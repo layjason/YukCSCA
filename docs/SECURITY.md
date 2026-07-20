@@ -19,7 +19,8 @@ Minor-user identity and relationships, learning conversations, assessment answer
 ### Repository and delivery
 
 - Secrets and real user/student data are prohibited from the repository and logs.
-- GitHub Actions are SHA-pinned; CodeQL, dependency review, Dependabot, and Gitleaks are configured.
+- GitHub Actions are SHA-pinned; Dependabot groups routine updates and excludes changes to explicitly fixed toolchain versions; Gitleaks scans pushes, pull requests, and the weekly schedule.
+- CodeQL, dependency review, and GitHub native secret scanning are not active for the current private repository because the required GitHub security entitlements are not enabled.
 - Containers expose health checks; the API runs as a non-root user.
 
 ## Required feature gates
