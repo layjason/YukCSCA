@@ -32,7 +32,7 @@ Browser ──► Nginx web container ──► Spring Boot API ──► Postgr
 | Data           | PostgreSQL 18                                                    |
 | Tests          | Vitest/Testing Library, JUnit/Testcontainers, Playwright         |
 | Operations     | Actuator health, structured logs, Docker Compose, GitHub Actions |
-| Security tools | CodeQL, dependency review, Dependabot, and Gitleaks              |
+| Security tools | Dependabot and Gitleaks; GitHub premium security checks inactive |
 
 ## Contract boundary
 

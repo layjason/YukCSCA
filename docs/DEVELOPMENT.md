@@ -144,9 +144,8 @@ The CI workflow exposes separately attributable jobs:
 | `e2e`         | mocked-boundary desktop/mobile journey and retained traces     |
 | `containers`  | Compose configuration, image builds, health, and smoke checks  |
 | `secret-scan` | Gitleaks                                                       |
-| `codeql`      | Java and JavaScript/TypeScript CodeQL analysis                 |
 
-Dependency review runs on pull requests. Every `uses:` reference is pinned to an immutable SHA.
+Every `uses:` reference is pinned to an immutable SHA. Dependabot groups npm, Maven, and GitHub Actions updates, while Docker updates that would leave Node 24, Java 21, or Maven 3.9.11 are ignored until an explicit toolchain change is accepted. CodeQL, dependency review, and GitHub native secret scanning are not active for the current private repository because the required GitHub security entitlements are not enabled; Gitleaks remains the active repository secret scan.
 
 The current Playwright journey intentionally mocks the unauthenticated refresh response and tests the browser login shell. The `containers` job separately proves the built Nginx/API/PostgreSQL stack, health routing, and security headers. Add a real backend to `e2e` only with the first journey whose acceptance criteria require persisted server behavior.
 
@@ -179,8 +178,8 @@ After the first push, create a `main` branch ruleset that:
 
 - requires pull requests, at least one approval, stale-approval dismissal, conversation resolution, and an up-to-date branch;
 - blocks force pushes and branch deletion;
-- requires `repository`, `contracts`, `frontend`, `backend`, `e2e`, `containers`, `secret-scan`, and `codeql`;
-- requires `dependency-review` when event-conditional checks are supported;
-- enables code scanning, secret scanning, push protection, Dependabot alerts, and security updates.
+- requires `repository`, `contracts`, `frontend`, `backend`, `e2e`, `containers`, and `secret-scan`;
+- enables Dependabot alerts and security updates;
+- enables GitHub Code Security and Secret Protection only when the repository has the required entitlement, then adds their proven checks to the ruleset.
 
 Run the workflows once before selecting required check names, then prove the ruleset with a small documentation-only pull request.

@@ -20,13 +20,25 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
 
   - package-ecosystem: docker
     directory: /services/api
     schedule:
       interval: weekly
+    ignore:
+      # The build image must stay aligned with the Maven Wrapper and Java 21 toolchain.
+      - dependency-name: maven
+      - dependency-name: eclipse-temurin
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: docker
     directory: /apps/web
     schedule:
       interval: weekly
+    ignore:
+      # Node major upgrades require an explicit repository-wide toolchain change.
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
