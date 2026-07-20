@@ -1,0 +1,229 @@
+openapi: 3.1.0
+info:
+  title: YukCSCA API
+  version: 0.1.0
+  summary: Contract-first API for YukCSCA
+tags: []
+paths:
+  /api/v1/auth/google:
+    post:
+      operationId: AuthApi_googleLogin
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.GoogleLoginRequest'
+  /api/v1/auth/logout:
+    post:
+      operationId: AuthApi_logout
+      parameters:
+        - name: yukcsca_refresh
+          in: cookie
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+          headers:
+            Set-Cookie:
+              required: true
+              schema:
+                type: string
+  /api/v1/auth/me:
+    get:
+      operationId: AuthApi_me
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.CurrentUser'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/auth/refresh:
+    post:
+      operationId: AuthApi_refresh
+      parameters:
+        - name: yukcsca_refresh
+          in: cookie
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    Auth.AuthResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresInSeconds
+        - user
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          enum:
+            - Bearer
+        expiresInSeconds:
+          type: integer
+          format: int64
+        user:
+          $ref: '#/components/schemas/Auth.CurrentUser'
+    Auth.CurrentUser:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - role
+        - onboardingCompleted
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        email:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          anyOf:
+            - type: string
+            - type: 'null'
+        role:
+          $ref: '#/components/schemas/Auth.UserRole'
+        onboardingCompleted:
+          type: boolean
+    Auth.GoogleLoginRequest:
+      type: object
+      required:
+        - credential
+      properties:
+        credential:
+          type: string
+          minLength: 20
+          maxLength: 10000
+      description: A browser credential returned by Google Identity Services.
+    Auth.UserRole:
+      type: string
+      enum:
+        - UNASSIGNED
+        - STUDENT
+        - PARENT
+        - TUTOR
+        - ADMIN
+    ForbiddenResponse:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          $ref: '#/components/schemas/Problem'
+    Problem:
+      type: object
+      required:
+        - status
+        - title
+      properties:
+        status:
+          type: integer
+          format: int32
+        type:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+    uuid:
+      type: string
+      format: uuid
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: Bearer

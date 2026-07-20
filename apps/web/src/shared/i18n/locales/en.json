@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "continueWithGoogle": "Continue with Google",
+    "googleLoadError": "Google Sign-In could not load. Check your connection and try again.",
+    "googleClientMissing": "Google Client ID is not configured.",
+    "googleCredentialMissing": "Google did not return a credential.",
+    "loginFailed": "Login failed.",
+    "restoringSession": "Restoring session…"
+  },
+  "login": {
+    "eyebrow": "YukCSCA",
+    "title": "Prepare for CSCA with a clear path",
+    "description": "Sign in with Google to start onboarding, diagnostics, and a personal study plan.",
+    "privacy": "Google is used only for basic authentication. YukCSCA issues its own application session."
+  },
+  "dashboard": {
+    "title": "Starter dashboard",
+    "welcome": "Welcome, {{name}}.",
+    "onboarding": "Next: choose a role and complete your learning profile.",
+    "logout": "Sign out",
+    "fallbackName": "Student",
+    "email": "Email",
+    "role": "Role"
+  },
+  "roles": {
+    "UNASSIGNED": "Not selected",
+    "STUDENT": "Student",
+    "PARENT": "Parent",
+    "TUTOR": "Tutor",
+    "ADMIN": "Administrator"
+  }
+}

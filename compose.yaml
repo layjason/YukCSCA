@@ -1,0 +1,88 @@
+name: yukcsca
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-yukcsca}
+      POSTGRES_USER: ${POSTGRES_USER:-yukcsca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yukcsca-local}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # PostgreSQL 18+ stores versioned PGDATA below this parent directory.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-yukcsca}
+      DB_USERNAME: ${POSTGRES_USER:-yukcsca}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-yukcsca-local}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      YUKCSCA_JWT_SECRET: ${YUKCSCA_JWT_SECRET}
+      YUKCSCA_AUTH_ISSUER: ${YUKCSCA_AUTH_ISSUER:-http://localhost:8080}
+      YUKCSCA_WEB_ORIGIN: ${YUKCSCA_WEB_ORIGIN:-http://localhost:5173}
+      YUKCSCA_COOKIE_SECURE: ${YUKCSCA_COOKIE_SECURE:-false}
+      YUKCSCA_COOKIE_SAME_SITE: ${YUKCSCA_COOKIE_SAME_SITE:-Lax}
+    ports:
+      - '${API_PORT:-8080}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', 'http://localhost:8080/actuator/health/readiness']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+    develop:
+      watch:
+        - action: rebuild
+          path: ./services/api
+          ignore:
+            - target/
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+    ports:
+      - '${WEB_PORT:-5173}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://127.0.0.1/']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    develop:
+      watch:
+        - action: rebuild
+          path: ./apps/web
+          ignore:
+            - dist/
+            - node_modules/
+            - playwright-report/
+            - test-results/
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./pnpm-lock.yaml
+        - action: rebuild
+          path: ./pnpm-workspace.yaml
+
+volumes:
+  postgres-data:

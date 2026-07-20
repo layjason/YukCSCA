@@ -1,0 +1,15 @@
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "arrowParens": "always",
+  "overrides": [
+    {
+      "files": "*.code-workspace",
+      "options": {
+        "parser": "json"
+      }
+    }
+  ]
+}

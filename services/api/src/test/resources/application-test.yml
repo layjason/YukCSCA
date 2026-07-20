@@ -1,0 +1,22 @@
+spring:
+  task:
+    scheduling:
+      enabled: false
+
+yukcsca:
+  auth:
+    google-client-id: test-google-client
+    jwt-secret: 01234567890123456789012345678901
+    issuer: https://api.test
+    web-origin: https://app.test
+    cookie-secure: true
+    cookie-same-site: Lax
+    access-token-ttl: 15m
+    refresh-token-ttl: 30d
+    rate-limit:
+      requests: 3
+      window: 1m
+      max-clients: 100
+    session-maintenance:
+      cleanup-interval: 1h
+      retention: 30d
