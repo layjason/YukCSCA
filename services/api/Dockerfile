@@ -5,7 +5,7 @@ RUN mvn --batch-mode -q -DskipTests dependency:go-offline
 COPY services/api/src src
 RUN mvn --batch-mode -q -DskipTests package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
