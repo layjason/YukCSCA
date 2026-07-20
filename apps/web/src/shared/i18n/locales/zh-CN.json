@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "continueWithGoogle": "使用 Google 继续",
+    "googleLoadError": "Google 登录加载失败，请检查网络后重试。",
+    "googleClientMissing": "尚未配置 Google Client ID。",
+    "googleCredentialMissing": "Google 未返回登录凭证。",
+    "loginFailed": "登录失败。",
+    "restoringSession": "正在恢复会话…"
+  },
+  "login": {
+    "eyebrow": "YukCSCA",
+    "title": "用清晰路径准备 CSCA",
+    "description": "使用 Google 登录，开始角色设置、诊断和个性化学习计划。",
+    "privacy": "Google 仅用于基础身份验证，YukCSCA 会签发自己的应用会话。"
+  },
+  "dashboard": {
+    "title": "初始控制台",
+    "welcome": "欢迎，{{name}}。",
+    "onboarding": "下一步：选择角色并完善学习资料。",
+    "logout": "退出登录",
+    "fallbackName": "同学",
+    "email": "邮箱",
+    "role": "角色"
+  },
+  "roles": {
+    "UNASSIGNED": "尚未选择",
+    "STUDENT": "学生",
+    "PARENT": "家长",
+    "TUTOR": "辅导老师",
+    "ADMIN": "管理员"
+  }
+}

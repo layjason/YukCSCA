@@ -1,0 +1,94 @@
+* {
+  box-sizing: border-box;
+}
+:root {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  color: #111827;
+  background: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+button {
+  font: inherit;
+}
+.page-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at top, #dbeafe 0, #f8fafc 45%);
+}
+.login-card,
+.dashboard-card,
+.center-card {
+  width: min(100%, 560px);
+  padding: clamp(24px, 5vw, 48px);
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
+.login-card h1,
+.dashboard-card h1 {
+  margin: 8px 0 16px;
+  line-height: 1.1;
+}
+.login-card p,
+.dashboard-card p {
+  color: #475569;
+  line-height: 1.65;
+}
+.login-card small {
+  display: block;
+  margin-top: 18px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.eyebrow {
+  color: #2563eb !important;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.error-message {
+  color: #b91c1c !important;
+}
+.dashboard-card dl {
+  display: grid;
+  gap: 12px;
+  margin: 28px 0;
+}
+.dashboard-card dl div {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 12px;
+}
+.dashboard-card dt {
+  color: #64748b;
+}
+.dashboard-card dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dashboard-card button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  color: white;
+  background: #111827;
+  cursor: pointer;
+}

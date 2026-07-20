@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "continueWithGoogle": "Lanjutkan dengan Google",
+    "googleLoadError": "Google Sign-In gagal dimuat. Periksa koneksi lalu coba lagi.",
+    "googleClientMissing": "Google Client ID belum dikonfigurasi.",
+    "googleCredentialMissing": "Google tidak mengembalikan kredensial.",
+    "loginFailed": "Login gagal.",
+    "restoringSession": "Memulihkan sesi…"
+  },
+  "login": {
+    "eyebrow": "YukCSCA",
+    "title": "Belajar CSCA dengan jalur yang jelas",
+    "description": "Masuk dengan Google untuk memulai onboarding, diagnostik, dan rencana belajar personal.",
+    "privacy": "Kami memakai Google hanya untuk autentikasi dasar. YukCSCA menerbitkan sesi aplikasinya sendiri."
+  },
+  "dashboard": {
+    "title": "Dasbor awal",
+    "welcome": "Selamat datang, {{name}}.",
+    "onboarding": "Langkah berikutnya: pilih peran dan lengkapi profil belajar.",
+    "logout": "Keluar",
+    "fallbackName": "Siswa",
+    "email": "Email",
+    "role": "Peran"
+  },
+  "roles": {
+    "UNASSIGNED": "Belum dipilih",
+    "STUDENT": "Siswa",
+    "PARENT": "Orang tua",
+    "TUTOR": "Tutor",
+    "ADMIN": "Administrator"
+  }
+}

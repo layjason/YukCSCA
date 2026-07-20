@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/yukcsca}
+    username: ${DB_USERNAME:yukcsca}
+    password: ${DB_PASSWORD:yukcsca-local}
+
+logging:
+  level:
+    com.yukcsca: DEBUG
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+yukcsca:
+  auth:
+    google-client-id: ${GOOGLE_CLIENT_ID:local-google-client-id}
+    jwt-secret: ${YUKCSCA_JWT_SECRET:local-development-secret-change-this-now}
+    issuer: ${YUKCSCA_AUTH_ISSUER:http://localhost:8080}
+    web-origin: ${YUKCSCA_WEB_ORIGIN:http://localhost:5173}
+    cookie-secure: ${YUKCSCA_COOKIE_SECURE:false}

@@ -1,0 +1,30 @@
+{
+  "name": "yukcsca",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.14.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": "11.14.0"
+  },
+  "scripts": {
+    "generate": "pnpm contract:build && pnpm api:generate",
+    "dev:web": "pnpm --filter @yukcsca/web dev",
+    "contract:build": "pnpm --filter @yukcsca/contracts build",
+    "contract:watch": "pnpm --filter @yukcsca/contracts watch",
+    "api:generate": "pnpm --filter @yukcsca/web api:generate",
+    "typecheck:web": "pnpm --filter @yukcsca/web typecheck",
+    "lint:web": "pnpm --filter @yukcsca/web lint",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test:web": "pnpm --filter @yukcsca/web test",
+    "e2e:web": "pnpm --filter @yukcsca/web e2e",
+    "build:web": "pnpm --filter @yukcsca/web build",
+    "check:web": "pnpm --filter @yukcsca/web check",
+    "check:generated": "./scripts/check-generated.sh",
+    "check": "pnpm check:generated && pnpm format:check && pnpm check:web"
+  },
+  "devDependencies": {
+    "prettier": "3.9.5"
+  }
+}

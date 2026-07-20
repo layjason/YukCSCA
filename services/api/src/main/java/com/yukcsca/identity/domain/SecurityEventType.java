@@ -1,0 +1,12 @@
+package com.yukcsca.identity.domain;
+
+public enum SecurityEventType {
+  GOOGLE_LOGIN_SUCCEEDED,
+  GOOGLE_LOGIN_REJECTED,
+  REFRESH_ROTATED,
+  REFRESH_REJECTED,
+  REFRESH_REUSE_DETECTED,
+  LOGOUT,
+  AUTH_RATE_LIMITED,
+  SESSION_CLEANUP
+}

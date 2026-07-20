@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - contracts
+
+onlyBuiltDependencies:
+  - esbuild
+
+# pnpm 11 reads project settings from this file; .npmrc is reserved for registry/auth settings.
+engineStrict: true
+autoInstallPeers: true
