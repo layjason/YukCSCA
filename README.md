@@ -18,7 +18,7 @@ Both documents have equal authority and must remain semantically synchronized. S
 - TypeSpec 1.14 → OpenAPI 3.1 → generated frontend TypeScript declarations
 - pnpm workspace, Docker Compose, and SHA-pinned GitHub Actions
 
-The implemented structure is described in [Current architecture](docs/ARCHITECTURE.md). Future sequencing and dependency candidates live only in the explicitly non-normative [Implementation plan](docs/PLAN.md).
+The implemented structure is described in [Current architecture](docs/ARCHITECTURE.md). The versioned P0 slice roadmap lives in the explicitly non-normative [Delivery plan](docs/PLAN.md); each accepted feature has one concrete brief under [`docs/delivery/`](docs/delivery/README.md).
 
 ## Quick start
 
@@ -54,7 +54,7 @@ docker compose config --quiet
 apps/web/       React application
 services/api/   Spring Boot modular monolith
 contracts/      TypeSpec source and generated OpenAPI
-docs/           requirements plus compact supporting documentation
+docs/           requirements, story coverage, delivery slices, and current-state guides
 ```
 
-Read [`AGENTS.md`](AGENTS.md), the nearest directory-specific `AGENTS.md`, the relevant requirements, and TypeSpec before editing public behavior.
+For feature work, read [`AGENTS.md`](AGENTS.md), the active row in [`docs/PLAN.md`](docs/PLAN.md), its vertical-slice file, the linked requirement/story sections, the nearest directory rules, and TypeSpec before editing public behavior.

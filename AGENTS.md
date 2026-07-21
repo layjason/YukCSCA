@@ -4,7 +4,9 @@ This is the repository-wide source of truth for coding agents. A nearer `AGENTS.
 
 ## Quick reference
 
-- The paired requirements are normative; `PLAN.md` is not.
+- The paired requirements are normative; `PLAN.md`, user stories, and slice plans are not.
+- Implement feature work only from one accepted vertical-slice plan under `docs/delivery/`; shape the slice first when none exists.
+- Use the bounded human-decision gate when material behavior is unresolved; investigate first, ask one question at a time, and do not ask about reversible implementation details.
 - Preserve existing staged, unstaged, and untracked user work.
 - Keep the modular monolith and add no speculative infrastructure or empty modules.
 - Change public HTTP behavior contract-first and regenerate; never patch generated artifacts.
@@ -23,23 +25,59 @@ The product is not a generic chatbot, an open tutor marketplace, or an official 
 
 ## Sources of truth
 
-Read before editing:
+Read before feature implementation:
 
-1. `README.md`
-2. `docs/README.md`
-3. The relevant sections of both requirement documents
-4. `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEVELOPMENT.md`
-5. The nearest directory-level `AGENTS.md`
-6. `contracts/` for any public HTTP behavior
+1. `README.md` and `docs/README.md`
+2. The active row in `docs/PLAN.md` and its `docs/delivery/VS-NNN-*.md` file
+3. Only the linked sections of both requirement documents and the linked stories `docs/requirements/USER_STORIES.md`
+4. `docs/requirements/COVERAGE.md` for known decomposition gaps
+5. `docs/delivery/HUMAN_REVIEW.md` when the slice has a decision gate or the documents appear insufficient
+6. `docs/GLOSSARY.md` and any related records under `docs/decisions/`
+7. `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEVELOPMENT.md`
+8. The nearest directory-level `AGENTS.md`
+9. `contracts/` for public HTTP behavior, then current implementation and tests
 
-Apply repository product sources in this order:
+If the requested feature has no accepted slice file, perform shaping first. Do not infer an implementation scope from the full backlog or broad requirement section alone.
+
+Apply repository authorities in this order:
 
 1. Bilingual product requirements—the sole normative product authority
-2. TypeSpec for the executable public HTTP boundary of an accepted requirement slice
-3. Current-state architecture/security documentation
-4. Existing implementation and tests
+2. Accepted vertical-slice plan—the bounded implementation brief and acceptance mapping
+3. TypeSpec—the executable public HTTP boundary for that accepted slice
+4. Current-state architecture/security/development constraints
+5. Existing implementation and tests
 
 `docs/requirements/YukCSCA平台需求_EN.md` and `docs/requirements/YukCSCA平台需求_CN.md` are semantically paired. Neither language is secondary. `docs/PLAN.md` is explicitly non-normative and never supplies acceptance criteria. If the requirements disagree, or another artifact conflicts with them, stop the affected work, cite the conflict, and resolve the requirements rather than silently choosing a meaning.
+
+## Human-in-the-loop decision protocol
+
+Human review is a bounded safety and product-quality gate, not a default conversational loop. Follow [`docs/delivery/HUMAN_REVIEW.md`](docs/delivery/HUMAN_REVIEW.md).
+
+Before asking a question, inspect the linked requirements, stories, coverage, glossary, architecture, TypeSpec, code, and tests. Ask only when the unresolved answer could materially change product flow, role/privacy/minor behavior, money or entitlements, domain state or ownership, scored learning semantics, a breaking contract, a destructive side effect, or a hard-to-reverse architectural trade-off.
+
+When a question is required:
+
+- record it in the slice with a stable decision ID;
+- ask one question at a time and at most three per review round;
+- cite the conflicting or missing evidence and test it with a concrete scenario;
+- provide two or three concrete options when useful, plus the agent's recommendation and impact;
+- update the owning artifact immediately after the human resolves it;
+- mark the slice `AWAITING_DECISION` and do not implement the affected behavior while a blocking decision remains.
+
+Do not ask for reversible implementation details, routine repository conventions, or renewed permission to implement an already approved `CONTRACT_READY` slice. Once the approved boundary is recorded, continue autonomously unless new contradictory evidence reopens the gate.
+
+`docs/GLOSSARY.md` is the canonical domain-language file for this repository; do not add a parallel `CONTEXT.md`. Create concise records under `docs/decisions/` only for choices that are costly to reverse, surprising without context, and based on a real trade-off.
+
+## Vertical-slice execution
+
+- `docs/PLAN.md` is a versioned roadmap and status index. It does not contain detailed implementation tasks for every future feature.
+- Every accepted feature has one plan file under `docs/delivery/` using `SLICE_TEMPLATE.md`. Do not create empty future slice files.
+- A slice must name one user-observable outcome, exact story/requirement references, exclusions, states, TypeSpec operations, persistence ownership, authorization/privacy rules, failure/idempotency behavior, observability, test evidence, and ordered implementation steps.
+- A public-HTTP slice may not enter implementation before its status is `CONTRACT_READY` and its TypeSpec compiles.
+- Keep TypeSpec organized by product/domain boundary, not duplicated per plan. The slice references exact operations and source files.
+- Mark a slice `DONE` only after the actor completes the real application flow and every acceptance criterion has named evidence. Code presence or generated OpenAPI alone is insufficient.
+- Increment the slice `Plan revision` when scope, state transitions, contract shape, or acceptance mapping materially changes. Git history records the diff; revision history records the reason.
+- Do not add pnpm scripts, generated files, or lockfile logic solely to validate plan/story documentation metadata.
 
 ## Before changing files
 
@@ -47,7 +85,7 @@ Apply repository product sources in this order:
 - When working on shared committed history and the task could overlap another branch, fetch remote refs before implementation, then compare relevant commits and files—especially changes under `docs/`, `contracts/`, migrations, and the target feature. Do not fetch merely for a local read-only explanation, an uncommitted initial baseline, or when the user has explicitly limited work to local state.
 - A fetch does not authorize merge, rebase, checkout, reset, deletion, commit, or push. Never change branches with uncommitted user work unless the user explicitly approves the operation.
 - Search the repository before adding a new abstraction or use case. If another branch or module already implements the requested behavior, report the evidence and ask before duplicating it.
-- State assumptions when the source material does not determine behavior. Ask before making a choice that changes product semantics, public contracts, privacy, money, roles, or scope.
+- State assumptions when the source material does not determine behavior. Use the human-decision protocol before making a choice that changes product semantics, public contracts, privacy, money, roles, domain ownership, or scope.
 
 ## Requirement traceability
 
@@ -170,7 +208,8 @@ Use an application-facing port or explicit public use case instead.
 
 - Update affected documentation in the same change as code, contract, configuration, or operational behavior.
 - Keep the bilingual requirement documents semantically synchronized. When requirements themselves change, update `Version`/`版本` and `Date`/`日期` in both files using the actual system date in `Asia/Jakarta`, and record a concise reason in an existing change-history section. Do not invent timestamps or add per-edit changelogs to every documentation file.
-- Update `ARCHITECTURE.md` when current implementation boundaries or active technology change. Update `PLAN.md` only for non-normative sequencing, experiments, or dependency candidates.
+- Update `ARCHITECTURE.md` when current implementation boundaries or active technology change. Update `PLAN.md` for plan version, slice order/status, dependencies, experiments, or dependency candidates; update the active slice file for detailed implementation evidence.
+- Update `docs/requirements/USER_STORIES.md` and `COVERAGE.md` when requirement decomposition changes. Never copy a broad requirement section into a slice without selecting a closed-loop story.
 - Documentation must distinguish configured, locally executed, CI-proven, and remotely enforced status. Never describe a staged workflow or repository setting as active before it exists remotely.
 - Do not change product requirements merely to make an implementation or test pass. Surface the mismatch instead.
 
