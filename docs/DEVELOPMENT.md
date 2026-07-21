@@ -62,6 +62,20 @@ docker compose down
 
 Use a separate Compose project name for disposable validation; never remove a developer data volume as part of a test cleanup.
 
+## Vertical-slice workflow
+
+Feature implementation starts from the selected row in `docs/PLAN.md` and its `docs/delivery/VS-NNN-*.md` file. If no slice file exists, shape one from `docs/delivery/SLICE_TEMPLATE.md` before changing product behavior. The full lifecycle is defined in [`docs/delivery/README.md`](delivery/README.md).
+
+Before TypeSpec or implementation:
+
+1. Read only the linked requirement sections, stories, and `docs/requirements/COVERAGE.md`.
+2. Complete the slice's **documentation-sufficiency review** in the slice template.
+3. If material product, privacy, money, state, contract, or architecture meaning remains unresolved, follow [`docs/delivery/HUMAN_REVIEW.md`](delivery/HUMAN_REVIEW.md): record stable decision IDs, mark the gate `AWAITING_DECISION`, ask one bounded question at a time, and do not implement the affected behavior until the gate is `NOT_REQUIRED` or `APPROVED` for the recorded scope.
+
+For public HTTP work, the slice reaches `CONTRACT_READY` only after blocking human decisions are resolved, the TypeSpec operation set compiles, and generated OpenAPI has been reviewed. Then implement migration/domain/application behavior, HTTP adapters, frontend flow, tests, observability, and documentation as one coherent slice.
+
+Update the slice's acceptance matrix and verification evidence with exact test names and command results. Plan versions and Git review provide documentation traceability; do not add a pnpm script solely to validate plan metadata.
+
 ## Contract-first changes
 
 Edit TypeSpec, never generated artifacts:
@@ -160,8 +174,8 @@ The separate `Runtime validation` workflow runs only on manual dispatch. Its `e2
 
 A change is done only when:
 
-- its requirement or accepted issue and acceptance criteria are identified;
-- contract, implementation, migration, tests, and documentation agree;
+- its accepted vertical-slice ID/revision, linked requirements/stories, and acceptance criteria are identified;
+- TypeSpec contract, slice plan, implementation, migration, tests, and current-state documentation agree;
 - each non-trivial use case has a success test and a validation, authorization, privacy, or edge test;
 - applicable local checks pass with exact results reported;
 - mobile, accessibility, authorization, privacy, audit, failure, and observability consequences are reviewed where relevant;

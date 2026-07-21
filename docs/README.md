@@ -1,33 +1,80 @@
 # YukCSCA documentation
 
-## Product authority
+## Authority model
 
 > **NORMATIVE PRODUCT AUTHORITY:** [English requirements](requirements/YukCSCA平台需求_EN.md) and [中文需求](requirements/YukCSCA平台需求_CN.md) are the only authoritative statements of what YukCSCA must do. They are equal, paired documents and must remain semantically synchronized.
 
-Implementation, contracts, architecture notes, security guidance, plans, issues, and code comments may explain or implement a subset of the requirements. They do not amend, narrow, or override them. A temporary delivery qualification is valid only when it is written into both requirement documents.
+Implementation artifacts may select, clarify, and implement a subset. They never amend or silently narrow the requirements. A delivery qualification is valid only when it appears in both requirement documents.
 
-If the two requirement documents disagree, or another artifact conflicts with them, stop the affected work and resolve the requirements first.
+The engineering authority stack is:
+
+1. **Paired requirements** — product meaning and obligations.
+2. **Accepted vertical-slice plan** — bounded outcome, exclusions, state transitions, and acceptance mapping for the current implementation change.
+3. **TypeSpec** — executable public HTTP boundary for that accepted slice.
+4. **Architecture/security/development documents** — current constraints and repeatable engineering practice.
+5. **Implementation and tests** — delivered behavior and evidence.
+
+If the bilingual requirements disagree, or a lower layer conflicts with a higher layer, stop the affected work and resolve the conflict rather than choosing silently.
 
 ## Documentation map
 
-| Document                                                     | Classification               | Purpose                                                                                       |
-| ------------------------------------------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| [Requirements — English](requirements/YukCSCA平台需求_EN.md) | **Normative**                | Complete product behavior and non-functional obligations.                                     |
-| [需求文档 — 中文](requirements/YukCSCA平台需求_CN.md)        | **规范性**                   | 完整产品行为与非功能性要求，与英文版具有同等权威。                                            |
-| [Architecture](ARCHITECTURE.md)                              | Descriptive current state    | What the repository implements now and where its code boundaries are.                         |
-| [Development](DEVELOPMENT.md)                                | Executable contributor guide | Toolchain, local workflow, validation, CI checks, and repository settings.                    |
-| [Security](SECURITY.md)                                      | Supporting control model     | Implemented controls and gates that must exist before sensitive features are introduced.      |
-| [Plan](PLAN.md)                                              | **Non-normative plan**       | Possible implementation sequence and dependency activation triggers; not acceptance criteria. |
-| [Glossary](GLOSSARY.md)                                      | Supporting definitions       | Shared vocabulary; requirements win if wording ever conflicts.                                |
+| Document                                                     | Classification                   | Purpose                                                                                  |
+| ------------------------------------------------------------ | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| [Requirements — English](requirements/YukCSCA平台需求_EN.md) | **Normative**                    | Complete English product behavior and NFR obligations.                                   |
+| [需求文档 — 中文](requirements/YukCSCA平台需求_CN.md)        | **规范性**                       | 与英文版具有同等权威的完整中文需求。                                                     |
+| [User stories](requirements/USER_STORIES.md)                 | Supporting decomposition         | Small actor/outcome stories and Given/When/Then acceptance candidates.                   |
+| [Story coverage](requirements/COVERAGE.md)                   | Supporting traceability          | Requirement-to-story coverage audit and known backlog gaps.                              |
+| [Delivery plan](PLAN.md)                                     | **Versioned non-normative plan** | P0 vertical-slice order, status, dependencies, and active slice.                         |
+| [Delivery process](delivery/README.md)                       | Executable delivery guide        | Slice lifecycle, TypeSpec gate, plan revisions, and agent handoff rules.                 |
+| [Human decision gates](delivery/HUMAN_REVIEW.md)             | Executable shaping guide         | Bounded questioning, escalation triggers, approval scope, and decision write-back rules. |
+| [Decision records](decisions/README.md)                      | Supporting rationale             | Lazy concise records for hard-to-reverse, surprising trade-offs.                         |
+| [Slice template](delivery/SLICE_TEMPLATE.md)                 | Executable template              | Required structure for an accepted vertical-slice implementation brief.                  |
+| [Architecture](ARCHITECTURE.md)                              | Descriptive current state        | What the repository implements now and current code boundaries.                          |
+| [Development](DEVELOPMENT.md)                                | Executable contributor guide     | Toolchain, local workflow, validation, CI, and repository setup.                         |
+| [Security](SECURITY.md)                                      | Supporting control model         | Implemented controls and gates before sensitive features.                                |
+| [Glossary](GLOSSARY.md)                                      | Supporting definitions           | Shared vocabulary; requirements win on conflict.                                         |
 
-Repository-wide coding rules live in [`AGENTS.md`](../AGENTS.md). The public HTTP boundary is defined by TypeSpec under [`contracts/`](../contracts/). Those are engineering authorities for how accepted requirement slices are implemented, not alternate product requirements.
+Repository-wide durable coding rules live in [`AGENTS.md`](../AGENTS.md). Directory-specific rules live in the nearest nested `AGENTS.md`. Public HTTP behavior is hand-edited only in TypeSpec under [`contracts/`](../contracts/).
 
-## Maintenance convention
+## Agent reading order
+
+### Feature implementation
+
+1. `AGENTS.md`
+2. `docs/PLAN.md` and the selected `docs/delivery/VS-NNN-*.md`
+3. Only the linked English and Chinese requirement sections
+4. The linked stories and `requirements/COVERAGE.md`
+5. `delivery/HUMAN_REVIEW.md` when documents are insufficient or a gate is open
+6. `GLOSSARY.md` and related decision records
+7. `ARCHITECTURE.md`, `SECURITY.md`, `DEVELOPMENT.md`
+8. The nearest directory `AGENTS.md`
+9. Existing TypeSpec, implementation, migrations, and tests
+
+If a requested feature has no accepted slice file, shape the slice first. Do not infer a broad implementation plan from the backlog alone. When the documents do not determine material behavior, use the bounded human-decision gate rather than guessing or starting an unlimited interview.
+
+### Bug fix or maintenance
+
+Read the relevant current-state documentation, nearest agent rules, implementation, and tests. Link the bug to the slice or requirement whose delivered behavior is being corrected. A new product outcome still requires a slice plan.
+
+## Documentation ownership
 
 - Change product meaning in both requirement documents in the same change.
-- Keep requirement version, date, contents, stable navigation anchors, and revision history synchronized.
-- Put current implementation facts in `ARCHITECTURE.md`, not in a decision-history file.
-- Put repeatable commands and quality gates in `DEVELOPMENT.md`, not in transient audit reports.
-- Put uncertain sequencing, future dependencies, and experiments in `PLAN.md` and label them non-normative.
-- Delete superseded guidance instead of retaining “old” and “new” versions in parallel.
-- Prefer links to the authoritative source over copying the same rule into several documents.
+- Add or revise user stories when requirement decomposition changes; update the coverage audit version/snapshot.
+- Put delivery order and status only in `PLAN.md`.
+- Put one accepted implementation brief and its scoped human decisions in one `delivery/VS-NNN-*.md` file.
+- Put canonical domain language in `GLOSSARY.md`; do not add a parallel `CONTEXT.md`.
+- Create a concise decision record only for a hard-to-reverse, surprising choice with real alternatives.
+- Put current implemented facts only in `ARCHITECTURE.md`.
+- Put repeatable commands and quality gates only in `DEVELOPMENT.md`.
+- Put durable repository behavior in `AGENTS.md`, not in a temporary slice plan.
+- Keep TypeSpec in domain-oriented `.tsp` files; the slice plan references exact operations rather than creating duplicate contract prose.
+- Delete superseded guidance or mark a slice `SUPERSEDED` with a replacement. Do not keep competing “old” and “new” instructions active.
+
+## Versioning convention
+
+- Requirement versions are synchronized in both normative documents.
+- The user-story backlog has its own version.
+- `PLAN.md` has a delivery-plan version.
+- Every slice has an integer plan revision and a revision history.
+- Runtime/API/package versions remain independent from documentation versions.
+- Plan and backlog versions are reviewed through Git and pull-request evidence. Do not add a pnpm script solely to check documentation metadata.
