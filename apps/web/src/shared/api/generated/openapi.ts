@@ -135,7 +135,7 @@ export interface components {
       title: string;
       detail?: string;
       instance?: string;
-      code?: string;
+      code: string;
     };
     'Profile.ActivateStudentProfileRequest': {
       /** @description The student's explicitly confirmed preferred name. Provider profile data is only an editable suggestion. */
@@ -224,16 +224,17 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Access is unauthorized. */
       401: {
         headers: {
+          'WWW-Authenticate'?: string;
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description The request conflicts with the current state of the server. */
@@ -242,7 +243,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Client error */
@@ -252,7 +253,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Server error */
@@ -261,7 +262,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
     };
@@ -291,7 +292,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
     };
@@ -317,10 +318,11 @@ export interface operations {
       /** @description Access is unauthorized. */
       401: {
         headers: {
+          'WWW-Authenticate'?: string;
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Server error */
@@ -329,7 +331,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
     };
@@ -358,10 +360,11 @@ export interface operations {
       /** @description Access is unauthorized. */
       401: {
         headers: {
+          'WWW-Authenticate'?: string;
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Client error */
@@ -371,7 +374,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Server error */
@@ -380,7 +383,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
     };
@@ -422,16 +425,17 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Profile.ValidationProblem'];
+          'application/problem+json': components['schemas']['Profile.ValidationProblem'];
         };
       };
       /** @description Access is unauthorized. */
       401: {
         headers: {
+          'WWW-Authenticate'?: string;
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description The request conflicts with the current state of the server. */
@@ -440,7 +444,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Server error */
@@ -449,7 +453,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
     };
@@ -475,10 +479,11 @@ export interface operations {
       /** @description Access is unauthorized. */
       401: {
         headers: {
+          'WWW-Authenticate'?: string;
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Access is forbidden. */
@@ -487,7 +492,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
       /** @description Server error */
@@ -496,7 +501,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['Problem'];
+          'application/problem+json': components['schemas']['Problem'];
         };
       };
     };

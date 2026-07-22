@@ -30,6 +30,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,6 +54,7 @@ class AuthHttpIT {
   @Autowired AuthSessionRepository sessions;
   @Autowired AuthIdentityRepository identities;
   @Autowired UserAccountRepository users;
+  @Autowired AccessDeniedHandler problemAccessDeniedHandler;
 
   @MockitoBean GoogleTokenVerifier googleTokenVerifier;
 
@@ -109,6 +113,11 @@ class AuthHttpIT {
 
     login("10.0.0.2")
         .andExpect(status().isUnauthorized())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(jsonPath("$.status").value(401))
+        .andExpect(jsonPath("$.title").value("Unauthorized"))
+        .andExpect(jsonPath("$.detail").value("Google credential is invalid or expired."))
         .andExpect(jsonPath("$.code").value("INVALID_CREDENTIAL"));
 
     assertThat(securityEvents.countByEventType(SecurityEventType.GOOGLE_LOGIN_REJECTED))
@@ -150,12 +159,39 @@ class AuthHttpIT {
     MvcResult login = login("10.0.0.4").andReturn();
     JsonNode body = json.readTree(login.getResponse().getContentAsString());
 
-    mvc.perform(get("/api/v1/auth/me")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/auth/me"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")))
+        .andExpect(jsonPath("$.status").value(401))
+        .andExpect(jsonPath("$.title").value("Unauthorized"))
+        .andExpect(
+            jsonPath("$.detail").value("Authentication is required to access this resource."))
+        .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     mvc.perform(
             get("/api/v1/auth/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + body.get("accessToken").asText()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.email").value("me@example.com"));
+  }
+
+  @Test
+  void securityAccessDeniedHandlerReturnsBearerProblem() throws Exception {
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    problemAccessDeniedHandler.handle(
+        new MockHttpServletRequest(), response, new AccessDeniedException("not authorized"));
+
+    assertThat(response.getStatus()).isEqualTo(403);
+    assertThat(response.getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+    assertThat(response.getHeader(HttpHeaders.WWW_AUTHENTICATE)).contains("Bearer");
+    JsonNode body = json.readTree(response.getContentAsString());
+    assertThat(body.get("status").asInt()).isEqualTo(403);
+    assertThat(body.get("title").asText()).isEqualTo("Forbidden");
+    assertThat(body.get("detail").asText())
+        .isEqualTo("The authenticated account cannot access this resource.");
+    assertThat(body.get("code").asText()).isEqualTo("ACCESS_DENIED");
   }
 
   @Test
@@ -203,7 +239,12 @@ class AuthHttpIT {
     }
     login("10.0.0.7")
         .andExpect(status().isTooManyRequests())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
         .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"))
+        .andExpect(jsonPath("$.status").value(429))
+        .andExpect(jsonPath("$.title").value("Too Many Requests"))
+        .andExpect(jsonPath("$.detail").value("Authentication request limit exceeded."))
         .andExpect(jsonPath("$.code").value("AUTH_RATE_LIMITED"));
 
     assertThat(securityEvents.countByEventType(SecurityEventType.AUTH_RATE_LIMITED)).isEqualTo(1);

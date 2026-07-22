@@ -6,8 +6,8 @@
 | -------------------- | ---------------------------------------------------------- |
 | Status               | `DONE`                                                     |
 | Human gate           | `NOT_REQUIRED` — retrospective delivered slice             |
-| Plan revision        | 2                                                          |
-| Updated              | 2026-07-22                                                 |
+| Plan revision        | 3                                                          |
+| Updated              | 2026-07-23                                                 |
 | Primary actor        | New or returning user                                      |
 | Story IDs            | `US-AUTH-01`, `US-AUTH-02`                                 |
 | Requirement sections | 1.1 pilot delivery qualification                           |
@@ -33,6 +33,8 @@ logout -> current session revoked + cookie cleared
 ```
 
 Public operations are defined in TypeSpec under `/api/v1/auth`. The refresh token is an HttpOnly cookie; browser application code receives only the access token and current-user response.
+
+Advertised problem responses use `application/problem+json` and require a stable application `code`. The shared `401` response permits `WWW-Authenticate` because credential and refresh-cookie failures do not use a bearer challenge; Spring Security rejections on bearer-protected operations always return the challenge together with the canonical problem body.
 
 ## Acceptance evidence snapshot
 
@@ -68,6 +70,7 @@ The repair must retain Google credential redaction, hashed refresh-token storage
 | Failure atomicity and safe error | `AuthInternalFailureHttpIT.accessTokenFailureReturnsSafeServerErrorWithoutIssuingSession` passes and proves `500 INTERNAL_ERROR` with no refresh session, success event, or cookie.                                          |
 | Full backend verification        | `./mvnw --batch-mode verify` passes: 14 unit tests and 10 PostgreSQL-backed integration tests, with Spotless clean.                                                                                                          |
 | Contract generation              | TypeSpec compiles and regeneration leaves both generated artifacts byte-identical to their pre-run repair state. The repository clean-tree assertion remains pending because the intended generated changes are uncommitted. |
+| Problem response conformance     | Focused Maven verification passes all 9 `AuthHttpIT` cases; `401`, `403`, and `429` assertions cover status, `application/problem+json`, required fields, stable code, bearer challenge, and retry header.                   |
 | Frontend verification            | `pnpm check:web` passes TypeScript, ESLint, 9 Vitest tests, and the production build; `pnpm e2e:web` passes in Chromium and mobile Chrome.                                                                                   |
 | Local stack                      | Rebuilt API is healthy and `scripts/smoke.sh` passes for the API and web endpoints.                                                                                                                                          |
 | Real Google journey              | Product owner confirmed on 2026-07-22 that sign in -> sign out -> sign in again with the same Google account succeeds and preserves login state.                                                                             |
@@ -85,5 +88,6 @@ The repair must retain Google credential redaction, hashed refresh-token storage
 
 | Revision | Date       | Change                                                                                                                  |
 | -------- | ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 3        | 2026-07-23 | Aligned auth problem media types and required codes; added structured Spring Security `401` and rate-limit evidence.    |
 | 2        | 2026-07-22 | Repaired returning-user login and failure atomicity; real Google-account retest confirmed and slice returned to `DONE`. |
 | 1        | 2026-07-21 | Recorded the already implemented identity slice in the delivery system.                                                 |

@@ -1,6 +1,7 @@
 package com.yukcsca.profile.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -178,7 +179,14 @@ class StudentProfileHttpIT {
 
   @Test
   void requiresAuthenticationAndRejectsAnAuthoritativelyAssignedOtherRole() throws Exception {
-    activate(null, validRequest(currentYear() - 17)).andExpect(status().isUnauthorized());
+    activate(null, validRequest(currentYear() - 17))
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")))
+        .andExpect(jsonPath("$.status").value(401))
+        .andExpect(jsonPath("$.title").value("Unauthorized"))
+        .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
 
     String token = login("parent-role", "parent@example.com");
     jdbc.update(
@@ -187,8 +195,26 @@ class StudentProfileHttpIT {
 
     activate(token, validRequest(currentYear() - 17))
         .andExpect(status().isConflict())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.title").value("Conflict"))
         .andExpect(jsonPath("$.code").value("ROLE_ALREADY_ASSIGNED"));
     assertThat(profiles.count()).isZero();
+  }
+
+  @Test
+  void unassignedAccountCannotReadAStudentProfile() throws Exception {
+    String token = login("unassigned-profile", "unassigned@example.com");
+
+    mvc.perform(get("/api/v1/student-profile/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(jsonPath("$.status").value(403))
+        .andExpect(jsonPath("$.title").value("Forbidden"))
+        .andExpect(jsonPath("$.detail").exists())
+        .andExpect(jsonPath("$.code").value("STUDENT_PROFILE_FORBIDDEN"));
   }
 
   @Test
@@ -206,6 +232,10 @@ class StudentProfileHttpIT {
       String subject, String email, String request, String field, String code) throws Exception {
     activate(login(subject, email), request)
         .andExpect(status().isBadRequest())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.title").value("Bad Request"))
         .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
         .andExpect(jsonPath("$.violations[0].field").value(field))
         .andExpect(jsonPath("$.violations[0].code").value(code));

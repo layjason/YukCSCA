@@ -9,10 +9,11 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = StudentProfileController.class)
@@ -21,15 +22,13 @@ public class StudentProfileExceptionHandler {
       LoggerFactory.getLogger(StudentProfileExceptionHandler.class);
 
   @ExceptionHandler(ProfileValidationException.class)
-  @ResponseStatus(HttpStatus.BAD_REQUEST)
-  ValidationProblemResponse invalidProfile(ProfileValidationException exception) {
-    return validationProblem(exception.violations());
+  ResponseEntity<ValidationProblemResponse> invalidProfile(ProfileValidationException exception) {
+    return validationProblemResponse(exception.violations());
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  @ResponseStatus(HttpStatus.BAD_REQUEST)
-  ValidationProblemResponse malformedRequest() {
-    return validationProblem(List.of());
+  ResponseEntity<ValidationProblemResponse> malformedRequest() {
+    return validationProblemResponse(List.of());
   }
 
   @ExceptionHandler(InvalidCredentialException.class)
@@ -69,6 +68,13 @@ public class StudentProfileExceptionHandler {
                     new FieldViolationResponse(
                         violation.field().wireName(), violation.code().name()))
             .toList());
+  }
+
+  private static ResponseEntity<ValidationProblemResponse> validationProblemResponse(
+      List<ProfileViolation> violations) {
+    return ResponseEntity.badRequest()
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(validationProblem(violations));
   }
 
   private static ProblemDetail problem(HttpStatus status, String code, String detail) {
