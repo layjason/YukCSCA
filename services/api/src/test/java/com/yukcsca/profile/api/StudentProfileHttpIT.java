@@ -17,7 +17,7 @@ import com.yukcsca.identity.infrastructure.AuthSessionRepository;
 import com.yukcsca.identity.infrastructure.SecurityEventRepository;
 import com.yukcsca.identity.infrastructure.UserAccountRepository;
 import com.yukcsca.profile.infrastructure.StudentProfileRepository;
-import com.yukcsca.support.PostgresIntegrationTestSupport;
+import com.yukcsca.support.PostgresTestConfiguration;
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.UUID;
@@ -30,6 +30,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -44,7 +45,8 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ExtendWith(OutputCaptureExtension.class)
-class StudentProfileHttpIT extends PostgresIntegrationTestSupport {
+@Import(PostgresTestConfiguration.class)
+class StudentProfileHttpIT {
   private static final ZoneId JAKARTA = ZoneId.of("Asia/Jakarta");
   private static final AtomicInteger LOGIN_SEQUENCE = new AtomicInteger();
 

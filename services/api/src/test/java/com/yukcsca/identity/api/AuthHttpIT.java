@@ -19,13 +19,14 @@ import com.yukcsca.identity.infrastructure.AuthIdentityRepository;
 import com.yukcsca.identity.infrastructure.AuthSessionRepository;
 import com.yukcsca.identity.infrastructure.SecurityEventRepository;
 import com.yukcsca.identity.infrastructure.UserAccountRepository;
-import com.yukcsca.support.PostgresIntegrationTestSupport;
+import com.yukcsca.support.PostgresTestConfiguration;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -40,7 +41,8 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
-class AuthHttpIT extends PostgresIntegrationTestSupport {
+@Import(PostgresTestConfiguration.class)
+class AuthHttpIT {
   private static final String VALID_CREDENTIAL = "valid-google-credential-value";
 
   @Autowired MockMvc mvc;
