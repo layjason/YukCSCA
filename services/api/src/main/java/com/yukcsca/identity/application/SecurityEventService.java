@@ -22,4 +22,10 @@ public class SecurityEventService {
   public void record(SecurityEventType type, UUID userId) {
     repository.save(new SecurityEvent(type, userId, clock.instant()));
   }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void recordStudentActivation(UUID userId) {
+    repository.save(
+        new SecurityEvent(SecurityEventType.STUDENT_ACTIVATION_SUCCEEDED, userId, clock.instant()));
+  }
 }

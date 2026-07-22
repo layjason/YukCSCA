@@ -4,15 +4,15 @@
 
 ## Plan metadata
 
-| Field                 | Value                                                                                                           |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Plan ID               | `YUK-P0-DELIVERY`                                                                                               |
-| Plan version          | `0.3.0`                                                                                                         |
-| Updated               | 2026-07-21                                                                                                      |
-| Current baseline      | `VS-000` Google sign-in and secure session lifecycle — `DONE`                                                   |
-| Current shaping slice | [`VS-001` Activate a student account](delivery/VS-001-student-activation.md) — awaiting bounded human decisions |
-| Requirement baseline  | English/Chinese V1.1, 2026-07-20                                                                                |
-| Story baseline        | `USER_STORIES.md` version 0.2.0                                                                                 |
+| Field                  | Value                                                                 |
+| ---------------------- | --------------------------------------------------------------------- |
+| Plan ID                | `YUK-P0-DELIVERY`                                                     |
+| Plan version           | `0.3.7`                                                               |
+| Updated                | 2026-07-22                                                            |
+| Current baseline       | `VS-001` student-account activation — `DONE`                          |
+| Current delivery slice | None — select and shape the next vertical slice before implementation |
+| Requirement baseline   | English/Chinese V1.1, 2026-07-20                                      |
+| Story baseline         | `USER_STORIES.md` version 0.2.0                                       |
 
 Plan versions are review markers for delivery-document changes. They are not npm/Maven package versions and are not TypeSpec API versions. This repository does not add pnpm checks solely to validate plan metadata; Git review, slice revision history, and acceptance evidence provide traceability.
 
@@ -32,21 +32,21 @@ The full process and lifecycle are defined in [`docs/delivery/README.md`](delive
 
 ### Phase A — Identity, roles, and family boundary
 
-| Slice                                             | User-observable outcome                                                          | Stories                    | Main dependency                                 | Status              |
-| ------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------- | ------------------- |
-| [`VS-000`](delivery/VS-000-google-auth.md)        | Sign in, restore a secure session, inspect current identity, and sign out        | `US-AUTH-01`, `US-AUTH-02` | Baseline                                        | `DONE`              |
-| [`VS-001`](delivery/VS-001-student-activation.md) | Activate one student profile from an `UNASSIGNED` identity                       | `US-PROF-01`               | `VS-000`                                        | `AWAITING_DECISION` |
-| `VS-002`                                          | Activate one parent profile with no student access until linked                  | `US-PROF-03`               | `VS-000`                                        | `PROPOSED`          |
-| `VS-003`                                          | Edit allowed student-profile fields without losing learning history              | `US-PROF-02`               | `VS-001`                                        | `PROPOSED`          |
-| `VS-004`                                          | Edit parent profile/contact settings with reverification boundaries              | `US-PROF-04`               | `VS-002`                                        | `PROPOSED`          |
-| `VS-005`                                          | Request and complete/hold an account-deletion lifecycle                          | `US-ACCOUNT-01`            | `VS-001` or `VS-002`; commerce blockers defined | `PROPOSED`          |
-| `VS-006`                                          | Request and retrieve a privacy-safe personal-data export                         | `US-ACCOUNT-02`            | `VS-001` or `VS-002`; secure file delivery      | `PROPOSED`          |
-| `VS-007`                                          | Provision an internal admin with explicit permission groups                      | `US-ADMIN-01`              | `VS-000`                                        | `PROPOSED`          |
-| `VS-008`                                          | Search accounts and resolve suspension/restoration/relationship cases with audit | `US-ADM-01`                | `VS-007`; profile/family state exists           | `PROPOSED`          |
-| `VS-009`                                          | Parent creates one pending student account and activation path                   | `US-FAM-00`                | `VS-002`                                        | `PROPOSED`          |
-| `VS-010`                                          | Student activates a parent-created pending account                               | `US-FAM-04`                | `VS-009`, Google identity binding decision      | `PROPOSED`          |
-| `VS-011`                                          | Student invitation is accepted into one active primary-parent relationship       | `US-FAM-01`, `US-FAM-02`   | `VS-001`, `VS-002`                              | `PROPOSED`          |
-| `VS-012`                                          | Student or parent unlinks while preserving payments and learning history         | `US-FAM-03`                | `VS-011`; order ownership policy                | `PROPOSED`          |
+| Slice                                             | User-observable outcome                                                          | Stories                    | Main dependency                                 | Status     |
+| ------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------- | ---------- |
+| [`VS-000`](delivery/VS-000-google-auth.md)        | Sign in, restore a secure session, inspect current identity, and sign out        | `US-AUTH-01`, `US-AUTH-02` | Baseline                                        | `DONE`     |
+| [`VS-001`](delivery/VS-001-student-activation.md) | Activate one student profile from an `UNASSIGNED` identity                       | `US-PROF-01`               | `VS-000`                                        | `DONE`     |
+| `VS-002`                                          | Activate one parent profile with no student access until linked                  | `US-PROF-03`               | `VS-000`                                        | `PROPOSED` |
+| `VS-003`                                          | Edit allowed student-profile fields without losing learning history              | `US-PROF-02`               | `VS-001`                                        | `PROPOSED` |
+| `VS-004`                                          | Edit parent profile/contact settings with reverification boundaries              | `US-PROF-04`               | `VS-002`                                        | `PROPOSED` |
+| `VS-005`                                          | Request and complete/hold an account-deletion lifecycle                          | `US-ACCOUNT-01`            | `VS-001` or `VS-002`; commerce blockers defined | `PROPOSED` |
+| `VS-006`                                          | Request and retrieve a privacy-safe personal-data export                         | `US-ACCOUNT-02`            | `VS-001` or `VS-002`; secure file delivery      | `PROPOSED` |
+| `VS-007`                                          | Provision an internal admin with explicit permission groups                      | `US-ADMIN-01`              | `VS-000`                                        | `PROPOSED` |
+| `VS-008`                                          | Search accounts and resolve suspension/restoration/relationship cases with audit | `US-ADM-01`                | `VS-007`; profile/family state exists           | `PROPOSED` |
+| `VS-009`                                          | Parent creates one pending student account and activation path                   | `US-FAM-00`                | `VS-002`                                        | `PROPOSED` |
+| `VS-010`                                          | Student activates a parent-created pending account                               | `US-FAM-04`                | `VS-009`, Google identity binding decision      | `PROPOSED` |
+| `VS-011`                                          | Student invitation is accepted into one active primary-parent relationship       | `US-FAM-01`, `US-FAM-02`   | `VS-001`, `VS-002`                              | `PROPOSED` |
+| `VS-012`                                          | Student or parent unlinks while preserving payments and learning history         | `US-FAM-03`                | `VS-011`; order ownership policy                | `PROPOSED` |
 
 ### Phase B — Academic content and assessment control plane
 
@@ -172,8 +172,15 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 ## Revision history
 
-| Version | Date       | Change                                                                                                                                         |
-| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.3.0   | 2026-07-21 | Added bounded human decision gates, documentation-sufficiency review, domain-language maintenance, and lazy decision records.                  |
-| 0.2.0   | 2026-07-21 | Replaced the generic dependency-only plan with a versioned vertical-slice roadmap, lifecycle, explicit TypeSpec gate, and concrete next slice. |
-| 0.1.0   | 2026-07-20 | Initial implementation principles and dependency activation list.                                                                              |
+| Version | Date       | Change                                                                                                                                              |
+| ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.3.7   | 2026-07-22 | Closed `VS-001` after real-flow confirmation, persisted-state inspection, reproducible contract generation, focused final tests, and log redaction. |
+| 0.3.6   | 2026-07-22 | Moved `VS-001` to `VERIFYING` after integrating its contract, migration, backend flow, onboarding UI, and focused automated evidence.               |
+| 0.3.5   | 2026-07-22 | Moved `VS-001` to `CONTRACT_READY` after the profile TypeSpec compiled and generated declarations were reviewed.                                    |
+| 0.3.4   | 2026-07-22 | Approved the complete `VS-001` human-decision scope and moved the slice into TypeSpec shaping.                                                      |
+| 0.3.3   | 2026-07-22 | Returned `VS-000` to `DONE` after the product owner confirmed the repaired real Google-account relogin journey.                                     |
+| 0.3.2   | 2026-07-22 | Moved the `VS-000` regression repair to `VERIFYING` after automated and local-stack checks; real Google-account confirmation remains pending.       |
+| 0.3.1   | 2026-07-22 | Reopened `VS-000` for the returning-user sign-in regression and safe failure-side-effect repair.                                                    |
+| 0.3.0   | 2026-07-21 | Added bounded human decision gates, documentation-sufficiency review, domain-language maintenance, and lazy decision records.                       |
+| 0.2.0   | 2026-07-21 | Replaced the generic dependency-only plan with a versioned vertical-slice roadmap, lifecycle, explicit TypeSpec gate, and concrete next slice.      |
+| 0.1.0   | 2026-07-20 | Initial implementation principles and dependency activation list.                                                                                   |

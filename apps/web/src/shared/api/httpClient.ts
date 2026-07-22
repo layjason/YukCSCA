@@ -3,17 +3,20 @@ export interface ApiProblem {
   title?: string;
   detail?: string;
   code?: string;
+  violations?: Array<{ field: string; code: string }>;
 }
 
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  readonly violations: Array<{ field: string; code: string }>;
 
   constructor(status: number, problem: ApiProblem) {
     super(problem.detail ?? problem.title ?? 'Request failed');
     this.name = 'ApiError';
     this.status = status;
     this.code = problem.code;
+    this.violations = problem.violations ?? [];
   }
 }
 

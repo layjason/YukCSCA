@@ -53,19 +53,24 @@ interface AuthApi {
     | YukCSCA.BadRequestResponse
     | YukCSCA.UnauthorizedResponse
     | YukCSCA.ConflictResponse
-    | YukCSCA.TooManyRequestsResponse;
+    | YukCSCA.TooManyRequestsResponse
+    | YukCSCA.InternalServerErrorResponse;
 
   @post
   @route("/refresh")
   refresh(@cookie("yukcsca_refresh") refreshToken?: string):
-    AuthCookieResponse | YukCSCA.UnauthorizedResponse | YukCSCA.TooManyRequestsResponse;
+    AuthCookieResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.TooManyRequestsResponse
+    | YukCSCA.InternalServerErrorResponse;
 
   @post
   @route("/logout")
-  logout(@cookie("yukcsca_refresh") refreshToken?: string): LogoutResponse;
+  logout(@cookie("yukcsca_refresh") refreshToken?: string):
+    LogoutResponse | YukCSCA.InternalServerErrorResponse;
 
   @get
   @route("/me")
   @useAuth(BearerAuth)
-  me(): CurrentUser | YukCSCA.UnauthorizedResponse;
+  me(): CurrentUser | YukCSCA.UnauthorizedResponse | YukCSCA.InternalServerErrorResponse;
 }

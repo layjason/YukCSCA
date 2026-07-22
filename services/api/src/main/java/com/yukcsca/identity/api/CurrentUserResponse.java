@@ -1,5 +1,6 @@
 package com.yukcsca.identity.api;
 
+import com.yukcsca.identity.application.CurrentAccount;
 import com.yukcsca.identity.domain.UserAccount;
 import com.yukcsca.identity.domain.UserRole;
 import java.util.UUID;
@@ -19,5 +20,24 @@ public record CurrentUserResponse(
         user.getAvatarUrl(),
         user.getRole(),
         user.isOnboardingCompleted());
+  }
+
+  public static CurrentUserResponse from(CurrentAccount account) {
+    return new CurrentUserResponse(
+        account.id(),
+        account.email(),
+        account.displayName(),
+        account.avatarUrl(),
+        account.role(),
+        account.onboardingCompleted());
+  }
+
+  @Override
+  public String toString() {
+    return "CurrentUserResponse[identity=<redacted>, role="
+        + role
+        + ", onboardingCompleted="
+        + onboardingCompleted
+        + "]";
   }
 }

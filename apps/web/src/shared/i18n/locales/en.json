@@ -13,10 +13,43 @@
     "description": "Sign in with Google to start onboarding, diagnostics, and a personal study plan.",
     "privacy": "Google is used only for basic authentication. YukCSCA issues its own application session."
   },
+  "studentActivation": {
+    "eyebrow": "Student activation",
+    "title": "Activate your student profile",
+    "description": "Confirm the minimum information YukCSCA needs to personalize your preparation.",
+    "preferredName": "Preferred name or nickname",
+    "birthYear": "Birth year",
+    "currentGrade": "Current grade",
+    "city": "City",
+    "defaultExplanationLanguage": "Default explanation language",
+    "selectPlaceholder": "Select an option",
+    "submit": "Activate student account",
+    "submitting": "Activating…",
+    "privacyNotice": "Your birth year supports age-appropriate behavior and is not legal age verification. Linking a parent is not required for this activation.",
+    "grades": {
+      "GRADE_10": "Grade 10",
+      "GRADE_11": "Grade 11",
+      "GRADE_12": "Grade 12",
+      "OTHER": "Other"
+    },
+    "languages": {
+      "id": "Bahasa Indonesia",
+      "en": "English",
+      "zh-CN": "Simplified Chinese"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "This value is too long.",
+      "birthYearRange": "Enter a birth year corresponding to age 12 through 21.",
+      "unsupported": "Choose one of the supported options.",
+      "requestFailed": "We could not activate the student profile. Try again without re-entering sensitive information."
+    }
+  },
   "dashboard": {
     "title": "Starter dashboard",
     "welcome": "Welcome, {{name}}.",
     "onboarding": "Next: choose a role and complete your learning profile.",
+    "studentReady": "Your student profile is active. The next learning steps will appear here.",
     "logout": "Sign out",
     "fallbackName": "Student",
     "email": "Email",

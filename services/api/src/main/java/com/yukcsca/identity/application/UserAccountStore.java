@@ -7,6 +7,8 @@ import java.util.UUID;
 public interface UserAccountStore {
   Optional<UserAccount> findById(UUID id);
 
+  Optional<UserAccount> findByIdForUpdate(UUID id);
+
   Optional<UserAccount> findByEmailIgnoreCase(String email);
 
   UserAccount save(UserAccount user);

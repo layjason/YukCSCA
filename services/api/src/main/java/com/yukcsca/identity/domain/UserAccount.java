@@ -83,4 +83,14 @@ public class UserAccount {
   public boolean isOnboardingCompleted() {
     return onboardingCompleted;
   }
+
+  /** Completes the one-way student activation transition for an unassigned account. */
+  public void activateStudent(Instant now) {
+    if (role != UserRole.UNASSIGNED) {
+      throw new IllegalStateException("Only an unassigned account can activate as a student.");
+    }
+    role = UserRole.STUDENT;
+    onboardingCompleted = true;
+    updatedAt = now;
+  }
 }

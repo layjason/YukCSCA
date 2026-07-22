@@ -68,6 +68,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/student-profile': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Activates the authenticated unassigned account as a student. A same-account retry returns the existing profile and replacement access state. */
+    post: operations['StudentProfileApi_activateStudentProfile'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/student-profile/me': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the authenticated student's own profile. */
+    get: operations['StudentProfileApi_getMyStudentProfile'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -94,9 +128,6 @@ export interface components {
     };
     /** @enum {string} */
     'Auth.UserRole': 'UNASSIGNED' | 'STUDENT' | 'PARENT' | 'TUTOR' | 'ADMIN';
-    ForbiddenResponse: {
-      body: components['schemas']['Problem'];
-    };
     Problem: {
       /** Format: int32 */
       status: number;
@@ -106,6 +137,53 @@ export interface components {
       instance?: string;
       code?: string;
     };
+    'Profile.ActivateStudentProfileRequest': {
+      /** @description The student's explicitly confirmed preferred name. Provider profile data is only an editable suggestion. */
+      preferredName: string;
+      /**
+       * Format: int32
+       * @description A birth year in the inclusive range from the current Asia/Jakarta year minus 21 through the current year minus 12.
+       */
+      birthYear: number;
+      currentGrade: components['schemas']['Profile.StudentGrade'];
+      city: string;
+      defaultExplanationLanguage: components['schemas']['Profile.ExplanationLanguage'];
+    };
+    /** @enum {string} */
+    'Profile.ExplanationLanguage': 'id' | 'en' | 'zh-CN';
+    'Profile.FieldViolation': {
+      field: components['schemas']['Profile.StudentActivationField'];
+      code: components['schemas']['Profile.FieldViolationCode'];
+    };
+    /** @enum {string} */
+    'Profile.FieldViolationCode': 'REQUIRED' | 'TOO_LONG' | 'OUT_OF_RANGE' | 'UNSUPPORTED';
+    /** @enum {string} */
+    'Profile.StudentActivationField':
+      'preferredName' | 'birthYear' | 'currentGrade' | 'city' | 'defaultExplanationLanguage';
+    'Profile.StudentActivationResult': {
+      profile: components['schemas']['Profile.StudentProfile'];
+      authentication: components['schemas']['Auth.AuthResponse'];
+    };
+    /** @enum {string} */
+    'Profile.StudentGrade': 'GRADE_10' | 'GRADE_11' | 'GRADE_12' | 'OTHER';
+    'Profile.StudentProfile': {
+      id: components['schemas']['uuid'];
+      preferredName: string;
+      /** Format: int32 */
+      birthYear: number;
+      currentGrade: components['schemas']['Profile.StudentGrade'];
+      city: string;
+      defaultExplanationLanguage: components['schemas']['Profile.ExplanationLanguage'];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    'Profile.ValidationProblem': {
+      /** @enum {string} */
+      code: 'VALIDATION_FAILED';
+      violations: components['schemas']['Profile.FieldViolation'][];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
     /** Format: uuid */
     uuid: string;
   };
@@ -177,6 +255,15 @@ export interface operations {
           'application/json': components['schemas']['Problem'];
         };
       };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
     };
   };
   AuthApi_logout: {
@@ -197,6 +284,15 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
       };
     };
   };
@@ -220,6 +316,15 @@ export interface operations {
       };
       /** @description Access is unauthorized. */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
         headers: {
           [name: string]: unknown;
         };
@@ -269,6 +374,134 @@ export interface operations {
           'application/json': components['schemas']['Problem'];
         };
       };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  StudentProfileApi_activateStudentProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Profile.ActivateStudentProfileRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Profile.StudentActivationResult'];
+        };
+      };
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Profile.StudentActivationResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Profile.ValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  StudentProfileApi_getMyStudentProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Profile.StudentProfile'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Problem'];
+        };
+      };
     };
   };
 }
+type WithRequired<T, K extends keyof T> = T & {
+  [P in K]-?: T[P];
+};

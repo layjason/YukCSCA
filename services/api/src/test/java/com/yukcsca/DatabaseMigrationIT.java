@@ -20,10 +20,10 @@ class DatabaseMigrationIT extends PostgresIntegrationTestSupport {
         var statement =
             connection.prepareStatement(
                 "select count(*) from information_schema.tables "
-                    + "where table_name in ('auth_session', 'security_event')");
+                    + "where table_name in ('auth_session', 'security_event', 'student_profile')");
         var result = statement.executeQuery()) {
       assertThat(result.next()).isTrue();
-      assertThat(result.getInt(1)).isEqualTo(2);
+      assertThat(result.getInt(1)).isEqualTo(3);
     }
   }
 }

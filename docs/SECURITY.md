@@ -16,6 +16,14 @@ Minor-user identity and relationships, learning conversations, assessment answer
 - Allowed browser origins and refresh-cookie attributes are configured and integration-tested.
 - Expired and old revoked sessions are removed by a retention job.
 
+### Student activation
+
+- Student activation accepts only an authenticated account whose authoritative database role is `UNASSIGNED`; other assigned roles are rejected.
+- Profile creation and the one-way transition to `STUDENT` share one transaction and a unique account constraint. A same-account retry returns the existing profile instead of creating another.
+- Only birth year is collected for age-appropriate behavior, using a rolling Asia/Jakarta range corresponding to ages 12 through 21. It is not represented as legal age verification, and parent linking is not required by this slice.
+- Activation returns a replacement short-lived access token carrying the new role while leaving the refresh session unchanged. The durable success event contains the account identifier and event time, not submitted profile fields or Google credentials.
+- Student-profile request, response, activation, and shared current-user string representations redact personal fields. Validation failures are converted to stable field/code pairs before framework exception logging can render rejected values.
+
 ### Repository and delivery
 
 - Secrets and real user/student data are prohibited from the repository and logs.

@@ -8,7 +8,7 @@
 | --- | --- |
 | Requirement baseline | English/Chinese V1.1, 2026-07-20 |
 | Story baseline | `USER_STORIES.md` version 0.2.0 |
-| Audit date | 2026-07-21 |
+| Audit date | 2026-07-22 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
 | P2 exact-reference coverage | **1 / 3 functional sections** |
@@ -20,9 +20,9 @@ P0 exact-reference coverage became complete after adding explicit stories for pa
 | Requirement | Requirement title | Candidate stories | Coverage note |
 | --- | --- | --- | --- |
 | 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-PROF-03`, `US-ADMIN-01` | Google pilot is implemented; parent/admin provisioning are separate slices. Long-term email/password remains outside the pilot qualification. |
-| 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | Student and parent profile/edit/lifecycle stories exist; tutor profile remains aligned with P1 tutoring. |
-| 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | Exact reference present; slice shaping must still map every normative bullet and NFR consequence. |
-| 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | Exact reference present; slice shaping must still map every normative bullet and NFR consequence. |
+| 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | `VS-001` delivers student activation; editing, parent profile, and account lifecycle remain separate slices. |
+| 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | `VS-001` delivers the bounded `UNASSIGNED` to `STUDENT` transition; other provisioning and permissions remain separate slices. |
+| 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | `VS-001` persists the activation-time default explanation language; later editing, session override, and exam language remain separate. |
 | 2.1 | Parent Creates a Student Account | `US-FAM-00`, `US-FAM-04` | Split into parent creation and student activation so the two-actor lifecycle is demonstrable. |
 | 2.2 | Student Invites a Parent to Link | `US-FAM-01`, `US-FAM-02` | Exact reference present; slice shaping must still map every normative bullet and NFR consequence. |
 | 2.3 | Relationship Management | `US-FAM-03` | Exact reference present; slice shaping must still map every normative bullet and NFR consequence. |
