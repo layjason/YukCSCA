@@ -89,6 +89,7 @@ test('keeps the form local when birth year is outside the accepted range', () =>
   fireEvent.click(screen.getByRole('button', { name: /aktifkan akun siswa/i }));
 
   expect(screen.getByText(/usia 12 sampai 21 tahun/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/tahun lahir/i)).toHaveAttribute('aria-invalid', 'true');
   expect(activateStudentProfile).not.toHaveBeenCalled();
 });
 

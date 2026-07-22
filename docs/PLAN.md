@@ -4,19 +4,24 @@
 
 ## Plan metadata
 
-| Field                  | Value                                                                 |
-| ---------------------- | --------------------------------------------------------------------- |
-| Plan ID                | `YUK-P0-DELIVERY`                                                     |
-| Plan version           | `0.3.7`                                                               |
-| Updated                | 2026-07-22                                                            |
-| Current baseline       | `VS-001` student-account activation — `DONE`                          |
-| Current delivery slice | None — select and shape the next vertical slice before implementation |
-| Requirement baseline   | English/Chinese V1.1, 2026-07-20                                      |
-| Story baseline         | `USER_STORIES.md` version 0.2.0                                       |
+| Field                        | Value                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| Plan ID                      | `YUK-P0-DELIVERY`                                                                                  |
+| Plan version                 | `0.3.12`                                                                                           |
+| Updated                      | 2026-07-23                                                                                         |
+| Current baseline             | `VS-001` student-account activation — `DONE`                                                       |
+| Current experience milestone | [`PX-001`](delivery/PX-001-product-experience-baseline.md) product experience baseline — `SHAPING` |
+| Current production slice     | None — production capability work remains paused while `PX-001` is active                          |
+| Requirement baseline         | English/Chinese V1.1, 2026-07-20                                                                   |
+| Story baseline               | `USER_STORIES.md` version 0.2.0                                                                    |
 
 Plan versions are review markers for delivery-document changes. They are not npm/Maven package versions and are not TypeSpec API versions. This repository does not add pnpm checks solely to validate plan metadata; Git review, slice revision history, and acceptance evidence provide traceability.
 
 ## How to execute this plan
+
+When an experience milestone is active, execute its accepted `PX-NNN` brief through the complete integrated experience outcome. Ordered implementation steps manage risk but do not make a shell-only or disconnected-page subset an acceptable handoff. A PX milestone validates navigation and journey coherence; it does not implement or advance the production slices it references.
+
+For production delivery:
 
 1. Select one `PROPOSED` row whose dependencies are done or intentionally mocked at an approved boundary.
 2. Create its `docs/delivery/VS-NNN-*.md` from the slice template and move it to `SHAPING`.
@@ -27,6 +32,26 @@ Plan versions are review markers for delivery-document changes. They are not npm
 7. Mark `DONE` only when the actor completes the real flow and every acceptance criterion has named evidence.
 
 The full process and lifecycle are defined in [`docs/delivery/README.md`](delivery/README.md). Future rows remain planning hypotheses; do not create empty modules, TypeSpec files, or slice documents for them.
+
+## Experience, shaping, and contract horizons
+
+YukCSCA separates product-journey coherence from executable API commitment:
+
+1. **Experience horizon:** a non-production clickable prototype may connect multiple future student journeys to validate navigation, terminology, task order, responsive layout, and data needs. It follows root `DESIGN.md` and `docs/design/README.md`, uses explicit fixtures or mock adapters, and does not promise backend behavior.
+2. **Shaping horizon:** keep the active slice and at most two likely next slices detailed enough to understand dependencies and user handoffs. Future roadmap rows remain capability hypotheses.
+3. **Contract horizon:** add executable TypeSpec only for an accepted slice whose behavior, authorization, state transitions, failures, and privacy boundary are sufficiently resolved. Do not pre-build the full future API surface.
+
+After a slice reaches `CONTRACT_READY`, frontend implementation against a contract-backed mock and backend implementation against the same contract may proceed in parallel. Choose frontend-first when navigation or interaction is the main risk; choose backend-first when transactions, authorization, idempotency, money, or concurrency are the main risk. Integrate the real flow as early as possible.
+
+A prototype model must remain separate from generated API declarations. When a prototype area becomes an active production slice, either promote it deliberately to the accepted contract and feature structure or delete the exploratory code; do not let prototype assumptions silently become public API.
+
+## Experience milestones
+
+Experience milestones are non-production delivery work. They may connect several future story areas to validate a coherent journey, but they do not change product requirements, advertise backend availability, persist fabricated academic evidence, or advance any referenced production slice.
+
+| Milestone | User-observable outcome                                                                                                                                                                                                                                                                                                             | Owning brief                                                                              | Depends on                           | Status    |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ | --------- |
+| `PX-001`  | An activated student can complete goal-to-plan onboarding, use every primary P0 destination, finish a lesson/practice/mistake/remediation loop, and complete a representative mock lifecycle with state-complete, accessible, responsive behavior while fixture-backed academic behavior remains visibly Preview and non-persistent | [`PX-001-product-experience-baseline.md`](delivery/PX-001-product-experience-baseline.md) | `VS-000`, `VS-001`, root `DESIGN.md` | `SHAPING` |
 
 ## P0 delivery graph
 
@@ -174,6 +199,11 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 | Version | Date       | Change                                                                                                                                              |
 | ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.3.12  | 2026-07-23 | Removed PX-001 environment-flag gating; authenticated students access visibly labelled, in-memory preview routes directly.                          |
+| 0.3.11  | 2026-07-23 | Expanded PX-001 to the goal-to-remediation journey, representative mock lifecycle, and supporting language/family/access visibility.                |
+| 0.3.10  | 2026-07-23 | Made the complete connected P0 student experience—not an intermediate shell phase—the PX-001 acceptance boundary.                                   |
+| 0.3.9   | 2026-07-23 | Selected `PX-001` as the active non-production experience milestone and kept every referenced production capability slice `PROPOSED`.               |
+| 0.3.8   | 2026-07-22 | Added experience/shaping/contract horizons and the DESIGN.md-guided prototype lane without expanding the speculative TypeSpec surface.              |
 | 0.3.7   | 2026-07-22 | Closed `VS-001` after real-flow confirmation, persisted-state inspection, reproducible contract generation, focused final tests, and log redaction. |
 | 0.3.6   | 2026-07-22 | Moved `VS-001` to `VERIFYING` after integrating its contract, migration, backend flow, onboarding UI, and focused automated evidence.               |
 | 0.3.5   | 2026-07-22 | Moved `VS-001` to `CONTRACT_READY` after the profile TypeSpec compiled and generated declarations were reviewed.                                    |

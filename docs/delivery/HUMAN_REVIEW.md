@@ -92,7 +92,7 @@ Update only the artifact that owns the resolved information:
 | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Product obligation or qualification changed                                               | Both normative requirement documents, with explicit human approval      |
 | Actor/outcome decomposition or acceptance flow clarified without changing product meaning | `USER_STORIES.md` and `COVERAGE.md`                                     |
-| Slice boundary, state transition, error behavior, or implementation order resolved        | The active `VS-NNN-*.md` and its plan revision                          |
+| Delivery boundary, state transition, error behavior, or implementation order resolved     | The active `VS-NNN-*.md` or `PX-NNN-*.md` and its plan revision         |
 | Canonical domain term resolved                                                            | `docs/GLOSSARY.md`                                                      |
 | Public HTTP shape resolved                                                                | TypeSpec, only after the human gate permits contract work               |
 | Hard-to-reverse, non-obvious trade-off resolved                                           | A concise decision record under `docs/decisions/`                       |

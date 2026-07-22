@@ -136,6 +136,7 @@ export default function StudentActivationPage(): React.JSX.Element {
             value={currentGrade}
             onChange={(event) => setCurrentGrade(event.target.value)}
             aria-describedby={errors.currentGrade ? 'currentGrade-error' : undefined}
+            aria-invalid={Boolean(errors.currentGrade)}
           >
             <option value="">{t('studentActivation.selectPlaceholder')}</option>
             {grades.map((grade) => (
@@ -165,6 +166,7 @@ export default function StudentActivationPage(): React.JSX.Element {
             aria-describedby={
               errors.defaultExplanationLanguage ? 'defaultExplanationLanguage-error' : undefined
             }
+            aria-invalid={Boolean(errors.defaultExplanationLanguage)}
           >
             <option value="">{t('studentActivation.selectPlaceholder')}</option>
             {languages.map((language) => (
@@ -220,6 +222,7 @@ function ProfileFieldInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-describedby={error ? `${id}-error` : undefined}
+        aria-invalid={Boolean(error)}
         maxLength={maxLength}
         inputMode={inputMode}
       />

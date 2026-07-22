@@ -26,7 +26,7 @@ Browser ──► Nginx web container ──► Spring Boot API ──► Postgr
 | Area           | Current implementation                                                                      |
 | -------------- | ------------------------------------------------------------------------------------------- |
 | Workspace      | pnpm 11 workspace with one lockfile; Node.js 24                                             |
-| Web            | React 19, Vite 8, strict TypeScript 5.9, React Router, i18next                              |
+| Web            | React 19, Vite 8, strict TypeScript 5.9, React Router, i18next, lightweight CSS tokens      |
 | API contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations                             |
 | API            | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway                                      |
 | Data           | PostgreSQL 18                                                                               |
@@ -69,6 +69,8 @@ app -> features -> shared
 - `app` owns routing and composition.
 - A feature owns its UI, state, validation, and API adapter.
 - `shared` contains reusable primitives and may not import a feature.
+- Root `DESIGN.md` is the persistent visual/interaction contract. `apps/web/src/styles.css` currently mirrors its semantic colors, radii, spacing, focus, and motion values as CSS custom properties; no external UI or animation framework is active.
+- The current design foundation uses a neutral/white application canvas, restrained contextual pastel blocks, flat surfaces, visible focus, and reduced-motion support. Feature code should consume semantic variables rather than create a parallel palette.
 - Access tokens remain in memory; refresh credentials are server-managed `HttpOnly` cookies.
 - The shell resolves interface language from a valid local choice, then a supported browser locale, then English; explicit interface-language changes persist locally.
 - Student-profile default explanation language is persisted during activation. Interface locale and per-subject exam language remain separate concepts and are not inferred from it.
