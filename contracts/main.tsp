@@ -3,6 +3,7 @@ import "@typespec/openapi";
 import "@typespec/openapi3";
 import "./common.tsp";
 import "./auth.tsp";
+import "./profile.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;

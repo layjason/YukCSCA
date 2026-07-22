@@ -42,7 +42,7 @@ An HTTP change is complete only when TypeSpec, generated artifacts, backend tran
 
 ## Backend boundaries
 
-Only the `identity` module exists. It contains users, Google identities, YukCSCA sessions, roles, security events, and session retention.
+The backend currently has `identity` and `profile` modules. Identity owns users, Google identities, YukCSCA sessions, roles, security events, and session retention. Profile owns student-profile state and activation validation. Profile reaches identity only through a narrow application-facing account activation API; it does not import identity persistence or infrastructure.
 
 ```text
 <module>/
@@ -69,7 +69,7 @@ app -> features -> shared
 - `shared` contains reusable primitives and may not import a feature.
 - Access tokens remain in memory; refresh credentials are server-managed `HttpOnly` cookies.
 - The shell resolves interface language from a valid local choice, then a supported browser locale, then English; explicit interface-language changes persist locally.
-- Profile-backed explanation-language and per-subject exam-language preferences are not implemented yet. They remain separate P0 concepts and must not be inferred from the interface locale.
+- Student-profile default explanation language is persisted during activation. Interface locale and per-subject exam language remain separate concepts and are not inferred from it.
 - Vite and Nginx expose the same web-origin proxy surface: `/api` plus health-only `/actuator/health`; other Actuator routes are not proxied through the web application.
 
 ## Implemented identity slice
@@ -88,7 +88,9 @@ Sign out         ──► POST /api/v1/auth/logout  ──► revoke session + 
 
 YukCSCA then issues a short-lived access JWT and a rotating refresh token. Refresh tokens are stored only as hashes, replay revokes the token family, logout revokes the session, authentication endpoints are rate-limited, security events are persisted, and expired/old revoked sessions are cleaned up.
 
-New accounts are `UNASSIGNED`. The repository does not yet implement the P0 learning loop, broader role onboarding, parent linking, content management, assessment, billing, tutoring, or AI behavior.
+New accounts are `UNASSIGNED`. The web routes them to the student-activation form. `POST /api/v1/student-profile` atomically creates the profile and moves the account to `STUDENT`; it returns canonical current-user state plus a replacement access token without rotating the refresh session. `GET /api/v1/student-profile/me` exposes only the authenticated student's own profile. Flyway migration `V3__student_profile.sql` owns the profile table and its unique account relationship.
+
+The repository does not yet implement profile editing, other role onboarding, the P0 learning loop, parent linking, content management, assessment, billing, tutoring, or AI behavior.
 
 ## External integrations
 

@@ -14,7 +14,7 @@ export default function DashboardPage(): React.JSX.Element {
             name: user?.displayName ?? user?.email ?? t('dashboard.fallbackName'),
           })}
         </h1>
-        <p>{t('dashboard.onboarding')}</p>
+        <p>{t(user?.role === 'STUDENT' ? 'dashboard.studentReady' : 'dashboard.onboarding')}</p>
         <dl>
           <div>
             <dt>{t('dashboard.email')}</dt>

@@ -13,10 +13,43 @@
     "description": "使用 Google 登录，开始角色设置、诊断和个性化学习计划。",
     "privacy": "Google 仅用于基础身份验证，YukCSCA 会签发自己的应用会话。"
   },
+  "studentActivation": {
+    "eyebrow": "学生账号开通",
+    "title": "开通学生资料",
+    "description": "请确认 YukCSCA 为个性化备考所需的最少信息。",
+    "preferredName": "常用姓名或昵称",
+    "birthYear": "出生年份",
+    "currentGrade": "当前年级",
+    "city": "所在城市",
+    "defaultExplanationLanguage": "默认讲解语言",
+    "selectPlaceholder": "请选择",
+    "submit": "开通学生账号",
+    "submitting": "正在开通…",
+    "privacyNotice": "出生年份仅用于提供适龄体验，不构成法定年龄验证。本次开通无需关联家长账号。",
+    "grades": {
+      "GRADE_10": "10 年级",
+      "GRADE_11": "11 年级",
+      "GRADE_12": "12 年级",
+      "OTHER": "其他"
+    },
+    "languages": {
+      "id": "印度尼西亚语",
+      "en": "英语",
+      "zh-CN": "简体中文"
+    },
+    "errors": {
+      "required": "此项为必填项。",
+      "tooLong": "此项内容过长。",
+      "birthYearRange": "请输入对应 12 至 21 岁的出生年份。",
+      "unsupported": "请选择支持的选项。",
+      "requestFailed": "暂时无法开通学生资料，请重试且不要重新输入敏感信息。"
+    }
+  },
   "dashboard": {
     "title": "初始控制台",
     "welcome": "欢迎，{{name}}。",
     "onboarding": "下一步：选择角色并完善学习资料。",
+    "studentReady": "学生资料已开通，后续学习步骤将在这里显示。",
     "logout": "退出登录",
     "fallbackName": "同学",
     "email": "邮箱",

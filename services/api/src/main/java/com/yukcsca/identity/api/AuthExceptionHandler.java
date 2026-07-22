@@ -3,14 +3,18 @@ package com.yukcsca.identity.api;
 import com.yukcsca.identity.application.AuthConflictException;
 import com.yukcsca.identity.application.InvalidCredentialException;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = AuthController.class)
 public class AuthExceptionHandler {
+  private static final Logger LOGGER = LoggerFactory.getLogger(AuthExceptionHandler.class);
+
   @ExceptionHandler(InvalidCredentialException.class)
   ProblemDetail invalidCredential(InvalidCredentialException exception) {
     return problem(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIAL", exception.getMessage());
@@ -24,6 +28,17 @@ public class AuthExceptionHandler {
   @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
   ProblemDetail invalidRequest(Exception exception) {
     return problem(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Request validation failed.");
+  }
+
+  @ExceptionHandler(Exception.class)
+  ProblemDetail internalFailure(Exception exception) {
+    // Exception messages can contain provider or persistence details, so log only the type.
+    LOGGER.error(
+        "Unexpected authentication operation failure ({})", exception.getClass().getName());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR",
+        "Authentication could not be completed.");
   }
 
   private static ProblemDetail problem(HttpStatus status, String code, String detail) {

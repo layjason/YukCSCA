@@ -44,3 +44,9 @@ model TooManyRequestsResponse {
   @header("Retry-After") retryAfter: string;
   @body body: Problem;
 }
+
+@error
+model InternalServerErrorResponse {
+  @statusCode statusCode: 500;
+  @body body: Problem;
+}

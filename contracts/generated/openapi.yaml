@@ -50,6 +50,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       requestBody:
         required: true
         content:
@@ -74,6 +80,12 @@ paths:
               required: true
               schema:
                 type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /api/v1/auth/me:
     get:
       operationId: AuthApi_me
@@ -87,6 +99,12 @@ paths:
                 $ref: '#/components/schemas/Auth.CurrentUser'
         '401':
           description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
           content:
             application/json:
               schema:
@@ -132,6 +150,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /api/v1/student-profile:
+    post:
+      operationId: StudentProfileApi_activateStudentProfile
+      description: Activates the authenticated unassigned account as a student. A same-account retry returns the existing profile and replacement access state.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile.StudentActivationResult'
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile.StudentActivationResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile.ValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Profile.ActivateStudentProfileRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/student-profile/me:
+    get:
+      operationId: StudentProfileApi_getMyStudentProfile
+      description: Returns the authenticated student's own profile.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile.StudentProfile'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
 components:
   schemas:
     Auth.AuthResponse:
@@ -194,13 +300,6 @@ components:
         - PARENT
         - TUTOR
         - ADMIN
-    ForbiddenResponse:
-      type: object
-      required:
-        - body
-      properties:
-        body:
-          $ref: '#/components/schemas/Problem'
     Problem:
       type: object
       required:
@@ -220,6 +319,127 @@ components:
           type: string
         code:
           type: string
+    Profile.ActivateStudentProfileRequest:
+      type: object
+      required:
+        - preferredName
+        - birthYear
+        - currentGrade
+        - city
+        - defaultExplanationLanguage
+      properties:
+        preferredName:
+          type: string
+          minLength: 1
+          maxLength: 160
+          description: The student's explicitly confirmed preferred name. Provider profile data is only an editable suggestion.
+        birthYear:
+          type: integer
+          format: int32
+          description: A birth year in the inclusive range from the current Asia/Jakarta year minus 21 through the current year minus 12.
+        currentGrade:
+          $ref: '#/components/schemas/Profile.StudentGrade'
+        city:
+          type: string
+          minLength: 1
+          maxLength: 120
+        defaultExplanationLanguage:
+          $ref: '#/components/schemas/Profile.ExplanationLanguage'
+    Profile.ExplanationLanguage:
+      type: string
+      enum:
+        - id
+        - en
+        - zh-CN
+    Profile.FieldViolation:
+      type: object
+      required:
+        - field
+        - code
+      properties:
+        field:
+          $ref: '#/components/schemas/Profile.StudentActivationField'
+        code:
+          $ref: '#/components/schemas/Profile.FieldViolationCode'
+    Profile.FieldViolationCode:
+      type: string
+      enum:
+        - REQUIRED
+        - TOO_LONG
+        - OUT_OF_RANGE
+        - UNSUPPORTED
+    Profile.StudentActivationField:
+      type: string
+      enum:
+        - preferredName
+        - birthYear
+        - currentGrade
+        - city
+        - defaultExplanationLanguage
+    Profile.StudentActivationResult:
+      type: object
+      required:
+        - profile
+        - authentication
+      properties:
+        profile:
+          $ref: '#/components/schemas/Profile.StudentProfile'
+        authentication:
+          $ref: '#/components/schemas/Auth.AuthResponse'
+    Profile.StudentGrade:
+      type: string
+      enum:
+        - GRADE_10
+        - GRADE_11
+        - GRADE_12
+        - OTHER
+    Profile.StudentProfile:
+      type: object
+      required:
+        - id
+        - preferredName
+        - birthYear
+        - currentGrade
+        - city
+        - defaultExplanationLanguage
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        preferredName:
+          type: string
+        birthYear:
+          type: integer
+          format: int32
+        currentGrade:
+          $ref: '#/components/schemas/Profile.StudentGrade'
+        city:
+          type: string
+        defaultExplanationLanguage:
+          $ref: '#/components/schemas/Profile.ExplanationLanguage'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Profile.ValidationProblem:
+      type: object
+      required:
+        - code
+        - violations
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Profile.FieldViolation'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
     uuid:
       type: string
       format: uuid

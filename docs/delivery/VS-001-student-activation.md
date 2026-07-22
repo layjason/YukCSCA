@@ -2,19 +2,19 @@
 
 ## Metadata
 
-| Field                   | Value                                                                                          |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| Status                  | `AWAITING_DECISION`                                                                            |
-| Human gate              | `AWAITING_DECISION`                                                                            |
-| Plan revision           | 2                                                                                              |
-| Updated                 | 2026-07-21                                                                                     |
-| Primary actor           | Authenticated `UNASSIGNED` user                                                                |
-| Story IDs               | `US-PROF-01`                                                                                   |
-| Requirement sections    | 1.2 Student profile; 1.3 Roles and permissions; 1.4 default explanation language only          |
-| Depends on              | `VS-000`                                                                                       |
-| TypeSpec source         | Proposed `contracts/profile.tsp`; shared auth model update in `contracts/auth.tsp` if required |
-| Proposed API operations | `activateStudentProfile`, `getMyStudentProfile`                                                |
-| Implementation owner    | Unassigned                                                                                     |
+| Field                | Value                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| Status               | `DONE`                                                                                |
+| Human gate           | `APPROVED`                                                                            |
+| Plan revision        | 10                                                                                    |
+| Updated              | 2026-07-22                                                                            |
+| Primary actor        | Authenticated `UNASSIGNED` user                                                       |
+| Story IDs            | `US-PROF-01`                                                                          |
+| Requirement sections | 1.2 Student profile; 1.3 Roles and permissions; 1.4 default explanation language only |
+| Depends on           | `VS-000`                                                                              |
+| TypeSpec source      | `contracts/profile.tsp`; shared auth response reused from `contracts/auth.tsp`        |
+| API operations       | `activateStudentProfile`, `getMyStudentProfile`                                       |
+| Implementation owner | Profile module, using a narrow identity application API                               |
 
 ## User-observable outcome
 
@@ -29,7 +29,7 @@ Default explanation language is included because the normative student profile a
 ## In scope
 
 - Student role choice from an `UNASSIGNED` account.
-- Minimum profile fields: nickname/name, birth year, current grade, city, and default explanation language.
+- Minimum profile fields: confirmed preferred name, birth year, current grade, city, and default explanation language.
 - Atomic creation of exactly one learner profile and transition from `UNASSIGNED` to `STUDENT`.
 - Reading the authenticated student's own profile after activation.
 - Field validation, role conflict handling, retry safety, security/audit event, and localized mobile UI states.
@@ -47,7 +47,9 @@ Default explanation language is included because the normative student profile a
 
 - `VS-000` authentication and `/api/v1/auth/me` are operational.
 - Supported explanation-language enum is Bahasa Indonesia, English, and Simplified Chinese.
-- Product decision required before contract readiness: exact grade representation and accepted birth-year range.
+- `currentGrade` is required and uses `GRADE_10`, `GRADE_11`, `GRADE_12`, or `OTHER`.
+- `birthYear` is required and must fall from `currentYear(Asia/Jakarta) - 21` through `currentYear(Asia/Jakarta) - 12`, inclusive; it supports age-appropriate behavior but is not legal age verification.
+- `preferredName` is required. The UI may prefill it from the Google display name, but the student must be able to edit and explicitly submit the value; provider data is only a suggestion and is not treated as a legal name.
 - The activation UI must not infer student status from interface locale or Google profile data.
 
 ## User flow
@@ -71,15 +73,15 @@ Default explanation language is included because the normative student profile a
 
 ## Documentation sufficiency review
 
-| Review area                                                   | Evidence inspected                                            | Status  | Gap or decision ID                                                                                  |
-| ------------------------------------------------------------- | ------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------- |
-| End-to-end actor flow and adjacent handoffs                   | Requirements 1.2–1.4; `US-PROF-01`; existing Google-auth flow | `CLEAR` | Parent activation, goals, and diagnostics are explicitly later slices.                              |
-| Requirement/story coverage and exclusions                     | `USER_STORIES.md`; `COVERAGE.md`; slice scope                 | `CLEAR` | The student activation loop is represented without combining profile editing or subject enrollment. |
-| Domain terms, states, invariants, and ownership               | `GLOSSARY.md`; auth contract; architecture/module rules       | `GAP`   | `D-04` module ownership; `D-03` profile-name semantics.                                             |
-| Authorization, privacy, minors, consent, and retention        | Requirements; security guide; target audience                 | `GAP`   | `D-02` accepted birth-year range and validation basis.                                              |
-| Failure, retry, idempotency, stale state, and recovery        | Story acceptance criteria; auth/current-user behavior         | `CLEAR` | Unique account/profile constraint plus authoritative server role are defined.                       |
-| Contract, migration, external side effects, and compatibility | Existing auth TypeSpec and current-user response              | `GAP`   | `D-01` grade representation; `D-05` post-activation identity/session response.                      |
-| Acceptance evidence and observability                         | Acceptance matrix and test/observability sections             | `CLEAR` | Exact test names are added during implementation.                                                   |
+| Review area                                                   | Evidence inspected                                            | Status  | Gap or decision ID                                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| End-to-end actor flow and adjacent handoffs                   | Requirements 1.2–1.4; `US-PROF-01`; existing Google-auth flow | `CLEAR` | Parent activation, goals, and diagnostics are explicitly later slices.                                   |
+| Requirement/story coverage and exclusions                     | `USER_STORIES.md`; `COVERAGE.md`; slice scope                 | `CLEAR` | The student activation loop is represented without combining profile editing or subject enrollment.      |
+| Domain terms, states, invariants, and ownership               | `GLOSSARY.md`; auth contract; architecture/module rules       | `CLEAR` | `D-03` and `D-04` resolved: the profile module owns `preferredName` and profile lifecycle.               |
+| Authorization, privacy, minors, consent, and retention        | Requirements; security guide; target audience                 | `CLEAR` | `D-02` resolved with birth-year minimization, a rolling age-appropriate range, and no legal-age claim.   |
+| Failure, retry, idempotency, stale state, and recovery        | Story acceptance criteria; auth/current-user behavior         | `CLEAR` | Unique account/profile constraint plus authoritative server role are defined.                            |
+| Contract, migration, external side effects, and compatibility | Existing auth TypeSpec and current-user response              | `CLEAR` | `D-05` resolved: activation returns replacement access-token state without rotating the refresh session. |
+| Acceptance evidence and observability                         | Acceptance matrix and test/observability sections             | `CLEAR` | Exact test names are added during implementation.                                                        |
 
 ## Human decision gate
 
@@ -87,18 +89,18 @@ Questions are asked one at a time under [`HUMAN_REVIEW.md`](HUMAN_REVIEW.md), wi
 
 | Field             | Value                                                                                                           |
 | ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Gate status       | `AWAITING_DECISION`                                                                                             |
+| Gate status       | `APPROVED`                                                                                                      |
 | Decision owner    | Product owner for `D-01`–`D-03`; architecture owner for `D-04`–`D-05`                                           |
 | Approval scope    | Student activation profile fields, validation semantics, module ownership, and post-activation identity refresh |
-| Approval evidence | Not yet approved                                                                                                |
+| Approval evidence | `D-01`–`D-05` resolved by the product/architecture owner on 2026-07-22; Option A approved for every decision    |
 
-| ID     | Blocking question and scenario                                                                                                                                                        | Agent recommendation                                                                                                                                                             | Owner            | Status | Resolution and artifacts updated |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ------ | -------------------------------- |
-| `D-01` | How is `currentGrade` represented when Indonesian students may describe grade and school stage differently? This changes the wire enum, localization, storage, and future plan rules. | Use a bounded `10`, `11`, `12`, plus `OTHER`/`NOT_SET` only if onboarding may continue without a standard grade; avoid free text.                                                | Product          | `OPEN` |                                  |
-| `D-02` | Which birth years are accepted, and is birth year collected only for age-appropriate product behavior rather than legal age verification?                                             | Store birth year only; validate against a rolling plausible school-age range with an explicit exception path rather than collecting full birth date.                             | Product/security | `OPEN` |                                  |
-| `D-03` | When Google provides a name, must the student explicitly confirm/edit it before activation, or may the server copy it automatically?                                                  | Prefill an editable display name and require submission confirmation; never treat provider name as an immutable legal name.                                                      | Product          | `OPEN` |                                  |
-| `D-04` | Does student-profile activation belong to the identity module or a new profile/onboarding module?                                                                                     | Create the profile/onboarding module with a narrow identity application port because profile lifecycle will grow independently; do not import identity persistence.              | Architecture     | `OPEN` |                                  |
-| `D-05` | After role transition, does activation return refreshed current-user state, rotate the access token, or require a separate `/auth/me` refresh?                                        | Return the created profile plus canonical current-user state and refresh the client cache; rotate tokens only if authorization is encoded exclusively in immutable token claims. | Architecture     | `OPEN` |                                  |
+| ID     | Blocking question and scenario                                                                                                                                                        | Agent recommendation                                                                                                                                                   | Owner            | Status     | Resolution and artifacts updated                                                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `D-01` | How is `currentGrade` represented when Indonesian students may describe grade and school stage differently? This changes the wire enum, localization, storage, and future plan rules. | Require a bounded `GRADE_10`, `GRADE_11`, `GRADE_12`, or `OTHER`; do not accept free text or `NOT_SET`.                                                                | Product          | `RESOLVED` | Option A approved; this slice, its TypeSpec enum, persistence, validation, and localization own the resolution.                                       |
+| `D-02` | Which birth years are accepted, and is birth year collected only for age-appropriate product behavior rather than legal age verification?                                             | Store birth year only; accept a rolling range equivalent to ages 12–21 with explicit exception guidance rather than collecting full birth date.                        | Product/security | `RESOLVED` | Option A approved; use the Asia/Jakarta calendar year, reject out-of-range values without persistence, and show non-data-collecting support guidance. |
+| `D-03` | When Google provides a name, must the student explicitly confirm/edit it before activation, or may the server copy it automatically?                                                  | Prefill an editable preferred name and require submission confirmation; never treat provider name as an immutable legal name.                                          | Product          | `RESOLVED` | Option A approved; the editable Google value is only a suggestion, and the submitted `preferredName` is owned by the student profile.                 |
+| `D-04` | Does student-profile activation belong to the identity module or a new profile/onboarding module?                                                                                     | Create a profile module with a narrow identity application API because profile lifecycle will grow independently; do not import identity persistence.                  | Architecture     | `RESOLVED` | Option A approved; the profile module owns `StudentProfile`, and one transaction coordinates persistence through identity's application boundary.     |
+| `D-05` | After role transition, does activation return refreshed current-user state, rotate the access token, or require a separate `/auth/me` refresh?                                        | Return the profile, canonical current-user state, and a replacement access token because role authorization is encoded in the JWT; keep the refresh session unchanged. | Architecture     | `RESOLVED` | Option A approved; first activation returns the new state, while a same-account retry returns the existing profile and fresh access state safely.     |
 
 ## State model
 
@@ -125,7 +127,7 @@ UserAccount.role = STUDENT
 - Database uniqueness enforces one profile per account.
 - Concurrent activation requests produce one success and one deterministic already-activated/conflict outcome; they never create duplicate rows.
 - The server role is authoritative. A stale browser showing onboarding must recover by refreshing current-user/profile state.
-- No client-generated idempotency key is required if the state transition and unique constraint provide equivalent duplicate prevention; decide and document before contract readiness.
+- No client-generated idempotency key is required. First activation returns `201`; a same-account retry after successful activation returns `200` with the existing profile, canonical current user, and a newly issued access token. Other assigned roles receive `409`.
 
 ## TypeSpec contract plan
 
@@ -133,31 +135,33 @@ The TypeSpec operation set must compile and be reviewed before backend or fronte
 
 ### Operations
 
-| Operation                | Method and route                                            | Auth                      | Success                                         | Required failures                                                                 |
-| ------------------------ | ----------------------------------------------------------- | ------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
-| `activateStudentProfile` | `POST /api/v1/student-profile` or accepted resource route   | Bearer; role `UNASSIGNED` | `201` with canonical profile/current-user state | `400`, `401`, `409`, optional `422` only if repository error conventions adopt it |
-| `getMyStudentProfile`    | `GET /api/v1/student-profile/me` or accepted resource route | Bearer; role `STUDENT`    | `200` canonical profile                         | `401`, `403`, `404` only if a valid Student role can lack a profile by design     |
+| Operation                | Method and route                 | Auth                                                  | Success                                                                                   | Required failures          |
+| ------------------------ | -------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------- |
+| `activateStudentProfile` | `POST /api/v1/student-profile`   | Bearer; role checked from authoritative account state | `201` on creation or `200` on same-account retry, with profile and replacement auth state | `400`, `401`, `409`, `500` |
+| `getMyStudentProfile`    | `GET /api/v1/student-profile/me` | Bearer; role `STUDENT`                                | `200` canonical profile                                                                   | `401`, `403`, `500`        |
 
 Do not create a generic role-management endpoint. This use case activates only a student profile and owns the role transition.
 
 ### Models and validation
 
-| Model                           | Important fields                                                                            | Validation/nullability                                                          | Ownership                 |
-| ------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------- |
-| `ActivateStudentProfileRequest` | `displayName`/`nickname`, `birthYear`, `currentGrade`, `city`, `defaultExplanationLanguage` | Exact lengths/enums/ranges resolved before contract readiness; no exam language | Profile module            |
-| `StudentProfile`                | account/profile IDs, canonical fields, created/updated timestamps if user-visible           | No sensitive contact fields added speculatively                                 | Profile module            |
-| `ExplanationLanguage`           | `id`, `en`, `zh-CN` or agreed wire enum                                                     | Must remain distinct from interface and exam language enums                     | Shared product vocabulary |
+| Model                           | Important fields                                                                   | Validation/nullability                                                                                                                                                           | Ownership                 |
+| ------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `ActivateStudentProfileRequest` | `preferredName`, `birthYear`, `currentGrade`, `city`, `defaultExplanationLanguage` | `preferredName` is required with maximum 160 characters; `city` is required with maximum 120 characters; `birthYear` uses the resolved rolling inclusive range; no exam language | Profile module            |
+| `StudentProfile`                | account/profile IDs, canonical fields, created/updated timestamps if user-visible  | No sensitive contact fields added speculatively                                                                                                                                  | Profile module            |
+| `StudentGrade`                  | `GRADE_10`, `GRADE_11`, `GRADE_12`, `OTHER`                                        | Required; no free text and no `NOT_SET`                                                                                                                                          | Profile module            |
+| `ExplanationLanguage`           | `id`, `en`, `zh-CN` or agreed wire enum                                            | Must remain distinct from interface and exam language enums                                                                                                                      | Shared product vocabulary |
 
-### Contract decisions required
+### Contract decisions
 
-- Resolve human decisions `D-01`, `D-02`, `D-03`, and `D-05` before TypeSpec work begins.
-- Confirm canonical wire names for supported languages and stable problem codes against existing contract conventions; escalate only if the sources conflict.
+- Implement resolved `D-01`–`D-05` exactly as recorded above.
+- Use the existing interface locale codes as wire values for the separate explanation-language enum: `id`, `en`, and `zh-CN`.
+- Use stable problem codes and the existing shared problem shape; validation responses additionally identify fields through bounded violations.
 
 ## Backend plan
 
-- Create the first profile/onboarding module only with this use case, following `api/application/domain/infrastructure` packages.
-- Use an application service as the transaction boundary. It reads the authenticated account through an application-facing identity port, validates `UNASSIGNED`, creates the profile, and changes the account role atomically.
-- Do not import the identity repository or JPA entity directly from another module. Add a narrow identity application port/use case if profile is a separate module; alternatively justify ownership within identity for this first transition.
+- Create the first `profile` module with this use case, following `api/application/domain/infrastructure` packages; onboarding remains a frontend flow rather than a backend ownership bucket.
+- Use the profile application service as the transaction boundary. It reads and transitions the authenticated account through a narrow identity application API, validates `UNASSIGNED`, creates the profile, and changes the account role atomically.
+- The profile module must not import an identity repository, JPA entity, or infrastructure package. Identity exposes only the application-facing account state and role-transition behavior required by this use case.
 - Add a Flyway migration for the student profile and a unique account foreign key.
 - Add explicit authorization and exception mapping with stable problem codes.
 - Record a minimal activation event containing account ID, resulting role, time, and outcome; do not log birth year, city, or raw request bodies.
@@ -167,6 +171,8 @@ Do not create a generic role-management endpoint. This use case activates only a
 - Add `src/features/onboarding/student-activation/` only with this slice.
 - Route authenticated `UNASSIGNED` users to the role/activation entry and Student users away from it based on server state.
 - Use generated OpenAPI schema types; no handwritten wire DTO.
+- Prefill `preferredName` from the current Google-backed display name as an editable suggestion and require the student to submit the confirmed value.
+- Replace the in-memory access token and current-user state from the activation response; do not call refresh or rotate the refresh cookie after success.
 - Keep interface locale initialization separate. The explanation-language field defaults only through an explicit product rule, not browser locale inference, unless the user confirms it.
 - Provide mobile-first labels, keyboard navigation, semantic errors, submission progress, retry, conflict recovery, and all three interface-language resources.
 - Do not build goal/subject/diagnostic screens in this slice.
@@ -176,6 +182,7 @@ Do not create a generic role-management endpoint. This use case activates only a
 - Only the authenticated account may activate itself in this slice.
 - The endpoint accepts no account ID from the browser.
 - Collect birth year rather than full birth date unless the requirements later require more precision.
+- Use birth year only for age-appropriate behavior, not as proof of legal age; reject values outside the resolved rolling range without persistence and provide localized support guidance without automatically creating a support record.
 - The activation notice must explain the profile purpose and that linking a parent is not mandatory in the first version.
 - Request fields and validation errors must not be written to logs as complete bodies.
 - A role conflict must not reveal another user's account or relationship data.
@@ -195,7 +202,7 @@ Do not create a generic role-management endpoint. This use case activates only a
 - TypeSpec compilation and generated OpenAPI review.
 - Migration integration test and unique account constraint.
 - HTTP success test proving role plus profile atomically.
-- Validation tests for every accepted boundary.
+- Validation tests for every accepted boundary, including both rolling birth-year limits and the year immediately outside each limit.
 - Unauthorized and already-assigned role tests.
 - Concurrent/repeated activation test.
 - Current-user/profile read consistency test after activation and refresh.
@@ -227,29 +234,39 @@ Do not create a generic role-management endpoint. This use case activates only a
 
 ## Definition of done
 
-- [ ] Documentation sufficiency review is complete.
-- [ ] Human decisions `D-01`–`D-05` are resolved and the approval scope is recorded.
-- [ ] TypeSpec is accepted and compiles before implementation starts.
-- [ ] The real application completes the activation flow end to end.
-- [ ] Profile creation and role transition are atomic and duplicate-safe.
-- [ ] Current identity state is consistent after activation and later sign-in.
-- [ ] Acceptance criteria have named backend/frontend/journey evidence.
-- [ ] Authorization, privacy, minor protection, and sensitive logging were reviewed.
-- [ ] Mobile, accessibility, localization, failure, retry, and stale states were verified.
-- [ ] Architecture, plan index, and coverage status reflect the delivered slice.
+- [x] Documentation sufficiency review is complete.
+- [x] Human decisions `D-01`–`D-05` are resolved and the approval scope is recorded.
+- [x] TypeSpec is accepted and compiles before implementation starts.
+- [x] The real application completes the activation flow end to end.
+- [x] Profile creation and role transition are atomic and duplicate-safe.
+- [x] Current identity state is consistent after activation and later sign-in.
+- [x] Acceptance criteria have named backend/frontend/journey evidence.
+- [x] Authorization, privacy, minor protection, and sensitive logging were reviewed.
+- [x] Mobile, accessibility, localization, failure, retry, and stale states were verified.
+- [x] Architecture, plan index, and coverage status reflect the delivered slice.
 
 ## Verification evidence
 
-| Evidence               | Result                 |
-| ---------------------- | ---------------------- |
-| Contract build         | Not run — shaping only |
-| Backend tests          | Not run — shaping only |
-| Frontend tests         | Not run — shaping only |
-| End-to-end/manual flow | Not run — shaping only |
+| Evidence               | Result                                                                                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract build         | `pnpm generate` passed; TypeSpec/OpenAPI/frontend declarations regenerated with unchanged hashes and were reviewed against AC-01 through AC-05.                                     |
+| Backend tests          | Focused Maven verify passed: 7 profile/migration integration tests and 16 unit tests, including rejected-value and request/response/current-user log-redaction regressions.         |
+| Frontend tests         | Focused Vitest passed: 3 files and 8 tests covering routing, success/client and server validation, stale-state recovery, bearer use, and token replacement; targeted ESLint passed. |
+| Frontend build         | Strict TypeScript production build passed with Vite; labels, localized field/error states, focus styling, and responsive layout were reviewed.                                      |
+| Local stack            | API and web containers were healthy at Flyway v3; the proxied activation endpoint enforced authentication and the served bundle contained the activation route.                     |
+| End-to-end/manual flow | Product owner reported no noticeable problem in the real VS-001 flow; count-only persistence inspection found 2 `STUDENT` accounts, 2 profiles, and 2 activation events.            |
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                          |
-| -------- | ---------- | --------------------------------------------------------------------------------------------------------------- |
-| 2        | 2026-07-21 | Added documentation-sufficiency review and bounded human decision gate; moved the slice to `AWAITING_DECISION`. |
-| 1        | 2026-07-21 | Initial concrete shaping plan after the implemented Google-auth slice.                                          |
+| Revision | Date       | Change                                                                                                            |
+| -------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| 10       | 2026-07-22 | Closed the slice after real-flow confirmation and final focused checks; added profile/current-user log redaction. |
+| 9        | 2026-07-22 | Integrated the profile module, migration, onboarding UI, and focused automated evidence; moved to `VERIFYING`.    |
+| 8        | 2026-07-22 | Added and reviewed the compiled TypeSpec boundary; moved the slice to `CONTRACT_READY`.                           |
+| 7        | 2026-07-22 | Resolved `D-05`: activation returns replacement access state without rotating the refresh session; gate approved. |
+| 6        | 2026-07-22 | Resolved `D-04`: a dedicated profile module owns profile state and uses a narrow identity application API.        |
+| 5        | 2026-07-22 | Resolved `D-03`: prefill an editable name suggestion and require explicit `preferredName` confirmation.           |
+| 4        | 2026-07-22 | Resolved `D-02`: collect birth year only and accept a rolling Asia/Jakarta range equivalent to ages 12–21.        |
+| 3        | 2026-07-22 | Resolved `D-01`: student grade is required and uses `GRADE_10`, `GRADE_11`, `GRADE_12`, or `OTHER`.               |
+| 2        | 2026-07-21 | Added documentation-sufficiency review and bounded human decision gate; moved the slice to `AWAITING_DECISION`.   |
+| 1        | 2026-07-21 | Initial concrete shaping plan after the implemented Google-auth slice.                                            |

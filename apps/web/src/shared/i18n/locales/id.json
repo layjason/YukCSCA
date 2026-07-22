@@ -13,10 +13,43 @@
     "description": "Masuk dengan Google untuk memulai onboarding, diagnostik, dan rencana belajar personal.",
     "privacy": "Kami memakai Google hanya untuk autentikasi dasar. YukCSCA menerbitkan sesi aplikasinya sendiri."
   },
+  "studentActivation": {
+    "eyebrow": "Aktivasi siswa",
+    "title": "Aktifkan profil siswa",
+    "description": "Konfirmasikan informasi minimum yang diperlukan YukCSCA untuk menyesuaikan persiapan belajarmu.",
+    "preferredName": "Nama panggilan",
+    "birthYear": "Tahun lahir",
+    "currentGrade": "Kelas saat ini",
+    "city": "Kota",
+    "defaultExplanationLanguage": "Bahasa penjelasan utama",
+    "selectPlaceholder": "Pilih opsi",
+    "submit": "Aktifkan akun siswa",
+    "submitting": "Mengaktifkan…",
+    "privacyNotice": "Tahun lahir digunakan untuk pengalaman yang sesuai usia, bukan sebagai verifikasi usia resmi. Menghubungkan akun orang tua tidak wajib untuk aktivasi ini.",
+    "grades": {
+      "GRADE_10": "Kelas 10",
+      "GRADE_11": "Kelas 11",
+      "GRADE_12": "Kelas 12",
+      "OTHER": "Lainnya"
+    },
+    "languages": {
+      "id": "Bahasa Indonesia",
+      "en": "English",
+      "zh-CN": "Bahasa Mandarin Sederhana"
+    },
+    "errors": {
+      "required": "Kolom ini wajib diisi.",
+      "tooLong": "Nilai ini terlalu panjang.",
+      "birthYearRange": "Masukkan tahun lahir yang sesuai dengan usia 12 sampai 21 tahun.",
+      "unsupported": "Pilih salah satu opsi yang didukung.",
+      "requestFailed": "Profil siswa belum dapat diaktifkan. Coba lagi tanpa memasukkan ulang informasi sensitif."
+    }
+  },
   "dashboard": {
     "title": "Dasbor awal",
     "welcome": "Selamat datang, {{name}}.",
     "onboarding": "Langkah berikutnya: pilih peran dan lengkapi profil belajar.",
+    "studentReady": "Profil siswamu sudah aktif. Langkah belajar berikutnya akan tampil di sini.",
     "logout": "Keluar",
     "fallbackName": "Siswa",
     "email": "Email",

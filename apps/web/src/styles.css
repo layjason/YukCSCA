@@ -32,6 +32,7 @@ button {
 }
 .login-card,
 .dashboard-card,
+.onboarding-card,
 .center-card {
   width: min(100%, 560px);
   padding: clamp(24px, 5vw, 48px);
@@ -41,12 +42,14 @@ button {
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
 }
 .login-card h1,
-.dashboard-card h1 {
+.dashboard-card h1,
+.onboarding-card h1 {
   margin: 8px 0 16px;
   line-height: 1.1;
 }
 .login-card p,
-.dashboard-card p {
+.dashboard-card p,
+.onboarding-card > p {
   color: #475569;
   line-height: 1.65;
 }
@@ -91,4 +94,64 @@ button {
   color: white;
   background: #111827;
   cursor: pointer;
+}
+.onboarding-shell {
+  align-items: start;
+}
+.onboarding-card {
+  width: min(100%, 640px);
+  padding: clamp(24px, 5vw, 44px);
+}
+.onboarding-card form {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+}
+.onboarding-card label {
+  margin-top: 10px;
+  color: #334155;
+  font-weight: 700;
+}
+.onboarding-card input,
+.onboarding-card select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #94a3b8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #0f172a;
+  background: white;
+  font: inherit;
+}
+.onboarding-card input:focus-visible,
+.onboarding-card select:focus-visible,
+.onboarding-card button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+}
+.onboarding-card button {
+  min-height: 48px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  color: white;
+  background: #1d4ed8;
+  cursor: pointer;
+  font-weight: 800;
+}
+.onboarding-card button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.privacy-note {
+  margin: 18px 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.field-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
 }

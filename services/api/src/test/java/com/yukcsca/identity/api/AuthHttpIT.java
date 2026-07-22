@@ -82,6 +82,25 @@ class AuthHttpIT extends PostgresIntegrationTestSupport {
   }
 
   @Test
+  void returningGoogleUserCanSignInAgainWithoutCreatingADuplicateAccount() throws Exception {
+    stubValidGoogleIdentity("returning-student", "returning@example.com");
+
+    MvcResult firstLogin = login("10.0.0.11").andExpect(status().isOk()).andReturn();
+    JsonNode firstBody = json.readTree(firstLogin.getResponse().getContentAsString());
+    Cookie firstRefresh = firstLogin.getResponse().getCookie("yukcsca_refresh");
+    assertThat(firstRefresh).isNotNull();
+
+    mvc.perform(post("/api/v1/auth/logout").cookie(firstRefresh)).andExpect(status().isNoContent());
+
+    MvcResult secondLogin = login("10.0.0.12").andExpect(status().isOk()).andReturn();
+    JsonNode secondBody = json.readTree(secondLogin.getResponse().getContentAsString());
+
+    assertThat(secondBody.get("user").get("id").asText())
+        .isEqualTo(firstBody.get("user").get("id").asText());
+    assertThat(users.count()).isEqualTo(1);
+  }
+
+  @Test
   void invalidGoogleCredentialReturnsProblemAndRecordsSecurityEvent() throws Exception {
     when(googleTokenVerifier.verify(VALID_CREDENTIAL))
         .thenThrow(new InvalidCredentialException("Google credential is invalid or expired."));

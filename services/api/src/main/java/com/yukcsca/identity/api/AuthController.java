@@ -56,11 +56,12 @@ public class AuthController {
   public AuthResponse googleLogin(
       @Valid @RequestBody GoogleLoginRequest request, HttpServletResponse response) {
     UserAccount user = authService.loginWithGoogle(request.credential());
+    AuthResponse authResponse = responseFor(user);
     SessionService.SessionToken session = sessionService.create(user);
     securityEvents.record(SecurityEventType.GOOGLE_LOGIN_SUCCEEDED, user.getId());
     setRefreshCookie(response, session.rawToken(), properties.refreshTokenTtl());
     disableCaching(response);
-    return responseFor(user);
+    return authResponse;
   }
 
   @PostMapping("/refresh")

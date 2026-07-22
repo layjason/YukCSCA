@@ -25,6 +25,6 @@ class SensitiveDtoLoggingTest {
 
     assertThat(response.toString())
         .contains("accessToken=<redacted>", "tokenType=Bearer", "expiresInSeconds=900")
-        .doesNotContain(response.accessToken());
+        .doesNotContain(response.accessToken(), user.email(), user.displayName());
   }
 }

@@ -37,9 +37,14 @@ export function AuthProvider({ children }: PropsWithChildren): React.JSX.Element
     setStatus('anonymous');
   }, []);
 
+  const replaceCurrentUser = useCallback((currentUser: CurrentUser) => {
+    setUser(currentUser);
+    setStatus('authenticated');
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, login, logout }),
-    [login, logout, status, user],
+    () => ({ status, user, login, logout, replaceCurrentUser }),
+    [login, logout, replaceCurrentUser, status, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
