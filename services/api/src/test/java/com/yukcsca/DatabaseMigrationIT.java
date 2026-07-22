@@ -2,16 +2,18 @@ package com.yukcsca;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.yukcsca.support.PostgresIntegrationTestSupport;
+import com.yukcsca.support.PostgresTestConfiguration;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
 @SpringBootTest
-class DatabaseMigrationIT extends PostgresIntegrationTestSupport {
+@Import(PostgresTestConfiguration.class)
+class DatabaseMigrationIT {
   @Autowired DataSource dataSource;
 
   @Test
