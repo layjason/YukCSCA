@@ -69,8 +69,9 @@ Feature implementation starts from the selected row in `docs/PLAN.md` and its `d
 Before TypeSpec or implementation:
 
 1. Read only the linked requirement sections, stories, and `docs/requirements/COVERAGE.md`.
-2. Complete the slice's **documentation-sufficiency review** in the slice template.
-3. If material product, privacy, money, state, contract, or architecture meaning remains unresolved, follow [`docs/delivery/HUMAN_REVIEW.md`](delivery/HUMAN_REVIEW.md): record stable decision IDs, mark the gate `AWAITING_DECISION`, ask one bounded question at a time, and do not implement the affected behavior until the gate is `NOT_REQUIRED` or `APPROVED` for the recorded scope.
+2. For UI work, read root `DESIGN.md` and [`docs/design/README.md`](design/README.md), then record the route entry/exit, primary action, full state set, motion intent, mobile behavior, and recovery behavior in the slice frontend plan.
+3. Complete the slice's **documentation-sufficiency review** in the slice template.
+4. If material product, privacy, money, state, contract, or architecture meaning remains unresolved, follow [`docs/delivery/HUMAN_REVIEW.md`](delivery/HUMAN_REVIEW.md): record stable decision IDs, mark the gate `AWAITING_DECISION`, ask one bounded question at a time, and do not implement the affected behavior until the gate is `NOT_REQUIRED` or `APPROVED` for the recorded scope.
 
 For public HTTP work, the slice reaches `CONTRACT_READY` only after blocking human decisions are resolved, the TypeSpec operation set compiles, and generated OpenAPI has been reviewed. Then implement migration/domain/application behavior, HTTP adapters, frontend flow, tests, observability, and documentation as one coherent slice.
 
@@ -86,6 +87,20 @@ pnpm check:generated
 ```
 
 Public API work updates the contract, backend HTTP boundary, frontend generated types/client behavior, and positive plus negative/edge tests together. Regeneration must leave no diff.
+
+## Design and visual verification
+
+Root [`DESIGN.md`](../DESIGN.md) defines the visual and interaction language; [`docs/design/README.md`](design/README.md) defines the agent workflow. Product behavior still comes from the accepted slice and requirements.
+
+For material UI changes, verify the smallest applicable matrix:
+
+- one narrow mobile viewport and one desktop viewport;
+- pointer and keyboard completion;
+- normal and reduced motion;
+- ready plus relevant loading, validation, empty, failure, stale, and success states;
+- Indonesian, English, and Simplified Chinese on layout-sensitive screens.
+
+Use CSS custom properties from `apps/web/src/styles.css`. Update `DESIGN.md` first when adding or changing a shared semantic token. Do not add an unpinned network-dependent `@google/design.md` command to required CI; the format and CLI are still alpha and should be pinned deliberately before activation.
 
 ## Formatting
 

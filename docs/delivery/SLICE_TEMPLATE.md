@@ -57,6 +57,7 @@ Complete this before contract work. Use `CLEAR`, `GAP`, or `CONFLICT`; a `GAP` o
 | Review area                                                   | Evidence inspected | Status | Gap or decision ID |
 | ------------------------------------------------------------- | ------------------ | ------ | ------------------ |
 | End-to-end actor flow and adjacent handoffs                   |                    |        |                    |
+| Experience flow, screen states, recovery, and navigation      |                    |        |                    |
 | Requirement/story coverage and exclusions                     |                    |        |                    |
 | Domain terms, states, invariants, and ownership               |                    |        |                    |
 | Authorization, privacy, minors, consent, and retention        |                    |        |                    |
@@ -133,9 +134,24 @@ TypeSpec must be written and compile before implementation begins when the slice
 
 - Route and navigation entry:
 - Feature folder ownership:
+- Contract-backed mock or real API boundary:
 - Forms and validation authority:
 - Loading, empty, error, retry, and stale states:
 - Mobile, keyboard, screen-reader, localization, and low-bandwidth behavior:
+
+## Experience and interaction plan
+
+Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../design/README.md).
+
+- User goal and entry context:
+- Exit state and next handoff:
+- One primary action and secondary actions:
+- Dominant surface/pastel semantic role:
+- State transition and acknowledgement behavior:
+- Purposeful micro-interactions or animation:
+- Reduced-motion behavior:
+- Prototype-only assumptions, if any:
+- Mobile/desktop and Indonesian/English/Chinese visual-review evidence:
 
 ## Authorization, privacy, and safety
 
@@ -168,13 +184,13 @@ TypeSpec must be written and compile before implementation begins when the slice
 ## Implementation sequence
 
 1. Complete the documentation sufficiency review and resolve all blocking human decisions.
-2. Write/update TypeSpec and review generated OpenAPI.
-3. Add migration and domain/application behavior.
-4. Implement HTTP adapter and integration tests.
-5. Implement frontend flow using generated types.
-6. Add component and journey coverage.
-7. Verify observability, accessibility, localization, privacy, and failure behavior.
-8. Update architecture, traceability, and this plan's evidence.
+2. Resolve the route, task flow, full UI state set, and interaction intent; use a non-production prototype only when it reduces material navigation uncertainty.
+3. Write/update TypeSpec and review generated OpenAPI.
+4. Implement frontend against a contract-backed mock and backend/persistence against the same contract in risk-first order.
+5. Integrate the real HTTP flow early and add HTTP/component coverage.
+6. Add journey coverage for the actor-observable closed loop.
+7. Verify observability, accessibility, localization, mobile/desktop layout, reduced motion, privacy, and failure recovery.
+8. Update architecture, traceability, design tokens when changed, and this plan's evidence.
 
 ## Definition of done
 
@@ -186,7 +202,9 @@ TypeSpec must be written and compile before implementation begins when the slice
 - [ ] Backend, frontend, migration, and tests implement the same states and errors.
 - [ ] All acceptance criteria have named evidence.
 - [ ] Authorization, privacy, minor safety, and audit behavior were reviewed.
-- [ ] Mobile, accessibility, localization, low-bandwidth, and failure states were verified where applicable.
+- [ ] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and failure states were verified where applicable.
+- [ ] The UI follows root `DESIGN.md`, uses semantic tokens, avoids prohibited generic/AI-like patterns, and records any intentional deviation.
+- [ ] The preceding and following journey handoff are coherent; prototype-only behavior is isolated from production contracts and routes.
 - [ ] Observability contains no unnecessary private content.
 - [ ] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, and `docs/requirements/COVERAGE.md` reflect the result.
 - [ ] Exact verification commands and results are recorded.

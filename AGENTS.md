@@ -5,11 +5,12 @@ This is the repository-wide source of truth for coding agents. A nearer `AGENTS.
 ## Quick reference
 
 - The paired requirements are normative; `PLAN.md`, user stories, and slice plans are not.
-- Implement feature work only from one accepted vertical-slice plan under `docs/delivery/`; shape the slice first when none exists.
+- Implement production feature work only from one accepted `VS-NNN` vertical-slice plan under `docs/delivery/`. A non-production product-journey prototype may proceed only from one accepted `PX-NNN` delivery brief in the same directory; shape the owning brief first when none exists.
 - Use the bounded human-decision gate when material behavior is unresolved; investigate first, ask one question at a time, and do not ask about reversible implementation details.
 - Preserve existing staged, unstaged, and untracked user work.
 - Keep the modular monolith and add no speculative infrastructure or empty modules.
 - Change public HTTP behavior contract-first and regenerate; never patch generated artifacts.
+- For UI work, read root `DESIGN.md` and `docs/design/README.md`; preserve the simple white/pastel academic language and purposeful motion.
 - Keep interface, explanation, and exam languages independent.
 - Treat minor data, authorization, content provenance, and external-provider output as security boundaries.
 - Add success plus failure/authorization/edge coverage, then run the applicable repository gates.
@@ -28,24 +29,26 @@ The product is not a generic chatbot, an open tutor marketplace, or an official 
 Read before feature implementation:
 
 1. `README.md` and `docs/README.md`
-2. The active row in `docs/PLAN.md` and its `docs/delivery/VS-NNN-*.md` file
+2. The active row in `docs/PLAN.md` and its owning `docs/delivery/VS-NNN-*.md` or `docs/delivery/PX-NNN-*.md` file
 3. Only the linked sections of both requirement documents and the linked stories `docs/requirements/USER_STORIES.md`
 4. `docs/requirements/COVERAGE.md` for known decomposition gaps
 5. `docs/delivery/HUMAN_REVIEW.md` when the slice has a decision gate or the documents appear insufficient
 6. `docs/GLOSSARY.md` and any related records under `docs/decisions/`
-7. `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEVELOPMENT.md`
-8. The nearest directory-level `AGENTS.md`
-9. `contracts/` for public HTTP behavior, then current implementation and tests
+7. Root `DESIGN.md` and `docs/design/README.md` for UI/interaction work
+8. `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/DEVELOPMENT.md`
+9. The nearest directory-level `AGENTS.md`
+10. `contracts/` for public HTTP behavior, then current implementation and tests
 
-If the requested feature has no accepted slice file, perform shaping first. Do not infer an implementation scope from the full backlog or broad requirement section alone.
+If the requested work has no accepted delivery brief, perform shaping first. Do not infer an implementation scope from the full backlog or broad requirement section alone.
 
 Apply repository authorities in this order:
 
 1. Bilingual product requirements—the sole normative product authority
-2. Accepted vertical-slice plan—the bounded implementation brief and acceptance mapping
+2. Accepted delivery brief—the bounded implementation and acceptance mapping; a `PX-NNN` brief may explore presentation and journey continuity but never creates production product meaning
 3. TypeSpec—the executable public HTTP boundary for that accepted slice
-4. Current-state architecture/security/development constraints
-5. Existing implementation and tests
+4. `DESIGN.md`—the visual and interaction authority for already accepted behavior; it never creates product behavior
+5. Current-state architecture/security/development constraints
+6. Existing implementation and tests
 
 `docs/requirements/YukCSCA平台需求_EN.md` and `docs/requirements/YukCSCA平台需求_CN.md` are semantically paired. Neither language is secondary. `docs/PLAN.md` is explicitly non-normative and never supplies acceptance criteria. If the requirements disagree, or another artifact conflicts with them, stop the affected work, cite the conflict, and resolve the requirements rather than silently choosing a meaning.
 
@@ -68,14 +71,15 @@ Do not ask for reversible implementation details, routine repository conventions
 
 `docs/GLOSSARY.md` is the canonical domain-language file for this repository; do not add a parallel `CONTEXT.md`. Create concise records under `docs/decisions/` only for choices that are costly to reverse, surprising without context, and based on a real trade-off.
 
-## Vertical-slice execution
+## Delivery execution
 
 - `docs/PLAN.md` is a versioned roadmap and status index. It does not contain detailed implementation tasks for every future feature.
-- Every accepted feature has one plan file under `docs/delivery/` using `SLICE_TEMPLATE.md`. Do not create empty future slice files.
-- A slice must name one user-observable outcome, exact story/requirement references, exclusions, states, TypeSpec operations, persistence ownership, authorization/privacy rules, failure/idempotency behavior, observability, test evidence, and ordered implementation steps.
+- Every accepted production feature has one `VS-NNN` plan file under `docs/delivery/` using `SLICE_TEMPLATE.md`. An accepted non-production journey prototype has one `PX-NNN` brief there. Do not create empty future briefs.
+- A production slice must name one user-observable outcome, exact story/requirement references, exclusions, states, TypeSpec operations, persistence ownership, authorization/privacy rules, failure/idempotency behavior, observability, test evidence, and ordered implementation steps.
+- A `PX-NNN` brief may reference several future stories only to test navigation, terminology, responsive hierarchy, and handoffs. It must isolate fixtures from generated contracts and production features, identify every fabricated state, forbid production persistence and semantic claims, define one integrated experience outcome plus an ordered implementation sequence, and state promotion/deletion criteria. A shell-only or disconnected-page subset may not be marked complete when the brief accepts a connected journey. Completing it never advances a referenced `VS-NNN` row.
 - A public-HTTP slice may not enter implementation before its status is `CONTRACT_READY` and its TypeSpec compiles.
 - Keep TypeSpec organized by product/domain boundary, not duplicated per plan. The slice references exact operations and source files.
-- Mark a slice `DONE` only after the actor completes the real application flow and every acceptance criterion has named evidence. Code presence or generated OpenAPI alone is insufficient.
+- Mark a production slice `DONE` only after the actor completes the real application flow and every acceptance criterion has named evidence. Mark a PX milestone `DONE` only after its explicitly non-production outcome and isolation criteria have named evidence. Code presence or generated OpenAPI alone is insufficient.
 - Increment the slice `Plan revision` when scope, state transitions, contract shape, or acceptance mapping materially changes. Git history records the diff; revision history records the reason.
 - Do not add pnpm scripts, generated files, or lockfile logic solely to validate plan/story documentation metadata.
 
@@ -169,10 +173,14 @@ Use an application-facing port or explicit public use case instead.
 - Use strict TypeScript and `.tsx`; do not add JavaScript application files.
 - Do not use explicit `any`. Use `unknown` only at an external or untyped boundary, then validate or narrow it immediately. Do not add marker comments as a substitute for a real type.
 - Reuse generated OpenAPI schema types instead of handwritten wire DTOs.
-- Follow `app -> features -> shared`. A feature owns its UI, state, validation, and API adapter; `shared` may not import a feature.
+- Follow `app -> features | prototype -> shared` when an accepted `PX-NNN` brief is active. `features` owns implemented production behavior, `prototype` owns explicitly exploratory fixtures and flows, the two may not import each other, and `shared` may import neither. Without an active PX brief, keep `app -> features -> shared`.
 - Keep access tokens in memory. Never persist refresh tokens or Google credentials in browser storage.
 - All user-visible text belongs in localization resources. Preserve Bahasa Indonesia, English, and Simplified Chinese support without coupling interface, explanation, and exam languages.
 - Build mobile-first and bandwidth-conscious behavior with keyboard access, semantic HTML, visible focus, and basic screen-reader support.
+- Treat root `DESIGN.md` as the visual/interaction contract. Use the shared CSS variables, one dominant action per task region, restrained pastel context surfaces, and purposeful motion with reduced-motion support.
+- Do not default to gradients, glassmorphism, glow, abstract blobs, random pastel cards, equal-weight dashboard card grids, decorative AI/robot imagery, or perpetual animation.
+- Design the complete task sequence and its initial, loading, empty, validation, failure, stale, success, and recovery states before polishing an isolated component.
+- Add or change a semantic design token in `DESIGN.md` first, then mirror it in the shared CSS foundation; do not scatter raw color values through feature styles.
 - Comment decisions, invariants, and non-obvious edge cases—not every function. Code comments and API documentation use clear English; user-facing content is localized.
 - Add component/API tests for a success state and at least one validation, failure, accessibility, or edge state.
 - Use workspace-pinned commands through pnpm: `pnpm exec prettier`, `pnpm lint:web`, `pnpm typecheck:web`, and `pnpm test:web`. Do not rely on unrelated globally installed Node tools.
@@ -209,6 +217,7 @@ Use an application-facing port or explicit public use case instead.
 - Update affected documentation in the same change as code, contract, configuration, or operational behavior.
 - Keep the bilingual requirement documents semantically synchronized. When requirements themselves change, update `Version`/`版本` and `Date`/`日期` in both files using the actual system date in `Asia/Jakarta`, and record a concise reason in an existing change-history section. Do not invent timestamps or add per-edit changelogs to every documentation file.
 - Update `ARCHITECTURE.md` when current implementation boundaries or active technology change. Update `PLAN.md` for plan version, slice order/status, dependencies, experiments, or dependency candidates; update the active slice file for detailed implementation evidence.
+- Update root `DESIGN.md` when the shared visual language, semantic tokens, component roles, motion rules, or anti-pattern boundaries change. Keep application CSS aligned and do not create a competing feature-level design system.
 - Update `docs/requirements/USER_STORIES.md` and `COVERAGE.md` when requirement decomposition changes. Never copy a broad requirement section into a slice without selecting a closed-loop story.
 - Documentation must distinguish configured, locally executed, CI-proven, and remotely enforced status. Never describe a staged workflow or repository setting as active before it exists remotely.
 - Do not change product requirements merely to make an implementation or test pass. Surface the mismatch instead.
@@ -235,7 +244,7 @@ pnpm build:web
 cd services/api && ./mvnw --batch-mode verify
 ```
 
-Run `make verify` for contract-to-frontend, cross-stack, dependency, shared configuration, or release-baseline changes. Run Playwright for user journeys and Compose build/health/smoke checks for container or cross-service behavior.
+Run `make verify` for contract-to-frontend, cross-stack, dependency, shared configuration, or release-baseline changes. Run Playwright for user journeys and Compose build/health/smoke checks for container or cross-service behavior. For material UI changes, also verify a narrow mobile viewport, a desktop viewport, keyboard focus order, reduced motion, and layout-sensitive content in Indonesian, English, and Chinese; record visual evidence when the active slice requires it.
 
 ## Git and delivery protocol
 

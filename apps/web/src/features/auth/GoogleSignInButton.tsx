@@ -35,6 +35,7 @@ export default function GoogleSignInButton({
       }
 
       target.replaceChildren();
+      const buttonWidth = Math.min(320, Math.max(240, Math.floor(target.clientWidth)));
       googleIdentity.initialize({
         client_id: clientId,
         callback: ({ credential }) => {
@@ -51,7 +52,7 @@ export default function GoogleSignInButton({
       googleIdentity.renderButton(target, {
         theme: 'outline',
         size: 'large',
-        width: 320,
+        width: buttonWidth,
         text: 'continue_with',
         shape: 'pill',
       });
@@ -67,7 +68,11 @@ export default function GoogleSignInButton({
 
   return (
     <div>
-      <div ref={buttonRef} aria-label={t('auth.continueWithGoogle')} />
+      <div
+        className="google-sign-in-slot"
+        ref={buttonRef}
+        aria-label={t('auth.continueWithGoogle')}
+      />
       {error ? (
         <p className="error-message" role="alert">
           {error}
