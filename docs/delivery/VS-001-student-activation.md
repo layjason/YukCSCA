@@ -6,8 +6,8 @@
 | -------------------- | ------------------------------------------------------------------------------------- |
 | Status               | `DONE`                                                                                |
 | Human gate           | `APPROVED`                                                                            |
-| Plan revision        | 10                                                                                    |
-| Updated              | 2026-07-22                                                                            |
+| Plan revision        | 11                                                                                    |
+| Updated              | 2026-07-23                                                                            |
 | Primary actor        | Authenticated `UNASSIGNED` user                                                       |
 | Story IDs            | `US-PROF-01`                                                                          |
 | Requirement sections | 1.2 Student profile; 1.3 Roles and permissions; 1.4 default explanation language only |
@@ -156,6 +156,7 @@ Do not create a generic role-management endpoint. This use case activates only a
 - Implement resolved `D-01`–`D-05` exactly as recorded above.
 - Use the existing interface locale codes as wire values for the separate explanation-language enum: `id`, `en`, and `zh-CN`.
 - Use stable problem codes and the existing shared problem shape; validation responses additionally identify fields through bounded violations.
+- Emit every advertised problem response as `application/problem+json`; bearer-filter `401` responses include `WWW-Authenticate`, while all problem bodies include a stable application `code`.
 
 ## Backend plan
 
@@ -251,6 +252,7 @@ Do not create a generic role-management endpoint. This use case activates only a
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Contract build         | `pnpm generate` passed; TypeSpec/OpenAPI/frontend declarations regenerated with unchanged hashes and were reviewed against AC-01 through AC-05.                                     |
 | Backend tests          | Focused Maven verify passed: 7 profile/migration integration tests and 16 unit tests, including rejected-value and request/response/current-user log-redaction regressions.         |
+| Problem responses      | All 7 `StudentProfileHttpIT` cases pass; focused assertions cover `400`, `401`, `403`, and `409` media types and fields plus the bearer challenge on security-filter `401`.         |
 | Frontend tests         | Focused Vitest passed: 3 files and 8 tests covering routing, success/client and server validation, stale-state recovery, bearer use, and token replacement; targeted ESLint passed. |
 | Frontend build         | Strict TypeScript production build passed with Vite; labels, localized field/error states, focus styling, and responsive layout were reviewed.                                      |
 | Local stack            | API and web containers were healthy at Flyway v3; the proxied activation endpoint enforced authentication and the served bundle contained the activation route.                     |
@@ -258,15 +260,16 @@ Do not create a generic role-management endpoint. This use case activates only a
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                            |
-| -------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| 10       | 2026-07-22 | Closed the slice after real-flow confirmation and final focused checks; added profile/current-user log redaction. |
-| 9        | 2026-07-22 | Integrated the profile module, migration, onboarding UI, and focused automated evidence; moved to `VERIFYING`.    |
-| 8        | 2026-07-22 | Added and reviewed the compiled TypeSpec boundary; moved the slice to `CONTRACT_READY`.                           |
-| 7        | 2026-07-22 | Resolved `D-05`: activation returns replacement access state without rotating the refresh session; gate approved. |
-| 6        | 2026-07-22 | Resolved `D-04`: a dedicated profile module owns profile state and uses a narrow identity application API.        |
-| 5        | 2026-07-22 | Resolved `D-03`: prefill an editable name suggestion and require explicit `preferredName` confirmation.           |
-| 4        | 2026-07-22 | Resolved `D-02`: collect birth year only and accept a rolling Asia/Jakarta range equivalent to ages 12–21.        |
-| 3        | 2026-07-22 | Resolved `D-01`: student grade is required and uses `GRADE_10`, `GRADE_11`, `GRADE_12`, or `OTHER`.               |
-| 2        | 2026-07-21 | Added documentation-sufficiency review and bounded human decision gate; moved the slice to `AWAITING_DECISION`.   |
-| 1        | 2026-07-21 | Initial concrete shaping plan after the implemented Google-auth slice.                                            |
+| Revision | Date       | Change                                                                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| 11       | 2026-07-23 | Aligned profile problem media types and added focused `400`, `401`, `403`, and `409` contract-conformance evidence. |
+| 10       | 2026-07-22 | Closed the slice after real-flow confirmation and final focused checks; added profile/current-user log redaction.   |
+| 9        | 2026-07-22 | Integrated the profile module, migration, onboarding UI, and focused automated evidence; moved to `VERIFYING`.      |
+| 8        | 2026-07-22 | Added and reviewed the compiled TypeSpec boundary; moved the slice to `CONTRACT_READY`.                             |
+| 7        | 2026-07-22 | Resolved `D-05`: activation returns replacement access state without rotating the refresh session; gate approved.   |
+| 6        | 2026-07-22 | Resolved `D-04`: a dedicated profile module owns profile state and uses a narrow identity application API.          |
+| 5        | 2026-07-22 | Resolved `D-03`: prefill an editable name suggestion and require explicit `preferredName` confirmation.             |
+| 4        | 2026-07-22 | Resolved `D-02`: collect birth year only and accept a rolling Asia/Jakarta range equivalent to ages 12–21.          |
+| 3        | 2026-07-22 | Resolved `D-01`: student grade is required and uses `GRADE_10`, `GRADE_11`, `GRADE_12`, or `OTHER`.                 |
+| 2        | 2026-07-21 | Added documentation-sufficiency review and bounded human decision gate; moved the slice to `AWAITING_DECISION`.     |
+| 1        | 2026-07-21 | Initial concrete shaping plan after the implemented Google-auth slice.                                              |

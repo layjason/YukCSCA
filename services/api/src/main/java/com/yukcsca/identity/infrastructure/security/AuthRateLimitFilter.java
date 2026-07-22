@@ -11,7 +11,7 @@ import java.time.Clock;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 public final class AuthRateLimitFilter extends OncePerRequestFilter {
@@ -22,12 +22,17 @@ public final class AuthRateLimitFilter extends OncePerRequestFilter {
   private final ConcurrentHashMap<String, Window> clients = new ConcurrentHashMap<>();
   private final AuthRateLimitProperties properties;
   private final SecurityEventService securityEvents;
+  private final SecurityProblemResponseWriter problemWriter;
   private final Clock clock;
 
   public AuthRateLimitFilter(
-      AuthRateLimitProperties properties, SecurityEventService securityEvents, Clock clock) {
+      AuthRateLimitProperties properties,
+      SecurityEventService securityEvents,
+      SecurityProblemResponseWriter problemWriter,
+      Clock clock) {
     this.properties = properties;
     this.securityEvents = securityEvents;
+    this.problemWriter = problemWriter;
     this.clock = clock;
   }
 
@@ -48,16 +53,13 @@ public final class AuthRateLimitFilter extends OncePerRequestFilter {
     }
 
     securityEvents.record(SecurityEventType.AUTH_RATE_LIMITED, null);
-    response.setStatus(429);
     response.setHeader(
         HttpHeaders.RETRY_AFTER, Long.toString(Math.max(1, properties.window().toSeconds())));
-    response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-    response
-        .getWriter()
-        .write(
-            "{\"status\":429,\"title\":\"Too Many Requests\","
-                + "\"detail\":\"Authentication request limit exceeded.\","
-                + "\"code\":\"AUTH_RATE_LIMITED\"}");
+    problemWriter.write(
+        response,
+        HttpStatus.TOO_MANY_REQUESTS,
+        "AUTH_RATE_LIMITED",
+        "Authentication request limit exceeded.");
   }
 
   private String clientKey(HttpServletRequest request, long now) {

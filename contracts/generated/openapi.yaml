@@ -24,19 +24,24 @@ paths:
         '400':
           description: The server could not understand the request due to invalid syntax.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '401':
           description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '409':
           description: The request conflicts with the current state of the server.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '429':
@@ -47,13 +52,13 @@ paths:
               schema:
                 type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: Server error
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
       requestBody:
@@ -83,7 +88,7 @@ paths:
         '500':
           description: Server error
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
   /api/v1/auth/me:
@@ -99,14 +104,19 @@ paths:
                 $ref: '#/components/schemas/Auth.CurrentUser'
         '401':
           description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: Server error
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
       security:
@@ -135,8 +145,13 @@ paths:
                 $ref: '#/components/schemas/Auth.AuthResponse'
         '401':
           description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '429':
@@ -147,13 +162,13 @@ paths:
               schema:
                 type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: Server error
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
   /api/v1/student-profile:
@@ -177,25 +192,30 @@ paths:
         '400':
           description: The server could not understand the request due to invalid syntax.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Profile.ValidationProblem'
         '401':
           description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '409':
           description: The request conflicts with the current state of the server.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: Server error
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
       requestBody:
@@ -220,20 +240,25 @@ paths:
                 $ref: '#/components/schemas/Profile.StudentProfile'
         '401':
           description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '403':
           description: Access is forbidden.
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
         '500':
           description: Server error
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
       security:
@@ -305,6 +330,7 @@ components:
       required:
         - status
         - title
+        - code
       properties:
         status:
           type: integer

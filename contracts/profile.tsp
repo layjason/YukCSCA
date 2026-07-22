@@ -43,6 +43,7 @@ model ValidationProblem extends YukCSCA.Problem {
 @error
 model StudentProfileValidationResponse {
   @statusCode statusCode: 400;
+  @header contentType: "application/problem+json";
   @body body: ValidationProblem;
 }
 

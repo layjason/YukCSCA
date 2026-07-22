@@ -13,6 +13,7 @@ Minor-user identity and relationships, learning conversations, assessment answer
 - Google credentials are verified server-side for signature, issuer, audience, expiry, and verified email and bound by provider `sub`.
 - YukCSCA access tokens are short-lived; refresh tokens are random, rotating, hashed at rest, and revoked on logout or replay.
 - Authentication endpoints use bounded per-process rate limiting and emit durable security events.
+- Authentication and authorization failures use canonical `application/problem+json` bodies with stable codes. Bearer-filter failures preserve RFC 6750 `WWW-Authenticate` challenges, and rate-limit failures preserve `Retry-After`.
 - Allowed browser origins and refresh-cookie attributes are configured and integration-tested.
 - Expired and old revoked sessions are removed by a retention job.
 

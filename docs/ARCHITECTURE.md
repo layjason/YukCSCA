@@ -40,6 +40,8 @@ TypeSpec under `contracts/` is the only hand-edited public HTTP definition. Gene
 
 An HTTP change is complete only when TypeSpec, generated artifacts, backend transport behavior, frontend client behavior, and relevant tests agree.
 
+Public error bodies use the shared TypeSpec problem shape and `application/problem+json`. Stable application codes are required. Spring Security preserves the RFC 6750 bearer challenge while adding the same structured body for filter-chain `401` and `403` responses; authentication rate limiting uses that canonical writer and also returns `Retry-After`.
+
 ## Backend boundaries
 
 The backend currently has `identity` and `profile` modules. Identity owns users, Google identities, YukCSCA sessions, roles, security events, and session retention. Profile owns student-profile state and activation validation. Profile reaches identity only through a narrow application-facing account activation API; it does not import identity persistence or infrastructure.

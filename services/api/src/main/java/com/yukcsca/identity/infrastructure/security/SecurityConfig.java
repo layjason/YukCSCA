@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,11 +22,16 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 public class SecurityConfig {
@@ -59,7 +65,11 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(
-      HttpSecurity http, JwtAuthenticationConverter converter, AuthRateLimitFilter rateLimitFilter)
+      HttpSecurity http,
+      JwtAuthenticationConverter converter,
+      AuthRateLimitFilter rateLimitFilter,
+      AuthenticationEntryPoint problemAuthenticationEntryPoint,
+      AccessDeniedHandler problemAccessDeniedHandler)
       throws Exception {
     return http.csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults())
@@ -79,15 +89,60 @@ public class SecurityConfig {
                     .permitAll()
                     .anyRequest()
                     .authenticated())
-        .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
+        .exceptionHandling(
+            exceptions ->
+                exceptions
+                    .authenticationEntryPoint(problemAuthenticationEntryPoint)
+                    .accessDeniedHandler(problemAccessDeniedHandler))
+        .oauth2ResourceServer(
+            oauth ->
+                oauth
+                    .authenticationEntryPoint(problemAuthenticationEntryPoint)
+                    .accessDeniedHandler(problemAccessDeniedHandler)
+                    .jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
         .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }
 
   @Bean
   AuthRateLimitFilter authRateLimitFilter(
-      AuthRateLimitProperties properties, SecurityEventService securityEvents, Clock clock) {
-    return new AuthRateLimitFilter(properties, securityEvents, clock);
+      AuthRateLimitProperties properties,
+      SecurityEventService securityEvents,
+      SecurityProblemResponseWriter problemWriter,
+      Clock clock) {
+    return new AuthRateLimitFilter(properties, securityEvents, problemWriter, clock);
+  }
+
+  @Bean
+  SecurityProblemResponseWriter securityProblemResponseWriter(JsonMapper json) {
+    return new SecurityProblemResponseWriter(json);
+  }
+
+  @Bean
+  AuthenticationEntryPoint problemAuthenticationEntryPoint(
+      SecurityProblemResponseWriter problemWriter) {
+    BearerTokenAuthenticationEntryPoint delegate = new BearerTokenAuthenticationEntryPoint();
+    return (request, response, exception) -> {
+      delegate.commence(request, response, exception);
+      problemWriter.write(
+          response,
+          HttpStatus.UNAUTHORIZED,
+          "AUTHENTICATION_REQUIRED",
+          "Authentication is required to access this resource.");
+    };
+  }
+
+  @Bean
+  AccessDeniedHandler problemAccessDeniedHandler(SecurityProblemResponseWriter problemWriter) {
+    BearerTokenAccessDeniedHandler delegate = new BearerTokenAccessDeniedHandler();
+    return (request, response, exception) -> {
+      delegate.handle(request, response, exception);
+      problemWriter.write(
+          response,
+          HttpStatus.FORBIDDEN,
+          "ACCESS_DENIED",
+          "The authenticated account cannot access this resource.");
+    };
   }
 
   @Bean
