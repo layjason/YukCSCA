@@ -221,7 +221,9 @@ Use an application-facing port or explicit public use case instead.
 - If a required tool or dependency is missing, report it and install only through the repository's declared package manager or wrapper. Request network/cache access when needed; do not silently skip a check or create an alternate temporary dependency cache.
 - Fix failures caused by the current change. Report unrelated failures with exact evidence and do not broaden the patch without authorization, except for an immediate security/data-loss hazard that makes continued work unsafe.
 
-Run the smallest relevant set during iteration and the full applicable gate before handoff:
+Use proportionate, risk-based validation to conserve time and output. During iteration and handoff, run the smallest test and check set that directly covers the changed behavior plus its plausible regressions. Do not run full backend, frontend, or repository-wide suites by default when targeted commands provide sufficient evidence. Run broader gates only when the change crosses stacks or contracts, changes shared configuration or a release baseline, targeted evidence exposes broader risk, or the user explicitly requests them. Report any broader checks intentionally not run.
+
+The available focused commands include:
 
 ```bash
 pnpm contract:build
