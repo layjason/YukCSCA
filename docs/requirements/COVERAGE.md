@@ -6,9 +6,9 @@
 
 | Field | Value |
 | --- | --- |
-| Requirement baseline | English/Chinese V1.1, 2026-07-20 |
-| Story baseline | `USER_STORIES.md` version 0.2.0 |
-| Audit date | 2026-07-22 |
+| Requirement baseline | English/Chinese V1.2, 2026-07-24 |
+| Story baseline | `USER_STORIES.md` version 0.2.2 |
+| Audit date | 2026-07-24 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
 | P2 exact-reference coverage | **1 / 3 functional sections** |
@@ -19,7 +19,7 @@ P0 exact-reference coverage became complete after adding explicit stories for pa
 
 | Requirement | Requirement title | Candidate stories | Coverage note |
 | --- | --- | --- | --- |
-| 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-PROF-03`, `US-ADMIN-01` | Google pilot is implemented; parent/admin provisioning are separate slices. Long-term email/password remains outside the pilot qualification. |
+| 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-AUTH-03`, `US-AUTH-04`, `US-PROF-03`, `US-ADMIN-01` | `VS-000` implements Google-only production authentication. `US-AUTH-03` and `US-AUTH-04` preserve the later production email/password and recovery outcomes, but have no accepted production slice or contract. PX-002 may preview those flows through deterministic fixtures without creating production identity or closing either story. |
 | 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | `VS-001` delivers student activation; editing, parent profile, and account lifecycle remain separate slices. |
 | 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | `VS-001` delivers the bounded `UNASSIGNED` to `STUDENT` transition; other provisioning and permissions remain separate slices. |
 | 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | `VS-001` persists the activation-time default explanation language; later editing, session override, and exam language remain separate. |
@@ -86,6 +86,14 @@ Route the result according to ownership:
 Agents must not use a `Covered` row to justify inventing missing behavior, and they must not ask the human to re-answer facts already present in the source documents. The questioning limits and decision format are defined in `docs/delivery/HUMAN_REVIEW.md`.
 
 ## Remaining backlog gaps outside P0
+
+### Deferred P0 production delivery
+
+- `US-AUTH-03` and `US-AUTH-04` now decompose production email/password
+  registration, verification, sign-in, and recovery. Their vertical-slice
+  boundary, verification/recovery credential design, session-revocation
+  policy, abuse controls, email provider, and TypeSpec contract remain to be
+  shaped. PX-002 fixture evidence must not be counted as production delivery.
 
 ### P1
 

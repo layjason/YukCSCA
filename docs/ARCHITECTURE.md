@@ -84,7 +84,7 @@ app -> features -> shared
 - Student-profile default explanation language is persisted during activation. Interface locale and per-subject exam language remain separate concepts and are not inferred from it.
 - Vite and Nginx expose the same web-origin proxy surface: `/api` plus health-only `/actuator/health`; other Actuator routes are not proxied through the web application.
 
-### PX-001 prototype boundary (active)
+### PX-001 prototype boundary (implemented)
 
 ```text
 app -> features -> shared
@@ -117,7 +117,7 @@ app -> features -> shared
 
 ## Implemented identity slice
 
-The current public identity slice is the Google-only qualification stated directly in the requirements. The browser obtains a Google ID credential; the API verifies signature, issuer, audience, expiry, and verified email and identifies the provider account by `sub`.
+The current production identity slice is the Google-only qualification stated directly in the requirements. The browser obtains a Google ID credential; the API verifies signature, issuer, audience, expiry, and verified email and identifies the provider account by `sub`. The requirements permit a fixture-backed credential-entry preview in PX-002, but no production email/password account, credential, verification, recovery, or session behavior exists yet.
 
 ```text
 Google credential ──► POST /api/v1/auth/google ──► provider verification
@@ -133,7 +133,7 @@ YukCSCA then issues a short-lived access JWT and a rotating refresh token. Refre
 
 New accounts are `UNASSIGNED`. The web routes them to the student-activation form. `POST /api/v1/student-profile` atomically creates the profile and moves the account to `STUDENT`; it returns canonical current-user state plus a replacement access token without rotating the refresh session. `GET /api/v1/student-profile/me` exposes only the authenticated student's own profile. Flyway migration `V3__student_profile.sql` owns the profile table and its unique account relationship.
 
-The repository does not yet implement profile editing, other role onboarding, the P0 learning loop, parent linking, content management, assessment, billing, tutoring, or AI behavior.
+The repository does not yet implement production profile editing, other role onboarding, the P0 learning loop, parent linking, content management, assessment, billing, tutoring, or AI behavior.
 
 ## External integrations
 

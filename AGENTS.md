@@ -102,7 +102,9 @@ Every feature change must identify its requirement or accepted issue and preserv
 - Parent access is summary- and risk-oriented; private student conversations are excluded by default.
 - Tutor access is assignment-bound and least-privilege. Students and parents never browse a public tutor marketplace; matching remains platform-managed.
 - Administrative changes to content, access, tutoring, entitlements, payments, or other sensitive state require authorization, reason capture, and an audit trail.
-- The first bounded pilot is Google-only and creates `UNASSIGNED` identities. Broader role provisioning and email/password behavior remain requirements for later accepted slices, not implicit baseline behavior.
+- Production authentication for the first bounded pilot remains Google-only and creates `UNASSIGNED` identities.
+- An accepted PX milestone may present email/password registration, verification, login, and recovery through an explicit fixture-backed preview boundary. The preview must not create credentials, accounts, sessions, contracts, persistence, or production-completion claims.
+- Production email/password authentication remains a later accepted vertical slice.
 - The target audience includes minors. Age, consent, data minimization, retention, deletion, and safety consequences must be considered in every data-bearing slice.
 
 For non-trivial behavior, record acceptance criteria covering the user-visible outcome, authorization/privacy posture, persisted state, failure behavior, and relevant observability.

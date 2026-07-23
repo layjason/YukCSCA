@@ -4,16 +4,16 @@
 
 ## Plan metadata
 
-| Field                        | Value                                                                                           |
-| ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| Plan ID                      | `YUK-P0-DELIVERY`                                                                               |
-| Plan version                 | `0.3.14`                                                                                        |
-| Updated                      | 2026-07-23                                                                                      |
-| Current baseline             | `VS-001` student-account activation — `DONE`                                                    |
-| Current experience milestone | [`PX-001`](delivery/PX-001-product-experience-baseline.md) product experience baseline — `DONE` |
-| Current production slice     | None — select and shape the next production slice before implementation                         |
-| Requirement baseline         | English/Chinese V1.1, 2026-07-20                                                                |
-| Story baseline               | `USER_STORIES.md` version 0.2.0                                                                 |
+| Field                        | Value                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Plan ID                      | `YUK-P0-DELIVERY`                                                                                       |
+| Plan version                 | `0.3.16`                                                                                                |
+| Updated                      | 2026-07-24                                                                                              |
+| Current baseline             | `VS-001` student-account activation — `DONE`                                                            |
+| Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `SHAPING` |
+| Current production slice     | None — production capability work remains paused while `PX-002` is active                               |
+| Requirement baseline         | English/Chinese V1.2, 2026-07-24                                                                        |
+| Story baseline               | `USER_STORIES.md` version 0.2.2                                                                         |
 
 Plan versions are review markers for delivery-document changes. They are not npm/Maven package versions and are not TypeSpec API versions. This repository does not add pnpm checks solely to validate plan metadata; Git review, slice revision history, and acceptance evidence provide traceability.
 
@@ -49,9 +49,15 @@ A prototype model must remain separate from generated API declarations. When a p
 
 Experience milestones are non-production delivery work. They may connect several future story areas to validate a coherent journey, but they do not change product requirements, advertise backend availability, persist fabricated academic evidence, or advance any referenced production slice.
 
-| Milestone | User-observable outcome                                                                                                                                                                                                                                                                                                             | Owning brief                                                                              | Depends on                           | Status      |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ | ----------- |
-| `PX-001`  | An activated student can complete goal-to-plan onboarding, use every primary P0 destination, finish a lesson/practice/mistake/remediation loop, and complete a representative mock lifecycle with state-complete, accessible, responsive behavior while fixture-backed academic behavior remains visibly Preview and non-persistent | [`PX-001-product-experience-baseline.md`](delivery/PX-001-product-experience-baseline.md) | `VS-000`, `VS-001`, root `DESIGN.md` | `VERIFYING` |
+| Milestone | User-observable outcome                                                                                                                                                                                                                                                                                                             | Owning brief                                                                                      | Depends on                                     | Status    |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------- | --------- |
+| `PX-001`  | An activated student can complete goal-to-plan onboarding, use every primary P0 destination, finish a lesson/practice/mistake/remediation loop, and complete a representative mock lifecycle with state-complete, accessible, responsive behavior while fixture-backed academic behavior remains visibly Preview and non-persistent | [`PX-001-product-experience-baseline.md`](delivery/PX-001-product-experience-baseline.md)         | `VS-000`, `VS-001`, root `DESIGN.md`           | `DONE`    |
+| `PX-002`  | A visitor can understand the product, compare production Google entry with fixture-backed credential entry, choose a student or parent continuation, and traverse connected public, parent, family, commerce, and aftercare previews without creating production identity, relationship, or financial state                         | [`PX-002-public-parent-commerce-baseline.md`](delivery/PX-002-public-parent-commerce-baseline.md) | `PX-001`, `VS-000`, `VS-001`, root `DESIGN.md` | `SHAPING` |
+
+PX-002 implementation follows
+[`worker-product-baseline-PX002.md`](prompts/worker-product-baseline-PX002.md).
+The prompt is subordinate to the accepted delivery brief and paired
+requirements.
 
 ## P0 delivery graph
 
@@ -197,22 +203,24 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 ## Revision history
 
-| Version | Date       | Change                                                                                                                                                                          |
-| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.3.14  | 2026-07-23 | Marked PX-001 `DONE` after the product owner verified the current revision-6 experience and found no remaining visual or journey issue; production-slice selection may resume.  |
-| 0.3.13  | 2026-07-23 | Moved PX-001 to `VERIFYING` after reviewer repairs, complete frontend gates, connected desktop/mobile journeys, responsive screenshots, and production/preview boundary checks. |
-| 0.3.12  | 2026-07-23 | Removed PX-001 environment-flag gating; authenticated students access visibly labelled, in-memory preview routes directly.                                                      |
-| 0.3.11  | 2026-07-23 | Expanded PX-001 to the goal-to-remediation journey, representative mock lifecycle, and supporting language/family/access visibility.                                            |
-| 0.3.10  | 2026-07-23 | Made the complete connected P0 student experience—not an intermediate shell phase—the PX-001 acceptance boundary.                                                               |
-| 0.3.9   | 2026-07-23 | Selected `PX-001` as the active non-production experience milestone and kept every referenced production capability slice `PROPOSED`.                                           |
-| 0.3.8   | 2026-07-22 | Added experience/shaping/contract horizons and the DESIGN.md-guided prototype lane without expanding the speculative TypeSpec surface.                                          |
-| 0.3.7   | 2026-07-22 | Closed `VS-001` after real-flow confirmation, persisted-state inspection, reproducible contract generation, focused final tests, and log redaction.                             |
-| 0.3.6   | 2026-07-22 | Moved `VS-001` to `VERIFYING` after integrating its contract, migration, backend flow, onboarding UI, and focused automated evidence.                                           |
-| 0.3.5   | 2026-07-22 | Moved `VS-001` to `CONTRACT_READY` after the profile TypeSpec compiled and generated declarations were reviewed.                                                                |
-| 0.3.4   | 2026-07-22 | Approved the complete `VS-001` human-decision scope and moved the slice into TypeSpec shaping.                                                                                  |
-| 0.3.3   | 2026-07-22 | Returned `VS-000` to `DONE` after the product owner confirmed the repaired real Google-account relogin journey.                                                                 |
-| 0.3.2   | 2026-07-22 | Moved the `VS-000` regression repair to `VERIFYING` after automated and local-stack checks; real Google-account confirmation remains pending.                                   |
-| 0.3.1   | 2026-07-22 | Reopened `VS-000` for the returning-user sign-in regression and safe failure-side-effect repair.                                                                                |
-| 0.3.0   | 2026-07-21 | Added bounded human decision gates, documentation-sufficiency review, domain-language maintenance, and lazy decision records.                                                   |
-| 0.2.0   | 2026-07-21 | Replaced the generic dependency-only plan with a versioned vertical-slice roadmap, lifecycle, explicit TypeSpec gate, and concrete next slice.                                  |
-| 0.1.0   | 2026-07-20 | Initial implementation principles and dependency activation list.                                                                                                               |
+| Version | Date       | Change                                                                                                                                                                                               |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.3.16  | 2026-07-24 | Added `US-AUTH-03` and `US-AUTH-04` for later production email/password registration, verification, sign-in, and recovery without creating a production slice or changing PX-002's fixture boundary. |
+| 0.3.15  | 2026-07-24 | Added PX-002 as the current shaping milestone, qualified fixture-backed credential entry beside production Google authentication, and reconciled the PX-001 milestone row to `DONE`.                 |
+| 0.3.14  | 2026-07-23 | Marked PX-001 `DONE` after the product owner verified the current revision-6 experience and found no remaining visual or journey issue; production-slice selection may resume.                       |
+| 0.3.13  | 2026-07-23 | Moved PX-001 to `VERIFYING` after reviewer repairs, complete frontend gates, connected desktop/mobile journeys, responsive screenshots, and production/preview boundary checks.                      |
+| 0.3.12  | 2026-07-23 | Removed PX-001 environment-flag gating; authenticated students access visibly labelled, in-memory preview routes directly.                                                                           |
+| 0.3.11  | 2026-07-23 | Expanded PX-001 to the goal-to-remediation journey, representative mock lifecycle, and supporting language/family/access visibility.                                                                 |
+| 0.3.10  | 2026-07-23 | Made the complete connected P0 student experience—not an intermediate shell phase—the PX-001 acceptance boundary.                                                                                    |
+| 0.3.9   | 2026-07-23 | Selected `PX-001` as the active non-production experience milestone and kept every referenced production capability slice `PROPOSED`.                                                                |
+| 0.3.8   | 2026-07-22 | Added experience/shaping/contract horizons and the DESIGN.md-guided prototype lane without expanding the speculative TypeSpec surface.                                                               |
+| 0.3.7   | 2026-07-22 | Closed `VS-001` after real-flow confirmation, persisted-state inspection, reproducible contract generation, focused final tests, and log redaction.                                                  |
+| 0.3.6   | 2026-07-22 | Moved `VS-001` to `VERIFYING` after integrating its contract, migration, backend flow, onboarding UI, and focused automated evidence.                                                                |
+| 0.3.5   | 2026-07-22 | Moved `VS-001` to `CONTRACT_READY` after the profile TypeSpec compiled and generated declarations were reviewed.                                                                                     |
+| 0.3.4   | 2026-07-22 | Approved the complete `VS-001` human-decision scope and moved the slice into TypeSpec shaping.                                                                                                       |
+| 0.3.3   | 2026-07-22 | Returned `VS-000` to `DONE` after the product owner confirmed the repaired real Google-account relogin journey.                                                                                      |
+| 0.3.2   | 2026-07-22 | Moved the `VS-000` regression repair to `VERIFYING` after automated and local-stack checks; real Google-account confirmation remains pending.                                                        |
+| 0.3.1   | 2026-07-22 | Reopened `VS-000` for the returning-user sign-in regression and safe failure-side-effect repair.                                                                                                     |
+| 0.3.0   | 2026-07-21 | Added bounded human decision gates, documentation-sufficiency review, domain-language maintenance, and lazy decision records.                                                                        |
+| 0.2.0   | 2026-07-21 | Replaced the generic dependency-only plan with a versioned vertical-slice roadmap, lifecycle, explicit TypeSpec gate, and concrete next slice.                                                       |
+| 0.1.0   | 2026-07-20 | Initial implementation principles and dependency activation list.                                                                                                                                    |

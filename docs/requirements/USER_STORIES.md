@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.2.0  
-**Updated:** 2026-07-21  
+**Backlog version:** 0.2.2
+**Updated:** 2026-07-24
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.  
@@ -44,6 +44,15 @@ Each story below contains:
 ## 3. Proposed story backlog
 
 ## Epic A — Identity, Profiles, and Language
+
+> **PX-002 prototype qualification:** PX-002 may represent the long-term P0
+> email/password account-entry experience through deterministic frontend
+> fixtures alongside production Google sign-in. This preview does not close a
+> production authentication story or remove the required later production
+> capability. `US-AUTH-03` and `US-AUTH-04` record the later production
+> outcomes; their credential-authentication slice and contract must be shaped
+> before implementation.
+
 ### US-AUTH-01 — Sign in with Google
 
 - **Priority:** P0
@@ -103,6 +112,106 @@ The user can return without signing in again while the refresh session is valid,
 - Given an unauthenticated request, when a protected page or current-user endpoint is opened, then no private account data is disclosed.
 
 **Not included in this story:** A user-facing multi-device session manager.
+
+### US-AUTH-03 — Register and sign in with verified email credentials
+
+- **Priority:** P0
+- **Actor:** New or returning user
+- **Requirement reference:** 1.1
+
+**User story**
+
+> As a user, I want to create and access YukCSCA with a verified email address
+> and password so that I can use the platform without a third-party identity
+> provider.
+
+**Closed-loop outcome**
+
+A verified email address belongs to exactly one credential account, and valid
+credentials establish an authenticated YukCSCA session without inferring a
+product role.
+
+**Main flow**
+
+1. Enter an email address and a password that satisfies the accepted policy.
+2. Confirm the password and accept the applicable Terms and Privacy notice.
+3. Receive and complete email verification.
+4. Sign in with the verified email and password.
+5. Continue to role-specific onboarding while the account remains unassigned.
+
+**Acceptance Criteria**
+
+- Given a valid unused email address and conforming password, when registration
+  is submitted, then one unverified credential account is created and the
+  password is stored only through an accepted password-hashing design.
+- Given an unverified account, when sign-in is attempted, then no authenticated
+  session is issued and a safe verification path is offered.
+- Given a valid, unexpired, single-use verification credential, when
+  verification succeeds, then the email becomes verified exactly once without
+  creating a duplicate account.
+- Given a verified account and valid credentials, when sign-in succeeds, then
+  a secure YukCSCA session is created and a new account remains `UNASSIGNED`.
+- Given an unknown email, wrong password, malformed request, expired
+  verification credential, or excessive attempts, when the operation is
+  attempted, then no account/session state is disclosed or issued and a safe,
+  rate-limited error is returned.
+- Given repeated registration, verification, or sign-in requests, when they
+  are processed, then the same email does not create duplicate credential
+  accounts and a verification credential cannot be reused.
+
+**Not included in this story:** Password recovery, production Parent/Student
+activation, social-account linking, multi-factor authentication, or a
+user-facing session manager.
+
+### US-AUTH-04 — Recover an email/password account
+
+- **Priority:** P0
+- **Actor:** User with a credential account
+- **Requirement reference:** 1.1
+
+**User story**
+
+> As a user who cannot remember my password, I want to reset it through my
+> verified email address so that I can regain access without revealing whether
+> an account exists.
+
+**Closed-loop outcome**
+
+The user can request a non-enumerating recovery message, replace the password
+through a valid single-use recovery credential, and sign in with the new
+password.
+
+**Main flow**
+
+1. Enter the account email on the recovery page.
+2. Receive the same safe confirmation whether or not the account exists.
+3. Open a valid recovery link for a verified credential account.
+4. Choose and confirm a conforming new password.
+5. Return to sign-in and authenticate with the new password.
+
+**Acceptance Criteria**
+
+- Given any syntactically valid email address, when recovery is requested, then
+  the response does not disclose whether an account exists.
+- Given an eligible verified credential account, when recovery is requested,
+  then one bounded-lifetime, single-use recovery credential is issued through
+  the accepted email-delivery boundary without storing its plaintext value.
+- Given an invalid, expired, already-used, or account-mismatched recovery
+  credential, when reset is attempted, then the password remains unchanged and
+  a safe restart path is shown.
+- Given a valid recovery credential and conforming new password, when reset
+  succeeds, then the credential cannot be reused and the old password no
+  longer authenticates.
+- Given repeated recovery requests or reset attempts, when rate limits are
+  exceeded, then processing is bounded without exposing account existence or
+  sensitive credential data.
+- Given successful reset, when session-security consequences are applied, then
+  they follow the explicit revocation policy accepted by the future
+  credential-authentication slice.
+
+**Not included in this story:** Recovery through an unverified destination,
+customer-service identity override, multi-factor recovery, or implementation
+of an email provider outside the accepted production slice.
 
 ### US-PROF-01 — Activate a student account
 
