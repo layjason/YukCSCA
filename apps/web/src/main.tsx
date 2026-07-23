@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './app/App';
 import { AuthProvider } from './features/auth/AuthContext';
+import { PrototypeProvider } from './prototype/student/PrototypeProvider';
 import './shared/i18n';
 import './styles.css';
 
@@ -13,7 +14,9 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <PrototypeProvider>
+          <App />
+        </PrototypeProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,

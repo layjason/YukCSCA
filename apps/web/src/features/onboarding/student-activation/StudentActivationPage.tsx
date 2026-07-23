@@ -46,13 +46,13 @@ export default function StudentActivationPage(): React.JSX.Element {
     try {
       const result = await activateStudentProfile(request);
       replaceCurrentUser(result.authentication.user);
-      navigate('/', { replace: true });
+      navigate('/onboarding/student/goals', { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         const currentUser = await refreshSession().catch(() => null);
         if (currentUser) {
           replaceCurrentUser(currentUser);
-          navigate('/', { replace: true });
+          navigate('/onboarding/student/goals', { replace: true });
           return;
         }
       }

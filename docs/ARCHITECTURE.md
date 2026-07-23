@@ -70,11 +70,50 @@ app -> features -> shared
 - A feature owns its UI, state, validation, and API adapter.
 - `shared` contains reusable primitives and may not import a feature.
 - Root `DESIGN.md` is the persistent visual/interaction contract. `apps/web/src/styles.css` currently mirrors its semantic colors, radii, spacing, focus, and motion values as CSS custom properties; no external UI or animation framework is active.
-- The current design foundation uses a neutral/white application canvas, restrained contextual pastel blocks, flat surfaces, visible focus, and reduced-motion support. Feature code should consume semantic variables rather than create a parallel palette.
+- The current design foundation uses a warm near-white application canvas,
+  restrained cream, lilac, mint, coral, and sky context blocks, flat surfaces,
+  visible focus, and reduced-motion support. Feature code consumes semantic
+  variables rather than creating a parallel palette.
+- Purposeful motion is implemented with small CSS-only primitives for surface
+  and card entry, inline feedback, progress changes, and milestone
+  acknowledgement. A global `prefers-reduced-motion: reduce` rule removes
+  transforms and reduces animation and transition durations to near-zero; no
+  animation framework or perpetual decorative motion is active.
 - Access tokens remain in memory; refresh credentials are server-managed `HttpOnly` cookies.
 - The shell resolves interface language from a valid local choice, then a supported browser locale, then English; explicit interface-language changes persist locally.
 - Student-profile default explanation language is persisted during activation. Interface locale and per-subject exam language remain separate concepts and are not inferred from it.
 - Vite and Nginx expose the same web-origin proxy surface: `/api` plus health-only `/actuator/health`; other Actuator routes are not proxied through the web application.
+
+### PX-001 prototype boundary (active)
+
+```text
+app -> features -> shared
+   \-> prototype -> shared
+```
+
+- `prototype/student/` owns explicitly non-production preview models, fixtures, state, and page components for the PX-001 experience milestone.
+- Production features and prototype modules may not import each other. `app` composes both.
+- `PrototypeProvider` (React context + `useReducer`) holds all preview state in memory. No browser storage, API calls, analytics, or cookies are used by prototype code.
+- Deterministic scenario factories provide new-student, active, risk, loading,
+  empty, recoverable-error, practice, mock, access, and state-loss states.
+  Diagnostic, practice, mock, and Progress presentation is derived from the
+  current in-memory answers/actions rather than a parallel fixed result.
+- Refresh loses all preview progress; the application shows an honest restart state.
+- A typed route manifest (`app/routes.ts`) is the single source of truth for navigation placement, labels, role visibility, availability, and requirement-area traceability.
+- Three layout components compose the authenticated experience:
+  `OnboardingLayout` (preview step flow with current, complete, and upcoming
+  state cues), `AppShellLayout` (desktop sidebar + mobile bottom nav), and
+  `PublicLayout`.
+- Guards enforce: anonymous → login, UNASSIGNED → activation, STUDENT + preview-incomplete → goals, STUDENT + preview-complete → Today, other role → unsupported.
+- Mobile primary navigation keeps Today, Learn, Practice, Progress, and More
+  reachable; Mock Exam and account/settings destinations live under More.
+- The Languages preview uses the production i18next interface-locale mechanism
+  while clearly signposting that permanent explanation and exam-language
+  editing belongs to later production slices.
+- The shell shows one restrained Preview badge; contextual labels identify fixture-backed values.
+- Profile groups production-backed identity separately from preview-only
+  settings and unavailable editing actions.
+- Generated API types are never expanded or disguised as prototype types.
 
 ## Implemented identity slice
 
