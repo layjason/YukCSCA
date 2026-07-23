@@ -1,7 +1,7 @@
 # YukCSCA Platform Requirements Summary
 
-**Version:** V1.1
-**Date:** 2026-07-20
+**Version:** V1.2
+**Date:** 2026-07-24
 **Target Market:** Indonesian high school students planning to pursue undergraduate study in China, and their families
 
 > **NORMATIVE PRODUCT AUTHORITY:** This document and its paired Chinese version are the sole authoritative product requirements for YukCSCA. Architecture descriptions, implementation plans, contracts, issues, and code may implement or propose a subset, but they do not amend or override these requirements. Both language versions must change together.
@@ -10,6 +10,7 @@
 
 | Version | Date       | Change                                                                                  |
 | ------- | ---------- | --------------------------------------------------------------------------------------- |
+| V1.2    | 2026-07-24 | Qualified fixture-backed email/password previews while preserving Google-only production authentication. |
 | V1.1    | 2026-07-20 | Added stable navigation and revision history. |
 | V1      | 2026-07-19 | Established the initial consolidated normative requirements baseline.                   |
 
@@ -361,6 +362,8 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 ### 1.1 Registration and Login (P0)
 
 > **Pilot delivery qualification:** The first bounded pilot uses Google sign-in only. Email/password registration and password recovery remain long-term P0 requirements but are not acceptance criteria for this Google-only pilot. Student, parent, tutor, and administrator provisioning beyond the current `UNASSIGNED` identity is implemented only in the relevant P0 vertical slice. This qualification is part of the requirements and does not depend on an external plan or architecture decision.
+
+> **PX-002 prototype qualification:** PX-002 may represent the long-term P0 email/password account-entry experience through deterministic frontend fixtures alongside production Google sign-in. The frontend prototype presents conventional email/password registration, verification, login, and recovery, but the credential path remains fixture-backed and does not create production accounts, sessions, credentials, verification messages, or password-reset operations. Google remains the only production-backed authentication method until a credential-authentication slice is accepted. Production email/password authentication remains a required later P0 capability. This preview does not close that production authentication outcome; a dedicated credential-authentication vertical slice and contract must be shaped before production implementation.
 
 - **Independent student registration:** Students can register using at least email. Mobile-number or third-party login may be introduced gradually according to launch channels. Students enter the platform after verification. Intent: reduce initial friction while avoiding excessive authentication integrations in the first version.
 - **Parent registration:** Parents can register independent parent accounts and later create or link a student. Intent: support parents as decision-makers and payers.

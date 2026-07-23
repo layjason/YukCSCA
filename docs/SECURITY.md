@@ -36,6 +36,24 @@ Minor-user identity and relationships, learning conversations, assessment answer
 
 These controls must ship with the first feature that needs them:
 
+### Fixture-backed credential previews
+
+- An accepted PX milestone may render email/password registration,
+  verification, login, and recovery only inside an explicit preview boundary.
+- Preview password values remain in the active form only long enough for local
+  validation and must not reach production APIs, storage, cookies, analytics,
+  logs, URLs, screenshots, traces, or generated contract models.
+- Preview identity/persona state must remain separate from production
+  `CurrentUser`, access tokens, refresh sessions, accounts, roles, and guards.
+  It may authorize fixture-backed preview routes only.
+- Preview verification and recovery must not send messages, mint tokens, reset
+  passwords, or claim production completion. Google remains the only
+  production-backed authentication method until a credential-authentication
+  vertical slice is accepted.
+- A production credential-authentication slice must separately define secure
+  password storage, contact verification, recovery-token lifecycle, abuse
+  controls, session issuance, audit behavior, and a TypeSpec contract.
+
 ### Roles, parents, tutors, and administration
 
 - Deny access by default and enforce server-side role plus object-level authorization.
