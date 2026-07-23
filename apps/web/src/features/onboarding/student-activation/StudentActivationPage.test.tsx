@@ -78,7 +78,7 @@ test('submits the confirmed profile and enters the student dashboard', async () 
     }),
   );
   expect(replaceCurrentUser).toHaveBeenCalledWith(studentUser);
-  expect(await screen.findByText('student-dashboard')).toBeInTheDocument();
+  expect(await screen.findByText('student-goals')).toBeInTheDocument();
 });
 
 test('keeps the form local when birth year is outside the accepted range', () => {
@@ -125,7 +125,7 @@ test('recovers stale onboarding state by refreshing the authoritative user', asy
   fillValidForm();
   fireEvent.click(screen.getByRole('button', { name: /aktifkan akun siswa/i }));
 
-  expect(await screen.findByText('student-dashboard')).toBeInTheDocument();
+  expect(await screen.findByText('student-goals')).toBeInTheDocument();
   expect(refreshSession).toHaveBeenCalledOnce();
   expect(replaceCurrentUser).toHaveBeenCalledWith(studentUser);
 });
@@ -149,7 +149,7 @@ function renderPage(): void {
     <MemoryRouter initialEntries={['/onboarding/student']}>
       <Routes>
         <Route path="/onboarding/student" element={<StudentActivationPage />} />
-        <Route path="/" element={<div>student-dashboard</div>} />
+        <Route path="/onboarding/student/goals" element={<div>student-goals</div>} />
       </Routes>
     </MemoryRouter>,
   );
