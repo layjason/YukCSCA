@@ -39,7 +39,7 @@ public class CurrentAuthenticationService {
         user.getEmail(),
         user.getDisplayName(),
         user.getAvatarUrl(),
-        user.getRole(),
+        CurrentAccountRole.from(user.getRole()),
         user.isOnboardingCompleted());
   }
 

@@ -28,7 +28,7 @@ public record CurrentUserResponse(
         account.email(),
         account.displayName(),
         account.avatarUrl(),
-        account.role(),
+        UserRole.valueOf(account.role().name()),
         account.onboardingCompleted());
   }
 

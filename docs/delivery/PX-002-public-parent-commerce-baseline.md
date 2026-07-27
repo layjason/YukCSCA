@@ -808,7 +808,6 @@ path is removed.
 | Responsive/accessibility/localization review | PASS — inspected 360/390 mobile, 768 tablet, 1280/1440 desktop, three locales, keyboard, reduced motion, and overflow evidence                                        |
 | Roadmap/copy remap                           | PASS — revision 6 removes internal slice IDs from localized preview copy; focused locale-parity test passed 3/3                                                       |
 | Backend/migration verification               | PASS — `git diff -- contracts services/api` empty; no backend or migration change                                                                                     |
-| Review repairs                               | 5 BLOCKER + 14 MAJOR findings repaired; see `docs/reviews/PX-002-product-baseline-review.md`                                                                          |
 
 ## Revision history
 

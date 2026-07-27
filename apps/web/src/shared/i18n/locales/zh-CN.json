@@ -7,15 +7,6 @@
     "loginFailed": "登录失败。",
     "restoringSession": "正在恢复会话…"
   },
-  "login": {
-    "eyebrow": "YukCSCA",
-    "title": "以清晰路径准备 CSCA",
-    "description": "使用 Google 登录，开始入学引导、诊断测试和个人学习计划。",
-    "or": "或",
-    "credentialHint": "偏好使用邮箱和密码？这是预览——不会创建生产账户。",
-    "credentialLink": "使用邮箱登录（预览）",
-    "privacy": "Google 仅用于基本身份验证。YukCSCA 颁发自己的应用会话。"
-  },
   "studentActivation": {
     "eyebrow": "学生激活",
     "title": "激活您的学生档案",
@@ -47,16 +38,6 @@
       "unsupported": "请选择受支持的选项之一。",
       "requestFailed": "我们无法激活学生档案。请重试，无需重新输入敏感信息。"
     }
-  },
-  "dashboard": {
-    "title": "初始仪表板",
-    "welcome": "欢迎，{{name}}。",
-    "onboarding": "下一步：选择角色并完善您的学习档案。",
-    "studentReady": "您的学生档案已激活。后续学习步骤将显示在此处。",
-    "logout": "退出登录",
-    "fallbackName": "学生",
-    "email": "邮箱",
-    "role": "角色"
   },
   "roles": {
     "UNASSIGNED": "未选择",

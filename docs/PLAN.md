@@ -7,11 +7,11 @@
 | Field                        | Value                                                                                                |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Plan ID                      | `YUK-P0-DELIVERY`                                                                                    |
-| Plan version                 | `0.4.0`                                                                                              |
+| Plan version                 | `0.4.1`                                                                                              |
 | Updated                      | 2026-07-28                                                                                           |
 | Current baseline             | `VS-001` student-account activation — `DONE`                                                         |
 | Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE` |
-| Current production slice     | None — production-slice selection and shaping may resume                                             |
+| Current production slice     | `VS-002` credential authentication — selected for backend-led shaping; brief not yet created         |
 | Requirement baseline         | English/Chinese V1.2, 2026-07-24                                                                     |
 | Story baseline               | `USER_STORIES.md` version 0.2.2                                                                      |
 
@@ -170,6 +170,7 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 | Version | Date       | Change                                                                                                                                                                                                                                                                    |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.4.1   | 2026-07-28 | Selected `VS-002` as the next backend-led shaping task while leaving its brief, human-decision review, and initial contract to the backend/slice owner.                                                                                                                   |
 | 0.4.0   | 2026-07-28 | Regrouped 74 proposed micro-slices into 32 capability-sized closed loops, retained delivered `VS-000`/`VS-001`, preserved ownership of all 51 P0 requirement sections, and synchronized prototype/coverage references without changing product requirements.              |
 | 0.3.18  | 2026-07-27 | Marked PX-002 `DONE` at its explicitly non-production journey boundary, recorded its low-fidelity UI and incomplete-requirement limitations, added the prototype-to-production promotion process, and assigned proposed credential ownership later renumbered by `0.4.0`. |
 | 0.3.17  | 2026-07-26 | Moved PX-002 to `VERIFYING` after reviewer repairs and current frontend, connected-journey, localization, accessibility, responsive, boundary, and generated-artifact evidence; product-owner final review remains pending.                                               |

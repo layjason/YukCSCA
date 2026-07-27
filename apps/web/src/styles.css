@@ -118,8 +118,6 @@ button {
   background: var(--color-app-background);
 }
 
-.login-card,
-.dashboard-card,
 .onboarding-card,
 .center-card {
   width: min(100%, 560px);
@@ -129,16 +127,6 @@ button {
   color: var(--color-ink);
   background: var(--color-surface-raised);
   animation: surface-enter var(--motion-deliberate) var(--ease-standard) both;
-}
-
-.login-card {
-  border-color: transparent;
-  background: var(--color-block-lilac);
-}
-
-.dashboard-card {
-  border-color: transparent;
-  background: var(--color-block-mint);
 }
 
 .center-card {
@@ -151,8 +139,6 @@ button {
   background: var(--color-app-background);
 }
 
-.login-card h1,
-.dashboard-card h1,
 .onboarding-card h1 {
   max-width: 18ch;
   margin: var(--space-xs) 0 var(--space-md);
@@ -161,23 +147,10 @@ button {
   letter-spacing: -0.035em;
 }
 
-.login-card p,
-.dashboard-card p,
 .onboarding-card > p {
   max-width: 58ch;
   color: var(--color-ink-muted);
   line-height: 1.6;
-}
-
-.login-card small {
-  display: block;
-  margin-top: var(--space-lg);
-  color: var(--color-ink-muted);
-  line-height: 1.5;
-}
-
-.login-card > div {
-  margin-top: var(--space-lg);
 }
 
 .google-sign-in-slot {
@@ -205,31 +178,6 @@ button {
   animation: inline-feedback-enter var(--motion-quick) var(--ease-standard) both;
 }
 
-.dashboard-card dl {
-  display: grid;
-  gap: var(--space-sm);
-  margin: var(--space-xl) 0;
-}
-
-.dashboard-card dl div {
-  display: grid;
-  grid-template-columns: minmax(72px, 96px) 1fr;
-  gap: var(--space-sm);
-  padding-bottom: var(--space-sm);
-  border-bottom: 1px solid rgb(23 23 23 / 12%);
-}
-
-.dashboard-card dt {
-  color: var(--color-ink-muted);
-}
-
-.dashboard-card dd {
-  margin: 0;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-
-.dashboard-card button,
 .onboarding-card button {
   min-height: 48px;
   border: 0;
@@ -245,17 +193,14 @@ button {
     opacity var(--motion-quick) var(--ease-standard);
 }
 
-.dashboard-card button:hover,
 .onboarding-card button:hover {
   transform: translateY(-1px);
 }
 
-.dashboard-card button:active,
 .onboarding-card button:active {
   transform: translateY(0) scale(0.98);
 }
 
-.dashboard-card button:focus-visible,
 .onboarding-card button:focus-visible,
 .onboarding-card input:focus-visible,
 .onboarding-card select:focus-visible {
@@ -405,8 +350,6 @@ button {
     padding: 0;
   }
 
-  .login-card,
-  .dashboard-card,
   .onboarding-card {
     min-height: 100vh;
     width: 100%;
@@ -415,14 +358,8 @@ button {
     padding: max(32px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
   }
 
-  .onboarding-card button,
-  .dashboard-card button {
+  .onboarding-card button {
     width: 100%;
-  }
-
-  .dashboard-card dl div {
-    grid-template-columns: 1fr;
-    gap: var(--space-xxs);
   }
 }
 
@@ -436,8 +373,6 @@ button {
     transition-duration: 0.01ms !important;
   }
 
-  .dashboard-card button:hover,
-  .dashboard-card button:active,
   .onboarding-card button:hover,
   .onboarding-card button:active {
     transform: none;
