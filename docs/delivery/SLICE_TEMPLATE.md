@@ -28,6 +28,19 @@ Write one sentence describing what the actor can complete and observe through th
 
 Explain why this is a closed loop, why it is not smaller, and why adjacent behavior is excluded.
 
+## Capability and adjacent contract horizon
+
+- Owning capability or lifecycle:
+- Closely related stories inspected but not accepted into this slice:
+- Relevant actors, states, transitions, and invariants included now:
+- Deferred transitions and why they remain independently valuable:
+- Compatibility/additive-evolution strategy for deferred work:
+- Why a smaller or larger boundary would be worse:
+
+Do not place deferred behavior in TypeSpec or user-visible availability. This
+review prevents avoidable contract churn; it does not turn adjacent
+requirements into accepted scope.
+
 ## In scope
 
 -

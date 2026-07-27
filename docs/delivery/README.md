@@ -83,7 +83,7 @@ For any feature request, an agent must:
 3. Inspect current architecture, TypeSpec, the nearest directory `AGENTS.md`, and root `DESIGN.md` plus `docs/design/README.md` for UI work.
 4. Complete the slice's documentation-sufficiency review, including technology/dependency and frontend/design impact. If a material ambiguity remains, follow `HUMAN_REVIEW.md`, mark the gate `AWAITING_DECISION`, and ask one bounded question at a time.
 5. After each answer, update the owning artifact immediately: paired requirements, stories/coverage, glossary, slice, TypeSpec, or a rare decision record.
-6. For a public-HTTP slice, BACKEND agent drafts the `VS-NNN`, runs its human gate, initializes TypeSpec, and records the initial contract checkpoint.
+6. BACKEND agent validates the capability and adjacent-contract horizon, drafts the `VS-NNN`, and runs its human gate. For public HTTP it then initializes TypeSpec and records the initial checkpoint.
 7. FRONTEND agent reviews the slice and generated contract as a consumer and records concrete `CR-NN` requests in the same slice. The backend agent accepts, declines, or escalates each request with evidence.
 8. The backend agent marks `CONTRACT_READY` only after an accepted checkpoint is recorded and no request or human decision remains open. Both agents then implement separately from that slice revision and checkpoint.
 9. Integrate the real flow early, update the slice checklist with exact evidence, and never mark `DONE` from code existence alone.
@@ -107,7 +107,7 @@ The repository uses `docs/GLOSSARY.md` as its domain-language model. Resolve ove
 
 Keep coordination inside the active slice; do not create a second contract-request document.
 
-1. **Backend first:** draft the `VS-NNN`, resolve or escalate its human decisions, initialize TypeSpec, generate its outputs, and record the initial checkpoint.
+1. **Backend first:** validate the capability and adjacent-contract horizon, draft the `VS-NNN`, resolve or escalate its human decisions, initialize TypeSpec, generate its outputs, and record the initial checkpoint.
 2. **Frontend review:** complete the frontend/experience sections and review the initialized contract against concrete screen states and user flows.
 3. **Request loop:** record a `CR-NN` in the slice. The backend agent accepts and applies it, declines it with a supported alternative, or opens a `D-NN` through `HUMAN_REVIEW.md`.
 4. **Readiness:** after frontend re-review and with no open request or decision, the backend agent records the accepted checkpoint and marks `CONTRACT_READY`.
@@ -120,16 +120,22 @@ Use the compact role prompt: [`backend-worker.md`](../prompts/backend-worker.md)
 
 ## Slice sizing rules
 
-A good slice normally has:
+A production slice owns one capability-sized, demonstrable journey. It may
+include a required actor handoff and several tightly coupled transitions when
+they share one lifecycle or aggregate and are all needed to reach stable user
+value.
 
-- one primary actor;
-- one observable outcome;
-- one main state transition or a tightly coupled transaction;
-- a small operation set, commonly one command plus the reads needed to observe it;
-- a demonstrable success path and at least one validation, authorization/privacy, and retry/stale-state path;
-- no unrelated CRUD bundle.
+Before TypeSpec work, inspect adjacent stories that may share this state or
+contract. Record which relevant states, actors, invariants, and transitions are
+included now and which remain deferred. Deferred behavior is not added to
+TypeSpec or advertised by the UI.
 
-Split a slice when it combines different actors, independent approvals, unrelated lifecycle transitions, or separate commercial/learning outcomes. Keep a coupled transaction together when splitting would make neither half demonstrable, such as verified payment plus exactly-once entitlement issuance.
+Split at an independently valuable boundary, especially a separate
+authorization/privacy decision, transaction, destructive lifecycle, external
+authority, or releasable outcome. Keep work together when splitting would
+create a non-valuable intermediate state or force the next slice to reopen the
+same contract immediately. Operation count follows the accepted outcome; it is
+not a fixed sizing target.
 
 ## Pull-request handoff
 

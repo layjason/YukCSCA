@@ -7,8 +7,8 @@
 | Field                        | Value                                                                                                |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Plan ID                      | `YUK-P0-DELIVERY`                                                                                    |
-| Plan version                 | `0.3.18`                                                                                             |
-| Updated                      | 2026-07-27                                                                                           |
+| Plan version                 | `0.4.0`                                                                                              |
+| Updated                      | 2026-07-28                                                                                           |
 | Current baseline             | `VS-001` student-account activation — `DONE`                                                         |
 | Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE` |
 | Current production slice     | None — production-slice selection and shaping may resume                                             |
@@ -71,124 +71,75 @@ Experience milestones are non-production delivery work. They may connect several
 
 ## P0 delivery graph
 
-### Phase A — Identity, roles, and family boundary
+Each row is a capability-sized closed loop. A row may group tightly coupled stories when separating them would create a non-valuable intermediate state or repeatedly reopen the same lifecycle and contract. The paired requirements remain the only product authority; rows do not pre-authorize fields, operations, or acceptance criteria.
 
-| Slice                                             | User-observable outcome                                                               | Stories                    | Main dependency                                  | Status     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------ | ---------- |
-| [`VS-000`](delivery/VS-000-google-auth.md)        | Sign in, restore a secure session, inspect current identity, and sign out             | `US-AUTH-01`, `US-AUTH-02` | Baseline                                         | `DONE`     |
-| `VS-074`                                          | Register, verify, and sign in with production email/password without inferring a role | `US-AUTH-03`               | `VS-000`; email-delivery and abuse decisions     | `PROPOSED` |
-| `VS-075`                                          | Recover a credential account through a non-enumerating single-use reset flow          | `US-AUTH-04`               | `VS-074`; email and session-revocation decisions | `PROPOSED` |
-| [`VS-001`](delivery/VS-001-student-activation.md) | Activate one student profile from an `UNASSIGNED` identity                            | `US-PROF-01`               | `VS-000`                                         | `DONE`     |
-| `VS-002`                                          | Activate one parent profile with no student access until linked                       | `US-PROF-03`               | `VS-000`                                         | `PROPOSED` |
-| `VS-003`                                          | Edit allowed student-profile fields without losing learning history                   | `US-PROF-02`               | `VS-001`                                         | `PROPOSED` |
-| `VS-004`                                          | Edit parent profile/contact settings with reverification boundaries                   | `US-PROF-04`               | `VS-002`                                         | `PROPOSED` |
-| `VS-005`                                          | Request and complete/hold an account-deletion lifecycle                               | `US-ACCOUNT-01`            | `VS-001` or `VS-002`; commerce blockers defined  | `PROPOSED` |
-| `VS-006`                                          | Request and retrieve a privacy-safe personal-data export                              | `US-ACCOUNT-02`            | `VS-001` or `VS-002`; secure file delivery       | `PROPOSED` |
-| `VS-007`                                          | Provision an internal admin with explicit permission groups                           | `US-ADMIN-01`              | `VS-000`                                         | `PROPOSED` |
-| `VS-008`                                          | Search accounts and resolve suspension/restoration/relationship cases with audit      | `US-ADM-01`                | `VS-007`; profile/family state exists            | `PROPOSED` |
-| `VS-009`                                          | Parent creates one pending student account and activation path                        | `US-FAM-00`                | `VS-002`                                         | `PROPOSED` |
-| `VS-010`                                          | Student activates a parent-created pending account                                    | `US-FAM-04`                | `VS-009`, Google identity binding decision       | `PROPOSED` |
-| `VS-011`                                          | Student invitation is accepted into one active primary-parent relationship            | `US-FAM-01`, `US-FAM-02`   | `VS-001`, `VS-002`                               | `PROPOSED` |
-| `VS-012`                                          | Student or parent unlinks while preserving payments and learning history              | `US-FAM-03`                | `VS-011`; order ownership policy                 | `PROPOSED` |
+[`COVERAGE.md`](requirements/COVERAGE.md) audits all 51 P0 functional sections against these owners.
 
-### Phase B — Academic content and assessment control plane
+### Phase A — Identity, profiles, family, and administration
 
-These back-office slices precede production learning delivery because scored content must be reviewed, versioned, mapped, and provenance-authorized.
+| Slice                                             | User-observable outcome                                                            | Stories                    | Main dependency                        | Status     |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- | -------------------------------------- | ---------- |
+| [`VS-000`](delivery/VS-000-google-auth.md)        | Sign in, restore a secure session, inspect current identity, and sign out          | `US-AUTH-01`, `US-AUTH-02` | Baseline                               | `DONE`     |
+| [`VS-001`](delivery/VS-001-student-activation.md) | Activate one student profile from an `UNASSIGNED` identity                         | `US-PROF-01`               | `VS-000`                               | `DONE`     |
+| `VS-002`                                          | Register, verify, and sign in with production credentials without inferring a role | `US-AUTH-03`               | `VS-000`; email and abuse decisions    | `PROPOSED` |
+| `VS-003`                                          | Recover a credential account through a non-enumerating single-use flow             | `US-AUTH-04`               | `VS-002`; session-revocation decisions | `PROPOSED` |
+| `VS-004`                                          | Maintain a student profile and permanent explanation-language preference           | `US-PROF-02`, `US-LANG-01` | `VS-001`                               | `PROPOSED` |
+| `VS-005`                                          | Activate and maintain a parent profile with contact reverification                 | `US-PROF-03`, `US-PROF-04` | `VS-000`                               | `PROPOSED` |
+| `VS-006`                                          | Parent creates a pending student who can later activate that identity              | `US-FAM-00`, `US-FAM-04`   | `VS-005`                               | `PROPOSED` |
+| `VS-007`                                          | Student invites a parent who accepts an authorized primary relationship            | `US-FAM-01`, `US-FAM-02`   | `VS-001`, `VS-005`                     | `PROPOSED` |
+| `VS-008`                                          | Student or parent unlinks while preserving required history                        | `US-FAM-03`                | `VS-007`; ownership decisions          | `PROPOSED` |
+| `VS-009`                                          | Request and retrieve a privacy-safe personal-data export                           | `US-ACCOUNT-02`            | Activated account                      | `PROPOSED` |
+| `VS-010`                                          | Request and complete or hold account deletion with visible consequences            | `US-ACCOUNT-01`            | Activated account; blocker decisions   | `PROPOSED` |
+| `VS-011`                                          | Authorized admins manage permissions, accounts, and relationships with audit       | `US-ADMIN-01`, `US-ADM-01` | `VS-000`; relevant account state       | `PROPOSED` |
 
-| Slice    | User-observable/operational outcome                                              | Stories     | Main dependency                                    | Status     |
-| -------- | -------------------------------------------------------------------------------- | ----------- | -------------------------------------------------- | ---------- |
-| `VS-013` | Reviewer records valid provenance and blocks unauthorized publication            | `US-ADM-05` | `VS-007`                                           | `PROPOSED` |
-| `VS-014` | Admin publishes a versioned official syllabus and reviewed resource mappings     | `US-ADM-03` | `VS-007`, `VS-013`                                 | `PROPOSED` |
-| `VS-015` | Author/reviewer publishes one complete versioned learning unit                   | `US-ADM-02` | `VS-013`, `VS-014`                                 | `PROPOSED` |
-| `VS-016` | Reviewer publishes one scored question and bounded mock configuration            | `US-ADM-04` | `VS-013`, `VS-014`                                 | `PROPOSED` |
-| `VS-017` | Academic reviewer disposes a flagged AI answer and can disable/reroute its scope | `US-ADM-06` | `VS-007`; reviewed content and agent answers exist | `PROPOSED` |
+### Phase B — Academic content control plane
 
-### Phase C — Language, goals, diagnostics, and feasible planning
+| Slice    | User-observable/operational outcome                                             | Stories                  | Main dependency | Status     |
+| -------- | ------------------------------------------------------------------------------- | ------------------------ | --------------- | ---------- |
+| `VS-012` | Record provenance and publish versioned official syllabus and resource mappings | `US-ADM-05`, `US-ADM-03` | `VS-011`        | `PROPOSED` |
+| `VS-013` | Publish a governed bilingual assessed-learning package                          | `US-ADM-02`, `US-ADM-04` | `VS-012`        | `PROPOSED` |
 
-| Slice    | User-observable outcome                                                     | Stories      | Main dependency                                    | Status     |
-| -------- | --------------------------------------------------------------------------- | ------------ | -------------------------------------------------- | ---------- |
-| `VS-018` | Save a permanent explanation-language preference                            | `US-LANG-01` | `VS-001`                                           | `PROPOSED` |
-| `VS-019` | Temporarily override explanation language for one session                   | `US-LANG-02` | `VS-018`; one learning session exists              | `PROPOSED` |
-| `VS-020` | Change a confirmed subject exam language after impact review                | `US-LANG-03` | subject enrollment from `VS-023`; content mappings | `PROPOSED` |
-| `VS-021` | Save a planning goal with one primary target and weekly availability        | `US-GOAL-01` | `VS-001`                                           | `PROPOSED` |
-| `VS-022` | Receive source-dated subject/exam-language recommendations                  | `US-GOAL-02` | `VS-021`; verified requirement data                | `PROPOSED` |
-| `VS-023` | Confirm or adjust canonical subject-language enrollments with risk warnings | `US-GOAL-03` | `VS-022`                                           | `PROPOSED` |
-| `VS-024` | Start, autosave, resume, and submit a valid diagnostic attempt              | `US-DIAG-01` | `VS-016`, `VS-023`                                 | `PROPOSED` |
-| `VS-025` | View an evidence-bounded diagnostic result and recommended starting point   | `US-DIAG-02` | `VS-024`                                           | `PROPOSED` |
-| `VS-026` | Review, adjust intensity, and confirm the first-week plan                   | `US-PLAN-01` | `VS-021`, `VS-025`                                 | `PROPOSED` |
-| `VS-027` | View deterministic plan feasibility and reasons                             | `US-PLAN-02` | `VS-026`; workload estimates                       | `PROPOSED` |
-| `VS-028` | Apply one chosen feasibility adjustment without rewriting history           | `US-PLAN-03` | `VS-027`                                           | `PROPOSED` |
+### Phase C — Goals, diagnostics, and feasible planning
 
-### Phase D — Course, terminology, practice, and evidence loops
+| Slice    | User-observable outcome                                                                 | Stories                                       | Main dependency    | Status     |
+| -------- | --------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------ | ---------- |
+| `VS-014` | Set a goal, review sourced recommendations, and confirm or adjust subject/exam language | `US-GOAL-01`–`03`, `US-LANG-03`               | `VS-001`, `VS-012` | `PROPOSED` |
+| `VS-015` | Complete a resumable diagnostic and confirm an evidence-based feasible first-week plan  | `US-DIAG-01`, `US-DIAG-02`, `US-PLAN-01`–`03` | `VS-013`, `VS-014` | `PROPOSED` |
 
-| Slice    | User-observable outcome                                                          | Stories          | Main dependency                           | Status     |
-| -------- | -------------------------------------------------------------------------------- | ---------------- | ----------------------------------------- | ---------- |
-| `VS-029` | Browse subject-language course structure and readiness                           | `US-COURSE-01`   | `VS-015`, entitlement/trial read boundary | `PROPOSED` |
-| `VS-030` | Compare official syllabus coverage with personal progress as separate dimensions | `US-SYL-01`      | `VS-014`, `VS-029`                        | `PROPOSED` |
-| `VS-031` | Resume and consume a micro-lesson through accessible media/text controls         | `US-COURSE-04`   | `VS-015`, `VS-029`                        | `PROPOSED` |
-| `VS-032` | Finish one focused learning unit and reach its checkpoint entry                  | `US-COURSE-02`   | `VS-031`                                  | `PROPOSED` |
-| `VS-033` | Complete an in-course checkpoint and branch to progression/remediation           | `US-COURSE-03`   | `VS-016`, `VS-032`                        | `PROPOSED` |
-| `VS-034` | Preview required Chinese Mathematics terms before a topic                        | `US-TERM-02`     | `VS-014`, `VS-015`, Chinese track         | `PROPOSED` |
-| `VS-035` | Select a Chinese word/phrase and record bounded assistance use                   | `US-TERM-01`     | `VS-034`, learning mode                   | `PROPOSED` |
-| `VS-036` | Review automatically collected terminology and produce later evidence            | `US-TERM-03`     | `VS-035`, mistake evidence                | `PROPOSED` |
-| `VS-037` | Create, complete, and score a bounded topic-practice set                         | `US-PRACTICE-01` | `VS-016`, `VS-023`                        | `PROPOSED` |
-| `VS-038` | Complete plan-assigned practice and close/update the plan task once              | `US-PRACTICE-02` | `VS-026`, `VS-037`                        | `PROPOSED` |
-| `VS-039` | Request progressive hints whose strength changes evidence interpretation         | `US-HINT-01`     | `VS-037`                                  | `PROPOSED` |
-| `VS-040` | Capture one incorrect attempt into a traceable mistake record                    | `US-MISTAKE-01`  | `VS-037`                                  | `PROPOSED` |
-| `VS-041` | Classify a mistake and save a private student note                               | `US-MISTAKE-02`  | `VS-040`                                  | `PROPOSED` |
-| `VS-042` | Revalidate a due mistake with delayed independent evidence                       | `US-MISTAKE-03`  | `VS-040`, review scheduling               | `PROPOSED` |
+### Phase D — Learning, evidence, agent, and mock loops
 
-### Phase E — Agentic daily learning
+| Slice    | User-observable outcome                                                                    | Stories                                                                | Main dependency              | Status     |
+| -------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------- | ---------- |
+| `VS-016` | Browse course hierarchy while separating official coverage from personal progress          | `US-COURSE-01`, `US-SYL-01`                                            | `VS-012`, `VS-013`, access   | `PROPOSED` |
+| `VS-017` | Resume and complete a lesson, checkpoint, and remediation with temporary language control  | `US-COURSE-02`–`04`, `US-LANG-02`                                      | `VS-013`, `VS-016`           | `PROPOSED` |
+| `VS-018` | Preview, use, collect, and review required Chinese terminology                             | `US-TERM-01`–`03`                                                      | `VS-012`, `VS-017`           | `PROPOSED` |
+| `VS-019` | Complete practice and its mistake-classification, note, remediation, and revalidation loop | `US-PRACTICE-01`, `US-PRACTICE-02`, `US-HINT-01`, `US-MISTAKE-01`–`03` | `VS-013`, `VS-015`           | `PROPOSED` |
+| `VS-020` | Use an ordered daily plan, adjust time, recover from missed days, and review the week      | `US-AGENT-01`, `US-AGENT-02`, `US-MOT-01`, `US-MOT-02`, `US-WEEK-01`   | `VS-015`, learning evidence  | `PROPOSED` |
+| `VS-021` | Complete a contextual guided session and approve material plan reprioritization            | `US-AGENT-03`–`05`                                                     | `VS-017`, `VS-019`, `VS-020` | `PROPOSED` |
+| `VS-022` | Review, correct, disable, or reroute flagged AI/content output                             | `US-ADM-06`                                                            | `VS-011`, `VS-021`           | `PROPOSED` |
+| `VS-023` | Select, recover, submit exactly once, and review one timed mock                            | `US-MOCK-01`–`04`                                                      | `VS-013`, `VS-014`, access   | `PROPOSED` |
+| `VS-024` | Complete post-mock remediation and compare later retest evidence                           | `US-MOCK-05`                                                           | `VS-019`, `VS-020`, `VS-023` | `PROPOSED` |
 
-| Slice    | User-observable outcome                                                  | Stories       | Main dependency                          | Status     |
-| -------- | ------------------------------------------------------------------------ | ------------- | ---------------------------------------- | ---------- |
-| `VS-043` | View an ordered, reasoned, time-bounded daily task list                  | `US-AGENT-01` | `VS-026`, mastery/review evidence        | `PROPOSED` |
-| `VS-044` | Reduce today's time and transparently reschedule lower-priority tasks    | `US-AGENT-02` | `VS-043`, `VS-027`                       | `PROPOSED` |
-| `VS-045` | Complete a guided explanation-question-feedback-practice-summary session | `US-AGENT-03` | reviewed content, `VS-033`, `VS-037`     | `PROPOSED` |
-| `VS-046` | Ask a contextual question with language/source/confidence boundaries     | `US-AGENT-04` | `VS-017`, one supported learning context | `PROPOSED` |
-| `VS-047` | Accept or reject a high-impact plan reprioritization                     | `US-AGENT-05` | `VS-043`, new assessment evidence        | `PROPOSED` |
+### Phase E — Parent, notification, trial, commerce, and operations
 
-### Phase F — Mock exams, motivation, and parent support
-
-| Slice    | User-observable outcome                                                     | Stories                    | Main dependency                             | Status     |
-| -------- | --------------------------------------------------------------------------- | -------------------------- | ------------------------------------------- | ---------- |
-| `VS-048` | Compare and start an eligible mock with disclosed scope/language/time       | `US-MOCK-01`               | `VS-016`, entitlement/trial boundary        | `PROPOSED` |
-| `VS-049` | Take, autosave, recover, submit/auto-submit one timed attempt exactly once  | `US-MOCK-02`, `US-MOCK-03` | `VS-048`                                    | `PROPOSED` |
-| `VS-050` | Review score, time, topic evidence, and bounded issue categories            | `US-MOCK-04`               | `VS-049`                                    | `PROPOSED` |
-| `VS-051` | Confirm post-mock remediation and compare later retest evidence             | `US-MOCK-05`               | `VS-050`, `VS-043`                          | `PROPOSED` |
-| `VS-052` | Set and complete a meaningful daily goal with exactly-once streak update    | `US-MOT-01`                | `VS-043`                                    | `PROPOSED` |
-| `VS-053` | Recover from a missed day through a bounded restart and plan reconciliation | `US-MOT-02`                | `VS-052`, `VS-027`                          | `PROPOSED` |
-| `VS-054` | Review the learning week and confirm one next-week decision                 | `US-WEEK-01`               | learning evidence and plan                  | `PROPOSED` |
-| `VS-055` | Parent views a privacy-safe linked-student learning overview                | `US-PARENT-01`             | `VS-011`, learning evidence                 | `PROPOSED` |
-| `VS-056` | Parent receives one preference-compliant weekly report                      | `US-PARENT-03`             | `VS-054`, `VS-055`, notification delivery   | `PROPOSED` |
-| `VS-057` | Parent acts on a deduplicated risk alert without rewriting the plan         | `US-PARENT-02`             | `VS-055`, risk rules, notification delivery | `PROPOSED` |
-| `VS-058` | Parent views authorized entitlement and purchased-service summaries         | `US-PARENT-04`             | `VS-011`, commerce states                   | `PROPOSED` |
-
-### Phase G — Trial, products, payments, notifications, and support
-
-| Slice    | User-observable outcome                                                     | Stories         | Main dependency                             | Status     |
-| -------- | --------------------------------------------------------------------------- | --------------- | ------------------------------------------- | ---------- |
-| `VS-059` | Visitor browses truthful product/coverage/trial information                 | `US-TRIAL-01`   | `VS-014`, product catalog                   | `PROPOSED` |
-| `VS-060` | Registered student completes one bounded learn-practice-feedback trial      | `US-TRIAL-02`   | `VS-031`, `VS-037`, trial entitlement       | `PROPOSED` |
-| `VS-061` | Registered student completes one representative trial mock workflow         | `US-TRIAL-03`   | `VS-048`–`VS-050`, trial entitlement        | `PROPOSED` |
-| `VS-062` | Buyer reviews a complete subject-language product before checkout           | `US-PRODUCT-01` | `VS-014`, product/entitlement model         | `PROPOSED` |
-| `VS-063` | Payer creates one immutable pending local-payment order for a recipient     | `US-PAY-01`     | `VS-062`, `VS-011` for parent payer         | `PROPOSED` |
-| `VS-064` | Verified provider success grants one matching entitlement exactly once      | `US-PAY-02`     | `VS-063`, payment adapter                   | `PROPOSED` |
-| `VS-065` | Payer views authoritative order states and eligible receipts                | `US-ORDER-01`   | `VS-063`, `VS-064`                          | `PROPOSED` |
-| `VS-066` | Payer submits and tracks a refund/duplicate-payment case                    | `US-REFUND-01`  | `VS-065`, support/finance workflow          | `PROPOSED` |
-| `VS-067` | Payer receives expiry notice and creates a truthful manual-renewal order    | `US-RENEW-01`   | `VS-064`, notification delivery             | `PROPOSED` |
-| `VS-068` | User configures channel/type preferences with separate marketing consent    | `US-NOTIFY-01`  | profile/account state                       | `PROPOSED` |
-| `VS-069` | Eligible event produces one preference-compliant authorized notification    | `US-NOTIFY-02`  | `VS-068`, first event producer              | `PROPOSED` |
-| `VS-070` | User submits one contextual support ticket without unsafe data copying      | `US-SUPPORT-01` | account state; first supported context      | `PROPOSED` |
-| `VS-071` | Support admin replies, escalates, and closes a ticket with audit            | `US-SUPPORT-02` | `VS-007`, `VS-070`                          | `PROPOSED` |
-| `VS-072` | Finance admin reconciles payment/refund/entitlement exceptions exactly once | `US-FINOPS-01`  | `VS-007`, `VS-063`–`VS-066`                 | `PROPOSED` |
-| `VS-073` | Operations admin views permission-scoped privacy-safe metrics               | `US-ADM-07`     | implemented event producers and definitions | `PROPOSED` |
+| Slice    | User-observable/operational outcome                                                       | Stories                                 | Main dependency                     | Status     |
+| -------- | ----------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------- | ---------- |
+| `VS-025` | Configure notification preferences and receive authorized in-app or email delivery        | `US-NOTIFY-01`, `US-NOTIFY-02`          | Account state; first event producer | `PROPOSED` |
+| `VS-026` | Parent reviews a privacy-safe overview, weekly report, risk, and action                   | `US-PARENT-01`–`03`                     | `VS-007`, `VS-020`, `VS-025`        | `PROPOSED` |
+| `VS-027` | Visitor or registered student sees truthful products and representative trial flows       | `US-TRIAL-01`–`03`, `US-PRODUCT-01`     | `VS-013`, `VS-017`, `VS-023`        | `PROPOSED` |
+| `VS-028` | Create an order, verify provider payment, grant entitlement once, and view receipt/status | `US-PAY-01`, `US-PAY-02`, `US-ORDER-01` | `VS-007`, `VS-027`; provider        | `PROPOSED` |
+| `VS-029` | Parent views authorized student entitlement and purchased-service summaries               | `US-PARENT-04`                          | `VS-007`, `VS-028`                  | `PROPOSED` |
+| `VS-030` | Submit and reconcile refund or duplicate-payment cases without duplicate side effects     | `US-REFUND-01`, `US-FINOPS-01`          | `VS-011`, `VS-028`                  | `PROPOSED` |
+| `VS-031` | Receive expiry notice and create a truthful manual-renewal order                          | `US-RENEW-01`                           | `VS-025`, `VS-028`                  | `PROPOSED` |
+| `VS-032` | Submit, reply to, escalate, and close a contextual support issue                          | `US-SUPPORT-01`, `US-SUPPORT-02`        | `VS-011`; first supported context   | `PROPOSED` |
+| `VS-033` | Authorized operations staff view permission-scoped, privacy-safe metrics                  | `US-ADM-07`                             | `VS-011`; implemented event sources | `PROPOSED` |
 
 ## P0 ordering notes
 
 - The table is a dependency-aware roadmap, not a commitment to implement every row before validating demand.
-- Slice IDs are stable allocation identifiers, not execution order. Newly
-  discovered work keeps a new ID even when it belongs in an earlier phase.
+- `VS-000` and `VS-001` retain their delivered IDs. Version `0.4.0` performed
+  the one-time renumbering of proposed work; after a detailed brief is created,
+  its ID is immutable and later replacement uses `SUPERSEDED`.
 - A representative student learning loop can be piloted before all P0 back-office breadth, but production scored learning still requires the minimum reviewed content, syllabus mapping, question publication, provenance, and admin access slices.
 - Parent, payment, and support slices may be deferred during an internal student-only pilot only through an explicit change to the normative requirement qualification, not by editing this plan.
 - Agentic behavior should begin only after deterministic content, assessment, mastery evidence, and plan state exist. The agent must orchestrate bounded tools; it must not become the authority for grading, mastery, entitlements, or plan feasibility.
@@ -203,7 +154,7 @@ Add a dependency only in the accepted slice that first uses it. The slice plan r
 | React Hook Form + Zod   | First multi-step form whose complexity exceeds native/local-state handling | One validation authority aligned with TypeSpec; no duplicate schema drift                                                |
 | KaTeX                   | First reviewed lesson/question with mathematical notation                  | Accessibility, CSP/font, low-bandwidth, and representative rendering tests                                               |
 | Object-storage adapter  | First authorized PDF/content/student upload                                | Ownership, signed access, malware checks, retention, deletion, and retry policy                                          |
-| AI provider adapter     | `VS-045` or `VS-046`                                                       | Reviewed sources, deterministic tools, schemas, prompt-injection defenses, budgets, traces, and multilingual evaluations |
+| AI provider adapter     | `VS-021`                                                                   | Reviewed sources, deterministic tools, schemas, prompt-injection defenses, budgets, traces, and multilingual evaluations |
 | Shared rate-limit store | Multiple API replicas or measured per-process insufficiency                | Topology/abuse evidence and operational ownership                                                                        |
 
 ## Deferred by default
@@ -217,26 +168,27 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 ## Revision history
 
-| Version | Date       | Change                                                                                                                                                                                                                                                             |
-| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0.3.18  | 2026-07-27 | Marked PX-002 `DONE` at its explicitly non-production journey boundary, recorded its low-fidelity UI and incomplete-requirement limitations, added the prototype-to-production promotion process, and added proposed `VS-074`/`VS-075` rows for `US-AUTH-03`/`04`. |
-| 0.3.17  | 2026-07-26 | Moved PX-002 to `VERIFYING` after reviewer repairs and current frontend, connected-journey, localization, accessibility, responsive, boundary, and generated-artifact evidence; product-owner final review remains pending.                                        |
-| 0.3.16  | 2026-07-24 | Added `US-AUTH-03` and `US-AUTH-04` for later production email/password registration, verification, sign-in, and recovery without creating a production slice or changing PX-002's fixture boundary.                                                               |
-| 0.3.15  | 2026-07-24 | Added PX-002 as the current shaping milestone, qualified fixture-backed credential entry beside production Google authentication, and reconciled the PX-001 milestone row to `DONE`.                                                                               |
-| 0.3.14  | 2026-07-23 | Marked PX-001 `DONE` after the product owner verified the current revision-6 experience and found no remaining visual or journey issue; production-slice selection may resume.                                                                                     |
-| 0.3.13  | 2026-07-23 | Moved PX-001 to `VERIFYING` after reviewer repairs, complete frontend gates, connected desktop/mobile journeys, responsive screenshots, and production/preview boundary checks.                                                                                    |
-| 0.3.12  | 2026-07-23 | Removed PX-001 environment-flag gating; authenticated students access visibly labelled, in-memory preview routes directly.                                                                                                                                         |
-| 0.3.11  | 2026-07-23 | Expanded PX-001 to the goal-to-remediation journey, representative mock lifecycle, and supporting language/family/access visibility.                                                                                                                               |
-| 0.3.10  | 2026-07-23 | Made the complete connected P0 student experience—not an intermediate shell phase—the PX-001 acceptance boundary.                                                                                                                                                  |
-| 0.3.9   | 2026-07-23 | Selected `PX-001` as the active non-production experience milestone and kept every referenced production capability slice `PROPOSED`.                                                                                                                              |
-| 0.3.8   | 2026-07-22 | Added experience/shaping/contract horizons and the DESIGN.md-guided prototype lane without expanding the speculative TypeSpec surface.                                                                                                                             |
-| 0.3.7   | 2026-07-22 | Closed `VS-001` after real-flow confirmation, persisted-state inspection, reproducible contract generation, focused final tests, and log redaction.                                                                                                                |
-| 0.3.6   | 2026-07-22 | Moved `VS-001` to `VERIFYING` after integrating its contract, migration, backend flow, onboarding UI, and focused automated evidence.                                                                                                                              |
-| 0.3.5   | 2026-07-22 | Moved `VS-001` to `CONTRACT_READY` after the profile TypeSpec compiled and generated declarations were reviewed.                                                                                                                                                   |
-| 0.3.4   | 2026-07-22 | Approved the complete `VS-001` human-decision scope and moved the slice into TypeSpec shaping.                                                                                                                                                                     |
-| 0.3.3   | 2026-07-22 | Returned `VS-000` to `DONE` after the product owner confirmed the repaired real Google-account relogin journey.                                                                                                                                                    |
-| 0.3.2   | 2026-07-22 | Moved the `VS-000` regression repair to `VERIFYING` after automated and local-stack checks; real Google-account confirmation remains pending.                                                                                                                      |
-| 0.3.1   | 2026-07-22 | Reopened `VS-000` for the returning-user sign-in regression and safe failure-side-effect repair.                                                                                                                                                                   |
-| 0.3.0   | 2026-07-21 | Added bounded human decision gates, documentation-sufficiency review, domain-language maintenance, and lazy decision records.                                                                                                                                      |
-| 0.2.0   | 2026-07-21 | Replaced the generic dependency-only plan with a versioned vertical-slice roadmap, lifecycle, explicit TypeSpec gate, and concrete next slice.                                                                                                                     |
-| 0.1.0   | 2026-07-20 | Initial implementation principles and dependency activation list.                                                                                                                                                                                                  |
+| Version | Date       | Change                                                                                                                                                                                                                                                                    |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.4.0   | 2026-07-28 | Regrouped 74 proposed micro-slices into 32 capability-sized closed loops, retained delivered `VS-000`/`VS-001`, preserved ownership of all 51 P0 requirement sections, and synchronized prototype/coverage references without changing product requirements.              |
+| 0.3.18  | 2026-07-27 | Marked PX-002 `DONE` at its explicitly non-production journey boundary, recorded its low-fidelity UI and incomplete-requirement limitations, added the prototype-to-production promotion process, and assigned proposed credential ownership later renumbered by `0.4.0`. |
+| 0.3.17  | 2026-07-26 | Moved PX-002 to `VERIFYING` after reviewer repairs and current frontend, connected-journey, localization, accessibility, responsive, boundary, and generated-artifact evidence; product-owner final review remains pending.                                               |
+| 0.3.16  | 2026-07-24 | Added `US-AUTH-03` and `US-AUTH-04` for later production email/password registration, verification, sign-in, and recovery without creating a production slice or changing PX-002's fixture boundary.                                                                      |
+| 0.3.15  | 2026-07-24 | Added PX-002 as the current shaping milestone, qualified fixture-backed credential entry beside production Google authentication, and reconciled the PX-001 milestone row to `DONE`.                                                                                      |
+| 0.3.14  | 2026-07-23 | Marked PX-001 `DONE` after the product owner verified the current revision-6 experience and found no remaining visual or journey issue; production-slice selection may resume.                                                                                            |
+| 0.3.13  | 2026-07-23 | Moved PX-001 to `VERIFYING` after reviewer repairs, complete frontend gates, connected desktop/mobile journeys, responsive screenshots, and production/preview boundary checks.                                                                                           |
+| 0.3.12  | 2026-07-23 | Removed PX-001 environment-flag gating; authenticated students access visibly labelled, in-memory preview routes directly.                                                                                                                                                |
+| 0.3.11  | 2026-07-23 | Expanded PX-001 to the goal-to-remediation journey, representative mock lifecycle, and supporting language/family/access visibility.                                                                                                                                      |
+| 0.3.10  | 2026-07-23 | Made the complete connected P0 student experience—not an intermediate shell phase—the PX-001 acceptance boundary.                                                                                                                                                         |
+| 0.3.9   | 2026-07-23 | Selected `PX-001` as the active non-production experience milestone and kept every referenced production capability slice `PROPOSED`.                                                                                                                                     |
+| 0.3.8   | 2026-07-22 | Added experience/shaping/contract horizons and the DESIGN.md-guided prototype lane without expanding the speculative TypeSpec surface.                                                                                                                                    |
+| 0.3.7   | 2026-07-22 | Closed `VS-001` after real-flow confirmation, persisted-state inspection, reproducible contract generation, focused final tests, and log redaction.                                                                                                                       |
+| 0.3.6   | 2026-07-22 | Moved `VS-001` to `VERIFYING` after integrating its contract, migration, backend flow, onboarding UI, and focused automated evidence.                                                                                                                                     |
+| 0.3.5   | 2026-07-22 | Moved `VS-001` to `CONTRACT_READY` after the profile TypeSpec compiled and generated declarations were reviewed.                                                                                                                                                          |
+| 0.3.4   | 2026-07-22 | Approved the complete `VS-001` human-decision scope and moved the slice into TypeSpec shaping.                                                                                                                                                                            |
+| 0.3.3   | 2026-07-22 | Returned `VS-000` to `DONE` after the product owner confirmed the repaired real Google-account relogin journey.                                                                                                                                                           |
+| 0.3.2   | 2026-07-22 | Moved the `VS-000` regression repair to `VERIFYING` after automated and local-stack checks; real Google-account confirmation remains pending.                                                                                                                             |
+| 0.3.1   | 2026-07-22 | Reopened `VS-000` for the returning-user sign-in regression and safe failure-side-effect repair.                                                                                                                                                                          |
+| 0.3.0   | 2026-07-21 | Added bounded human decision gates, documentation-sufficiency review, domain-language maintenance, and lazy decision records.                                                                                                                                             |
+| 0.2.0   | 2026-07-21 | Replaced the generic dependency-only plan with a versioned vertical-slice roadmap, lifecycle, explicit TypeSpec gate, and concrete next slice.                                                                                                                            |
+| 0.1.0   | 2026-07-20 | Initial implementation principles and dependency activation list.                                                                                                                                                                                                         |
