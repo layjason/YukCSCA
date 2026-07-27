@@ -28,7 +28,8 @@ A slice file must be complete enough for a new agent to implement the outcome wi
 - selected story IDs and exact requirement sections;
 - one demonstrable user outcome;
 - explicit in-scope and out-of-scope behavior;
-- UI flow and route ownership;
+- frontend route/state/ownership, prototype promotion, and design-system impact;
+- technology/dependency need, alternatives, operating impact, removal, and ADR disposition;
 - TypeSpec operation and model inventory;
 - domain state transitions, persistence ownership, and migration impact;
 - authorization, privacy, audit, idempotency, and failure behavior;
@@ -79,8 +80,8 @@ For any feature request, an agent must:
 
 1. Read `AGENTS.md`, `docs/README.md`, and the active row in `docs/PLAN.md`.
 2. Read the active delivery brief and only its linked requirement/story sections first.
-3. Inspect current architecture, TypeSpec, and the nearest directory `AGENTS.md`.
-4. Complete the slice's documentation-sufficiency review. If a material ambiguity remains, follow `HUMAN_REVIEW.md`, mark the gate `AWAITING_DECISION`, and ask one bounded question at a time.
+3. Inspect current architecture, TypeSpec, the nearest directory `AGENTS.md`, and root `DESIGN.md` plus `docs/design/README.md` for UI work.
+4. Complete the slice's documentation-sufficiency review, including technology/dependency and frontend/design impact. If a material ambiguity remains, follow `HUMAN_REVIEW.md`, mark the gate `AWAITING_DECISION`, and ask one bounded question at a time.
 5. After each answer, update the owning artifact immediately: paired requirements, stories/coverage, glossary, slice, TypeSpec, or a rare decision record.
 6. Change TypeSpec first for approved public HTTP behavior, then generated declarations, backend, frontend, persistence, tests, and documentation in one coherent slice. For a no-HTTP PX brief, keep prototype state behind its documented boundary and do not change TypeSpec.
 7. Update the slice checklist with exact evidence; never mark `DONE` from code existence alone.
