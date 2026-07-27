@@ -18,6 +18,8 @@ A slice is `CONTRACT_READY` only when:
 
 - its TypeSpec operation set compiles;
 - generated OpenAPI has been reviewed against the slice acceptance matrix;
+- the backend agent records the initial checkpoint and the frontend agent completes its consumer review;
+- an accepted checkpoint is recorded after every slice-local request is applied, declined with evidence, or resolved through the human gate;
 - authentication, authorization, validation, nullability, enums, cookies, and required errors are explicit;
 - the contract does not advertise adjacent future behavior;
 - backend/frontend implementation may proceed without unresolved product-semantic questions.

@@ -28,7 +28,7 @@ For production delivery:
 3. Complete the documentation-sufficiency review. If material semantics remain unresolved, follow `docs/delivery/HUMAN_REVIEW.md`, record stable decision IDs, and move the slice to `AWAITING_DECISION`.
 4. Resolve product semantics, state transitions, ownership, privacy, money, and failure behavior; update the owning requirement/story/coverage/glossary/slice artifact after each human answer.
 5. Write and review the TypeSpec operation set. A public-HTTP slice reaches `CONTRACT_READY` only after TypeSpec compiles and generated output is reviewed.
-6. Implement backend, frontend, persistence, tests, observability, and documentation as one coherent vertical slice.
+6. Once the slice gate permits implementation (`CONTRACT_READY` for public HTTP), each agent implements only its assigned backend or frontend sections from the same slice revision and accepted boundary, records its own evidence, and integrates the real flow before completion.
 7. Mark `DONE` only when the actor completes the real flow and every acceptance criterion has named evidence.
 
 The full process and lifecycle are defined in [`docs/delivery/README.md`](delivery/README.md). Future rows remain planning hypotheses; do not create empty modules, TypeSpec files, or slice documents for them.
@@ -41,7 +41,7 @@ YukCSCA separates product-journey coherence from executable API commitment:
 2. **Shaping horizon:** keep the active slice and at most two likely next slices detailed enough to understand dependencies and user handoffs. Future roadmap rows remain capability hypotheses.
 3. **Contract horizon:** add executable TypeSpec only for an accepted slice whose behavior, authorization, state transitions, failures, and privacy boundary are sufficiently resolved. Do not pre-build the full future API surface.
 
-After a slice reaches `CONTRACT_READY`, frontend implementation against a contract-backed mock and backend implementation against the same contract may proceed in parallel. Choose frontend-first when navigation or interaction is the main risk; choose backend-first when transactions, authorization, idempotency, money, or concurrency are the main risk. Integrate the real flow as early as possible.
+After a slice reaches `CONTRACT_READY`, backend and frontend implementation may proceed separately from the same reviewed contract checkpoint. The delivery guide owns the detailed agent handoff.
 
 A prototype model must remain separate from generated API declarations. When a prototype area becomes an active production slice, either promote it deliberately to the accepted contract and feature structure or delete the exploratory code; do not let prototype assumptions silently become public API.
 
@@ -68,12 +68,6 @@ Experience milestones are non-production delivery work. They may connect several
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------ |
 | `PX-001`  | An activated student can complete goal-to-plan onboarding, use every primary P0 destination, finish a lesson/practice/mistake/remediation loop, and complete a representative mock lifecycle with state-complete, accessible, responsive behavior while fixture-backed academic behavior remains visibly Preview and non-persistent | [`PX-001-product-experience-baseline.md`](delivery/PX-001-product-experience-baseline.md)         | `VS-000`, `VS-001`, root `DESIGN.md`           | `DONE` |
 | `PX-002`  | A visitor can understand the product, compare production Google entry with fixture-backed credential entry, choose a student or parent continuation, and traverse connected public, parent, family, commerce, and aftercare previews without creating production identity, relationship, or financial state                         | [`PX-002-public-parent-commerce-baseline.md`](delivery/PX-002-public-parent-commerce-baseline.md) | `PX-001`, `VS-000`, `VS-001`, root `DESIGN.md` | `DONE` |
-
-PX-002 implementation followed
-[`worker-product-baseline-PX002.md`](prompts/worker-product-baseline-PX002.md).
-The prompt is subordinate to the accepted delivery brief and paired
-requirements. Completion validates the connected prototype boundary only; its
-rough, largely text-led presentation is not the production UI baseline.
 
 ## P0 delivery graph
 

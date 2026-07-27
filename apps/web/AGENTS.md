@@ -17,3 +17,5 @@
 - All user-visible text belongs in localization resources.
 - Add a component test for a success state and a failure, validation, accessibility, or edge state.
 - For material layout changes, verify at least one narrow mobile and one desktop viewport, keyboard order, reduced motion, and layout-sensitive content in Indonesian, English, and Chinese.
+
+- Review the backend agent's initialized contract as a consumer. Do not hand-edit TypeSpec or invent a competing wire model; record a concrete `CR-NN` request in the active slice and implement only from its accepted contract checkpoint.

@@ -20,7 +20,6 @@
 | Exploratory requirement areas | 0.1; 1.1–1.3; 2.1–2.3; 10.1–10.4; 11.1–11.5; 13.1–13.2; applicable security, privacy/minor, localization/accessibility, and financial-consistency NFRs                                  |
 | Exploratory story families    | `US-AUTH-*`, `US-PROF-*`, `US-ACCOUNT-*`, `US-FAM-*`, `US-PARENT-*`, `US-TRIAL-*`, `US-PRODUCT-*`, `US-PAY-*`, `US-ORDER-*`, `US-REFUND-*`, `US-RENEW-*`, `US-NOTIFY-*`, `US-SUPPORT-*` |
 | Depends on                    | `PX-001`, `VS-000`, `VS-001`, root `DESIGN.md`                                                                                                                                          |
-| Worker prompt                 | [`worker-product-baseline-PX002.md`](../prompts/worker-product-baseline-PX002.md)                                                                                                       |
 | TypeSpec source               | None; existing TypeSpec and generated declarations remain unchanged                                                                                                                     |
 | API operations                | Existing Google identity/session and student-activation operations only                                                                                                                 |
 | Implementation owner          | Web frontend                                                                                                                                                                            |

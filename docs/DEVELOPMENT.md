@@ -115,7 +115,7 @@ These targets use the workspace-pinned Prettier and Maven Wrapper. Do not replac
 
 ## Focused tests
 
-Run a narrow test while iterating, then run the applicable full gate before handoff:
+Run a narrow test while iterating. At handoff, run the smallest applicable gate; use a full suite only when the active slice or wider regression risk requires it:
 
 ```bash
 # One frontend test file
@@ -144,11 +144,11 @@ are `chromium` (desktop) and `mobile-chrome` (Pixel 7). Compose and real Google
 credentials are unnecessary unless an accepted slice requires cross-stack
 behavior.
 
-Run the narrowest useful test while iterating, then the required desktop/mobile
-matrix once at handoff:
+Run the narrowest useful test while iterating, then only the project/viewport
+matrix required by the active slice and regression risk at handoff:
 
 ```bash
-# Full suite, both projects
+# Full suite, both projects — only when the slice or regression risk requires it
 pnpm e2e:web
 
 # One spec/project
@@ -183,6 +183,11 @@ Artifacts:
 - Failure artifacts/traces: `apps/web/test-results/`
 - `--reporter=line`: terminal only; any existing HTML report is stale
 - Retained review screenshots only: `output/playwright/<slice-or-review-id>/`
+
+For visual handoff, open and inspect every screenshot produced or retained for
+the current slice run. Confirm that the accepted flow, states, and handoffs are
+complete and that no layout, localization, action, or feedback defect is hidden
+by a passing assertion.
 
 Open reports/traces with:
 
