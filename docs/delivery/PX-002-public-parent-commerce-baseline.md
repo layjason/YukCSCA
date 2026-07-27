@@ -11,10 +11,10 @@
 
 | Field                         | Value                                                                                                                                                                                   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status                        | `SHAPING`                                                                                                                                                                               |
+| Status                        | `DONE`                                                                                                                                                                                  |
 | Human gate                    | `APPROVED`                                                                                                                                                                              |
-| Plan revision                 | 2                                                                                                                                                                                       |
-| Updated                       | 2026-07-24                                                                                                                                                                              |
+| Plan revision                 | 5                                                                                                                                                                                       |
+| Updated                       | 2026-07-27                                                                                                                                                                              |
 | Primary actors                | Public visitor; production Google `UNASSIGNED` user; fixture-backed credential persona; parent/payer preview persona                                                                    |
 | Production-backed entry       | `VS-000` Google authentication/session and `VS-001` student activation                                                                                                                  |
 | Exploratory requirement areas | 0.1; 1.1–1.3; 2.1–2.3; 10.1–10.4; 11.1–11.5; 13.1–13.2; applicable security, privacy/minor, localization/accessibility, and financial-consistency NFRs                                  |
@@ -71,10 +71,27 @@ terminology, privacy explanation, money-state comprehension, responsive
 hierarchy, and future contract needs across several later slices. It does not
 authorize a broad production implementation.
 
-Production outcomes are recorded in `US-AUTH-03` and `US-AUTH-04`, but no
-credential-authentication slice or contract is created now. Exact account,
-password, verification, recovery, abuse-control, session, and provider
-semantics must be shaped when that vertical slice is selected.
+Production outcomes are recorded in `US-AUTH-03` and `US-AUTH-04`, with
+`VS-074` and `VS-075` now reserved as proposed roadmap slices. Those IDs do not
+constitute accepted briefs or contracts. Exact account, password, verification,
+recovery, abuse-control, session, and provider semantics must be shaped when
+each vertical slice is selected.
+
+## Completion qualification
+
+PX-002 is `DONE` because its labelled non-production journeys and isolation
+boundary are demonstrable. It does not fully represent the normative
+requirement flows, production states, authorization, persistence, provider
+behavior, or final interaction quality.
+
+Many current screens are intentionally low fidelity: they are text-heavy, use
+basic layouts and controls, and communicate future behavior more than a finished
+product experience. Production work must not treat them as final UI or copy
+their fixture models directly. Before implementing each owning slice, reread the
+latest paired requirements, accepted slice, stories/coverage, root `DESIGN.md`,
+`docs/design/README.md`, architecture/security/development guidance, TypeSpec,
+and current implementation, then refine the complete task flow and visual
+hierarchy to the production standard.
 
 ## In scope
 
@@ -481,31 +498,35 @@ app
 
 ## Requirement and future-owner traceability
 
-| PX-002 surface                               | Requirement/story                              | Accepted depth              | Authority                                                     | Future production owner                                        | Required evidence                      |
-| -------------------------------------------- | ---------------------------------------------- | --------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------- |
-| Public Home and For Parents                  | Product positioning; `US-TRIAL-01`             | Surface complete            | Preview content                                               | `VS-059`                                                       | Routes and responsive screenshots      |
-| Product/trial detail                         | 11.1–11.2; `US-TRIAL-01`–`03`, `US-PRODUCT-01` | Flow complete               | Preview                                                       | `VS-059`–`VS-062`                                              | Route tests and journey                |
-| Google entry/session                         | 1.1; `US-AUTH-01`, `US-AUTH-02`                | Reused real boundary        | Production                                                    | `VS-000`                                                       | Existing auth plus boundary regression |
-| Email/password register/verify/login/recover | 1.1; `US-AUTH-03`, `US-AUTH-04`                | Flow complete               | Preview                                                       | Future credential-authentication slice assigned during shaping | Boundary tests and Journey A           |
-| Role selection                               | 1.2–1.3; `US-PROF-01`, `US-PROF-03`            | Flow complete               | Mixed                                                         | `VS-001`, `VS-002`                                             | Route/guard tests                      |
-| Student continuation                         | `US-PROF-01`                                   | Flow complete handoff       | Production activation or PX-001 preview by identity authority | `VS-001` and later academic slices                             | Journey A                              |
-| Parent activation                            | 1.1–1.3; `US-PROF-03`                          | Flow complete               | Preview                                                       | `VS-002`                                                       | Journey B                              |
-| Parent-created student                       | 2.1; `US-FAM-00`, `US-FAM-04`                  | Representative flow         | Preview                                                       | `VS-009`, `VS-010`                                             | Journey B and conflict test            |
-| Invitation/link/unlink                       | 2.2–2.3; `US-FAM-01`–`03`                      | Flow complete               | Preview                                                       | `VS-011`, `VS-012`                                             | State tests                            |
-| Parent overview/privacy                      | 10.1, 10.4; `US-PARENT-01`, `US-FAM-02`        | Surface complete            | Preview                                                       | `VS-055`                                                       | Screenshot and privacy test            |
-| Weekly report/risk                           | 10.2; `US-PARENT-02`, `US-PARENT-03`           | Surface complete            | Preview                                                       | `VS-056`, `VS-057`                                             | Scenario tests                         |
-| Entitlement/service summary                  | 10.3; `US-PARENT-04`                           | Surface complete            | Preview                                                       | `VS-058`                                                       | Parent route test                      |
-| Checkout/order                               | 11.3; `US-PAY-01`                              | Flow complete               | Preview                                                       | `VS-063`                                                       | Journey C and duplicate-confirm test   |
-| Provider outcome/entitlement                 | 11.3; `US-PAY-02`                              | Representative lifecycle    | Preview                                                       | `VS-064`                                                       | Reducer/state tests                    |
-| Orders/receipts                              | 11.5; `US-ORDER-01`                            | Surface complete            | Preview                                                       | `VS-065`                                                       | Paid/unpaid tests                      |
-| Refund/duplicate payment                     | 11.5; `US-REFUND-01`                           | Representative flow         | Preview                                                       | `VS-066`                                                       | Eligibility/state tests                |
-| Manual renewal                               | 11.4; `US-RENEW-01`                            | Representative flow         | Preview                                                       | `VS-067`                                                       | New-order test                         |
-| Notification preferences                     | 13.1; `US-NOTIFY-01`, `US-NOTIFY-02`           | Surface complete            | Preview                                                       | `VS-068`, `VS-069`                                             | Preference/default tests               |
-| Account export/deletion                      | 1.2; `US-ACCOUNT-01`, `US-ACCOUNT-02`          | Signposted/explanation only | Preview                                                       | `VS-005`, `VS-006`                                             | Route/copy tests                       |
-| Support                                      | 13.2; `US-SUPPORT-01`                          | Representative flow         | Preview                                                       | `VS-070`                                                       | Context-safety test                    |
+| PX-002 surface                               | Requirement/story                              | Accepted depth              | Authority                                                     | Future production owner            | Required evidence                      |
+| -------------------------------------------- | ---------------------------------------------- | --------------------------- | ------------------------------------------------------------- | ---------------------------------- | -------------------------------------- |
+| Public Home and For Parents                  | Product positioning; `US-TRIAL-01`             | Surface complete            | Preview content                                               | `VS-059`                           | Routes and responsive screenshots      |
+| Product/trial detail                         | 11.1–11.2; `US-TRIAL-01`–`03`, `US-PRODUCT-01` | Flow complete               | Preview                                                       | `VS-059`–`VS-062`                  | Route tests and journey                |
+| Google entry/session                         | 1.1; `US-AUTH-01`, `US-AUTH-02`                | Reused real boundary        | Production                                                    | `VS-000`                           | Existing auth plus boundary regression |
+| Email/password register/verify/login/recover | 1.1; `US-AUTH-03`, `US-AUTH-04`                | Flow complete               | Preview                                                       | `VS-074`, `VS-075`                 | Boundary tests and Journey A           |
+| Role selection                               | 1.2–1.3; `US-PROF-01`, `US-PROF-03`            | Flow complete               | Mixed                                                         | `VS-001`, `VS-002`                 | Route/guard tests                      |
+| Student continuation                         | `US-PROF-01`                                   | Flow complete handoff       | Production activation or PX-001 preview by identity authority | `VS-001` and later academic slices | Journey A                              |
+| Parent activation                            | 1.1–1.3; `US-PROF-03`                          | Flow complete               | Preview                                                       | `VS-002`                           | Journey B                              |
+| Parent-created student                       | 2.1; `US-FAM-00`, `US-FAM-04`                  | Representative flow         | Preview                                                       | `VS-009`, `VS-010`                 | Journey B and conflict test            |
+| Invitation/link/unlink                       | 2.2–2.3; `US-FAM-01`–`03`                      | Flow complete               | Preview                                                       | `VS-011`, `VS-012`                 | State tests                            |
+| Parent overview/privacy                      | 10.1, 10.4; `US-PARENT-01`, `US-FAM-02`        | Surface complete            | Preview                                                       | `VS-055`                           | Screenshot and privacy test            |
+| Weekly report/risk                           | 10.2; `US-PARENT-02`, `US-PARENT-03`           | Surface complete            | Preview                                                       | `VS-056`, `VS-057`                 | Scenario tests                         |
+| Entitlement/service summary                  | 10.3; `US-PARENT-04`                           | Surface complete            | Preview                                                       | `VS-058`                           | Parent route test                      |
+| Checkout/order                               | 11.3; `US-PAY-01`                              | Flow complete               | Preview                                                       | `VS-063`                           | Journey C and duplicate-confirm test   |
+| Provider outcome/entitlement                 | 11.3; `US-PAY-02`                              | Representative lifecycle    | Preview                                                       | `VS-064`                           | Reducer/state tests                    |
+| Orders/receipts                              | 11.5; `US-ORDER-01`                            | Surface complete            | Preview                                                       | `VS-065`                           | Paid/unpaid tests                      |
+| Refund/duplicate payment                     | 11.5; `US-REFUND-01`                           | Representative flow         | Preview                                                       | `VS-066`                           | Eligibility/state tests                |
+| Manual renewal                               | 11.4; `US-RENEW-01`                            | Representative flow         | Preview                                                       | `VS-067`                           | New-order test                         |
+| Notification preferences                     | 13.1; `US-NOTIFY-01`, `US-NOTIFY-02`           | Surface complete            | Preview                                                       | `VS-068`, `VS-069`                 | Preference/default tests               |
+| Account export/deletion                      | 1.2; `US-ACCOUNT-01`, `US-ACCOUNT-02`          | Signposted/explanation only | Preview                                                       | `VS-005`, `VS-006`                 | Route/copy tests                       |
+| Support                                      | 13.2; `US-SUPPORT-01`                          | Representative flow         | Preview                                                       | `VS-070`                           | Context-safety test                    |
 
 No row changes a future owner's `PROPOSED` status or counts as production
 acceptance.
+
+“Flow complete” and “surface complete” in this table mean complete only for the
+accepted connected-preview depth. They do not mean that every normative branch,
+production state, or final visual treatment is represented.
 
 ## Experience, accessibility, localization, and motion requirements
 
@@ -689,33 +710,33 @@ reduced motion. It must not capture real or preview-entered passwords.
 
 ## Definition of done
 
-- [ ] Journeys A–D form one connected, understandable consumer experience.
-- [ ] Public information explains the product without private data or false
+- [x] Journeys A–D form one connected, understandable consumer experience.
+- [x] Public information explains the product without private data or false
       coverage, score, urgency, or official-status claims.
-- [ ] Production Google and fixture credential paths are equally discoverable
+- [x] Production Google and fixture credential paths are equally discoverable
       and unmistakably different in authority.
-- [ ] Preview passwords, identities, roles, family, and commerce state remain
+- [x] Preview passwords, identities, roles, family, and commerce state remain
       isolated from production APIs, auth state, storage, logs, analytics, and
       evidence artifacts.
-- [ ] Google Student reuses `VS-001`; credential Student reaches only PX-001
+- [x] Google Student reuses `VS-001`; credential Student reaches only PX-001
       fixtures; Parent never mutates production role.
-- [ ] Family/privacy and parent-support surfaces expose no private student
+- [x] Family/privacy and parent-support surfaces expose no private student
       conversation, note, staff record, or mastery/plan control.
-- [ ] Product, payer, recipient, amount, subject, exam language, validity,
+- [x] Product, payer, recipient, amount, subject, exam language, validity,
       coverage, limits, deadline, order state, and authority remain explicit.
-- [ ] Duplicate confirmation/paid outcomes are idempotent and no unpaid state
+- [x] Duplicate confirmation/paid outcomes are idempotent and no unpaid state
       yields a receipt or entitlement.
-- [ ] Refund and renewal copy makes no promise or automatic-charge claim.
-- [ ] State completeness, restart/recovery, keyboard, focus, dialogs,
+- [x] Refund and renewal copy makes no promise or automatic-charge claim.
+- [x] State completeness, restart/recovery, keyboard, focus, dialogs,
       responsive behavior, reduced motion, and all three interface locales have
       named evidence.
-- [ ] TypeSpec, generated declarations, backend, migrations, production
+- [x] TypeSpec, generated declarations, backend, migrations, production
       storage, and production telemetry remain unchanged.
-- [ ] Referenced stories/slices remain production-incomplete and every preview
+- [x] Referenced stories/slices remain production-incomplete and every preview
       surface has a promotion/deletion owner.
-- [ ] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, `COVERAGE.md`, and this brief
+- [x] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, `COVERAGE.md`, and this brief
       accurately describe the final result.
-- [ ] Product owner completes the bounded final consumer-journey and visual
+- [x] Product owner completes the bounded final consumer-journey and visual
       review before `DONE`.
 
 ## Known limitations and remaining decisions
@@ -724,9 +745,13 @@ reduced motion. It must not capture real or preview-entered passwords.
   is memory-only and may reset on refresh.
 - Public products, prices, coverage, payment methods, dates, orders, provider
   results, receipts, entitlements, and cases are fictional samples.
-- Production credential outcomes exist as `US-AUTH-03` and `US-AUTH-04`, but
-  no credential-authentication slice ID, contract, or implementation exists.
-  Create those artifacts only when the production vertical slice enters
+- The current UI is mostly text-led with basic visual hierarchy and controls.
+  It is sufficient to validate the connected preview but is not final
+  production design and does not cover every normative requirement state.
+- Production credential outcomes exist as `US-AUTH-03` and `US-AUTH-04`, and
+  proposed roadmap IDs `VS-074` and `VS-075` now exist, but neither has an
+  accepted delivery brief, contract, provider decision, or implementation.
+  Create those artifacts only when each production vertical slice enters
   shaping.
 - Production parent activation, family authorization, catalog, payment
   provider, entitlement, receipt, refund, notification, export/deletion, and
@@ -756,22 +781,41 @@ refund, unlinking, notification, audit, and observability semantics. Reuse only
 presentation code that still fits the accepted contract and delete superseded
 fixtures/routes rather than retaining parallel paths indefinitely.
 
+For each owning slice, classify prototype code as:
+
+- **reuse** — genuinely generic presentation or accessibility behavior that
+  still matches the latest design and accepted contract;
+- **rewrite** — text-heavy/basic screens, fixture-bound state, or incomplete
+  states that need production interaction and visual refinement;
+- **delete** — preview routes, reducers, models, and scenarios replaced by the
+  real feature.
+
+Production code belongs under `features` and the owning backend module, not
+under `prototype`. App composition switches the route only after the real
+success and failure/authorization/edge paths pass; then the superseded preview
+path is removed.
+
 ## Verification evidence
 
-| Evidence                                     | Result                                                                                         |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Documentation sufficiency                    | Complete for plan revision 2                                                                   |
-| Human decision gate                          | Approved on 2026-07-24                                                                         |
-| Current implementation inspection            | Completed during shaping; PX-001 is committed and the PX-002 implementation does not yet exist |
-| Contract build/generated check               | Not run; no contract change is planned                                                         |
-| Frontend typecheck/lint/tests/build          | Not run; implementation has not started                                                        |
-| Connected browser journeys                   | Not run; implementation has not started                                                        |
-| Responsive/accessibility/localization review | Not run; implementation has not started                                                        |
-| Backend/migration verification               | Not run; no backend or migration change is planned                                             |
+| Evidence                                     | Result                                                                                                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documentation sufficiency                    | Complete for plan revision 5                                                                                                                                          |
+| Human decision gate                          | Approved on 2026-07-24                                                                                                                                                |
+| Product-owner final review                   | Accepted on 2026-07-27 at the explicitly non-production journey boundary; low-fidelity UI and incomplete requirement representation recorded as promotion constraints |
+| Current implementation inspection            | Reviewed and repaired 2026-07-26; routes, guards, layouts, fixtures, state, tests, and screenshots reinspected                                                        |
+| Contract build/generated check               | PASS — `pnpm check:generated` confirms artifacts unchanged                                                                                                            |
+| Frontend typecheck/lint/tests/build          | PASS — typecheck 0 errors, lint 0 warnings, 51 tests pass, production build succeeds                                                                                  |
+| Connected browser journeys                   | PASS — 14/14 focused Chromium checks cover A1, A2, B, C, D, public/mobile, keyboard, locales, and reduced motion                                                      |
+| Responsive/accessibility/localization review | PASS — inspected 360/390 mobile, 768 tablet, 1280/1440 desktop, three locales, keyboard, reduced motion, and overflow evidence                                        |
+| Backend/migration verification               | PASS — `git diff -- contracts services/api` empty; no backend or migration change                                                                                     |
+| Review repairs                               | 5 BLOCKER + 14 MAJOR findings repaired; see `docs/reviews/PX-002-product-baseline-review.md`                                                                          |
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                                                                                                                                                             |
-| -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2        | 2026-07-24 | Linked the production credential stories `US-AUTH-03` and `US-AUTH-04` while preserving the fixture-only PX-002 boundary and deferring the production slice and contract to shaping.                                                               |
-| 1        | 2026-07-24 | Created the accepted no-HTTP PX-002 shaping boundary, including production Google versus fixture credential authority, public/role/parent/family/commerce journeys, safety invariants, traceability, acceptance evidence, and promotion ownership. |
+| Revision | Date       | Change                                                                                                                                                                                                                                                                                          |
+| -------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5        | 2026-07-27 | Marked `DONE` after product-owner acceptance of the bounded journeys, while explicitly recording that the text-heavy/basic UI and fixture flows are not complete requirement or production-design representations; added `VS-074`/`VS-075` ownership and a reuse/rewrite/delete promotion gate. |
+| 4        | 2026-07-26 | Moved to `VERIFYING` after reviewer repairs restored A1/A2 routing, role/privacy guards, financial invariants, localization, responsive presentation, and complete focused frontend/browser evidence. Product-owner final review remains pending.                                               |
+| 3        | 2026-07-24 | Moved to `IN_PROGRESS` after confirming the committed PX-001 result, current routes, auth state, and clean tree match the accepted boundary. Implementation started.                                                                                                                            |
+| 2        | 2026-07-24 | Linked the production credential stories `US-AUTH-03` and `US-AUTH-04` while preserving the fixture-only PX-002 boundary and deferring the production slice and contract to shaping.                                                                                                            |
+| 1        | 2026-07-24 | Created the accepted no-HTTP PX-002 shaping boundary, including production Google versus fixture credential authority, public/role/parent/family/commerce journeys, safety invariants, traceability, acceptance evidence, and promotion ownership.                                              |

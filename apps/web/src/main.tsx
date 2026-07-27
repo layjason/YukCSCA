@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './app/App';
 import { AuthProvider } from './features/auth/AuthContext';
 import { PrototypeProvider } from './prototype/student/PrototypeProvider';
+import { ConsumerProvider } from './prototype/consumer/state/ConsumerProvider';
 import './shared/i18n';
 import './styles.css';
 
@@ -15,7 +16,9 @@ ReactDOM.createRoot(root).render(
     <BrowserRouter>
       <AuthProvider>
         <PrototypeProvider>
-          <App />
+          <ConsumerProvider>
+            <App />
+          </ConsumerProvider>
         </PrototypeProvider>
       </AuthProvider>
     </BrowserRouter>

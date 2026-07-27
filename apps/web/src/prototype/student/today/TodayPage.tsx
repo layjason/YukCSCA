@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/features/auth/useAuth';
 import { usePrototype } from '@/prototype/student/prototypeContext';
 import { PrototypeStatusBoundary } from '@/prototype/student/components/PrototypeStatusBoundary';
 
-export function TodayPage(): React.JSX.Element {
+interface TodayPageProps {
+  displayName?: string;
+}
+
+export function TodayPage({ displayName }: TodayPageProps = {}): React.JSX.Element {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { state } = usePrototype();
 
   const tasks = state.todayTasks;
@@ -17,7 +19,7 @@ export function TodayPage(): React.JSX.Element {
   return (
     <PrototypeStatusBoundary>
       <div className="page-content">
-        <h1>{t('today.greeting', { name: user?.displayName ?? t('shell.fallbackName') })}</h1>
+        <h1>{t('today.greeting', { name: displayName ?? t('shell.fallbackName') })}</h1>
 
         <section className="today-focus" aria-labelledby="focus-heading">
           <h2 id="focus-heading">{t('today.focus')}</h2>

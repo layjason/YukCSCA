@@ -70,6 +70,9 @@ test('connects production session restoration and activation to the isolated Pre
 }) => {
   await mockProductionActivationBoundary(page);
   await page.goto('/');
+  await expect(page).toHaveURL(/\/onboarding\/role$/);
+  await page.locator('.role-card', { hasText: /siswa|student/i }).click();
+  await page.getByRole('button', { name: /lanjutkan|continue/i }).click();
   await expect(page).toHaveURL(/\/onboarding\/student$/);
 
   await page.getByLabel(/preferred name|nama panggilan/i).fill('Ayu');

@@ -5,6 +5,7 @@ import App from '@/app/App';
 import { mobileMoreRoutes, mobilePrimaryNavRoutes } from '@/app/routes';
 import { PrototypeProvider, type ScenarioId } from './PrototypeProvider';
 import type { PrototypeState } from './prototypeState';
+import { ConsumerProvider } from '@/prototype/consumer/state/ConsumerProvider';
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 
@@ -32,7 +33,9 @@ function renderScenario(
         initialScenario={scenario}
         {...(initialOverrides ? { initialOverrides } : {})}
       >
-        <App />
+        <ConsumerProvider>
+          <App />
+        </ConsumerProvider>
       </PrototypeProvider>
     </MemoryRouter>,
   );

@@ -11,6 +11,9 @@
     "eyebrow": "YukCSCA",
     "title": "Prepare for CSCA with a clear path",
     "description": "Sign in with Google to start onboarding, diagnostics, and a personal study plan.",
+    "or": "or",
+    "credentialHint": "Prefer email and password? This is a preview — no production account is created.",
+    "credentialLink": "Sign in with email (Preview)",
     "privacy": "Google is used only for basic authentication. YukCSCA issues its own application session."
   },
   "studentActivation": {
@@ -93,6 +96,7 @@
   "shell": {
     "navLabel": "Main navigation",
     "logout": "Sign out",
+    "exitPreview": "Exit preview",
     "fallbackName": "Student"
   },
   "preview": {
@@ -105,6 +109,19 @@
     "loadingDescription": "The deterministic sample is loading. No AI request or production write is occurring.",
     "errorTitle": "Preview content could not load",
     "retry": "Try again"
+  },
+  "guard": {
+    "previewContext": {
+      "title": "Preview session required",
+      "description": "This area is part of the in-memory preview. Your session may have been reset by a page refresh or direct link. Start from role selection to continue.",
+      "startRole": "Choose a role",
+      "goHome": "Back to Home"
+    },
+    "previewStudentAccount": {
+      "title": "Preview student identity",
+      "description": "This credential persona can use fixture-backed learning only. It is not a production account, session, or Student role.",
+      "exit": "Discard preview"
+    }
   },
   "unsupported": {
     "eyebrow": "YukCSCA",
@@ -583,6 +600,815 @@
     "mistake": {
       "remediationTitle": "Review: finding the greatest common factor",
       "remediationContent": "Check the largest shared number and the lowest power of every shared variable, then retry later without assistance."
+    }
+  },
+  "public": {
+    "brand": "YukCSCA",
+    "languageSelect": "Interface language",
+    "nav": {
+      "label": "Main navigation",
+      "home": "Home",
+      "products": "Products",
+      "trial": "Trial",
+      "forParents": "For Parents",
+      "signIn": "Sign in",
+      "createAccount": "Create account",
+      "toggleMenu": "Toggle navigation menu"
+    },
+    "footer": {
+      "label": "Footer navigation",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "support": "Support",
+      "note": "YukCSCA is a learning platform for Indonesian students preparing for CSCA. This preview does not represent a live service."
+    },
+    "home": {
+      "heroTitle": "A clear path through CSCA Mathematics",
+      "heroSubtitle": "YukCSCA helps Indonesian high-school students prepare for CSCA with goal-based planning, daily learning, practice, mistake recovery, and mock exams — in English or Chinese exam language.",
+      "startFree": "Create your account",
+      "viewProducts": "View products",
+      "howItWorks": "How YukCSCA works",
+      "step1Title": "Goal and subject confirmation",
+      "step1Desc": "Set your target university, exam date, and confirm which Mathematics track you need.",
+      "step2Title": "Diagnostic",
+      "step2Desc": "A short diagnostic identifies your current strengths and gaps.",
+      "step3Title": "Feasible study plan",
+      "step3Desc": "Receive a plan matched to your available time and exam timeline.",
+      "step4Title": "Daily learning and practice",
+      "step4Desc": "Work through focused lessons, practice questions, and terminology support.",
+      "step5Title": "Mistake recovery",
+      "step5Desc": "Incorrect answers become tracked mistakes with guided remediation.",
+      "step6Title": "Mock exams and progress",
+      "step6Desc": "Take mock exams, review evidence, and reprioritize your plan.",
+      "languageModel": "Two exam-language tracks",
+      "languageModelDesc": "CSCA Mathematics is offered in English and Chinese. The exam language determines question language; explanations can be in Indonesian, English, or Chinese independently.",
+      "mathEnglish": "Mathematics (English)",
+      "mathEnglishDesc": "English exam questions with Indonesian, English, or Chinese explanations.",
+      "mathChinese": "Mathematics (Chinese)",
+      "mathChineseDesc": "Chinese exam questions with pinyin support and Indonesian, English, or Chinese explanations.",
+      "trialTitle": "Try before you commit",
+      "trialDesc": "The free trial gives you a bounded experience of the learning loop.",
+      "trialItem1": "One sample lesson per module",
+      "trialItem2": "Five practice questions",
+      "trialItem3": "One short diagnostic",
+      "learnMoreTrial": "Learn about the trial",
+      "parentTitle": "Support for parents",
+      "parentDesc": "Parents receive privacy-safe weekly summaries, risk alerts, and purchase management — without accessing private student conversations.",
+      "forParents": "Learn more for parents",
+      "trustTitle": "Content and trust principles",
+      "trustItem1": "Reviewed, provenance-recorded content only",
+      "trustItem2": "No guaranteed scores or admission claims",
+      "trustItem3": "Student privacy is protected by design"
+    },
+    "products": {
+      "title": "Products",
+      "subtitle": "Subject-language plans for CSCA Mathematics preparation.",
+      "previewNotice": "Sample catalog — not a live product listing.",
+      "perPlan": "per {{days}}-day plan",
+      "coverage": "{{covered}} of {{total}} modules covered",
+      "viewDetail": "View details",
+      "notFound": "Product not found",
+      "notFoundDesc": "The requested product does not exist in this sample catalog."
+    },
+    "productDetail": {
+      "previewNotice": "Sample product — not production-authoritative.",
+      "subject": "Subject",
+      "examLanguage": "Exam language",
+      "intendedLearner": "Intended learner",
+      "includedModules": "Included modules",
+      "missingModules": "Not yet covered",
+      "practiceScope": "Practice scope",
+      "terminologySupport": "Terminology support",
+      "aiAllowance": "AI assistance",
+      "mockAllowance": "Mock exams",
+      "validity": "Validity",
+      "days": "{{days}} days",
+      "price": "Price",
+      "renewalBehavior": "Renewal",
+      "trialBenefits": "Trial includes",
+      "trialLimits": "Trial limits",
+      "startCheckout": "Continue to checkout",
+      "covered": "Covered",
+      "notCovered": "Not covered",
+      "missingModulesNone": "All listed modules are covered by this plan."
+    },
+    "trial": {
+      "title": "Free trial",
+      "subtitle": "Experience the learning loop before choosing a plan.",
+      "included": "What the trial includes",
+      "includedItem1": "One sample lesson per module",
+      "includedItem2": "Five practice questions with feedback",
+      "includedItem3": "One short diagnostic with result",
+      "notIncluded": "What the trial does not include",
+      "notIncludedItem1": "Mock exam access",
+      "notIncludedItem2": "Full progress tracking",
+      "notIncludedItem3": "AI explanation assistance",
+      "notIncludedItem4": "Parent reports or purchase features",
+      "cta": "Create your account to start the trial",
+      "previewNotice": "Trial scope is sample data for this preview."
+    },
+    "forParents": {
+      "title": "For parents",
+      "subtitle": "Support your child's CSCA preparation with visibility and boundaries.",
+      "summaryTitle": "What you can see",
+      "summaryItem1": "Weekly activity summaries",
+      "summaryItem2": "Syllabus progress and plan feasibility",
+      "summaryItem3": "Risk alerts when the plan falls behind",
+      "summaryItem4": "Access and entitlement summaries",
+      "summaryItem5": "Purchase and receipt management",
+      "privacyTitle": "What remains private",
+      "privacyItem1": "Full agent conversations",
+      "privacyItem2": "Private student notes",
+      "privacyItem3": "Question-by-question answer history",
+      "privacyItem4": "Internal staff records",
+      "privacyNote": "Parent access is summary-oriented. Students retain privacy over their detailed learning process.",
+      "cta": "Create a parent account"
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "body": "This is a sample privacy policy for the YukCSCA preview. It does not represent a live legal document. In production, this page would explain data collection, processing, retention, minor protections, and your rights."
+    },
+    "terms": {
+      "title": "Terms of service",
+      "body": "These are sample terms of service for the YukCSCA preview. They do not constitute a binding agreement. In production, this page would contain the actual service terms, refund policy, and usage conditions."
+    }
+  },
+  "credential": {
+    "previewBadge": "Preview — not production authentication",
+    "show": "Show",
+    "hide": "Hide",
+    "or": "or",
+    "register": {
+      "title": "Create your account",
+      "description": "Register with email and password to explore the preview experience.",
+      "email": "Email address",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "passwordRequirementsLabel": "Password requirements",
+      "requirements": "Password must be at least 8 characters.",
+      "terms": "I accept the Terms of Service and Privacy Policy.",
+      "submit": "Create account",
+      "submitting": "Creating…",
+      "orDivider": "or",
+      "googleHint": "For production sign-in, use Google:",
+      "goToGoogleLogin": "Continue with Google",
+      "haveAccount": "Already have an account? Sign in",
+      "signIn": "Sign in",
+      "errorEmailRequired": "Email is required.",
+      "errorEmailFormat": "Enter a valid email address.",
+      "errorPasswordRequired": "Password is required.",
+      "errorPasswordMin": "Password must be at least 8 characters.",
+      "errorConfirmRequired": "Please confirm your password.",
+      "errorPasswordMismatch": "Passwords do not match.",
+      "errorTermsRequired": "You must accept the terms to continue.",
+      "errorDuplicateEmail": "An account with this email already exists.",
+      "verificationSent": "Verification email sent. Check your inbox."
+    },
+    "verify": {
+      "title": "Verify your email",
+      "description": "We sent a verification code to {{email}}.",
+      "verifyButton": "Verify email",
+      "verifying": "Verifying…",
+      "resend": "Resend code",
+      "resendCooldown": "Resend available in {{seconds}}s",
+      "cooldownNote": "You can request another code in {{seconds}} seconds.",
+      "resent": "Verification code resent.",
+      "invalidToken": "This verification link is invalid or has expired.",
+      "expiredHint": "Request a new verification email to continue.",
+      "success": "Email verified successfully.",
+      "noSession": "No pending verification. Start from registration.",
+      "backToRegister": "Back to registration",
+      "previewNote": "This is a preview simulation. No real email was sent."
+    },
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in with your email and password for the preview experience.",
+      "email": "Email address",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "keepSignedIn": "Keep me signed in",
+      "keepSignedInNote": "Preview only — no persistent session is created.",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "orDivider": "or",
+      "googleHint": "For production sign-in, use Google:",
+      "goToGoogleLogin": "Continue with Google",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account? Create one",
+      "createAccount": "Create account",
+      "errorEmailRequired": "Email is required.",
+      "errorEmailFormat": "Enter a valid email address.",
+      "errorPasswordRequired": "Password is required.",
+      "errorInvalidCredentials": "Invalid email or password."
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "description": "Enter your email and we will send a reset link if an account exists.",
+      "email": "Email address",
+      "emailHint": "Enter the email address associated with your account.",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "confirmation": "If an account exists for that email, a reset link has been sent.",
+      "backToLogin": "Back to sign in",
+      "errorEmailRequired": "Email is required.",
+      "errorEmailFormat": "Enter a valid email address.",
+      "previewNote": "This is a preview. No real email is sent."
+    }
+  },
+  "role": {
+    "title": "Choose your role",
+    "description": "Roles determine your permissions and data boundaries. Choose the role that matches how you will use YukCSCA.",
+    "legend": "Select the role that describes you",
+    "student": {
+      "title": "Student",
+      "description": "Access learning, practice, mock exams, and progress tracking.",
+      "googleNote": "You will continue to production student activation.",
+      "previewNote": "You will enter the fixture-backed student preview."
+    },
+    "parent": {
+      "title": "Parent",
+      "description": "Support your child with privacy-safe summaries, reports, and purchase management.",
+      "previewNote": "Parent experience is a preview. Production parent activation belongs to a future update."
+    },
+    "tutor": {
+      "title": "Tutor",
+      "description": "Tutor applications are not open in the current pilot.",
+      "unavailable": "Not available"
+    },
+    "continue": "Continue",
+    "previewBadge": "Preview"
+  },
+  "parent": {
+    "onboarding": {
+      "title": "Set up your parent profile",
+      "step": "Step {{current}} of {{total}}",
+      "progressLabel": "Parent onboarding progress",
+      "steps": {
+        "profile": "Profile",
+        "privacy": "Privacy",
+        "complete": "Complete"
+      },
+      "continueToPrivacy": "Continue to privacy settings",
+      "continueToComplete": "Continue to summary",
+      "back": "Back",
+      "profile": {
+        "heading": "Your information",
+        "name": "Full name",
+        "relationship": "Relationship to student",
+        "relationshipParent": "Parent",
+        "relationshipGuardian": "Guardian",
+        "relationshipOther": "Other",
+        "contactEmail": "Contact email",
+        "preferredContact": "Preferred contact method",
+        "preferredEmail": "Email",
+        "preferredPhone": "Phone",
+        "locale": "Preferred language",
+        "localeId": "Bahasa Indonesia",
+        "localeEn": "English",
+        "localeZh": "Simplified Chinese",
+        "errorNameRequired": "Name is required.",
+        "errorEmailRequired": "Contact email is required.",
+        "errorEmailFormat": "Enter a valid email address."
+      },
+      "privacy": {
+        "heading": "Privacy and notifications",
+        "explanationTitle": "What you can and cannot see",
+        "explanation": "As a parent, you will see summary-level information about your child's learning. You will not see private conversations, personal notes, or detailed answer history.",
+        "canSeeTitle": "You can see",
+        "canSeeProgress": "Progress summaries and plan feasibility",
+        "canSeeRisk": "Risk alerts when the study plan falls behind",
+        "canSeeAccess": "Access, entitlement, and purchase summaries",
+        "cannotSeeTitle": "You cannot see",
+        "cannotSeeConversations": "Private agent conversations",
+        "cannotSeeNotes": "Private student notes and detailed answer history",
+        "notificationsLegend": "Notification preferences",
+        "essentialTitle": "Essential notifications (always on)",
+        "essentialDesc": "Security alerts, transaction confirmations",
+        "alwaysOn": "Always on",
+        "optionalTitle": "Optional notifications",
+        "learningReminders": "Learning activity reminders",
+        "weeklyReport": "Weekly progress report",
+        "riskAlerts": "Plan risk alerts",
+        "marketingTitle": "Marketing (optional)",
+        "marketingOptIn": "Send me product updates and promotions",
+        "termsAccept": "I accept the Terms of Service and Privacy Policy.",
+        "errorTermsRequired": "You must accept the terms to continue."
+      },
+      "complete": {
+        "heading": "You're ready",
+        "summary": "Your parent preview profile is set up. You can now enter the parent workspace.",
+        "enterWorkspace": "Enter parent workspace",
+        "noLinkedNote": "No student is linked yet. You will be able to create or accept a student relationship inside.",
+        "optedIn": "Yes",
+        "optedOut": "No"
+      }
+    },
+    "nav": {
+      "label": "Parent navigation",
+      "home": "Home",
+      "family": "Family",
+      "reports": "Reports",
+      "purchases": "Purchases",
+      "account": "Account"
+    },
+    "home": {
+      "title": "Parent home",
+      "noLinked": {
+        "heading": "No student linked yet",
+        "explanation": "Learning data becomes available after you create a student profile or accept a student's invitation.",
+        "createStudent": "Create a student profile",
+        "acceptInvitation": "Accept a student invitation",
+        "privacyNote": "Until a relationship is active, no student data is visible.",
+        "browseProducts": "Browse products"
+      },
+      "privacyTitle": "Privacy",
+      "linked": {
+        "studentLabel": "Linked student",
+        "weeklyActivity": "This week's activity",
+        "tasksCompleted": "{{completed}} of {{total}} tasks completed",
+        "studyTime": "{{minutes}} minutes studied",
+        "syllabusProgress": "Syllabus progress: {{percent}}%",
+        "planFeasibility": "Plan status",
+        "feasibilityOnTrack": "On track",
+        "feasibilityAtRisk": "At risk",
+        "feasibilityHighRisk": "High risk",
+        "currentRisk": "Current risk",
+        "noRisk": "No active risk identified.",
+        "recommendedActions": "Recommended actions",
+        "entitlementSummary": "Access summary",
+        "latestReport": "Latest report",
+        "viewReport": "View report"
+      }
+    },
+    "report": {
+      "title": "Weekly reports",
+      "notFound": "Student not found or not linked to your account.",
+      "noLinkedStudent": "Reports are available after a student is linked to your account.",
+      "backHome": "Back to home",
+      "listHeading": "Reports",
+      "empty": "No reports available yet.",
+      "statusAvailable": "Available",
+      "statusInsufficient": "Insufficient evidence",
+      "statusDeliveryFailed": "Email delivery failed — available in-app",
+      "tasksCompleted": "{{completed}}/{{total}} tasks",
+      "topicsProgressed": "Topics progressed",
+      "riskLevel": "Risk level",
+      "riskNone": "None",
+      "riskLow": "Low",
+      "riskMedium": "Medium",
+      "riskHigh": "High",
+      "recommendedActions": "Recommended actions",
+      "encouragement": "Send encouragement",
+      "suggestPlanReview": "Suggest plan review",
+      "reviewProduct": "Review a suitable product",
+      "dismiss": "Dismiss temporarily",
+      "planReviewNote": "If you suggest a plan review, the student must accept or reject the change.",
+      "noPlanEdit": "You cannot directly edit the student's plan or mastery."
+    },
+    "studentOverview": {
+      "title": "Student overview",
+      "notFound": "Student not found or not linked to your account.",
+      "backHome": "Back to home",
+      "privacyNote": "This view shows summary-level information only. Private conversations and notes are not visible.",
+      "weeklySummary": "Weekly summary",
+      "tasksLabel": "Tasks completed",
+      "minutesLabel": "Study minutes",
+      "progressLabel": "Syllabus progress",
+      "feasibilityLabel": "Plan feasibility",
+      "riskLabel": "Current risk",
+      "noRisk": "No active risk identified.",
+      "mockTrend": "Mock exam trend",
+      "mockTrendNote": "Based on limited preview evidence. Not a production score.",
+      "actions": "Supportive actions",
+      "encourage": "Send encouragement",
+      "encouragementRecorded": "Encouragement recorded in this preview.",
+      "suggestReview": "Suggest plan review",
+      "reviewRecorded": "Plan-review suggestion recorded in this preview.",
+      "browseProduct": "Review products",
+      "dismiss": "Dismiss",
+      "dismissed": "The suggestion was dismissed in this preview.",
+      "viewReports": "View weekly reports"
+    }
+  },
+  "family": {
+    "title": "Family",
+    "create": {
+      "privacyTitle": "Privacy boundary"
+    },
+    "noLink": {
+      "heading": "No linked student",
+      "createOption": "Create a student profile for later activation",
+      "acceptOption": "Accept a student's invitation",
+      "privacyExplanation": "A parent-student relationship must be active before any learning data is visible."
+    },
+    "pending": {
+      "heading": "Pending student activation",
+      "studentName": "Student name",
+      "studentEmail": "Student email",
+      "createdAt": "Created",
+      "notice": "The student must verify their identity and confirm their own information before learning begins.",
+      "noEmailSent": "This preview does not send a functional invitation email or SMS."
+    },
+    "active": {
+      "heading": "Linked student",
+      "studentName": "Student",
+      "linkedAt": "Linked since",
+      "permissions": "You can see",
+      "permissionSummary": "Summary progress and plan risk",
+      "permissionSyllabus": "Syllabus progress",
+      "permissionMock": "Mock trend with evidence limitation",
+      "permissionAccess": "Access and service summary",
+      "permissionReport": "Weekly report",
+      "notVisible": "Not visible to you",
+      "notVisibleConversations": "Private agent conversations",
+      "notVisibleNotes": "Private student notes",
+      "notVisibleHistory": "Full question-by-question history",
+      "unlink": "Unlink student"
+    },
+    "unlink": {
+      "heading": "Unlink student",
+      "consequences": "If you unlink:",
+      "consequence1": "Future summary access will end.",
+      "consequence2": "The student's learning history remains intact.",
+      "consequence3": "You retain your own historical receipts and refund records.",
+      "consequence4": "Unresolved tutoring or order issues may require review.",
+      "confirm": "Confirm unlink",
+      "cancel": "Cancel",
+      "done": "Student unlinked. You no longer have summary access.",
+      "previewNote": "This preview does not mutate a real relationship."
+    },
+    "createStudent": {
+      "title": "Create a student profile",
+      "name": "Student name",
+      "email": "Student email",
+      "submit": "Create student profile",
+      "privacyBoundary": "The student must verify their identity and confirm their information before activation.",
+      "errorNameRequired": "Student name is required.",
+      "errorEmailFormat": "Enter a valid email address.",
+      "errorDuplicate": "A student with this information already exists.",
+      "success": "Student profile created. Awaiting student activation."
+    },
+    "invitation": {
+      "title": "Student invitation",
+      "studentName": "Student",
+      "studentEmail": "Student email",
+      "allowedAccess": "Allowed access",
+      "expiresAt": "Expires: {{date}}",
+      "accept": "Accept invitation",
+      "expired": "This invitation has expired.",
+      "mismatched": "This invitation was sent to a different account.",
+      "alreadyUsed": "This invitation has already been used.",
+      "notFound": "This invitation does not exist.",
+      "backToFamily": "Back to family"
+    }
+  },
+  "commerce": {
+    "checkout": {
+      "title": "Checkout",
+      "product": "Product",
+      "recipient": "Recipient",
+      "recipientSelf": "Myself",
+      "selectRecipient": "Select a recipient",
+      "payer": "Payer",
+      "amount": "Amount",
+      "validity": "Validity",
+      "validityDays": "{{days}} days",
+      "benefits": "Included benefits",
+      "limits": "Limits",
+      "coverageNote": "Coverage limitation",
+      "deadline": "Payment deadline",
+      "deadlineNote": "Complete payment within 12 hours or the order expires.",
+      "termsSummary": "Refunds follow the platform refund policy. See Terms for details.",
+      "continueToPayment": "Continue to payment",
+      "noRecipient": "Select a linked student as recipient before continuing.",
+      "selectProduct": "Select a product",
+      "subject": "Subject",
+      "examLanguage": "Exam language",
+      "missingModules": "Not yet covered: {{modules}}",
+      "changeProduct": "Change product",
+      "selfRecipient": "Myself (student self-purchase)"
+    },
+    "payment": {
+      "title": "Payment method",
+      "selectMethod": "Select a payment method",
+      "unavailable": "Not available",
+      "confirm": "Confirm order",
+      "creating": "Creating order…",
+      "qrNotice": "Sample — not payable",
+      "noCardInput": "This preview does not collect real card numbers.",
+      "noCharge": "This preview does not create a real charge.",
+      "methods": {
+        "qris": "QRIS",
+        "bankVa": "Bank Virtual Account",
+        "gopay": "GoPay",
+        "shopeepay": "ShopeePay",
+        "card": "Payment card"
+      }
+    },
+    "instructions": {
+      "title": "Payment instructions",
+      "sampleNotice": "Sample payment instructions — this preview does not create a real charge.",
+      "qrisPlaceholder": "Sample QR code — not payable",
+      "vaNumber": "Virtual Account number (sample)",
+      "authorityNote": "In production, the payment provider's outcome is authoritative. Closing this browser does not determine final payment status.",
+      "browserNote": "A browser success screen alone does not grant access.",
+      "simulateOutcome": "Simulate provider outcome (preview control)",
+      "markPaid": "Simulate: Paid",
+      "markFailed": "Simulate: Failed",
+      "markExpired": "Simulate: Expired",
+      "viewOrder": "View order"
+    },
+    "orders": {
+      "title": "Orders",
+      "empty": "No orders yet.",
+      "statusPending": "Pending",
+      "statusPaid": "Paid",
+      "statusFailed": "Failed",
+      "statusExpired": "Expired",
+      "statusCancelled": "Cancelled",
+      "statusRefunded": "Refunded",
+      "viewDetail": "View"
+    },
+    "orderDetail": {
+      "title": "Order detail",
+      "notFound": "This order was not found in the current preview session.",
+      "orderId": "Order ID (sample)",
+      "product": "Product",
+      "payer": "Payer",
+      "recipient": "Recipient",
+      "amount": "Amount",
+      "validity": "Validity",
+      "paymentMethod": "Payment method",
+      "status": "Status",
+      "providerRef": "Provider reference (sample)",
+      "reconciliation": "Reconciliation time",
+      "notReconciled": "Not yet reconciled",
+      "receiptSection": "Receipt",
+      "receiptNumber": "Receipt number",
+      "receiptNote": "This is a sample receipt, not a tax invoice.",
+      "entitlementLink": "View entitlement",
+      "pendingNote": "Access is granted only after the payment provider confirms success.",
+      "refundLink": "Request refund",
+      "renewLink": "Renew",
+      "supportLink": "Contact support"
+    },
+    "entitlements": {
+      "title": "Entitlements",
+      "empty": "No active entitlements.",
+      "statusActive": "Active",
+      "statusExpiring": "Expiring soon",
+      "statusExpired": "Expired",
+      "statusPending": "Pending reconciliation",
+      "validity": "Valid until",
+      "limits": "Usage limits",
+      "sourceOrder": "Source order",
+      "renew": "Renew"
+    },
+    "refund": {
+      "title": "Request refund",
+      "eligibility": "Refund eligibility depends on the platform refund policy and order status.",
+      "ineligible": "This order is not eligible for a refund.",
+      "reason": "Reason",
+      "reasonDuplicate": "Duplicate payment",
+      "reasonService": "Service issue",
+      "reasonOther": "Other",
+      "evidence": "Supporting evidence",
+      "evidenceNote": "In production, you could attach screenshots. This preview does not support real uploads.",
+      "effectOnAccess": "Effect on access",
+      "submit": "Submit refund request",
+      "submitted": "Refund request submitted for review.",
+      "caseId": "Case ID",
+      "noPromise": "Submitting a request does not guarantee a refund.",
+      "statusPendingReview": "Pending review",
+      "statusApproved": "Approved",
+      "statusRejected": "Rejected",
+      "statusResolved": "Resolved"
+    },
+    "renewal": {
+      "title": "Manual renewal",
+      "currentExpiry": "Current expiry date",
+      "newValidity": "New validity period",
+      "newValidityDays": "{{days}} days from purchase",
+      "amount": "Renewal amount",
+      "explicitNote": "A new one-time order will be created. This is not automatic billing.",
+      "notAutomatic": "QRIS and Virtual Account payments are never automatic recurring charges.",
+      "confirm": "Create renewal order",
+      "created": "Renewal order created."
+    }
+  },
+  "notifications": {
+    "title": "Notification preferences",
+    "essentialTitle": "Essential (always on)",
+    "essentialDesc": "Security alerts and transaction confirmations cannot be disabled.",
+    "securityAlerts": "Security alerts",
+    "transactionConfirmations": "Transaction confirmations",
+    "optionalTitle": "Optional notifications",
+    "inApp": "In-app notifications",
+    "email": "Email notifications",
+    "learningReminders": "Learning reminders",
+    "weeklyParentReport": "Weekly parent report",
+    "riskAlerts": "Risk alerts",
+    "entitlementExpiry": "Entitlement expiry notices",
+    "orderPaymentStatus": "Order and payment status",
+    "supportUpdates": "Support ticket updates",
+    "marketingTitle": "Marketing (separate opt-in)",
+    "marketing": "Product updates and promotions",
+    "marketingNote": "Marketing is off by default and separate from essential notifications.",
+    "whatsappTitle": "WhatsApp",
+    "whatsapp": "WhatsApp notifications",
+    "whatsappUnavailable": "WhatsApp notifications are not available.",
+    "saved": "Preferences updated."
+  },
+  "support": {
+    "title": "Support",
+    "description": "Review your support requests and their current status.",
+    "empty": "No support tickets yet.",
+    "newTicket": "New ticket",
+    "backToList": "Back to support",
+    "notFound": "This support request is unavailable. It may have been cleared from the preview session.",
+    "categoryLabel": "Category",
+    "categories": {
+      "account": "Account",
+      "payment": "Payment",
+      "content": "Content",
+      "aiAnswer": "AI answer",
+      "tutoring": "Tutoring/service"
+    },
+    "new": {
+      "title": "Contact support",
+      "category": "Category",
+      "categoryAccount": "Account",
+      "categoryPayment": "Payment",
+      "categoryContent": "Content",
+      "categoryAiAnswer": "AI answer",
+      "categoryTutoring": "Tutoring/service",
+      "description": "Describe your issue",
+      "contextLink": "Related order or reference (optional)",
+      "safetyNote": "Do not include passwords, card numbers, or private learning content.",
+      "submit": "Submit ticket",
+      "submitted": "Ticket submitted."
+    },
+    "ticket": {
+      "title": "Ticket",
+      "status": "Status",
+      "statusOpen": "Open",
+      "statusInProgress": "In progress",
+      "statusResolved": "Resolved",
+      "statusClosed": "Closed",
+      "category": "Category",
+      "contextLink": "Related reference",
+      "replies": "Conversation",
+      "replyPlaceholder": "Write a reply…",
+      "replyFromUser": "You",
+      "replyFromSupport": "Support",
+      "sendReply": "Send",
+      "noReplies": "No replies yet.",
+      "closedNote": "This request is closed. Open a new request if you still need help."
+    },
+    "errors": {
+      "descriptionRequired": "Please describe the issue.",
+      "replyRequired": "Please enter a reply message."
+    }
+  },
+  "account": {
+    "previewNotice": "Preview only. No real account data is processed, exported, or deleted.",
+    "privacy": {
+      "title": "Privacy and data",
+      "body": "This preview explains how YukCSCA would handle your data. In production, this page would detail collection, processing, retention, minor protections, and your rights under applicable law.",
+      "collectionTitle": "What is collected",
+      "collectionBody": "Account information, learning activity, and payment records as needed for the service.",
+      "parentBoundaryTitle": "Parent and student boundary",
+      "parentBoundary": "Parent and student accounts remain separate. Parents see summaries only.",
+      "minorTitle": "Minor considerations",
+      "minorNote": "YukCSCA serves minors. Data minimization and age-appropriate handling apply."
+    },
+    "export": {
+      "title": "Export your data",
+      "explanation": "You can request a copy of your personal data. This is a request, not an instant browser download.",
+      "ownershipTitle": "Ownership boundary",
+      "ownership": "The export includes data you own. Student learning data belongs to the student.",
+      "deliveryTitle": "Secure delivery",
+      "delivery": "In production, the export would be delivered securely to your verified email.",
+      "requestButton": "Request data export",
+      "requested": "Export request submitted (preview). In production, you would receive a secure download link.",
+      "previewNote": "This preview does not create a real export request."
+    },
+    "delete": {
+      "title": "Delete your account",
+      "explanation": "Account deletion is a formal request, not an instant action.",
+      "consequences": "Consequences of deletion:",
+      "consequence1": "Parent-student relationships will end.",
+      "consequence2": "Active entitlements will be revoked.",
+      "consequence3": "Financial records are retained as required by law.",
+      "consequence4": "Unresolved orders or disputes may block deletion until reviewed.",
+      "confirmLabel": "I understand the consequences and want to request account deletion.",
+      "confirmRequired": "Please confirm before requesting deletion.",
+      "requestButton": "Request account deletion",
+      "requested": "Deletion request submitted for review (preview).",
+      "previewNote": "This preview does not create a real deletion request."
+    }
+  },
+  "prototypeData": {
+    "currentRisk": "Plan delay: three consecutive days without activity. At the current pace, required topics may not be covered before the exam date.",
+    "products": {
+      "math-english": {
+        "name": "Mathematics (English) Plan",
+        "subject": "Mathematics",
+        "examLanguage": "English",
+        "intendedLearner": "Indonesian high-school students preparing for CSCA Mathematics in English",
+        "modules": {
+          "1": "Algebra and Functions",
+          "2": "Geometry and Measurement",
+          "3": "Statistics and Probability",
+          "4": "Calculus Introduction",
+          "5": "Trigonometry"
+        },
+        "practiceScope": "120+ practice questions across covered modules",
+        "terminologySupport": "English mathematical terms with Indonesian explanations",
+        "aiAllowance": "Bounded explanation assistance during learning; disabled during mock exams",
+        "mockAllowance": "2 full-length mock exams per validity period",
+        "renewalBehavior": "Manual one-time renewal; no automatic billing",
+        "trialBenefits": {
+          "1": "1 sample lesson per module",
+          "2": "5 practice questions",
+          "3": "1 short diagnostic"
+        },
+        "trialLimits": {
+          "1": "No mock exam access",
+          "2": "No progress tracking",
+          "3": "No AI explanation help"
+        }
+      },
+      "math-chinese": {
+        "name": "Mathematics (Chinese) Plan",
+        "subject": "Mathematics",
+        "examLanguage": "Chinese",
+        "intendedLearner": "Indonesian high-school students preparing for CSCA Mathematics in Chinese",
+        "modules": {
+          "1": "Algebra and Functions",
+          "2": "Geometry and Measurement",
+          "3": "Statistics and Probability",
+          "4": "Calculus Introduction",
+          "5": "Trigonometry"
+        },
+        "practiceScope": "100+ practice questions with Chinese terminology support",
+        "terminologySupport": "Chinese mathematical terms with pinyin, Indonesian, and English explanations",
+        "aiAllowance": "Bounded explanation and terminology assistance; disabled during mock exams",
+        "mockAllowance": "2 full-length mock exams per validity period",
+        "renewalBehavior": "Manual one-time renewal; no automatic billing",
+        "trialBenefits": {
+          "1": "1 sample lesson per module",
+          "2": "5 practice questions",
+          "3": "Terminology preview"
+        },
+        "trialLimits": {
+          "1": "No mock exam access",
+          "2": "No progress tracking",
+          "3": "Limited AI terminology help"
+        }
+      }
+    },
+    "invitationAccess": {
+      "1": "Weekly activity summary",
+      "2": "Syllabus progress",
+      "3": "Plan risk",
+      "4": "Access and service summary"
+    },
+    "entitlementUsage": "2 mock exams remaining; unlimited practice within covered modules",
+    "reports": {
+      "report-w3": {
+        "weekLabel": "Week 3 (15–21 Jul)",
+        "summary": "Rina completed 8 of 12 planned tasks, progressed through Algebra module 3, and maintained a steady study rhythm. No significant risk identified.",
+        "topics": {
+          "1": "Algebra: Quadratic equations",
+          "2": "Geometry: Triangle congruence"
+        },
+        "actions": {
+          "1": "Continue current pace",
+          "2": "Review trigonometry terms before the next mock"
+        }
+      },
+      "report-w2": {
+        "weekLabel": "Week 2 (8–14 Jul)",
+        "summary": "There is not enough activity to generate a meaningful report for this week.",
+        "actions": {
+          "1": "Encourage the student to resume their plan"
+        }
+      },
+      "report-w1": {
+        "weekLabel": "Week 1 (1–7 Jul)",
+        "summary": "The weekly report was generated, but email delivery failed. The report remains available here.",
+        "topics": {
+          "1": "Algebra: Linear equations",
+          "2": "Statistics: Mean and median"
+        },
+        "actions": {
+          "1": "Verify contact information for future delivery"
+        }
+      }
     }
   }
 }

@@ -1,14 +1,20 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 import { PreviewBadge } from '@/shared/components/PreviewBadge';
 import { RouteFocusManager } from '@/app/focus/RouteFocusManager';
 import { mobileMoreRoutes, mobilePrimaryNavRoutes, primaryNavRoutes } from '@/app/routes';
+import { useConsumer } from '@/prototype/consumer/state/consumerContext';
 
 export function AppShellLayout(): React.JSX.Element {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const { state: consumerState, dispatch: consumerDispatch } = useConsumer();
   const location = useLocation();
+  const navigate = useNavigate();
+  const isCredentialPreview =
+    consumerState.credentialSession.status === 'active' &&
+    consumerState.credentialSession.roleIntent === 'student';
 
   const activeRoute = primaryNavRoutes.find((r) => location.pathname.startsWith(r.path));
   const moreRouteIsActive = mobileMoreRoutes.some((route) =>
@@ -40,9 +46,24 @@ export function AppShellLayout(): React.JSX.Element {
           ))}
         </ul>
         <div className="app-nav-footer">
-          <span className="app-nav-user">{user?.displayName ?? t('shell.fallbackName')}</span>
-          <button type="button" className="nav-logout-btn" onClick={() => void logout()}>
-            {t('shell.logout')}
+          <span className="app-nav-user">
+            {isCredentialPreview
+              ? consumerState.credentialSession.displayEmail
+              : (user?.displayName ?? t('shell.fallbackName'))}
+          </span>
+          <button
+            type="button"
+            className="nav-logout-btn"
+            onClick={() => {
+              if (isCredentialPreview) {
+                consumerDispatch({ type: 'PREVIEW_RESTART' });
+                navigate('/');
+                return;
+              }
+              void logout();
+            }}
+          >
+            {isCredentialPreview ? t('shell.exitPreview') : t('shell.logout')}
           </button>
         </div>
       </nav>
