@@ -483,16 +483,16 @@
     "languageNote": "Interface, explanation, and exam languages are independent. Changing one does not change the others.",
     "examLanguageWarning": "Changing exam language may change question sets, terminology tasks, diagnostic needs, and plan feasibility.",
     "historyNote": "Your learning history remains when explanation language changes.",
-    "explanationOwnership": "This screen shows a preview academic preference. Permanent editing belongs to VS-018 and is not available here.",
-    "examOwnership": "The sample exam track is preview-only. A production impact-reviewed change belongs to VS-020.",
+    "explanationOwnership": "This screen shows a preview academic preference. Permanent editing is not available in Preview.",
+    "examOwnership": "The sample exam track is preview-only. Production changes require an impact review.",
     "family": {
       "noParent": "No parent is currently linked.",
       "inviteEntry": "Invite a parent (coming soon)",
       "unlinkEntry": "Manage relationship (coming soon)",
       "invitePurpose": "A future invitation will show the parent-access boundary before creating one primary relationship.",
-      "inviteStatus": "Planned in VS-011. No invitation or authorization change occurs in Preview.",
+      "inviteStatus": "Invitations are planned production behavior. Preview sends no invitation and changes no authorization.",
       "unlinkPurpose": "A future unlink flow will preserve learning history and review minor/order consequences.",
-      "unlinkStatus": "Planned in VS-012. No relationship exists or changes in Preview.",
+      "unlinkStatus": "Unlinking is planned production behavior. Preview creates or changes no relationship.",
       "parentMaySee": "A linked parent may see:",
       "parentMaySeeList": "Progress summary, plan risk, syllabus progress, purchased access, tutoring summary",
       "parentCannotSee": "A linked parent may not see by default:",
@@ -510,7 +510,7 @@
       "noCheckout": "Checkout is not available in this preview.",
       "purchaseTitle": "Future access purchase",
       "purchasePurpose": "Product details will explain subject, exam language, syllabus coverage, limits, and validity before checkout.",
-      "purchaseStatus": "Planned in VS-062 and later payment slices. Preview cannot create an order or entitlement."
+      "purchaseStatus": "Production purchasing is not available in Preview. Preview cannot create an order or entitlement."
     }
   },
   "feasibility": {

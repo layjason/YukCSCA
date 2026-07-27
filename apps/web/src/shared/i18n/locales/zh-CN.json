@@ -483,16 +483,16 @@
     "languageNote": "界面语言、讲解语言和考试语言相互独立。更改其一不会影响其他。",
     "examLanguageWarning": "更改考试语言可能会改变题集、术语任务、诊断需求和计划可行性。",
     "historyNote": "更改讲解语言时，您的学习记录保持不变。",
-    "explanationOwnership": "此页面展示预览学术偏好。永久编辑归 VS-018 所有，此处不可操作。",
-    "examOwnership": "示例考试轨道仅供预览。生产环境中的影响审查变更归 VS-020 所有。",
+    "explanationOwnership": "此页面展示预览学术偏好。预览中不提供永久编辑。",
+    "examOwnership": "示例考试轨道仅供预览。生产环境中的更改需要影响审查。",
     "family": {
       "noParent": "当前没有关联的家长。",
       "inviteEntry": "邀请家长（即将推出）",
       "unlinkEntry": "管理关联（即将推出）",
       "invitePurpose": "未来邀请会在建立一个主要关系前说明家长访问边界。",
-      "inviteStatus": "计划由 VS-011 实现。预览不会发送邀请或更改权限。",
+      "inviteStatus": "邀请属于计划中的生产功能。预览不会发送邀请或更改权限。",
       "unlinkPurpose": "未来解除关联流程会保留学习历史，并审查未成年人和订单后果。",
-      "unlinkStatus": "计划由 VS-012 实现。预览不会创建或更改关联。",
+      "unlinkStatus": "解除关联属于计划中的生产功能。预览不会创建或更改关联。",
       "parentMaySee": "关联的家长可以看到：",
       "parentMaySeeList": "进度摘要、计划风险、大纲进度、已购权限、辅导摘要",
       "parentCannotSee": "关联的家长默认不能看到：",
@@ -510,7 +510,7 @@
       "noCheckout": "此预览中不提供结账。",
       "purchaseTitle": "未来购买访问权限",
       "purchasePurpose": "商品详情会在结账前说明科目、考试语言、大纲覆盖、限制和有效期。",
-      "purchaseStatus": "计划由 VS-062 及后续支付切片实现。预览不能创建订单或权益。"
+      "purchaseStatus": "预览中不提供生产购买功能，也不能创建订单或权益。"
     }
   },
   "feasibility": {

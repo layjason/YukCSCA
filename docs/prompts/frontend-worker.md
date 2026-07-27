@@ -19,7 +19,7 @@ Before changing files, follow the source order in `AGENTS.md`. At minimum read r
 ## Work
 
 1. Start consumer review after the backend records the initial contract checkpoint or a no-public-HTTP disposition.
-2. Review `SLICE`, generated declarations, root `DESIGN.md`, and the complete user flow. Complete the frontend, experience, UI-state, accessibility, localization, and prototype promotion/deletion sections.
+2. Review `SLICE`, its capability/adjacent-contract horizon, generated declarations, root `DESIGN.md`, and the complete accepted user flow. Complete the frontend, experience, UI-state, accessibility, localization, and prototype promotion/deletion sections; do not turn deferred adjacent behavior into UI availability.
 3. Do not edit TypeSpec or create a competing wire model. Record `CR-NN` with the concrete user scenario, current gap, and requested behavior; wait for the backend decision and re-review applied changes.
 4. For public HTTP, implement only after `CONTRACT_READY` using the accepted checkpoint and generated declarations. Otherwise implement after the slice gate permits it.
 5. Implement only frontend-owned behavior and record frontend tests, visual evidence, journey handoffs, and remaining risks in the slice. Do not change lifecycle status.

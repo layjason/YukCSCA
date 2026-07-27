@@ -483,16 +483,16 @@
     "languageNote": "Bahasa antarmuka, penjelasan, dan ujian bersifat independen. Mengubah satu tidak mengubah yang lain.",
     "examLanguageWarning": "Mengubah bahasa ujian dapat mengubah set soal, tugas terminologi, kebutuhan diagnostik, dan kelayakan rencana.",
     "historyNote": "Riwayat belajar Anda tetap ada saat bahasa penjelasan berubah.",
-    "explanationOwnership": "Layar ini menampilkan preferensi akademik pratinjau. Pengeditan permanen dimiliki VS-018 dan belum tersedia.",
-    "examOwnership": "Jalur ujian contoh hanya untuk pratinjau. Perubahan produksi dengan tinjauan dampak dimiliki VS-020.",
+    "explanationOwnership": "Layar ini menampilkan preferensi akademik pratinjau. Pengeditan permanen belum tersedia dalam Pratinjau.",
+    "examOwnership": "Jalur ujian contoh hanya untuk pratinjau. Perubahan produksi memerlukan tinjauan dampak.",
     "family": {
       "noParent": "Tidak ada orang tua yang terhubung saat ini.",
       "inviteEntry": "Undang orang tua (segera hadir)",
       "unlinkEntry": "Kelola hubungan (segera hadir)",
       "invitePurpose": "Undangan mendatang akan menjelaskan batas akses orang tua sebelum membuat satu hubungan utama.",
-      "inviteStatus": "Direncanakan dalam VS-011. Tidak ada undangan atau perubahan izin dalam Pratinjau.",
+      "inviteStatus": "Undangan adalah perilaku produksi yang direncanakan. Pratinjau tidak mengirim undangan atau mengubah izin.",
       "unlinkPurpose": "Alur putus hubungan mendatang akan menjaga riwayat belajar serta meninjau konsekuensi anak dan pesanan.",
-      "unlinkStatus": "Direncanakan dalam VS-012. Tidak ada hubungan yang dibuat atau diubah dalam Pratinjau.",
+      "unlinkStatus": "Pemutusan hubungan adalah perilaku produksi yang direncanakan. Pratinjau tidak membuat atau mengubah hubungan.",
       "parentMaySee": "Orang tua yang terhubung dapat melihat:",
       "parentMaySeeList": "Ringkasan kemajuan, risiko rencana, kemajuan silabus, akses yang dibeli, ringkasan bimbingan",
       "parentCannotSee": "Orang tua yang terhubung tidak dapat melihat secara default:",
@@ -510,7 +510,7 @@
       "noCheckout": "Checkout tidak tersedia dalam pratinjau ini.",
       "purchaseTitle": "Pembelian akses mendatang",
       "purchasePurpose": "Detail produk akan menjelaskan mata pelajaran, bahasa ujian, cakupan silabus, batas, dan masa berlaku sebelum checkout.",
-      "purchaseStatus": "Direncanakan dalam VS-062 dan slice pembayaran berikutnya. Pratinjau tidak dapat membuat pesanan atau hak akses."
+      "purchaseStatus": "Pembelian produksi belum tersedia dalam Pratinjau. Pratinjau tidak dapat membuat pesanan atau hak akses."
     }
   },
   "feasibility": {

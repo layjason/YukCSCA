@@ -19,12 +19,13 @@ Before changing files, follow the source order in `AGENTS.md`. At minimum read r
 ## Work
 
 1. Inspect the repository and draft or refresh `SLICE` from `docs/delivery/SLICE_TEMPLATE.md`.
-2. Own the slice lifecycle, acceptance boundary, state model, backend plan, preliminary consumer-data needs, and human gate.
-3. For a material gap, record `D-NN`, set `AWAITING_DECISION`, ask one bounded question through [`HUMAN_REVIEW.md`](../delivery/HUMAN_REVIEW.md), and pause only affected work.
-4. After the gate permits contract work, initialize TypeSpec, regenerate, run the contract checks, and record the initial checkpoint. Record a no-public-HTTP disposition when applicable.
-5. For each frontend `CR-NN`, accept and apply it, decline it with evidence and a supported client approach, or create `D-NN` when human review is required.
-6. For public HTTP, record the accepted checkpoint and mark `CONTRACT_READY` only after frontend re-review and with no open request or decision.
-7. Implement backend, persistence, observability, and backend-owned documentation from the accepted slice boundary. Do not implement frontend-owned code or treat contract ownership as product authority.
+2. Before TypeSpec, inspect adjacent stories that share the capability, lifecycle, aggregate, or likely contract. Complete the adjacent-contract horizon. If the roadmap row would cause a non-valuable partial state or unnecessary immediate contract reopening, record a `D-NN` merge/split recommendation and ask the user before changing `docs/PLAN.md` or the slice ID.
+3. Own the slice lifecycle, acceptance boundary, state model, backend plan, preliminary consumer-data needs, and human gate.
+4. For a material gap, record `D-NN`, set `AWAITING_DECISION`, ask one bounded question through [`HUMAN_REVIEW.md`](../delivery/HUMAN_REVIEW.md), and pause only affected work.
+5. After the gate permits contract work, initialize TypeSpec, regenerate, run the contract checks, and record the initial checkpoint. Record a no-public-HTTP disposition when applicable.
+6. For each frontend `CR-NN`, accept and apply it, decline it with evidence and a supported client approach, or create `D-NN` when human review is required.
+7. For public HTTP, record the accepted checkpoint and mark `CONTRACT_READY` only after frontend re-review and with no open request or decision.
+8. Implement backend, persistence, observability, and backend-owned documentation from the accepted slice boundary. Do not implement frontend-owned code or treat contract ownership as product authority.
 
 ## Verification
 
