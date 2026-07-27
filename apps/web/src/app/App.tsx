@@ -71,129 +71,123 @@ import { SupportTicketPage } from '@/prototype/consumer/support/SupportTicketPag
 import { AccountPrivacyPage } from '@/prototype/consumer/account/AccountPrivacyPage';
 import { AccountExportPage } from '@/prototype/consumer/account/AccountExportPage';
 import { AccountDeletePage } from '@/prototype/consumer/account/AccountDeletePage';
+import { getRouteById, routesForAccess, type RouteAccess, type RouteId } from '@/app/routes';
 
 export default function App(): React.JSX.Element {
   return (
     <Routes>
-      {/* Public site */}
-      <Route element={<PublicSiteLayout />}>
-        <Route path="/" element={<RootDecisionPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/products/:productId" element={<ProductDetailPage />} />
-        <Route path="/trial" element={<TrialPage />} />
-        <Route path="/for-parents" element={<ForParentsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/register" element={<AccountRegistrationPage />} />
-        <Route path="/login" element={<AccountEntryPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/credential-login" element={<Navigate to="/login" replace />} />
-      </Route>
+      <Route element={<PublicSiteLayout />}>{renderRoutes('public')}</Route>
 
-      <Route path="/unsupported" element={<UnsupportedRolePage />} />
+      {renderRoutes('unsupported')}
 
-      {/* Role selection (requires Google UNASSIGNED or preview credential) */}
-      <Route element={<RoleSelectionGuard />}>
-        <Route path="/onboarding/role" element={<RoleSelectionPage />} />
-      </Route>
-      <Route element={<ParentOnboardingGuard />}>
-        <Route path="/onboarding/parent" element={<ParentOnboardingPage />} />
-      </Route>
+      <Route element={<RoleSelectionGuard />}>{renderRoutes('role-selection')}</Route>
+      <Route element={<ParentOnboardingGuard />}>{renderRoutes('parent-onboarding')}</Route>
 
-      {/* Parent workspace requires completed Parent preview onboarding. */}
       <Route element={<PreviewContextGuard scope="parent" />}>
-        <Route element={<ParentShellLayout />}>
-          <Route path="/parent/home" element={<ParentHomePage />} />
-          <Route path="/parent/family" element={<ConsumerFamilyPage />} />
-          <Route path="/parent/family/create-student" element={<CreateStudentPage />} />
-          <Route path="/parent/invitations/:invitationId" element={<InvitationPage />} />
-          <Route path="/parent/reports" element={<ParentReportsIndexPage />} />
-          <Route path="/parent/students/:studentId" element={<StudentOverviewPage />} />
-          <Route path="/parent/students/:studentId/report" element={<ParentReportPage />} />
-          <Route path="/parent/purchases" element={<EntitlementsPage />} />
-          <Route path="/parent/orders" element={<OrdersPage />} />
-          <Route path="/parent/orders/:orderId" element={<OrderDetailPage />} />
-          <Route path="/parent/account" element={<AccountPrivacyPage />} />
-          <Route path="/parent/account/notifications" element={<NotificationPrefsPage />} />
-          <Route path="/parent/account/privacy" element={<AccountPrivacyPage />} />
-          <Route path="/parent/support" element={<SupportPage />} />
-        </Route>
+        <Route element={<ParentShellLayout />}>{renderRoutes('parent-preview')}</Route>
       </Route>
 
-      {/* Checkout requires Student-self or an active linked Parent recipient. */}
       <Route element={<PreviewContextGuard scope="commerce" />}>
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/checkout/payment" element={<CheckoutPaymentPage />} />
+        {renderRoutes('commerce-preview')}
       </Route>
 
-      {/* Existing preview-persona state owns aftercare and account/support access. */}
-      <Route element={<PreviewContextGuard />}>
-        <Route path="/checkout/instructions" element={<CheckoutInstructionsPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-        <Route path="/orders/:orderId/refund" element={<RefundPage />} />
-        <Route path="/entitlements" element={<EntitlementsPage />} />
-        <Route path="/entitlements/:entitlementId/renew" element={<EntitlementRenewPage />} />
+      <Route element={<PreviewContextGuard />}>{renderRoutes('preview-context')}</Route>
 
-        {/* Shared account and support */}
-        <Route path="/account/notifications" element={<NotificationPrefsPage />} />
-        <Route path="/account/privacy" element={<AccountPrivacyPage />} />
-        <Route path="/account/export" element={<AccountExportPage />} />
-        <Route path="/account/delete" element={<AccountDeletePage />} />
-        <Route path="/support" element={<SupportPage />} />
-        <Route path="/support/new" element={<SupportNewPage />} />
-        <Route path="/support/:ticketId" element={<SupportTicketPage />} />
-      </Route>
-
-      {/* Production-only student activation. */}
       <Route element={<AuthGuard />}>
-        <Route element={<OnboardingLayout />}>
-          <Route path="/onboarding/student" element={<StudentActivationPage />} />
-        </Route>
+        <Route element={<OnboardingLayout />}>{renderRoutes('production-auth')}</Route>
       </Route>
 
-      {/* Production Student or credential-preview Student may use PX-001 fixtures. */}
       <Route element={<StudentExperienceGuard />}>
         <Route element={<OnboardingLayout />}>
           <Route element={<PreviewOnboardingGuard />}>
-            <Route path="/onboarding/student/goals" element={<GoalsPage />} />
-            <Route path="/onboarding/student/subjects" element={<SubjectsPage />} />
-            <Route path="/onboarding/student/diagnostic" element={<DiagnosticPage />} />
-            <Route
-              path="/onboarding/student/diagnostic/result"
-              element={<DiagnosticResultPage />}
-            />
-            <Route path="/onboarding/student/plan-review" element={<PlanReviewPage />} />
+            {renderRoutes('student-onboarding-preview')}
           </Route>
         </Route>
 
         <Route element={<PreviewWorkspaceGuard />}>
-          <Route element={<AppShellLayout />}>
-            <Route path="/app/today" element={<StudentTodayRoute />} />
-            <Route path="/app/learn" element={<LearnPage />} />
-            <Route path="/app/learn/syllabus" element={<SyllabusPage />} />
-            <Route path="/app/learn/:lessonId" element={<LessonPage />} />
-            <Route path="/app/practice" element={<PracticePage />} />
-            <Route path="/app/practice/mistakes" element={<MistakesPage />} />
-            <Route path="/app/practice/mistakes/:mistakeId" element={<MistakeDetailPage />} />
-            <Route path="/app/practice/:sessionId" element={<PracticeSessionPage />} />
-            <Route path="/app/practice/:sessionId/result" element={<PracticeResultPage />} />
-            <Route path="/app/mock-exams" element={<MockExamListPage />} />
-            <Route path="/app/mock-exams/:examId/instructions" element={<MockInstructionsPage />} />
-            <Route path="/app/mock-exams/:examId/session" element={<MockSessionPage />} />
-            <Route path="/app/mock-exams/:examId/result" element={<MockResultPage />} />
-            <Route path="/app/progress" element={<ProgressPage />} />
-            <Route path="/app/profile" element={<StudentProfileRoute />} />
-            <Route path="/app/profile/languages" element={<LanguagesPage />} />
-            <Route path="/app/profile/family" element={<FamilyPage />} />
-            <Route path="/app/profile/access" element={<AccessPage />} />
-            <Route path="/app/more" element={<StudentMorePage />} />
-          </Route>
+          <Route element={<AppShellLayout />}>{renderRoutes('student-workspace-preview')}</Route>
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={getRouteById('home').path} replace />} />
     </Routes>
   );
+}
+
+const routeElements = {
+  home: <RootDecisionPage />,
+  products: <ProductsPage />,
+  'product-detail': <ProductDetailPage />,
+  trial: <TrialPage />,
+  'for-parents': <ForParentsPage />,
+  privacy: <PrivacyPage />,
+  terms: <TermsPage />,
+  register: <AccountRegistrationPage />,
+  login: <AccountEntryPage />,
+  'verify-email': <VerifyEmailPage />,
+  'forgot-password': <ForgotPasswordPage />,
+  'credential-login': <Navigate to={getRouteById('login').path} replace />,
+  unsupported: <UnsupportedRolePage />,
+  'role-selection': <RoleSelectionPage />,
+  'parent-onboarding': <ParentOnboardingPage />,
+  'student-activation': <StudentActivationPage />,
+  'parent-home': <ParentHomePage />,
+  'parent-family': <ConsumerFamilyPage />,
+  'parent-family-create-student': <CreateStudentPage />,
+  'parent-invitation': <InvitationPage />,
+  'parent-reports': <ParentReportsIndexPage />,
+  'parent-student': <StudentOverviewPage />,
+  'parent-student-report': <ParentReportPage />,
+  'parent-purchases': <EntitlementsPage />,
+  'parent-orders': <OrdersPage />,
+  'parent-order-detail': <OrderDetailPage />,
+  'parent-account': <AccountPrivacyPage />,
+  'parent-notifications': <NotificationPrefsPage />,
+  'parent-account-privacy': <AccountPrivacyPage />,
+  'parent-support': <SupportPage />,
+  checkout: <CheckoutPage />,
+  'checkout-payment': <CheckoutPaymentPage />,
+  'checkout-instructions': <CheckoutInstructionsPage />,
+  orders: <OrdersPage />,
+  'order-detail': <OrderDetailPage />,
+  'order-refund': <RefundPage />,
+  entitlements: <EntitlementsPage />,
+  'entitlement-renew': <EntitlementRenewPage />,
+  'account-notifications': <NotificationPrefsPage />,
+  'account-privacy': <AccountPrivacyPage />,
+  'account-export': <AccountExportPage />,
+  'account-delete': <AccountDeletePage />,
+  support: <SupportPage />,
+  'support-new': <SupportNewPage />,
+  'support-ticket': <SupportTicketPage />,
+  'onboarding-goals': <GoalsPage />,
+  'onboarding-subjects': <SubjectsPage />,
+  'onboarding-diagnostic': <DiagnosticPage />,
+  'onboarding-diagnostic-result': <DiagnosticResultPage />,
+  'onboarding-plan-review': <PlanReviewPage />,
+  today: <StudentTodayRoute />,
+  learn: <LearnPage />,
+  'learn-syllabus': <SyllabusPage />,
+  'learn-lesson': <LessonPage />,
+  practice: <PracticePage />,
+  'practice-session': <PracticeSessionPage />,
+  'practice-result': <PracticeResultPage />,
+  'practice-mistakes': <MistakesPage />,
+  'practice-mistake-detail': <MistakeDetailPage />,
+  'mock-exams': <MockExamListPage />,
+  'mock-instructions': <MockInstructionsPage />,
+  'mock-session': <MockSessionPage />,
+  'mock-result': <MockResultPage />,
+  progress: <ProgressPage />,
+  profile: <StudentProfileRoute />,
+  'profile-languages': <LanguagesPage />,
+  'profile-family': <FamilyPage />,
+  'profile-access': <AccessPage />,
+  more: <StudentMorePage />,
+} satisfies Record<RouteId, React.JSX.Element>;
+
+function renderRoutes(access: RouteAccess): React.JSX.Element[] {
+  return routesForAccess(access).map((route) => (
+    <Route key={route.id} path={route.path} element={routeElements[route.id]} />
+  ));
 }

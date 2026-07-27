@@ -74,7 +74,10 @@ app -> features -> shared
 - `prototype/*` owns explicitly non-production fixture flows.
 - `shared` imports neither features nor prototypes. Production and prototype
   runtime modules never import each other.
-- `app/routes.ts` is the typed navigation and audience manifest.
+- `app/routes.ts` is the complete typed authority for concrete paths, access
+  groups, audience, navigation, availability, labels, and requirement
+  traceability. `App.tsx` maps every route ID to one screen and composes the
+  manifest access groups through the matching guards and layouts.
 - Root `DESIGN.md` defines visual roles; `styles.css` mirrors its semantic
   tokens, focus behavior, and reduced-motion rules.
 - Interface, explanation, and per-subject exam languages remain independent.

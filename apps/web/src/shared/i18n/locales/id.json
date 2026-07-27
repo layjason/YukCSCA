@@ -7,15 +7,6 @@
     "loginFailed": "Login gagal.",
     "restoringSession": "Memulihkan sesi…"
   },
-  "login": {
-    "eyebrow": "YukCSCA",
-    "title": "Belajar CSCA dengan jalur yang jelas",
-    "description": "Masuk dengan Google untuk memulai onboarding, diagnostik, dan rencana belajar pribadi.",
-    "or": "atau",
-    "credentialHint": "Lebih suka email dan kata sandi? Ini pratinjau — tidak ada akun produksi yang dibuat.",
-    "credentialLink": "Masuk dengan email (Pratinjau)",
-    "privacy": "Google hanya digunakan untuk autentikasi dasar. YukCSCA menerbitkan sesi aplikasinya sendiri."
-  },
   "studentActivation": {
     "eyebrow": "Aktivasi siswa",
     "title": "Aktifkan profil siswa Anda",
@@ -47,16 +38,6 @@
       "unsupported": "Pilih salah satu opsi yang didukung.",
       "requestFailed": "Kami tidak dapat mengaktifkan profil siswa. Coba lagi tanpa memasukkan ulang informasi sensitif."
     }
-  },
-  "dashboard": {
-    "title": "Dasbor awal",
-    "welcome": "Selamat datang, {{name}}.",
-    "onboarding": "Selanjutnya: pilih peran dan lengkapi profil belajar Anda.",
-    "studentReady": "Profil siswa Anda aktif. Langkah belajar berikutnya akan muncul di sini.",
-    "logout": "Keluar",
-    "fallbackName": "Siswa",
-    "email": "Email",
-    "role": "Peran"
   },
   "roles": {
     "UNASSIGNED": "Belum dipilih",

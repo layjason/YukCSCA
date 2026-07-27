@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { publicNavRoutes } from '@/app/routes';
+import { isRouteActive, publicNavRoutes } from '@/app/routes';
 
 const languageOptions = [
   { code: 'id', label: 'Bahasa Indonesia' },
@@ -28,15 +28,7 @@ export function PublicSiteLayout(): React.JSX.Element {
                 key={item.path}
                 to={item.path}
                 className="public-nav-link"
-                aria-current={
-                  item.path === '/'
-                    ? location.pathname === item.path
-                      ? 'page'
-                      : undefined
-                    : location.pathname.startsWith(item.path)
-                      ? 'page'
-                      : undefined
-                }
+                aria-current={isRouteActive(item, location.pathname) ? 'page' : undefined}
               >
                 {t(item.labelKey)}
               </Link>
@@ -90,7 +82,7 @@ export function PublicSiteLayout(): React.JSX.Element {
                 to={item.path}
                 className="public-nav-mobile-link"
                 onClick={() => setMobileMenuOpen(false)}
-                aria-current={location.pathname === item.path ? 'page' : undefined}
+                aria-current={isRouteActive(item, location.pathname) ? 'page' : undefined}
               >
                 {t(item.labelKey)}
               </Link>

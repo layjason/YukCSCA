@@ -1,6 +1,5 @@
 package com.yukcsca.identity.application;
 
-import com.yukcsca.identity.domain.UserRole;
 import java.util.UUID;
 
 public record CurrentAccount(
@@ -8,5 +7,5 @@ public record CurrentAccount(
     String email,
     String displayName,
     String avatarUrl,
-    UserRole role,
+    CurrentAccountRole role,
     boolean onboardingCompleted) {}

@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PreviewBadge } from '@/shared/components/PreviewBadge';
 import { RouteFocusManager } from '@/app/focus/RouteFocusManager';
-import { parentNavRoutes, parentMobileNavRoutes } from '@/app/routes';
+import { isRouteActive, parentNavRoutes, parentMobileNavRoutes } from '@/app/routes';
 import { useConsumer } from '@/prototype/consumer/state/consumerContext';
 
 export function ParentShellLayout(): React.JSX.Element {
@@ -25,9 +25,12 @@ export function ParentShellLayout(): React.JSX.Element {
             <li key={route.id}>
               <NavLink
                 to={route.path}
-                className={({ isActive }) =>
-                  isActive ? 'parent-nav-item parent-nav-item-active' : 'parent-nav-item'
+                className={
+                  isRouteActive(route, location.pathname)
+                    ? 'parent-nav-item parent-nav-item-active'
+                    : 'parent-nav-item'
                 }
+                aria-current={isRouteActive(route, location.pathname) ? 'page' : undefined}
               >
                 <span className="parent-nav-icon" aria-hidden="true">
                   {getParentNavIcon(route.id)}
@@ -66,7 +69,7 @@ export function ParentShellLayout(): React.JSX.Element {
 
       <nav className="parent-bottom-nav" aria-label={t('parent.nav.label')}>
         {parentMobileNavRoutes.map((route) => {
-          const isActive = location.pathname.startsWith(route.path);
+          const isActive = isRouteActive(route, location.pathname);
           return (
             <NavLink
               key={route.id}

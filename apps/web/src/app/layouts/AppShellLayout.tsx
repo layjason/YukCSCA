@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 import { PreviewBadge } from '@/shared/components/PreviewBadge';
 import { RouteFocusManager } from '@/app/focus/RouteFocusManager';
-import { mobileMoreRoutes, mobilePrimaryNavRoutes, primaryNavRoutes } from '@/app/routes';
+import {
+  isRouteActive,
+  mobileMoreRoutes,
+  mobilePrimaryNavRoutes,
+  primaryNavRoutes,
+} from '@/app/routes';
 import { useConsumer } from '@/prototype/consumer/state/consumerContext';
 
 export function AppShellLayout(): React.JSX.Element {
@@ -16,9 +21,9 @@ export function AppShellLayout(): React.JSX.Element {
     consumerState.credentialSession.status === 'active' &&
     consumerState.credentialSession.roleIntent === 'student';
 
-  const activeRoute = primaryNavRoutes.find((r) => location.pathname.startsWith(r.path));
+  const activeRoute = primaryNavRoutes.find((route) => isRouteActive(route, location.pathname));
   const moreRouteIsActive = mobileMoreRoutes.some((route) =>
-    location.pathname.startsWith(route.path),
+    isRouteActive(route, location.pathname),
   );
 
   return (
@@ -35,7 +40,10 @@ export function AppShellLayout(): React.JSX.Element {
             <li key={route.id}>
               <NavLink
                 to={route.path}
-                className={({ isActive }) => (isActive ? 'nav-item nav-item-active' : 'nav-item')}
+                className={
+                  isRouteActive(route, location.pathname) ? 'nav-item nav-item-active' : 'nav-item'
+                }
+                aria-current={isRouteActive(route, location.pathname) ? 'page' : undefined}
               >
                 <span className="nav-item-icon" aria-hidden="true">
                   {getNavIcon(route.id)}
@@ -83,8 +91,10 @@ export function AppShellLayout(): React.JSX.Element {
           <NavLink
             key={route.id}
             to={route.path}
-            className={({ isActive }) => {
-              const routeIsActive = isActive || (route.id === 'more' && moreRouteIsActive);
+            className={() => {
+              const routeIsActive =
+                isRouteActive(route, location.pathname) ||
+                (route.id === 'more' && moreRouteIsActive);
               return routeIsActive ? 'bottom-nav-item bottom-nav-item-active' : 'bottom-nav-item';
             }}
             aria-current={

@@ -1,9 +1,9 @@
 package com.yukcsca.profile.application;
 
+import com.yukcsca.identity.application.CurrentAccountRole;
 import com.yukcsca.identity.application.CurrentAuthenticationService;
 import com.yukcsca.identity.application.StudentAccountActivation;
 import com.yukcsca.identity.application.StudentAccountActivation.AccountRoleState;
-import com.yukcsca.identity.domain.UserRole;
 import com.yukcsca.profile.domain.ExplanationLanguage;
 import com.yukcsca.profile.domain.StudentGrade;
 import com.yukcsca.profile.domain.StudentProfile;
@@ -69,7 +69,7 @@ public class StudentProfileService {
 
   @Transactional(readOnly = true)
   public StudentProfile getOwnProfile(UUID accountId) {
-    if (authentication.requireAccount(accountId).role() != UserRole.STUDENT) {
+    if (authentication.requireAccount(accountId).role() != CurrentAccountRole.STUDENT) {
       throw new ProfileAccessDeniedException();
     }
     return profiles
