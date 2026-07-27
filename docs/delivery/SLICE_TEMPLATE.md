@@ -2,20 +2,23 @@
 
 ## Metadata
 
-| Field                | Value               |
-| -------------------- | ------------------- |
-| Status               | `SHAPING`           |
-| Human gate           | `NOT_REQUIRED`      |
-| Plan revision        | 1                   |
-| Updated              | YYYY-MM-DD          |
-| Primary actor        |                     |
-| Story IDs            |                     |
-| Requirement sections | English: ; Chinese: |
-| Depends on           |                     |
-| Related ADRs         | None                |
-| TypeSpec source      |                     |
-| API operations       |                     |
-| Implementation owner |                     |
+| Field                        | Value               |
+| ---------------------------- | ------------------- |
+| Status                       | `SHAPING`           |
+| Human gate                   | `NOT_REQUIRED`      |
+| Plan revision                | 1                   |
+| Updated                      | YYYY-MM-DD          |
+| Primary actor                |                     |
+| Story IDs                    |                     |
+| Requirement sections         | English: ; Chinese: |
+| Depends on                   |                     |
+| Related ADRs                 | None                |
+| TypeSpec source              |                     |
+| API operations               |                     |
+| Backend/slice owner          |                     |
+| Frontend owner               |                     |
+| Initial contract checkpoint  | Not yet established |
+| Accepted contract checkpoint | Not yet established |
 
 ## User-observable outcome
 
@@ -135,6 +138,28 @@ TypeSpec must be written and compile before implementation begins when the slice
 - Pagination/filtering if applicable:
 - Compatibility or migration impact:
 
+## Contract collaboration
+
+The backend agent drafts and owns this slice, resolves its human decision gate, and initializes TypeSpec before frontend review. Contract ownership is not product authority. A checkpoint records the slice revision, TypeSpec files/operations, generation result, and a commit or handoff reference when available. Use `N/A — no public HTTP change` with evidence when applicable.
+
+### Readiness reviews
+
+| Review                                                     | Owner               | Status    | Evidence |
+| ---------------------------------------------------------- | ------------------- | --------- | -------- |
+| Slice drafted and human gate resolved                      | Backend/slice owner | `PENDING` |          |
+| Initial TypeSpec compiles and generated output is reviewed | Backend/slice owner | `PENDING` |          |
+| Frontend consumer review                                   | Frontend owner      | `PENDING` |          |
+| Contract requests resolved                                 | Backend/slice owner | `PENDING` |          |
+| Accepted contract checkpoint recorded                      | Backend/slice owner | `PENDING` |          |
+
+### Contract change requests
+
+| ID  | Consumer scenario or constraint | Proposed change | Backend decision and reason | Human decision ID | Status | Applied/review evidence |
+| --- | ------------------------------- | --------------- | --------------------------- | ----------------- | ------ | ----------------------- |
+| —   | No requests recorded.           | —               | —                           | —                 | —      | —                       |
+
+Add `CR-NN` rows only when the initialized contract cannot support an accepted frontend scenario. Use `OPEN`, `ACCEPTED`, `DECLINED`, `AWAITING_HUMAN`, or `APPLIED`. The backend agent must explain a decline, apply and regenerate an accepted request, or create a `D-NN` human decision when the request changes product meaning, authorization, privacy, money, state ownership, a breaking contract, or another human-gate concern. The frontend agent re-reviews every affected scenario.
+
 ## Backend plan
 
 - Module and package ownership:
@@ -202,16 +227,16 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 
 ## Implementation sequence
 
-1. Complete the documentation sufficiency review and resolve all blocking human decisions.
-2. Resolve technology/dependency need, alternatives, impact, removal, and the ADR threshold.
-3. Resolve frontend ownership, prototype promotion/deletion, route/task flow, full UI state set, design-system impact, and interaction intent.
-4. Update `DESIGN.md` before CSS when a shared token, component role, or motion rule changes.
-5. Write/update TypeSpec and review generated OpenAPI.
-6. Implement frontend against a contract-backed mock and backend/persistence against the same contract in risk-first order.
-7. Integrate the real HTTP flow early and add HTTP/component coverage.
-8. Add journey coverage for the actor-observable closed loop.
-9. Verify observability, accessibility, localization, mobile/desktop layout, reduced motion, privacy, and failure recovery.
-10. Update architecture, traceability, design/CSS alignment, and this plan's evidence.
+1. The backend agent drafts this `VS-NNN`, completes the documentation review, and escalates every material gap through the human gate.
+2. After the gate is resolved, the backend agent completes the state, contract, backend, persistence, technology/ADR, authorization, and preliminary consumer-data plans.
+3. For a public-HTTP change, the backend agent initializes TypeSpec, runs generation, reviews the output, and records the initial contract checkpoint while the slice remains `SHAPING`; otherwise it records the no-HTTP disposition.
+4. The frontend agent reviews the slice and initialized contract, then completes the frontend, experience, UI-state, design, accessibility, localization, and prototype promotion/deletion plans.
+5. The frontend agent records any `CR-NN`; the backend agent accepts, declines, or escalates it, applies accepted changes, regenerates, and obtains frontend re-review.
+6. For a public-HTTP change, the backend agent records the accepted checkpoint and moves the slice to `CONTRACT_READY` only when no request or human decision remains open.
+7. Backend and frontend agents implement separately from the same slice revision and accepted checkpoint when applicable. Update `DESIGN.md` before CSS when a shared visual rule changes.
+8. Integrate the real HTTP flow early and add backend, frontend, contract, and journey evidence for the closed loop.
+9. The backend/slice owner advances lifecycle status only after both agents record their evidence.
+10. Verify observability, accessibility, localization, mobile/desktop layout, reduced motion, privacy, failure recovery, architecture, traceability, design/CSS alignment, and this plan's evidence.
 
 ## Definition of done
 
@@ -221,7 +246,8 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 - [ ] Scope and exclusions match the delivered flow.
 - [ ] The existing stack is confirmed sufficient, or each new/replaced technology records its first use, alternatives, impacts, rollback/removal, owner, and ADR disposition.
 - [ ] TypeSpec compiles and generated artifacts match the accepted contract.
-- [ ] Backend, frontend, migration, and tests implement the same states and errors.
+- [ ] When public HTTP changes, the initial and accepted contract checkpoints are recorded, the frontend consumer review is complete, and every contract request is resolved.
+- [ ] Backend, frontend, migration, and tests implement the same states and errors from that checkpoint.
 - [ ] All acceptance criteria have named evidence.
 - [ ] Authorization, privacy, minor safety, and audit behavior were reviewed.
 - [ ] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and failure states were verified where applicable.
@@ -235,14 +261,17 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 
 ## Verification evidence
 
-| Evidence               | Result  |
-| ---------------------- | ------- |
-| Contract build         | Not run |
-| Technology/ADR review  | Not run |
-| Backend tests          | Not run |
-| Frontend tests         | Not run |
-| Frontend visual review | Not run |
-| End-to-end/manual flow | Not run |
+| Evidence                     | Result          |
+| ---------------------------- | --------------- |
+| Contract build               | Not run         |
+| Initial contract checkpoint  | Not established |
+| Frontend contract review     | Not run         |
+| Accepted contract checkpoint | Not established |
+| Technology/ADR review        | Not run         |
+| Backend tests                | Not run         |
+| Frontend tests               | Not run         |
+| Frontend visual review       | Not run         |
+| End-to-end/manual flow       | Not run         |
 
 ## Revision history
 
