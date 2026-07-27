@@ -128,6 +128,90 @@ cd services/api && ./mvnw --batch-mode -Dtest=SessionServiceTest test
 cd services/api && ./mvnw --batch-mode -Dit.test=AuthHttpIT verify
 ```
 
+## Playwright browser tests
+
+Run commands from the repository root with the workspace-pinned package. After a
+fresh checkout or Playwright upgrade:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @yukcsca/web exec playwright install chromium
+```
+
+Playwright starts Vite at `http://127.0.0.1:5173`; outside CI it reuses an
+existing server, so confirm that process belongs to this checkout. The projects
+are `chromium` (desktop) and `mobile-chrome` (Pixel 7). Compose and real Google
+credentials are unnecessary unless an accepted slice requires cross-stack
+behavior.
+
+Run the narrowest useful test while iterating, then the required desktop/mobile
+matrix once at handoff:
+
+```bash
+# Full suite, both projects
+pnpm e2e:web
+
+# One spec/project
+pnpm --filter @yukcsca/web exec playwright test \
+  e2e/px002-consumer-journeys.spec.ts \
+  --project=chromium \
+  --reporter=line
+
+# One test by title
+pnpm --filter @yukcsca/web exec playwright test \
+  e2e/px002-consumer-journeys.spec.ts \
+  --grep "checkout" \
+  --project=chromium \
+  --reporter=line
+
+# Mobile project
+pnpm --filter @yukcsca/web exec playwright test \
+  e2e/px002-consumer-journeys.spec.ts \
+  --project=mobile-chrome \
+  --reporter=line
+
+# Debug: add --headed or --debug to a focused command, or use UI mode
+pnpm --filter @yukcsca/web exec playwright test --ui
+```
+
+Replace the example spec/title with the current slice. Record a deterministic
+non-interactive run for final evidence.
+
+Artifacts:
+
+- HTML report: `apps/web/playwright-report/`
+- Failure artifacts/traces: `apps/web/test-results/`
+- `--reporter=line`: terminal only; any existing HTML report is stale
+- Retained review screenshots only: `output/playwright/<slice-or-review-id>/`
+
+Open reports/traces with:
+
+```bash
+pnpm --filter @yukcsca/web exec playwright show-report
+pnpm --filter @yukcsca/web exec playwright show-trace \
+  test-results/<test-result-directory>/trace.zip
+```
+
+Never enter real credentials, tokens, personal data, or student answers in a
+test. Disable trace/video around fixture-password tests and take screenshots only
+after the field is cleared or unmounted:
+
+```typescript
+test.describe('fixture credential flow', () => {
+  test.use({ trace: 'off', video: 'off' });
+});
+```
+
+Troubleshooting:
+
+- Missing browser: rerun the Chromium install command above.
+- Port conflict: inspect with `lsof -nP -iTCP:5173 -sTCP:LISTEN`; stop only the
+  known owning process.
+- Loopback bind denied: rerun where a local web server is allowed; this is not a
+  product failure.
+- CI failure: inspect the manual `Runtime validation` workflow's uploaded
+  `playwright-report` and first-retry trace before changing behavior.
+
 ## Validation
 
 Run the smallest relevant checks during iteration:
