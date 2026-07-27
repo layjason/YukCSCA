@@ -11,6 +11,9 @@
     "eyebrow": "YukCSCA",
     "title": "Belajar CSCA dengan jalur yang jelas",
     "description": "Masuk dengan Google untuk memulai onboarding, diagnostik, dan rencana belajar pribadi.",
+    "or": "atau",
+    "credentialHint": "Lebih suka email dan kata sandi? Ini pratinjau — tidak ada akun produksi yang dibuat.",
+    "credentialLink": "Masuk dengan email (Pratinjau)",
     "privacy": "Google hanya digunakan untuk autentikasi dasar. YukCSCA menerbitkan sesi aplikasinya sendiri."
   },
   "studentActivation": {
@@ -93,6 +96,7 @@
   "shell": {
     "navLabel": "Navigasi utama",
     "logout": "Keluar",
+    "exitPreview": "Keluar dari pratinjau",
     "fallbackName": "Siswa"
   },
   "preview": {
@@ -105,6 +109,19 @@
     "loadingDescription": "Contoh deterministik sedang dimuat. Tidak ada permintaan AI atau penulisan data produksi.",
     "errorTitle": "Konten pratinjau tidak dapat dimuat",
     "retry": "Coba lagi"
+  },
+  "guard": {
+    "previewContext": {
+      "title": "Sesi pratinjau diperlukan",
+      "description": "Area ini adalah bagian dari pratinjau dalam memori. Sesi Anda mungkin telah direset oleh refresh halaman atau tautan langsung. Mulai dari pemilihan peran untuk melanjutkan.",
+      "startRole": "Pilih peran",
+      "goHome": "Kembali ke Beranda"
+    },
+    "previewStudentAccount": {
+      "title": "Identitas siswa pratinjau",
+      "description": "Persona kredensial ini hanya dapat menggunakan pengalaman belajar berbasis contoh. Ini bukan akun, sesi, atau peran Siswa produksi.",
+      "exit": "Hapus pratinjau"
+    }
   },
   "unsupported": {
     "eyebrow": "YukCSCA",
@@ -583,6 +600,815 @@
     "mistake": {
       "remediationTitle": "Tinjau: mencari faktor persekutuan terbesar",
       "remediationContent": "Periksa angka terbesar yang sama dan pangkat terendah setiap variabel yang sama, lalu coba lagi tanpa bantuan."
+    }
+  },
+  "public": {
+    "brand": "YukCSCA",
+    "languageSelect": "Bahasa antarmuka",
+    "nav": {
+      "label": "Navigasi utama",
+      "home": "Beranda",
+      "products": "Produk",
+      "trial": "Uji Coba",
+      "forParents": "Untuk Orang Tua",
+      "signIn": "Masuk",
+      "createAccount": "Buat akun",
+      "toggleMenu": "Buka/tutup menu navigasi"
+    },
+    "footer": {
+      "label": "Navigasi footer",
+      "privacy": "Privasi",
+      "terms": "Ketentuan",
+      "support": "Bantuan",
+      "note": "YukCSCA adalah platform belajar untuk siswa Indonesia yang mempersiapkan CSCA. Preview ini bukan layanan aktif."
+    },
+    "home": {
+      "heroTitle": "Jalur jelas menuju kelulusan Matematika CSCA",
+      "heroSubtitle": "YukCSCA membantu siswa SMA Indonesia mempersiapkan CSCA dengan perencanaan berbasis target, belajar harian, latihan, pemulihan kesalahan, dan ujian coba — dalam bahasa ujian Inggris atau Mandarin.",
+      "startFree": "Buat akun Anda",
+      "viewProducts": "Lihat produk",
+      "howItWorks": "Cara kerja YukCSCA",
+      "step1Title": "Konfirmasi target dan mata pelajaran",
+      "step1Desc": "Tentukan universitas target, tanggal ujian, dan konfirmasi jalur Matematika yang Anda butuhkan.",
+      "step2Title": "Diagnostik",
+      "step2Desc": "Diagnostik singkat mengidentifikasi kekuatan dan kesenjangan Anda saat ini.",
+      "step3Title": "Rencana belajar yang layak",
+      "step3Desc": "Terima rencana yang sesuai dengan waktu tersedia dan jadwal ujian Anda.",
+      "step4Title": "Belajar dan latihan harian",
+      "step4Desc": "Kerjakan pelajaran terfokus, soal latihan, dan dukungan terminologi.",
+      "step5Title": "Pemulihan kesalahan",
+      "step5Desc": "Jawaban salah menjadi kesalahan terlacak dengan perbaikan terpandu.",
+      "step6Title": "Ujian coba dan kemajuan",
+      "step6Desc": "Ikuti ujian coba, tinjau bukti, dan sesuaikan prioritas rencana Anda.",
+      "languageModel": "Dua jalur bahasa ujian",
+      "languageModelDesc": "Matematika CSCA tersedia dalam bahasa Inggris dan Mandarin. Bahasa ujian menentukan bahasa soal; penjelasan dapat menggunakan bahasa Indonesia, Inggris, atau Mandarin secara independen.",
+      "mathEnglish": "Matematika (Inggris)",
+      "mathEnglishDesc": "Soal ujian berbahasa Inggris dengan penjelasan bahasa Indonesia, Inggris, atau Mandarin.",
+      "mathChinese": "Matematika (Mandarin)",
+      "mathChineseDesc": "Soal ujian berbahasa Mandarin dengan dukungan pinyin dan penjelasan bahasa Indonesia, Inggris, atau Mandarin.",
+      "trialTitle": "Coba sebelum berkomitmen",
+      "trialDesc": "Uji coba gratis memberikan pengalaman terbatas dari alur belajar.",
+      "trialItem1": "Satu pelajaran contoh per modul",
+      "trialItem2": "Lima soal latihan",
+      "trialItem3": "Satu diagnostik singkat",
+      "learnMoreTrial": "Pelajari tentang uji coba",
+      "parentTitle": "Dukungan untuk orang tua",
+      "parentDesc": "Orang tua menerima ringkasan mingguan yang aman secara privasi, peringatan risiko, dan pengelolaan pembelian — tanpa mengakses percakapan pribadi siswa.",
+      "forParents": "Selengkapnya untuk orang tua",
+      "trustTitle": "Prinsip konten dan kepercayaan",
+      "trustItem1": "Hanya konten yang telah ditinjau dan tercatat asal-usulnya",
+      "trustItem2": "Tidak ada jaminan skor atau klaim penerimaan",
+      "trustItem3": "Privasi siswa dilindungi sejak perancangan"
+    },
+    "products": {
+      "title": "Produk",
+      "subtitle": "Paket bahasa-mata pelajaran untuk persiapan Matematika CSCA.",
+      "previewNotice": "Katalog contoh — bukan daftar produk aktif.",
+      "perPlan": "per paket {{days}} hari",
+      "coverage": "{{covered}} dari {{total}} modul tercakup",
+      "viewDetail": "Lihat detail",
+      "notFound": "Produk tidak ditemukan",
+      "notFoundDesc": "Produk yang diminta tidak ada dalam katalog contoh ini."
+    },
+    "productDetail": {
+      "previewNotice": "Produk contoh — bukan data produksi resmi.",
+      "subject": "Mata pelajaran",
+      "examLanguage": "Bahasa ujian",
+      "intendedLearner": "Peserta yang dituju",
+      "includedModules": "Modul yang termasuk",
+      "missingModules": "Belum tercakup",
+      "missingModulesNone": "Semua modul yang tercantum tercakup dalam paket ini.",
+      "practiceScope": "Cakupan latihan",
+      "terminologySupport": "Dukungan terminologi",
+      "aiAllowance": "Bantuan AI",
+      "mockAllowance": "Ujian coba",
+      "validity": "Masa berlaku",
+      "days": "{{days}} hari",
+      "price": "Harga",
+      "renewalBehavior": "Perpanjangan",
+      "trialBenefits": "Uji coba mencakup",
+      "trialLimits": "Batas uji coba",
+      "startCheckout": "Lanjut ke pembayaran",
+      "covered": "Tercakup",
+      "notCovered": "Tidak tercakup"
+    },
+    "trial": {
+      "title": "Uji coba gratis",
+      "subtitle": "Rasakan alur belajar sebelum memilih paket.",
+      "included": "Yang termasuk dalam uji coba",
+      "includedItem1": "Satu pelajaran contoh per modul",
+      "includedItem2": "Lima soal latihan dengan umpan balik",
+      "includedItem3": "Satu diagnostik singkat dengan hasil",
+      "notIncluded": "Yang tidak termasuk dalam uji coba",
+      "notIncludedItem1": "Akses ujian coba",
+      "notIncludedItem2": "Pelacakan kemajuan penuh",
+      "notIncludedItem3": "Bantuan penjelasan AI",
+      "notIncludedItem4": "Laporan orang tua atau fitur pembelian",
+      "cta": "Buat akun untuk memulai uji coba",
+      "previewNotice": "Cakupan uji coba adalah data contoh untuk preview ini."
+    },
+    "forParents": {
+      "title": "Untuk orang tua",
+      "subtitle": "Dukung persiapan CSCA anak Anda dengan visibilitas dan batasan yang jelas.",
+      "summaryTitle": "Yang dapat Anda lihat",
+      "summaryItem1": "Ringkasan aktivitas mingguan",
+      "summaryItem2": "Kemajuan silabus dan kelayakan rencana",
+      "summaryItem3": "Peringatan risiko saat rencana tertinggal",
+      "summaryItem4": "Ringkasan akses dan hak layanan",
+      "summaryItem5": "Pengelolaan pembelian dan bukti bayar",
+      "privacyTitle": "Yang tetap pribadi",
+      "privacyItem1": "Percakapan agen secara penuh",
+      "privacyItem2": "Catatan pribadi siswa",
+      "privacyItem3": "Riwayat jawaban per soal",
+      "privacyItem4": "Catatan internal staf",
+      "privacyNote": "Akses orang tua berorientasi pada ringkasan. Siswa tetap memiliki privasi atas proses belajar detail mereka.",
+      "cta": "Buat akun orang tua"
+    },
+    "privacy": {
+      "title": "Kebijakan privasi",
+      "body": "Ini adalah kebijakan privasi contoh untuk preview YukCSCA. Bukan dokumen hukum aktif. Dalam produksi, halaman ini akan menjelaskan pengumpulan data, pemrosesan, retensi, perlindungan anak di bawah umur, dan hak-hak Anda."
+    },
+    "terms": {
+      "title": "Ketentuan layanan",
+      "body": "Ini adalah ketentuan layanan contoh untuk preview YukCSCA. Bukan perjanjian yang mengikat. Dalam produksi, halaman ini akan berisi ketentuan layanan, kebijakan pengembalian dana, dan syarat penggunaan yang sebenarnya."
+    }
+  },
+  "credential": {
+    "previewBadge": "Preview — bukan autentikasi produksi",
+    "show": "Tampilkan",
+    "hide": "Sembunyikan",
+    "or": "atau",
+    "register": {
+      "title": "Buat akun Anda",
+      "description": "Daftar dengan email dan kata sandi untuk menjelajahi pengalaman preview.",
+      "email": "Alamat email",
+      "password": "Kata sandi",
+      "confirmPassword": "Konfirmasi kata sandi",
+      "showPassword": "Tampilkan kata sandi",
+      "hidePassword": "Sembunyikan kata sandi",
+      "passwordRequirementsLabel": "Persyaratan kata sandi",
+      "requirements": "Kata sandi minimal 8 karakter.",
+      "terms": "Saya menerima Ketentuan Layanan dan Kebijakan Privasi.",
+      "submit": "Buat akun",
+      "submitting": "Membuat…",
+      "orDivider": "atau",
+      "googleHint": "Untuk masuk di produksi, gunakan Google:",
+      "goToGoogleLogin": "Lanjutkan dengan Google",
+      "haveAccount": "Sudah punya akun? Masuk",
+      "signIn": "Masuk",
+      "errorEmailRequired": "Email wajib diisi.",
+      "errorEmailFormat": "Masukkan alamat email yang valid.",
+      "errorPasswordRequired": "Kata sandi wajib diisi.",
+      "errorPasswordMin": "Kata sandi minimal 8 karakter.",
+      "errorConfirmRequired": "Konfirmasi kata sandi wajib diisi.",
+      "errorPasswordMismatch": "Kata sandi tidak cocok.",
+      "errorTermsRequired": "Anda harus menerima ketentuan untuk melanjutkan.",
+      "errorDuplicateEmail": "Akun dengan email ini sudah ada.",
+      "verificationSent": "Email verifikasi terkirim. Periksa kotak masuk Anda."
+    },
+    "verify": {
+      "title": "Verifikasi email Anda",
+      "description": "Kami mengirim kode verifikasi ke {{email}}.",
+      "verifyButton": "Verifikasi email",
+      "verifying": "Memverifikasi…",
+      "resend": "Kirim ulang kode",
+      "resendCooldown": "Kirim ulang tersedia dalam {{seconds}} dtk",
+      "cooldownNote": "Anda dapat meminta kode lagi dalam {{seconds}} detik.",
+      "resent": "Kode verifikasi dikirim ulang.",
+      "invalidToken": "Tautan verifikasi ini tidak valid atau sudah kedaluwarsa.",
+      "expiredHint": "Minta email verifikasi baru untuk melanjutkan.",
+      "success": "Email berhasil diverifikasi.",
+      "noSession": "Tidak ada verifikasi yang tertunda. Mulai dari pendaftaran.",
+      "backToRegister": "Kembali ke pendaftaran",
+      "previewNote": "Ini adalah simulasi preview. Tidak ada email sungguhan yang dikirim."
+    },
+    "login": {
+      "title": "Masuk",
+      "description": "Masuk dengan email dan kata sandi untuk pengalaman preview.",
+      "email": "Alamat email",
+      "password": "Kata sandi",
+      "showPassword": "Tampilkan kata sandi",
+      "hidePassword": "Sembunyikan kata sandi",
+      "keepSignedIn": "Tetap masuk",
+      "keepSignedInNote": "Khusus preview — tidak ada sesi persisten yang dibuat.",
+      "submit": "Masuk",
+      "submitting": "Masuk…",
+      "orDivider": "atau",
+      "googleHint": "Untuk masuk di produksi, gunakan Google:",
+      "goToGoogleLogin": "Lanjutkan dengan Google",
+      "forgotPassword": "Lupa kata sandi?",
+      "noAccount": "Belum punya akun? Buat akun",
+      "createAccount": "Buat akun",
+      "errorEmailRequired": "Email wajib diisi.",
+      "errorEmailFormat": "Masukkan alamat email yang valid.",
+      "errorPasswordRequired": "Kata sandi wajib diisi.",
+      "errorInvalidCredentials": "Email atau kata sandi salah."
+    },
+    "forgot": {
+      "title": "Atur ulang kata sandi",
+      "description": "Masukkan email Anda dan kami akan mengirim tautan atur ulang jika akun tersedia.",
+      "email": "Alamat email",
+      "emailHint": "Masukkan alamat email yang terkait dengan akun Anda.",
+      "submit": "Kirim tautan atur ulang",
+      "submitting": "Mengirim…",
+      "confirmation": "Jika akun dengan email tersebut ada, tautan atur ulang telah dikirim.",
+      "backToLogin": "Kembali ke halaman masuk",
+      "errorEmailRequired": "Email wajib diisi.",
+      "errorEmailFormat": "Masukkan alamat email yang valid.",
+      "previewNote": "Ini adalah preview. Tidak ada email sungguhan yang dikirim."
+    }
+  },
+  "role": {
+    "title": "Pilih peran Anda",
+    "description": "Peran menentukan izin dan batasan data Anda. Pilih peran yang sesuai dengan cara Anda menggunakan YukCSCA.",
+    "legend": "Pilih peran yang menggambarkan Anda",
+    "student": {
+      "title": "Siswa",
+      "description": "Akses belajar, latihan, ujian coba, dan pelacakan kemajuan.",
+      "googleNote": "Anda akan melanjutkan ke aktivasi siswa produksi.",
+      "previewNote": "Anda akan masuk ke preview siswa berbasis fixture."
+    },
+    "parent": {
+      "title": "Orang tua",
+      "description": "Dukung anak Anda dengan ringkasan yang aman secara privasi, laporan, dan pengelolaan pembelian.",
+      "previewNote": "Pengalaman orang tua adalah preview. Aktivasi orang tua produksi termasuk dalam pembaruan mendatang."
+    },
+    "tutor": {
+      "title": "Tutor",
+      "description": "Pendaftaran tutor belum dibuka pada pilot saat ini.",
+      "unavailable": "Tidak tersedia"
+    },
+    "continue": "Lanjutkan",
+    "previewBadge": "Preview"
+  },
+  "parent": {
+    "onboarding": {
+      "title": "Siapkan profil orang tua Anda",
+      "progressLabel": "Kemajuan onboarding orang tua",
+      "steps": {
+        "profile": "Profil",
+        "privacy": "Privasi",
+        "complete": "Selesai"
+      },
+      "step": "Langkah {{current}} dari {{total}}",
+      "back": "Kembali",
+      "continueToPrivacy": "Lanjut ke pengaturan privasi",
+      "continueToComplete": "Lanjut ke ringkasan",
+      "profile": {
+        "heading": "Informasi Anda",
+        "name": "Nama lengkap",
+        "relationship": "Hubungan dengan siswa",
+        "relationshipParent": "Orang tua",
+        "relationshipGuardian": "Wali",
+        "relationshipOther": "Lainnya",
+        "contactEmail": "Email kontak",
+        "preferredContact": "Metode kontak pilihan",
+        "preferredEmail": "Email",
+        "preferredPhone": "Telepon",
+        "locale": "Bahasa pilihan",
+        "localeId": "Bahasa Indonesia",
+        "localeEn": "English",
+        "localeZh": "Bahasa Mandarin Sederhana",
+        "errorNameRequired": "Nama wajib diisi.",
+        "errorEmailRequired": "Email kontak wajib diisi.",
+        "errorEmailFormat": "Masukkan alamat email yang valid."
+      },
+      "privacy": {
+        "heading": "Privasi dan notifikasi",
+        "explanationTitle": "Yang dapat dan tidak dapat Anda lihat",
+        "explanation": "Sebagai orang tua, Anda akan melihat informasi ringkasan tentang belajar anak Anda. Anda tidak akan melihat percakapan pribadi, catatan personal, atau riwayat jawaban detail.",
+        "canSeeTitle": "Anda dapat melihat",
+        "canSeeProgress": "Ringkasan kemajuan dan kelayakan rencana",
+        "canSeeRisk": "Peringatan risiko saat rencana belajar tertinggal",
+        "canSeeAccess": "Ringkasan akses, hak layanan, dan pembelian",
+        "cannotSeeTitle": "Anda tidak dapat melihat",
+        "cannotSeeConversations": "Percakapan agen pribadi",
+        "cannotSeeNotes": "Catatan pribadi siswa dan riwayat jawaban detail",
+        "notificationsLegend": "Preferensi notifikasi",
+        "essentialTitle": "Notifikasi penting (selalu aktif)",
+        "essentialDesc": "Peringatan keamanan, konfirmasi transaksi",
+        "alwaysOn": "Selalu aktif",
+        "optionalTitle": "Notifikasi opsional",
+        "learningReminders": "Pengingat aktivitas belajar",
+        "weeklyReport": "Laporan kemajuan mingguan",
+        "riskAlerts": "Peringatan risiko rencana",
+        "marketingTitle": "Pemasaran (opsional)",
+        "marketingOptIn": "Kirim pembaruan produk dan promosi",
+        "termsAccept": "Saya menerima Ketentuan Layanan dan Kebijakan Privasi.",
+        "errorTermsRequired": "Anda harus menerima ketentuan untuk melanjutkan."
+      },
+      "complete": {
+        "heading": "Anda siap",
+        "summary": "Profil preview orang tua Anda sudah disiapkan. Anda sekarang dapat masuk ke ruang kerja orang tua.",
+        "optedIn": "Ya",
+        "optedOut": "Tidak",
+        "enterWorkspace": "Masuk ke ruang kerja orang tua",
+        "noLinkedNote": "Belum ada siswa yang terhubung. Anda dapat membuat atau menerima hubungan siswa di dalamnya."
+      }
+    },
+    "nav": {
+      "label": "Navigasi orang tua",
+      "home": "Beranda",
+      "family": "Keluarga",
+      "reports": "Laporan",
+      "purchases": "Pembelian",
+      "account": "Akun"
+    },
+    "home": {
+      "title": "Beranda orang tua",
+      "noLinked": {
+        "heading": "Belum ada siswa terhubung",
+        "explanation": "Data belajar tersedia setelah Anda membuat profil siswa atau menerima undangan siswa.",
+        "createStudent": "Buat profil siswa",
+        "acceptInvitation": "Terima undangan siswa",
+        "privacyNote": "Sebelum hubungan aktif, data siswa tidak terlihat.",
+        "browseProducts": "Lihat produk"
+      },
+      "privacyTitle": "Privasi",
+      "linked": {
+        "studentLabel": "Siswa terhubung",
+        "weeklyActivity": "Aktivitas minggu ini",
+        "tasksCompleted": "{{completed}} dari {{total}} tugas selesai",
+        "studyTime": "{{minutes}} menit belajar",
+        "syllabusProgress": "Kemajuan silabus: {{percent}}%",
+        "planFeasibility": "Status rencana",
+        "feasibilityOnTrack": "Di jalur",
+        "feasibilityAtRisk": "Berisiko",
+        "feasibilityHighRisk": "Risiko tinggi",
+        "currentRisk": "Risiko saat ini",
+        "noRisk": "Tidak ada risiko aktif teridentifikasi.",
+        "recommendedActions": "Tindakan yang disarankan",
+        "entitlementSummary": "Ringkasan akses",
+        "latestReport": "Laporan terbaru",
+        "viewReport": "Lihat laporan"
+      }
+    },
+    "report": {
+      "title": "Laporan mingguan",
+      "notFound": "Siswa tidak ditemukan atau tidak terhubung ke akun Anda.",
+      "noLinkedStudent": "Laporan tersedia setelah siswa terhubung ke akun Anda.",
+      "backHome": "Kembali ke beranda",
+      "listHeading": "Laporan",
+      "empty": "Belum ada laporan tersedia.",
+      "statusAvailable": "Tersedia",
+      "statusInsufficient": "Bukti tidak cukup",
+      "statusDeliveryFailed": "Pengiriman email gagal — tersedia di aplikasi",
+      "tasksCompleted": "{{completed}}/{{total}} tugas",
+      "topicsProgressed": "Topik yang berkembang",
+      "riskLevel": "Tingkat risiko",
+      "riskNone": "Tidak ada",
+      "riskLow": "Rendah",
+      "riskMedium": "Sedang",
+      "riskHigh": "Tinggi",
+      "recommendedActions": "Tindakan yang disarankan",
+      "encouragement": "Kirim semangat",
+      "suggestPlanReview": "Sarankan tinjauan rencana",
+      "reviewProduct": "Tinjau produk yang sesuai",
+      "dismiss": "Tutup sementara",
+      "planReviewNote": "Jika Anda menyarankan tinjauan rencana, siswa harus menerima atau menolak perubahan tersebut.",
+      "noPlanEdit": "Anda tidak dapat mengedit rencana atau penguasaan siswa secara langsung."
+    },
+    "studentOverview": {
+      "title": "Ikhtisar siswa",
+      "notFound": "Siswa tidak ditemukan atau tidak terhubung ke akun Anda.",
+      "backHome": "Kembali ke beranda",
+      "privacyNote": "Tampilan ini hanya menampilkan informasi ringkasan. Percakapan dan catatan pribadi tidak terlihat.",
+      "weeklySummary": "Ringkasan mingguan",
+      "tasksLabel": "Tugas selesai",
+      "minutesLabel": "Menit belajar",
+      "progressLabel": "Kemajuan silabus",
+      "feasibilityLabel": "Kelayakan rencana",
+      "riskLabel": "Risiko saat ini",
+      "noRisk": "Tidak ada risiko aktif teridentifikasi.",
+      "mockTrend": "Tren ujian coba",
+      "mockTrendNote": "Berdasarkan bukti preview terbatas. Bukan skor produksi.",
+      "actions": "Tindakan pendukung",
+      "encourage": "Kirim semangat",
+      "encouragementRecorded": "Dukungan tercatat di preview ini.",
+      "suggestReview": "Sarankan tinjauan rencana",
+      "reviewRecorded": "Saran tinjauan rencana tercatat di preview ini.",
+      "browseProduct": "Tinjau produk",
+      "dismiss": "Tutup",
+      "dismissed": "Saran ditutup di preview ini.",
+      "viewReports": "Lihat laporan mingguan"
+    }
+  },
+  "family": {
+    "title": "Keluarga",
+    "create": {
+      "privacyTitle": "Batas privasi"
+    },
+    "noLink": {
+      "heading": "Belum ada siswa terhubung",
+      "createOption": "Buat profil siswa untuk aktivasi nanti",
+      "acceptOption": "Terima undangan siswa",
+      "privacyExplanation": "Hubungan orang tua-siswa harus aktif sebelum data belajar dapat terlihat."
+    },
+    "pending": {
+      "heading": "Menunggu aktivasi siswa",
+      "studentName": "Nama siswa",
+      "studentEmail": "Email siswa",
+      "createdAt": "Dibuat",
+      "notice": "Siswa harus memverifikasi identitas dan mengonfirmasi informasi mereka sendiri sebelum belajar dimulai.",
+      "noEmailSent": "Preview ini tidak mengirim email atau SMS undangan fungsional."
+    },
+    "active": {
+      "heading": "Siswa terhubung",
+      "studentName": "Siswa",
+      "linkedAt": "Terhubung sejak",
+      "permissions": "Anda dapat melihat",
+      "permissionSummary": "Ringkasan kemajuan dan risiko rencana",
+      "permissionSyllabus": "Kemajuan silabus",
+      "permissionMock": "Tren ujian coba dengan keterbatasan bukti",
+      "permissionAccess": "Ringkasan akses dan layanan",
+      "permissionReport": "Laporan mingguan",
+      "notVisible": "Tidak terlihat oleh Anda",
+      "notVisibleConversations": "Percakapan agen pribadi",
+      "notVisibleNotes": "Catatan pribadi siswa",
+      "notVisibleHistory": "Riwayat jawaban per soal secara penuh",
+      "unlink": "Putuskan hubungan siswa"
+    },
+    "unlink": {
+      "heading": "Putuskan hubungan siswa",
+      "consequences": "Jika Anda memutuskan hubungan:",
+      "consequence1": "Akses ringkasan mendatang akan berakhir.",
+      "consequence2": "Riwayat belajar siswa tetap utuh.",
+      "consequence3": "Anda tetap menyimpan bukti bayar dan catatan pengembalian dana historis.",
+      "consequence4": "Masalah bimbingan atau pesanan yang belum selesai mungkin perlu ditinjau.",
+      "confirm": "Konfirmasi putus hubungan",
+      "cancel": "Batal",
+      "done": "Hubungan siswa diputus. Anda tidak lagi memiliki akses ringkasan.",
+      "previewNote": "Preview ini tidak mengubah hubungan yang sebenarnya."
+    },
+    "createStudent": {
+      "title": "Buat profil siswa",
+      "name": "Nama siswa",
+      "email": "Email siswa",
+      "submit": "Buat profil siswa",
+      "privacyBoundary": "Siswa harus memverifikasi identitas dan mengonfirmasi informasi mereka sebelum aktivasi.",
+      "errorNameRequired": "Nama siswa wajib diisi.",
+      "errorEmailFormat": "Masukkan alamat email yang valid.",
+      "errorDuplicate": "Siswa dengan informasi ini sudah ada.",
+      "success": "Profil siswa dibuat. Menunggu aktivasi siswa."
+    },
+    "invitation": {
+      "title": "Undangan siswa",
+      "studentName": "Siswa",
+      "studentEmail": "Email siswa",
+      "allowedAccess": "Akses yang diizinkan",
+      "expiresAt": "Kedaluwarsa: {{date}}",
+      "accept": "Terima undangan",
+      "expired": "Undangan ini sudah kedaluwarsa.",
+      "mismatched": "Undangan ini dikirim ke akun yang berbeda.",
+      "alreadyUsed": "Undangan ini sudah digunakan.",
+      "notFound": "Undangan ini tidak ada.",
+      "backToFamily": "Kembali ke keluarga"
+    }
+  },
+  "commerce": {
+    "checkout": {
+      "title": "Checkout",
+      "product": "Produk",
+      "recipient": "Penerima",
+      "recipientSelf": "Saya sendiri",
+      "selectRecipient": "Pilih penerima",
+      "payer": "Pembayar",
+      "amount": "Jumlah",
+      "validity": "Masa berlaku",
+      "validityDays": "{{days}} hari",
+      "benefits": "Manfaat yang termasuk",
+      "limits": "Batas",
+      "coverageNote": "Keterbatasan cakupan",
+      "deadline": "Batas waktu pembayaran",
+      "deadlineNote": "Selesaikan pembayaran dalam 12 jam atau pesanan kedaluwarsa.",
+      "termsSummary": "Pengembalian dana mengikuti kebijakan platform. Lihat Ketentuan untuk detail.",
+      "continueToPayment": "Lanjut ke pembayaran",
+      "noRecipient": "Pilih siswa terhubung sebagai penerima sebelum melanjutkan.",
+      "selectProduct": "Pilih produk",
+      "subject": "Mata pelajaran",
+      "examLanguage": "Bahasa ujian",
+      "missingModules": "Belum tercakup: {{modules}}",
+      "changeProduct": "Ganti produk",
+      "selfRecipient": "Saya sendiri (pembelian sendiri oleh siswa)"
+    },
+    "payment": {
+      "title": "Metode pembayaran",
+      "selectMethod": "Pilih metode pembayaran",
+      "unavailable": "Tidak tersedia",
+      "confirm": "Konfirmasi pesanan",
+      "creating": "Membuat pesanan…",
+      "qrNotice": "Contoh — tidak dapat dibayar",
+      "noCardInput": "Preview ini tidak mengumpulkan nomor kartu asli.",
+      "noCharge": "Preview ini tidak membuat tagihan nyata.",
+      "methods": {
+        "qris": "QRIS",
+        "bankVa": "Virtual Account Bank",
+        "gopay": "GoPay",
+        "shopeepay": "ShopeePay",
+        "card": "Kartu pembayaran"
+      }
+    },
+    "instructions": {
+      "title": "Instruksi pembayaran",
+      "sampleNotice": "Instruksi pembayaran contoh — preview ini tidak membuat tagihan nyata.",
+      "qrisPlaceholder": "Kode QR contoh — tidak dapat dibayar",
+      "vaNumber": "Nomor Virtual Account (contoh)",
+      "authorityNote": "Dalam produksi, hasil dari penyedia pembayaran bersifat otoritatif. Menutup browser tidak menentukan status pembayaran akhir.",
+      "browserNote": "Layar sukses di browser saja tidak memberikan akses.",
+      "simulateOutcome": "Simulasikan hasil penyedia (kontrol preview)",
+      "markPaid": "Simulasi: Berhasil dibayar",
+      "markFailed": "Simulasi: Gagal",
+      "markExpired": "Simulasi: Kedaluwarsa",
+      "viewOrder": "Lihat pesanan"
+    },
+    "orders": {
+      "title": "Pesanan",
+      "empty": "Belum ada pesanan.",
+      "statusPending": "Menunggu",
+      "statusPaid": "Dibayar",
+      "statusFailed": "Gagal",
+      "statusExpired": "Kedaluwarsa",
+      "statusCancelled": "Dibatalkan",
+      "statusRefunded": "Dana dikembalikan",
+      "viewDetail": "Lihat"
+    },
+    "orderDetail": {
+      "title": "Detail pesanan",
+      "notFound": "Pesanan ini tidak ditemukan dalam sesi preview saat ini.",
+      "orderId": "ID pesanan (contoh)",
+      "product": "Produk",
+      "payer": "Pembayar",
+      "recipient": "Penerima",
+      "amount": "Jumlah",
+      "validity": "Masa berlaku",
+      "paymentMethod": "Metode pembayaran",
+      "status": "Status",
+      "providerRef": "Referensi penyedia (contoh)",
+      "reconciliation": "Waktu rekonsiliasi",
+      "notReconciled": "Belum direkonsiliasi",
+      "receiptSection": "Bukti bayar",
+      "receiptNumber": "Nomor bukti bayar",
+      "receiptNote": "Ini adalah bukti bayar contoh, bukan faktur pajak.",
+      "entitlementLink": "Lihat hak akses",
+      "pendingNote": "Akses diberikan hanya setelah penyedia pembayaran mengonfirmasi keberhasilan.",
+      "refundLink": "Ajukan pengembalian dana",
+      "renewLink": "Perpanjang",
+      "supportLink": "Hubungi dukungan"
+    },
+    "entitlements": {
+      "title": "Hak akses",
+      "empty": "Tidak ada hak akses aktif.",
+      "statusActive": "Aktif",
+      "statusExpiring": "Segera berakhir",
+      "statusExpired": "Kedaluwarsa",
+      "statusPending": "Menunggu rekonsiliasi",
+      "validity": "Berlaku hingga",
+      "limits": "Batas penggunaan",
+      "sourceOrder": "Pesanan sumber",
+      "renew": "Perpanjang"
+    },
+    "refund": {
+      "title": "Ajukan pengembalian dana",
+      "eligibility": "Kelayakan pengembalian dana bergantung pada kebijakan platform dan status pesanan.",
+      "ineligible": "Pesanan ini tidak memenuhi syarat pengembalian dana.",
+      "reason": "Alasan",
+      "reasonDuplicate": "Pembayaran ganda",
+      "reasonService": "Masalah layanan",
+      "reasonOther": "Lainnya",
+      "evidence": "Bukti pendukung",
+      "evidenceNote": "Dalam produksi, Anda dapat melampirkan tangkapan layar. Preview ini tidak mendukung unggahan nyata.",
+      "effectOnAccess": "Dampak pada akses",
+      "submit": "Kirim permintaan pengembalian dana",
+      "submitted": "Permintaan pengembalian dana dikirim untuk ditinjau.",
+      "caseId": "ID kasus",
+      "noPromise": "Mengirim permintaan tidak menjamin pengembalian dana.",
+      "statusPendingReview": "Menunggu tinjauan",
+      "statusApproved": "Disetujui",
+      "statusRejected": "Ditolak",
+      "statusResolved": "Selesai"
+    },
+    "renewal": {
+      "title": "Perpanjangan manual",
+      "currentExpiry": "Tanggal kedaluwarsa saat ini",
+      "newValidity": "Masa berlaku baru",
+      "newValidityDays": "{{days}} hari dari pembelian",
+      "amount": "Jumlah perpanjangan",
+      "explicitNote": "Pesanan sekali bayar baru akan dibuat. Ini bukan penagihan otomatis.",
+      "notAutomatic": "Pembayaran QRIS dan Virtual Account tidak pernah berupa tagihan berulang otomatis.",
+      "confirm": "Buat pesanan perpanjangan",
+      "created": "Pesanan perpanjangan dibuat."
+    }
+  },
+  "notifications": {
+    "title": "Preferensi notifikasi",
+    "essentialTitle": "Penting (selalu aktif)",
+    "essentialDesc": "Peringatan keamanan dan konfirmasi transaksi tidak dapat dinonaktifkan.",
+    "securityAlerts": "Peringatan keamanan",
+    "transactionConfirmations": "Konfirmasi transaksi",
+    "optionalTitle": "Notifikasi opsional",
+    "inApp": "Notifikasi dalam aplikasi",
+    "email": "Notifikasi email",
+    "learningReminders": "Pengingat belajar",
+    "weeklyParentReport": "Laporan mingguan orang tua",
+    "riskAlerts": "Peringatan risiko",
+    "entitlementExpiry": "Pemberitahuan kedaluwarsa hak akses",
+    "orderPaymentStatus": "Status pesanan dan pembayaran",
+    "supportUpdates": "Pembaruan tiket bantuan",
+    "marketingTitle": "Pemasaran (opt-in terpisah)",
+    "marketing": "Pembaruan produk dan promosi",
+    "marketingNote": "Pemasaran nonaktif secara default dan terpisah dari notifikasi penting.",
+    "whatsappTitle": "WhatsApp",
+    "whatsapp": "Notifikasi WhatsApp",
+    "whatsappUnavailable": "Notifikasi WhatsApp tidak tersedia.",
+    "saved": "Preferensi diperbarui."
+  },
+  "support": {
+    "title": "Bantuan",
+    "description": "Tinjau permintaan bantuan Anda dan statusnya saat ini.",
+    "empty": "Belum ada tiket bantuan.",
+    "newTicket": "Tiket baru",
+    "backToList": "Kembali ke bantuan",
+    "notFound": "Permintaan bantuan ini tidak tersedia. Mungkin sudah dihapus dari sesi preview.",
+    "categoryLabel": "Kategori",
+    "categories": {
+      "account": "Akun",
+      "payment": "Pembayaran",
+      "content": "Konten",
+      "aiAnswer": "Jawaban AI",
+      "tutoring": "Bimbingan/layanan"
+    },
+    "new": {
+      "title": "Hubungi bantuan",
+      "category": "Kategori",
+      "categoryAccount": "Akun",
+      "categoryPayment": "Pembayaran",
+      "categoryContent": "Konten",
+      "categoryAiAnswer": "Jawaban AI",
+      "categoryTutoring": "Bimbingan/layanan",
+      "description": "Jelaskan masalah Anda",
+      "contextLink": "Pesanan atau referensi terkait (opsional)",
+      "safetyNote": "Jangan sertakan kata sandi, nomor kartu, atau konten belajar pribadi.",
+      "submit": "Kirim tiket",
+      "submitted": "Tiket terkirim."
+    },
+    "ticket": {
+      "title": "Tiket",
+      "status": "Status",
+      "statusOpen": "Terbuka",
+      "statusInProgress": "Sedang diproses",
+      "statusResolved": "Selesai",
+      "statusClosed": "Ditutup",
+      "category": "Kategori",
+      "contextLink": "Referensi terkait",
+      "replies": "Percakapan",
+      "replyPlaceholder": "Tulis balasan…",
+      "replyFromUser": "Anda",
+      "replyFromSupport": "Bantuan",
+      "sendReply": "Kirim",
+      "noReplies": "Belum ada balasan.",
+      "closedNote": "Permintaan ini sudah ditutup. Buat permintaan baru jika masih membutuhkan bantuan."
+    },
+    "errors": {
+      "descriptionRequired": "Jelaskan masalah Anda.",
+      "replyRequired": "Tulis pesan balasan."
+    }
+  },
+  "account": {
+    "previewNotice": "Khusus preview. Tidak ada data akun nyata yang diproses, diekspor, atau dihapus.",
+    "privacy": {
+      "title": "Privasi dan data",
+      "body": "Preview ini menjelaskan bagaimana YukCSCA akan menangani data Anda. Dalam produksi, halaman ini akan merinci pengumpulan, pemrosesan, retensi, perlindungan anak di bawah umur, dan hak-hak Anda berdasarkan hukum yang berlaku.",
+      "collectionTitle": "Data yang dikumpulkan",
+      "collectionBody": "Informasi akun, aktivitas belajar, dan catatan pembayaran sesuai kebutuhan layanan.",
+      "parentBoundaryTitle": "Batas orang tua dan siswa",
+      "parentBoundary": "Akun orang tua dan siswa tetap terpisah. Orang tua hanya melihat ringkasan.",
+      "minorTitle": "Pertimbangan anak di bawah umur",
+      "minorNote": "YukCSCA melayani anak di bawah umur. Minimisasi data dan penanganan sesuai usia berlaku."
+    },
+    "export": {
+      "title": "Ekspor data Anda",
+      "explanation": "Anda dapat meminta salinan data pribadi Anda. Ini adalah permintaan, bukan unduhan instan di browser.",
+      "ownershipTitle": "Batas kepemilikan",
+      "ownership": "Ekspor mencakup data yang Anda miliki. Data belajar siswa milik siswa.",
+      "deliveryTitle": "Pengiriman aman",
+      "delivery": "Dalam produksi, ekspor akan dikirim secara aman ke email terverifikasi Anda.",
+      "requestButton": "Minta ekspor data",
+      "requested": "Permintaan ekspor terkirim (preview). Dalam produksi, Anda akan menerima tautan unduhan aman.",
+      "previewNote": "Preview ini tidak membuat permintaan ekspor nyata."
+    },
+    "delete": {
+      "title": "Hapus akun Anda",
+      "explanation": "Penghapusan akun adalah permintaan formal, bukan tindakan instan.",
+      "consequences": "Konsekuensi penghapusan:",
+      "consequence1": "Hubungan orang tua-siswa akan berakhir.",
+      "consequence2": "Hak akses aktif akan dicabut.",
+      "consequence3": "Catatan keuangan disimpan sesuai ketentuan hukum.",
+      "consequence4": "Pesanan atau sengketa yang belum selesai dapat menghalangi penghapusan sampai ditinjau.",
+      "confirmLabel": "Saya memahami konsekuensinya dan ingin meminta penghapusan akun.",
+      "confirmRequired": "Harap konfirmasi sebelum meminta penghapusan.",
+      "requestButton": "Minta penghapusan akun",
+      "requested": "Permintaan penghapusan dikirim untuk ditinjau (preview).",
+      "previewNote": "Preview ini tidak membuat permintaan penghapusan nyata."
+    }
+  },
+  "prototypeData": {
+    "currentRisk": "Keterlambatan rencana: tiga hari berturut-turut tanpa aktivitas. Dengan ritme saat ini, topik wajib mungkin tidak selesai sebelum tanggal ujian.",
+    "products": {
+      "math-english": {
+        "name": "Paket Matematika (Bahasa Inggris)",
+        "subject": "Matematika",
+        "examLanguage": "Bahasa Inggris",
+        "intendedLearner": "Siswa SMA Indonesia yang mempersiapkan Matematika CSCA dalam bahasa Inggris",
+        "modules": {
+          "1": "Aljabar dan Fungsi",
+          "2": "Geometri dan Pengukuran",
+          "3": "Statistika dan Peluang",
+          "4": "Pengantar Kalkulus",
+          "5": "Trigonometri"
+        },
+        "practiceScope": "Lebih dari 120 soal latihan pada modul yang tercakup",
+        "terminologySupport": "Istilah matematika bahasa Inggris dengan penjelasan bahasa Indonesia",
+        "aiAllowance": "Bantuan penjelasan terbatas saat belajar; dinonaktifkan selama ujian coba",
+        "mockAllowance": "2 ujian coba lengkap per masa berlaku",
+        "renewalBehavior": "Perpanjangan satu kali secara manual; tanpa tagihan otomatis",
+        "trialBenefits": {
+          "1": "1 pelajaran contoh per modul",
+          "2": "5 soal latihan",
+          "3": "1 diagnostik singkat"
+        },
+        "trialLimits": {
+          "1": "Tanpa akses ujian coba",
+          "2": "Tanpa pelacakan kemajuan",
+          "3": "Tanpa bantuan penjelasan AI"
+        }
+      },
+      "math-chinese": {
+        "name": "Paket Matematika (Bahasa Mandarin)",
+        "subject": "Matematika",
+        "examLanguage": "Bahasa Mandarin",
+        "intendedLearner": "Siswa SMA Indonesia yang mempersiapkan Matematika CSCA dalam bahasa Mandarin",
+        "modules": {
+          "1": "Aljabar dan Fungsi",
+          "2": "Geometri dan Pengukuran",
+          "3": "Statistika dan Peluang",
+          "4": "Pengantar Kalkulus",
+          "5": "Trigonometri"
+        },
+        "practiceScope": "Lebih dari 100 soal latihan dengan dukungan istilah bahasa Mandarin",
+        "terminologySupport": "Istilah matematika Mandarin dengan pinyin serta penjelasan bahasa Indonesia dan Inggris",
+        "aiAllowance": "Bantuan penjelasan dan istilah terbatas; dinonaktifkan selama ujian coba",
+        "mockAllowance": "2 ujian coba lengkap per masa berlaku",
+        "renewalBehavior": "Perpanjangan satu kali secara manual; tanpa tagihan otomatis",
+        "trialBenefits": {
+          "1": "1 pelajaran contoh per modul",
+          "2": "5 soal latihan",
+          "3": "Preview istilah"
+        },
+        "trialLimits": {
+          "1": "Tanpa akses ujian coba",
+          "2": "Tanpa pelacakan kemajuan",
+          "3": "Bantuan istilah AI terbatas"
+        }
+      }
+    },
+    "invitationAccess": {
+      "1": "Ringkasan aktivitas mingguan",
+      "2": "Kemajuan silabus",
+      "3": "Risiko rencana",
+      "4": "Ringkasan akses dan layanan"
+    },
+    "entitlementUsage": "Tersisa 2 ujian coba; latihan tanpa batas dalam modul yang tercakup",
+    "reports": {
+      "report-w3": {
+        "weekLabel": "Minggu 3 (15–21 Jul)",
+        "summary": "Rina menyelesaikan 8 dari 12 tugas rencana, maju hingga modul Aljabar 3, dan menjaga ritme belajar yang stabil. Tidak ada risiko berarti yang teridentifikasi.",
+        "topics": {
+          "1": "Aljabar: Persamaan kuadrat",
+          "2": "Geometri: Kekongruenan segitiga"
+        },
+        "actions": {
+          "1": "Lanjutkan ritme saat ini",
+          "2": "Tinjau istilah trigonometri sebelum ujian coba berikutnya"
+        }
+      },
+      "report-w2": {
+        "weekLabel": "Minggu 2 (8–14 Jul)",
+        "summary": "Aktivitas belum cukup untuk membuat laporan yang bermakna pada minggu ini.",
+        "actions": {
+          "1": "Dorong siswa untuk melanjutkan rencana belajarnya"
+        }
+      },
+      "report-w1": {
+        "weekLabel": "Minggu 1 (1–7 Jul)",
+        "summary": "Laporan mingguan telah dibuat, tetapi pengiriman email gagal. Laporan tetap tersedia di sini.",
+        "topics": {
+          "1": "Aljabar: Persamaan linear",
+          "2": "Statistika: Rata-rata dan median"
+        },
+        "actions": {
+          "1": "Periksa informasi kontak untuk pengiriman berikutnya"
+        }
+      }
     }
   }
 }

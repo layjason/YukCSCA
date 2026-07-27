@@ -11,6 +11,9 @@
     "eyebrow": "YukCSCA",
     "title": "以清晰路径准备 CSCA",
     "description": "使用 Google 登录，开始入学引导、诊断测试和个人学习计划。",
+    "or": "或",
+    "credentialHint": "偏好使用邮箱和密码？这是预览——不会创建生产账户。",
+    "credentialLink": "使用邮箱登录（预览）",
     "privacy": "Google 仅用于基本身份验证。YukCSCA 颁发自己的应用会话。"
   },
   "studentActivation": {
@@ -93,6 +96,7 @@
   "shell": {
     "navLabel": "主导航",
     "logout": "退出登录",
+    "exitPreview": "退出预览",
     "fallbackName": "学生"
   },
   "preview": {
@@ -105,6 +109,19 @@
     "loadingDescription": "确定性示例正在加载，不会发起 AI 请求或写入生产数据。",
     "errorTitle": "无法加载预览内容",
     "retry": "重试"
+  },
+  "guard": {
+    "previewContext": {
+      "title": "需要预览会话",
+      "description": "此区域属于内存预览的一部分。您的会话可能因页面刷新或直接链接而重置。请从角色选择开始继续。",
+      "startRole": "选择角色",
+      "goHome": "返回首页"
+    },
+    "previewStudentAccount": {
+      "title": "预览学生身份",
+      "description": "此凭据角色只能使用夹具支持的学习体验，并非生产账户、会话或学生角色。",
+      "exit": "清除预览"
+    }
   },
   "unsupported": {
     "eyebrow": "YukCSCA",
@@ -583,6 +600,815 @@
     "mistake": {
       "remediationTitle": "复习：寻找最大公因式",
       "remediationContent": "检查最大的共有数字和每个共有变量的最低次数，然后在之后不借助帮助重试。"
+    }
+  },
+  "public": {
+    "brand": "YukCSCA",
+    "languageSelect": "界面语言",
+    "nav": {
+      "label": "主导航",
+      "home": "首页",
+      "products": "产品",
+      "trial": "试用",
+      "forParents": "家长专区",
+      "signIn": "登录",
+      "createAccount": "注册账户",
+      "toggleMenu": "切换导航菜单"
+    },
+    "footer": {
+      "label": "页脚导航",
+      "privacy": "隐私政策",
+      "terms": "服务条款",
+      "support": "帮助支持",
+      "note": "YukCSCA 是面向印尼学生备考 CSCA 的学习平台。此预览不代表正式服务。"
+    },
+    "home": {
+      "heroTitle": "CSCA 数学的清晰备考路径",
+      "heroSubtitle": "YukCSCA 帮助印尼高中生备考 CSCA，提供目标规划、每日学习、练习、错题补救和模拟考试——支持英文或中文考试语言。",
+      "startFree": "创建账户",
+      "viewProducts": "查看产品",
+      "howItWorks": "YukCSCA 如何运作",
+      "step1Title": "目标与科目确认",
+      "step1Desc": "设定目标大学、考试日期，并确认您需要哪个数学轨道。",
+      "step2Title": "诊断评估",
+      "step2Desc": "简短的诊断帮助您了解当前的优势和薄弱环节。",
+      "step3Title": "可行的学习计划",
+      "step3Desc": "获得与您可用时间和考试安排匹配的学习计划。",
+      "step4Title": "每日学习与练习",
+      "step4Desc": "完成聚焦的课程、练习题和术语支持。",
+      "step5Title": "错题补救",
+      "step5Desc": "错误答案会被记录为错题，并配有引导式补救方案。",
+      "step6Title": "模拟考试与进度",
+      "step6Desc": "参加模拟考试，查看证据，重新调整计划优先级。",
+      "languageModel": "两个考试语言轨道",
+      "languageModelDesc": "CSCA 数学提供英文和中文两种考试语言。考试语言决定题目语言；讲解语言可独立选择印尼语、英语或中文。",
+      "mathEnglish": "数学（英文）",
+      "mathEnglishDesc": "英文考试题目，讲解可选印尼语、英语或中文。",
+      "mathChinese": "数学（中文）",
+      "mathChineseDesc": "中文考试题目，附拼音支持，讲解可选印尼语、英语或中文。",
+      "trialTitle": "先试后买",
+      "trialDesc": "免费试用让您体验完整的学习循环。",
+      "trialItem1": "每个模块一节示例课程",
+      "trialItem2": "五道练习题",
+      "trialItem3": "一次简短诊断",
+      "learnMoreTrial": "了解试用详情",
+      "parentTitle": "家长支持",
+      "parentDesc": "家长可收到保护隐私的每周摘要、风险提醒和购买管理——无需访问学生的私人对话。",
+      "forParents": "了解家长功能",
+      "trustTitle": "内容与信任原则",
+      "trustItem1": "仅使用经审核、有来源记录的内容",
+      "trustItem2": "不承诺保证分数或录取",
+      "trustItem3": "学生隐私从设计层面得到保护"
+    },
+    "products": {
+      "title": "产品",
+      "subtitle": "CSCA 数学备考的科目语言方案。",
+      "previewNotice": "示例目录——非正式产品列表。",
+      "perPlan": "每 {{days}} 天方案",
+      "coverage": "已覆盖 {{covered}} / {{total}} 个模块",
+      "viewDetail": "查看详情",
+      "notFound": "未找到产品",
+      "notFoundDesc": "请求的产品不存在于此示例目录中。"
+    },
+    "productDetail": {
+      "previewNotice": "示例产品——非生产权威数据。",
+      "subject": "科目",
+      "examLanguage": "考试语言",
+      "intendedLearner": "适用对象",
+      "includedModules": "包含模块",
+      "missingModules": "尚未覆盖",
+      "practiceScope": "练习范围",
+      "terminologySupport": "术语支持",
+      "aiAllowance": "AI 辅助",
+      "mockAllowance": "模拟考试",
+      "validity": "有效期",
+      "days": "{{days}} 天",
+      "price": "价格",
+      "renewalBehavior": "续订方式",
+      "trialBenefits": "试用包含",
+      "trialLimits": "试用限制",
+      "startCheckout": "前往结账",
+      "covered": "已覆盖",
+      "notCovered": "未覆盖",
+      "missingModulesNone": "该计划涵盖所有列出的模块。"
+    },
+    "trial": {
+      "title": "免费试用",
+      "subtitle": "在选择方案前体验完整的学习循环。",
+      "included": "试用包含内容",
+      "includedItem1": "每个模块一节示例课程",
+      "includedItem2": "五道带反馈的练习题",
+      "includedItem3": "一次简短诊断及结果",
+      "notIncluded": "试用不包含",
+      "notIncludedItem1": "模拟考试访问",
+      "notIncludedItem2": "完整进度追踪",
+      "notIncludedItem3": "AI 讲解辅助",
+      "notIncludedItem4": "家长报告或购买功能",
+      "cta": "创建账户开始试用",
+      "previewNotice": "试用范围为此预览的示例数据。"
+    },
+    "forParents": {
+      "title": "家长专区",
+      "subtitle": "在保护隐私的前提下，关注孩子的 CSCA 备考进展。",
+      "summaryTitle": "您可以看到",
+      "summaryItem1": "每周学习摘要",
+      "summaryItem2": "大纲进度和计划可行性",
+      "summaryItem3": "计划落后时的风险提醒",
+      "summaryItem4": "访问权限和服务摘要",
+      "summaryItem5": "购买和收据管理",
+      "privacyTitle": "以下内容保持私密",
+      "privacyItem1": "完整的 AI 对话",
+      "privacyItem2": "学生私人笔记",
+      "privacyItem3": "逐题作答历史",
+      "privacyItem4": "内部员工记录",
+      "privacyNote": "家长访问以摘要为导向。学生保留对学习细节的隐私权。",
+      "cta": "创建家长账户"
+    },
+    "privacy": {
+      "title": "隐私政策",
+      "body": "这是 YukCSCA 预览的示例隐私政策，不代表正式法律文件。在生产环境中，此页面将说明数据收集、处理、保留、未成年人保护及您的权利。"
+    },
+    "terms": {
+      "title": "服务条款",
+      "body": "这是 YukCSCA 预览的示例服务条款，不构成具有约束力的协议。在生产环境中，此页面将包含实际的服务条款、退款政策和使用条件。"
+    }
+  },
+  "credential": {
+    "previewBadge": "预览——非生产身份验证",
+    "show": "显示",
+    "hide": "隐藏",
+    "or": "或",
+    "register": {
+      "title": "创建账户",
+      "description": "使用邮箱和密码注册，体验预览功能。",
+      "email": "邮箱地址",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "showPassword": "显示密码",
+      "hidePassword": "隐藏密码",
+      "passwordRequirementsLabel": "密码要求",
+      "requirements": "密码至少需要 8 个字符。",
+      "terms": "我接受服务条款和隐私政策。",
+      "submit": "创建账户",
+      "submitting": "创建中…",
+      "orDivider": "或",
+      "googleHint": "生产环境请使用 Google 登录：",
+      "goToGoogleLogin": "使用 Google 继续",
+      "haveAccount": "已有账户？登录",
+      "signIn": "登录",
+      "errorEmailRequired": "请输入邮箱。",
+      "errorEmailFormat": "请输入有效的邮箱地址。",
+      "errorPasswordRequired": "请输入密码。",
+      "errorPasswordMin": "密码至少需要 8 个字符。",
+      "errorConfirmRequired": "请确认密码。",
+      "errorPasswordMismatch": "两次输入的密码不一致。",
+      "errorTermsRequired": "请接受条款后继续。",
+      "errorDuplicateEmail": "该邮箱已注册。",
+      "verificationSent": "验证邮件已发送，请查收邮箱。"
+    },
+    "verify": {
+      "title": "验证邮箱",
+      "description": "我们已向 {{email}} 发送了验证码。",
+      "verifyButton": "验证邮箱",
+      "verifying": "验证中…",
+      "resend": "重新发送验证码",
+      "resendCooldown": "{{seconds}} 秒后可重新发送",
+      "cooldownNote": "您可以在 {{seconds}} 秒后再次请求验证码。",
+      "resent": "验证码已重新发送。",
+      "invalidToken": "此验证链接无效或已过期。",
+      "expiredHint": "请请求新的验证邮件以继续。",
+      "success": "邮箱验证成功。",
+      "noSession": "没有待验证的请求。请从注册开始。",
+      "backToRegister": "返回注册",
+      "previewNote": "这是预览模拟。未发送真实邮件。"
+    },
+    "login": {
+      "title": "登录",
+      "description": "使用邮箱和密码登录预览体验。",
+      "email": "邮箱地址",
+      "password": "密码",
+      "showPassword": "显示密码",
+      "hidePassword": "隐藏密码",
+      "keepSignedIn": "保持登录状态",
+      "keepSignedInNote": "仅预览——不会创建持久会话。",
+      "submit": "登录",
+      "submitting": "登录中…",
+      "orDivider": "或",
+      "googleHint": "生产环境请使用 Google 登录：",
+      "goToGoogleLogin": "使用 Google 继续",
+      "forgotPassword": "忘记密码？",
+      "noAccount": "没有账户？创建账户",
+      "createAccount": "创建账户",
+      "errorEmailRequired": "请输入邮箱。",
+      "errorEmailFormat": "请输入有效的邮箱地址。",
+      "errorPasswordRequired": "请输入密码。",
+      "errorInvalidCredentials": "邮箱或密码错误。"
+    },
+    "forgot": {
+      "title": "重置密码",
+      "description": "输入您的邮箱，如果账户存在，我们将发送重置链接。",
+      "email": "邮箱地址",
+      "emailHint": "请输入与您账户关联的邮箱地址。",
+      "submit": "发送重置链接",
+      "submitting": "发送中…",
+      "confirmation": "如果该邮箱已注册，重置链接已发送。",
+      "backToLogin": "返回登录",
+      "errorEmailRequired": "请输入邮箱。",
+      "errorEmailFormat": "请输入有效的邮箱地址。",
+      "previewNote": "这是预览。未发送真实邮件。"
+    }
+  },
+  "role": {
+    "title": "选择您的角色",
+    "description": "角色决定您的权限和数据边界。请选择与您使用 YukCSCA 方式匹配的角色。",
+    "legend": "选择描述您的角色",
+    "student": {
+      "title": "学生",
+      "description": "访问学习、练习、模拟考试和进度追踪。",
+      "googleNote": "您将继续进入生产学生激活流程。",
+      "previewNote": "您将进入夹具驱动的学生预览。"
+    },
+    "parent": {
+      "title": "家长",
+      "description": "通过保护隐私的摘要、报告和购买管理来支持孩子。",
+      "previewNote": "家长体验为预览。生产家长激活将在后续更新中推出。"
+    },
+    "tutor": {
+      "title": "导师",
+      "description": "当前试点阶段暂不开放导师申请。",
+      "unavailable": "暂不可用"
+    },
+    "continue": "继续",
+    "previewBadge": "预览"
+  },
+  "parent": {
+    "onboarding": {
+      "title": "设置家长档案",
+      "step": "第 {{current}} 步 / 共 {{total}} 步",
+      "progressLabel": "家长引导进度",
+      "steps": {
+        "profile": "档案",
+        "privacy": "隐私",
+        "complete": "完成"
+      },
+      "continueToPrivacy": "继续到隐私设置",
+      "continueToComplete": "继续到摘要",
+      "back": "返回",
+      "profile": {
+        "heading": "您的信息",
+        "name": "姓名",
+        "relationship": "与学生的关系",
+        "relationshipParent": "父母",
+        "relationshipGuardian": "监护人",
+        "relationshipOther": "其他",
+        "contactEmail": "联系邮箱",
+        "preferredContact": "首选联系方式",
+        "preferredEmail": "邮件",
+        "preferredPhone": "电话",
+        "locale": "首选语言",
+        "localeId": "印尼语",
+        "localeEn": "英语",
+        "localeZh": "简体中文",
+        "errorNameRequired": "请输入姓名。",
+        "errorEmailRequired": "请输入联系邮箱。",
+        "errorEmailFormat": "请输入有效的邮箱地址。"
+      },
+      "privacy": {
+        "heading": "隐私与通知",
+        "explanationTitle": "您可以和不可以看到的内容",
+        "explanation": "作为家长，您将看到孩子学习的摘要信息。您不会看到私人对话、个人笔记或详细的作答历史。",
+        "canSeeTitle": "您可以看到",
+        "canSeeProgress": "进度摘要和计划可行性",
+        "canSeeRisk": "学习计划落后时的风险提醒",
+        "canSeeAccess": "访问权限、服务权益和购买摘要",
+        "cannotSeeTitle": "您不可以看到",
+        "cannotSeeConversations": "私人 AI 对话",
+        "cannotSeeNotes": "学生私人笔记和详细作答历史",
+        "notificationsLegend": "通知偏好",
+        "essentialTitle": "必要通知（始终开启）",
+        "essentialDesc": "安全提醒、交易确认",
+        "alwaysOn": "始终开启",
+        "optionalTitle": "可选通知",
+        "learningReminders": "学习活动提醒",
+        "weeklyReport": "每周进度报告",
+        "riskAlerts": "计划风险提醒",
+        "marketingTitle": "营销推广（可选）",
+        "marketingOptIn": "接收产品更新和促销信息",
+        "termsAccept": "我接受服务条款和隐私政策。",
+        "errorTermsRequired": "请接受条款后继续。"
+      },
+      "complete": {
+        "heading": "设置完成",
+        "summary": "您的家长预览档案已设置完毕。现在可以进入家长工作台。",
+        "enterWorkspace": "进入家长工作台",
+        "noLinkedNote": "尚未关联学生。您可以在工作台内创建或接受学生关联。",
+        "optedIn": "是",
+        "optedOut": "否"
+      }
+    },
+    "nav": {
+      "label": "家长导航",
+      "home": "首页",
+      "family": "家庭",
+      "reports": "报告",
+      "purchases": "购买",
+      "account": "账户"
+    },
+    "home": {
+      "title": "家长首页",
+      "noLinked": {
+        "heading": "尚未关联学生",
+        "explanation": "创建学生档案或接受学生邀请后，学习数据才会可见。",
+        "createStudent": "创建学生档案",
+        "acceptInvitation": "接受学生邀请",
+        "privacyNote": "在关联生效前，不会显示任何学生数据。",
+        "browseProducts": "浏览产品"
+      },
+      "privacyTitle": "隐私",
+      "linked": {
+        "studentLabel": "已关联学生",
+        "weeklyActivity": "本周活动",
+        "tasksCompleted": "已完成 {{completed}} / {{total}} 个任务",
+        "studyTime": "已学习 {{minutes}} 分钟",
+        "syllabusProgress": "大纲进度：{{percent}}%",
+        "planFeasibility": "计划状态",
+        "feasibilityOnTrack": "正常",
+        "feasibilityAtRisk": "有风险",
+        "feasibilityHighRisk": "高风险",
+        "currentRisk": "当前风险",
+        "noRisk": "未发现活跃风险。",
+        "recommendedActions": "建议操作",
+        "entitlementSummary": "访问权限摘要",
+        "latestReport": "最新报告",
+        "viewReport": "查看报告"
+      }
+    },
+    "report": {
+      "title": "每周报告",
+      "notFound": "未找到学生或该学生未关联到您的账户。",
+      "noLinkedStudent": "报告在学生关联到您的账户后可用。",
+      "backHome": "返回首页",
+      "listHeading": "报告列表",
+      "empty": "暂无报告。",
+      "statusAvailable": "可查看",
+      "statusInsufficient": "证据不足",
+      "statusDeliveryFailed": "邮件发送失败——可在应用内查看",
+      "tasksCompleted": "{{completed}}/{{total}} 个任务",
+      "topicsProgressed": "推进的主题",
+      "riskLevel": "风险等级",
+      "riskNone": "无",
+      "riskLow": "低",
+      "riskMedium": "中",
+      "riskHigh": "高",
+      "recommendedActions": "建议操作",
+      "encouragement": "发送鼓励",
+      "suggestPlanReview": "建议审查计划",
+      "reviewProduct": "查看合适的产品",
+      "dismiss": "暂时忽略",
+      "planReviewNote": "如果您建议审查计划，学生需要自行接受或拒绝变更。",
+      "noPlanEdit": "您不能直接编辑学生的计划或掌握状态。"
+    },
+    "studentOverview": {
+      "title": "学生概览",
+      "notFound": "未找到学生或该学生未关联到您的账户。",
+      "backHome": "返回首页",
+      "privacyNote": "此视图仅显示摘要信息。私人对话和笔记不可见。",
+      "weeklySummary": "每周摘要",
+      "tasksLabel": "已完成任务",
+      "minutesLabel": "学习时长（分钟）",
+      "progressLabel": "大纲进度",
+      "feasibilityLabel": "计划可行性",
+      "riskLabel": "当前风险",
+      "noRisk": "未发现活跃风险。",
+      "mockTrend": "模考趋势",
+      "mockTrendNote": "基于有限的预览证据，非生产分数。",
+      "actions": "支持操作",
+      "encourage": "发送鼓励",
+      "encouragementRecorded": "已在此预览中记录鼓励。",
+      "suggestReview": "建议审查计划",
+      "reviewRecorded": "已在此预览中记录计划审查建议。",
+      "browseProduct": "查看产品",
+      "dismiss": "忽略",
+      "dismissed": "已在此预览中忽略该建议。",
+      "viewReports": "查看每周报告"
+    }
+  },
+  "family": {
+    "title": "家庭",
+    "create": {
+      "privacyTitle": "隐私边界"
+    },
+    "noLink": {
+      "heading": "尚未关联学生",
+      "createOption": "创建学生档案以便日后激活",
+      "acceptOption": "接受学生的邀请",
+      "privacyExplanation": "家长与学生的关联必须生效后，学习数据才会可见。"
+    },
+    "pending": {
+      "heading": "等待学生激活",
+      "studentName": "学生姓名",
+      "studentEmail": "学生邮箱",
+      "createdAt": "创建时间",
+      "notice": "学生需要验证身份并确认自己的信息后才能开始学习。",
+      "noEmailSent": "此预览不会发送实际的邀请邮件或短信。"
+    },
+    "active": {
+      "heading": "已关联学生",
+      "studentName": "学生",
+      "linkedAt": "关联时间",
+      "permissions": "您可以看到",
+      "permissionSummary": "进度摘要和计划风险",
+      "permissionSyllabus": "大纲进度",
+      "permissionMock": "模考趋势（证据有限）",
+      "permissionAccess": "访问权限和服务摘要",
+      "permissionReport": "每周报告",
+      "notVisible": "您不可见的内容",
+      "notVisibleConversations": "私人 AI 对话",
+      "notVisibleNotes": "学生私人笔记",
+      "notVisibleHistory": "完整的逐题作答历史",
+      "unlink": "解除关联"
+    },
+    "unlink": {
+      "heading": "解除学生关联",
+      "consequences": "解除关联后：",
+      "consequence1": "后续摘要访问将终止。",
+      "consequence2": "学生的学习历史保持完整。",
+      "consequence3": "您保留自己的历史收据和退款记录。",
+      "consequence4": "未解决的辅导或订单问题可能需要审查。",
+      "confirm": "确认解除关联",
+      "cancel": "取消",
+      "done": "已解除学生关联。您不再有摘要访问权限。",
+      "previewNote": "此预览不会更改真实关联。"
+    },
+    "createStudent": {
+      "title": "创建学生档案",
+      "name": "学生姓名",
+      "email": "学生邮箱",
+      "submit": "创建学生档案",
+      "privacyBoundary": "学生需要验证身份并确认信息后才能激活。",
+      "errorNameRequired": "请输入学生姓名。",
+      "errorEmailFormat": "请输入有效的邮箱地址。",
+      "errorDuplicate": "该信息对应的学生已存在。",
+      "success": "学生档案已创建，等待学生激活。"
+    },
+    "invitation": {
+      "title": "学生邀请",
+      "studentName": "学生",
+      "studentEmail": "学生邮箱",
+      "allowedAccess": "允许的访问范围",
+      "expiresAt": "过期时间：{{date}}",
+      "accept": "接受邀请",
+      "expired": "此邀请已过期。",
+      "mismatched": "此邀请发送给了其他账户。",
+      "alreadyUsed": "此邀请已被使用。",
+      "notFound": "此邀请不存在。",
+      "backToFamily": "返回家庭"
+    }
+  },
+  "commerce": {
+    "checkout": {
+      "title": "结账",
+      "product": "产品",
+      "recipient": "接收人",
+      "recipientSelf": "我自己",
+      "selectRecipient": "选择接收人",
+      "payer": "付款人",
+      "amount": "金额",
+      "validity": "有效期",
+      "validityDays": "{{days}} 天",
+      "benefits": "包含权益",
+      "limits": "使用限制",
+      "coverageNote": "覆盖范围限制",
+      "deadline": "付款截止时间",
+      "deadlineNote": "请在 12 小时内完成付款，否则订单将过期。",
+      "termsSummary": "退款遵循平台退款政策。详见服务条款。",
+      "continueToPayment": "前往支付",
+      "noRecipient": "请先选择已关联的学生作为接收人。",
+      "selectProduct": "选择产品",
+      "subject": "科目",
+      "examLanguage": "考试语言",
+      "missingModules": "尚未覆盖：{{modules}}",
+      "changeProduct": "更换产品",
+      "selfRecipient": "我自己（学生自购）"
+    },
+    "payment": {
+      "title": "支付方式",
+      "selectMethod": "选择支付方式",
+      "unavailable": "暂不可用",
+      "confirm": "确认订单",
+      "creating": "创建订单中…",
+      "qrNotice": "示例——不可实际支付",
+      "noCardInput": "此预览不收集真实银行卡号。",
+      "noCharge": "此预览不会产生真实扣款。",
+      "methods": {
+        "qris": "QRIS",
+        "bankVa": "银行虚拟账户",
+        "gopay": "GoPay",
+        "shopeepay": "ShopeePay",
+        "card": "支付卡"
+      }
+    },
+    "instructions": {
+      "title": "支付说明",
+      "sampleNotice": "示例支付说明——此预览不会产生真实扣款。",
+      "qrisPlaceholder": "示例二维码——不可实际支付",
+      "vaNumber": "虚拟账户号码（示例）",
+      "authorityNote": "在生产环境中，支付服务商的结果为最终权威。关闭浏览器不决定最终支付状态。",
+      "browserNote": "仅凭浏览器成功页面不能获得访问权限。",
+      "simulateOutcome": "模拟服务商结果（预览控制）",
+      "markPaid": "模拟：已支付",
+      "markFailed": "模拟：支付失败",
+      "markExpired": "模拟：已过期",
+      "viewOrder": "查看订单"
+    },
+    "orders": {
+      "title": "订单",
+      "empty": "暂无订单。",
+      "statusPending": "待支付",
+      "statusPaid": "已支付",
+      "statusFailed": "支付失败",
+      "statusExpired": "已过期",
+      "statusCancelled": "已取消",
+      "statusRefunded": "已退款",
+      "viewDetail": "查看"
+    },
+    "orderDetail": {
+      "title": "订单详情",
+      "notFound": "在当前预览会话中未找到此订单。",
+      "orderId": "订单编号（示例）",
+      "product": "产品",
+      "payer": "付款人",
+      "recipient": "接收人",
+      "amount": "金额",
+      "validity": "有效期",
+      "paymentMethod": "支付方式",
+      "status": "状态",
+      "providerRef": "服务商参考号（示例）",
+      "reconciliation": "对账时间",
+      "notReconciled": "尚未对账",
+      "receiptSection": "收据",
+      "receiptNumber": "收据编号",
+      "receiptNote": "这是示例收据，不是税务发票。",
+      "entitlementLink": "查看权益",
+      "pendingNote": "只有在支付服务商确认成功后才会授予访问权限。",
+      "refundLink": "申请退款",
+      "renewLink": "续订",
+      "supportLink": "联系支持"
+    },
+    "entitlements": {
+      "title": "权益",
+      "empty": "暂无有效权益。",
+      "statusActive": "有效",
+      "statusExpiring": "即将到期",
+      "statusExpired": "已过期",
+      "statusPending": "等待对账",
+      "validity": "有效期至",
+      "limits": "使用限制",
+      "sourceOrder": "来源订单",
+      "renew": "续订"
+    },
+    "refund": {
+      "title": "申请退款",
+      "eligibility": "退款资格取决于平台退款政策和订单状态。",
+      "ineligible": "此订单不符合退款条件。",
+      "reason": "原因",
+      "reasonDuplicate": "重复支付",
+      "reasonService": "服务问题",
+      "reasonOther": "其他",
+      "evidence": "支持材料",
+      "evidenceNote": "在生产环境中可上传截图。此预览不支持真实文件上传。",
+      "effectOnAccess": "对访问权限的影响",
+      "submit": "提交退款申请",
+      "submitted": "退款申请已提交审核。",
+      "caseId": "工单编号",
+      "noPromise": "提交申请不保证一定获得退款。",
+      "statusPendingReview": "待审核",
+      "statusApproved": "已批准",
+      "statusRejected": "已拒绝",
+      "statusResolved": "已解决"
+    },
+    "renewal": {
+      "title": "手动续订",
+      "currentExpiry": "当前到期日",
+      "newValidity": "新有效期",
+      "newValidityDays": "购买后 {{days}} 天",
+      "amount": "续订金额",
+      "explicitNote": "将创建新的一次性订单，这不是自动扣费。",
+      "notAutomatic": "QRIS 和虚拟账户支付不会产生自动续费。",
+      "confirm": "创建续订订单",
+      "created": "续订订单已创建。"
+    }
+  },
+  "notifications": {
+    "title": "通知偏好",
+    "essentialTitle": "必要通知（始终开启）",
+    "essentialDesc": "安全提醒和交易确认无法关闭。",
+    "securityAlerts": "安全提醒",
+    "transactionConfirmations": "交易确认",
+    "optionalTitle": "可选通知",
+    "inApp": "应用内通知",
+    "email": "邮件通知",
+    "learningReminders": "学习提醒",
+    "weeklyParentReport": "每周家长报告",
+    "riskAlerts": "风险提醒",
+    "entitlementExpiry": "权益到期提醒",
+    "orderPaymentStatus": "订单和支付状态",
+    "supportUpdates": "工单进度更新",
+    "marketingTitle": "营销推广（单独订阅）",
+    "marketing": "产品更新和促销信息",
+    "marketingNote": "营销推广默认关闭，与必要通知相互独立。",
+    "whatsappTitle": "WhatsApp",
+    "whatsapp": "WhatsApp 通知",
+    "whatsappUnavailable": "WhatsApp 通知暂不可用。",
+    "saved": "偏好设置已更新。"
+  },
+  "support": {
+    "title": "帮助支持",
+    "description": "查看您的支持请求及当前状态。",
+    "empty": "暂无工单。",
+    "newTicket": "新建工单",
+    "backToList": "返回帮助支持",
+    "notFound": "此支持请求不可用，可能已从预览会话中清除。",
+    "categoryLabel": "类别",
+    "categories": {
+      "account": "账户",
+      "payment": "支付",
+      "content": "内容",
+      "aiAnswer": "AI 回答",
+      "tutoring": "辅导/服务"
+    },
+    "new": {
+      "title": "联系客服",
+      "category": "类别",
+      "categoryAccount": "账户",
+      "categoryPayment": "支付",
+      "categoryContent": "内容",
+      "categoryAiAnswer": "AI 回答",
+      "categoryTutoring": "辅导/服务",
+      "description": "描述您的问题",
+      "contextLink": "相关订单或参考编号（可选）",
+      "safetyNote": "请勿包含密码、银行卡号或私人学习内容。",
+      "submit": "提交工单",
+      "submitted": "工单已提交。"
+    },
+    "ticket": {
+      "title": "工单",
+      "status": "状态",
+      "statusOpen": "待处理",
+      "statusInProgress": "处理中",
+      "statusResolved": "已解决",
+      "statusClosed": "已关闭",
+      "category": "类别",
+      "contextLink": "相关参考",
+      "replies": "对话",
+      "replyPlaceholder": "输入回复…",
+      "replyFromUser": "您",
+      "replyFromSupport": "客服",
+      "sendReply": "发送",
+      "noReplies": "暂无回复。",
+      "closedNote": "此请求已关闭。如仍需帮助，请新建请求。"
+    },
+    "errors": {
+      "descriptionRequired": "请描述您的问题。",
+      "replyRequired": "请输入回复内容。"
+    }
+  },
+  "account": {
+    "previewNotice": "仅预览。不会处理、导出或删除真实的账户数据。",
+    "privacy": {
+      "title": "隐私与数据",
+      "body": "此预览说明 YukCSCA 将如何处理您的数据。在生产环境中，此页面将详细说明数据收集、处理、保留、未成年人保护及适用法律赋予您的权利。",
+      "collectionTitle": "收集的内容",
+      "collectionBody": "根据服务需要收集账户信息、学习活动和支付记录。",
+      "parentBoundaryTitle": "家长与学生边界",
+      "parentBoundary": "家长和学生账户保持独立。家长只能看到摘要信息。",
+      "minorTitle": "未成年人注意事项",
+      "minorNote": "YukCSCA 面向未成年人。适用数据最小化和适龄处理原则。"
+    },
+    "export": {
+      "title": "导出您的数据",
+      "explanation": "您可以申请导出个人数据副本。这是一项请求，而非即时浏览器下载。",
+      "ownershipTitle": "数据归属边界",
+      "ownership": "导出包含您拥有的数据。学生学习数据归学生所有。",
+      "deliveryTitle": "安全交付",
+      "delivery": "在生产环境中，导出将安全地发送到您已验证的邮箱。",
+      "requestButton": "申请数据导出",
+      "requested": "导出请求已提交（预览）。在生产环境中，您将收到安全下载链接。",
+      "previewNote": "此预览不会创建真实的导出请求。"
+    },
+    "delete": {
+      "title": "删除账户",
+      "explanation": "账户删除是正式请求，而非即时操作。",
+      "consequences": "删除后果：",
+      "consequence1": "家长与学生的关联将终止。",
+      "consequence2": "有效权益将被撤销。",
+      "consequence3": "财务记录将依法保留。",
+      "consequence4": "未解决的订单或争议可能阻止删除，直到审查完成。",
+      "confirmLabel": "我了解后果并希望申请删除账户。",
+      "confirmRequired": "请在申请删除前确认。",
+      "requestButton": "申请删除账户",
+      "requested": "删除请求已提交审核（预览）。",
+      "previewNote": "此预览不会创建真实的删除请求。"
+    }
+  },
+  "prototypeData": {
+    "currentRisk": "学习计划延迟：连续三天没有活动。按当前进度，考试日期前可能无法覆盖必修主题。",
+    "products": {
+      "math-english": {
+        "name": "数学（英语）方案",
+        "subject": "数学",
+        "examLanguage": "英语",
+        "intendedLearner": "准备参加英语版 CSCA 数学考试的印度尼西亚高中生",
+        "modules": {
+          "1": "代数与函数",
+          "2": "几何与测量",
+          "3": "统计与概率",
+          "4": "微积分入门",
+          "5": "三角学"
+        },
+        "practiceScope": "覆盖模块内的 120 多道练习题",
+        "terminologySupport": "英语数学术语配印度尼西亚语解释",
+        "aiAllowance": "学习期间提供有限解释辅助；模拟考试期间禁用",
+        "mockAllowance": "每个有效期内 2 次完整模拟考试",
+        "renewalBehavior": "仅支持手动单次续期；不会自动扣费",
+        "trialBenefits": {
+          "1": "每个模块 1 节示例课程",
+          "2": "5 道练习题",
+          "3": "1 次简短诊断"
+        },
+        "trialLimits": {
+          "1": "不含模拟考试",
+          "2": "不含进度跟踪",
+          "3": "不含 AI 解释辅助"
+        }
+      },
+      "math-chinese": {
+        "name": "数学（中文）方案",
+        "subject": "数学",
+        "examLanguage": "中文",
+        "intendedLearner": "准备参加中文版 CSCA 数学考试的印度尼西亚高中生",
+        "modules": {
+          "1": "代数与函数",
+          "2": "几何与测量",
+          "3": "统计与概率",
+          "4": "微积分入门",
+          "5": "三角学"
+        },
+        "practiceScope": "100 多道练习题，并提供中文术语支持",
+        "terminologySupport": "中文数学术语配拼音、印度尼西亚语和英语解释",
+        "aiAllowance": "提供有限的解释和术语辅助；模拟考试期间禁用",
+        "mockAllowance": "每个有效期内 2 次完整模拟考试",
+        "renewalBehavior": "仅支持手动单次续期；不会自动扣费",
+        "trialBenefits": {
+          "1": "每个模块 1 节示例课程",
+          "2": "5 道练习题",
+          "3": "术语预览"
+        },
+        "trialLimits": {
+          "1": "不含模拟考试",
+          "2": "不含进度跟踪",
+          "3": "仅有限 AI 术语辅助"
+        }
+      }
+    },
+    "invitationAccess": {
+      "1": "每周活动摘要",
+      "2": "教学大纲进度",
+      "3": "学习计划风险",
+      "4": "访问权限与服务摘要"
+    },
+    "entitlementUsage": "剩余 2 次模拟考试；覆盖模块内练习不限次数",
+    "reports": {
+      "report-w3": {
+        "weekLabel": "第 3 周（7 月 15–21 日）",
+        "summary": "Rina 完成了 12 项计划任务中的 8 项，推进到代数模块 3，并保持稳定学习节奏。未发现显著风险。",
+        "topics": {
+          "1": "代数：二次方程",
+          "2": "几何：三角形全等"
+        },
+        "actions": {
+          "1": "保持当前进度",
+          "2": "下次模拟考试前复习三角学术语"
+        }
+      },
+      "report-w2": {
+        "weekLabel": "第 2 周（7 月 8–14 日）",
+        "summary": "本周活动证据不足，无法生成有意义的报告。",
+        "actions": {
+          "1": "鼓励学生恢复学习计划"
+        }
+      },
+      "report-w1": {
+        "weekLabel": "第 1 周（7 月 1–7 日）",
+        "summary": "每周报告已生成，但邮件发送失败。报告仍可在此查看。",
+        "topics": {
+          "1": "代数：一元一次方程",
+          "2": "统计：平均数与中位数"
+        },
+        "actions": {
+          "1": "检查联系信息，以便后续发送"
+        }
+      }
     }
   }
 }

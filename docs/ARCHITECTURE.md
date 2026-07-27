@@ -1,140 +1,150 @@
 # Current architecture
 
-> **Classification: descriptive current state.** This document describes the repository as implemented. It does not create or modify product requirements. Verify changing details against code and configuration.
+> **Classification: descriptive current state.** This file records implemented
+> boundaries, not product requirements or future commitments. Verify changing
+> details against code and configuration.
 
-## System shape
+## Topology and stack
 
-YukCSCA is a pnpm workspace containing a React web application, one Spring Boot modular-monolith API, a TypeSpec contract package, and one PostgreSQL database.
+YukCSCA is a pnpm workspace with one React web app, one Spring Boot modular
+monolith, one TypeSpec package, and one PostgreSQL database.
 
 ```text
 apps/web/       React application
 contracts/      TypeSpec source and generated OpenAPI
 services/api/   Spring Boot modular monolith
+
+Browser -> Nginx/React -> Spring Boot API -> PostgreSQL 18
+             |
+             +-> proxies /api and health only
 ```
 
-Local orchestration uses Docker Compose. CI uses GitHub Actions. There are no microservices, queues, caches, vector stores, object-storage services, Python services, or AI SDKs in the current baseline.
+| Area       | Current implementation                                                 |
+| ---------- | ---------------------------------------------------------------------- |
+| Workspace  | Node.js 24, pnpm 11, one lockfile                                      |
+| Web        | React 19, Vite 8, strict TypeScript, React Router, i18next, CSS tokens |
+| Contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations        |
+| API/data   | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL 18  |
+| Testing    | Vitest, Testing Library, JUnit, Testcontainers, Playwright             |
+| Operations | Docker Compose, Actuator health, structured logs, GitHub Actions       |
 
-```text
-Browser ──► Nginx web container ──► Spring Boot API ──► PostgreSQL 18
-             │                       │
-             ├─ serves built React   └─ owns auth/session decisions
-             └─ proxies /api and health only
-```
+No microservices, queues, caches, vector/object stores, Python services, AI
+SDKs, or external UI/animation frameworks are active.
 
-## Active technology
+## Contract and backend boundaries
 
-| Area           | Current implementation                                                                      |
-| -------------- | ------------------------------------------------------------------------------------------- |
-| Workspace      | pnpm 11 workspace with one lockfile; Node.js 24                                             |
-| Web            | React 19, Vite 8, strict TypeScript 5.9, React Router, i18next, lightweight CSS tokens      |
-| API contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations                             |
-| API            | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway                                      |
-| Data           | PostgreSQL 18                                                                               |
-| Tests          | Vitest/Testing Library, JUnit/Testcontainers, Playwright                                    |
-| Operations     | Actuator health, structured logs, Docker Compose, GitHub Actions                            |
-| Security tools | Gitleaks; dependency updates are manually reviewed; GitHub premium security checks inactive |
+- TypeSpec under `contracts/` is the only hand-edited public HTTP contract.
+  Generated OpenAPI and frontend declarations are committed outputs, never
+  patched manually.
+- HTTP changes update TypeSpec, generated artifacts, backend transport,
+  frontend client behavior, and tests together.
+- Public failures use the shared `application/problem+json` shape and stable
+  codes. Bearer failures preserve `WWW-Authenticate`; rate limits preserve
+  `Retry-After`.
 
-## Contract boundary
-
-TypeSpec under `contracts/` is the only hand-edited public HTTP definition. Generated OpenAPI and frontend declarations are committed review artifacts and contain no business logic.
-
-An HTTP change is complete only when TypeSpec, generated artifacts, backend transport behavior, frontend client behavior, and relevant tests agree.
-
-Public error bodies use the shared TypeSpec problem shape and `application/problem+json`. Stable application codes are required. Spring Security preserves the RFC 6750 bearer challenge while adding the same structured body for filter-chain `401` and `403` responses; authentication rate limiting uses that canonical writer and also returns `Retry-After`.
-
-## Backend boundaries
-
-The backend currently has `identity` and `profile` modules. Identity owns users, Google identities, YukCSCA sessions, roles, security events, and session retention. Profile owns student-profile state and activation validation. Profile reaches identity only through a narrow application-facing account activation API; it does not import identity persistence or infrastructure.
+The API currently contains `identity` and `profile` modules:
 
 ```text
 <module>/
 ├── api/             HTTP translation and request validation
-├── application/     use cases and transaction boundaries
+├── application/     use cases and transactions
 ├── domain/          business state and rules
-└── infrastructure/  persistence, security, and provider adapters
+└── infrastructure/  persistence, security, provider adapters
 ```
 
-Within a module, dependencies point toward application/domain code. Another module may not import a repository, JPA entity, controller, or infrastructure implementation. A new module is created with its first accepted vertical slice, never as empty scaffolding.
+Identity owns accounts, Google identities, roles, sessions, security events,
+and retention. Profile owns student activation and profile state, reaching
+identity only through an application-facing activation API. Modules never
+import another module's repository, JPA entity, controller, or infrastructure.
+New modules appear only with their first accepted use case.
 
-Flyway owns the PostgreSQL schema. Migrations are append-only after the first shared deployment. Integration tests run the production migrations against PostgreSQL through Testcontainers.
-
-The Compose named volume mounts `/var/lib/postgresql`, matching the official PostgreSQL 18+ image's versioned `PGDATA` layout below that directory. The older `/var/lib/postgresql/data` convention applies to PostgreSQL 17 and earlier and must not be substituted without an explicit data-migration plan.
+Flyway owns the schema; shared migrations are append-only. Integration tests use
+the production migrations with PostgreSQL through Testcontainers.
 
 ## Frontend boundaries
 
 ```text
 app -> features -> shared
+   \-> prototype/student  -> shared
+   \-> prototype/consumer -> shared
 ```
 
-- `app` owns routing and composition.
-- A feature owns its UI, state, validation, and API adapter.
-- `shared` contains reusable primitives and may not import a feature.
-- Root `DESIGN.md` is the persistent visual/interaction contract. `apps/web/src/styles.css` currently mirrors its semantic colors, radii, spacing, focus, and motion values as CSS custom properties; no external UI or animation framework is active.
-- The current design foundation uses a warm near-white application canvas,
-  restrained cream, lilac, mint, coral, and sky context blocks, flat surfaces,
-  visible focus, and reduced-motion support. Feature code consumes semantic
-  variables rather than creating a parallel palette.
-- Purposeful motion is implemented with small CSS-only primitives for surface
-  and card entry, inline feedback, progress changes, and milestone
-  acknowledgement. A global `prefers-reduced-motion: reduce` rule removes
-  transforms and reduces animation and transition durations to near-zero; no
-  animation framework or perpetual decorative motion is active.
-- Access tokens remain in memory; refresh credentials are server-managed `HttpOnly` cookies.
-- The shell resolves interface language from a valid local choice, then a supported browser locale, then English; explicit interface-language changes persist locally.
-- Student-profile default explanation language is persisted during activation. Interface locale and per-subject exam language remain separate concepts and are not inferred from it.
-- Vite and Nginx expose the same web-origin proxy surface: `/api` plus health-only `/actuator/health`; other Actuator routes are not proxied through the web application.
+- `app` owns routes, guards, layouts, and composition.
+- `features` owns production UI, state, validation, and API adapters.
+- `prototype/*` owns explicitly non-production fixture flows.
+- `shared` imports neither features nor prototypes. Production and prototype
+  runtime modules never import each other.
+- `app/routes.ts` is the typed navigation and audience manifest.
+- Root `DESIGN.md` defines visual roles; `styles.css` mirrors its semantic
+  tokens, focus behavior, and reduced-motion rules.
+- Interface, explanation, and per-subject exam languages remain independent.
+- Access tokens stay in memory; refresh credentials remain server-managed
+  `HttpOnly` cookies.
+- Vite and Nginx expose the same-origin `/api` and health-only proxy surface.
 
-### PX-001 prototype boundary (implemented)
+## Implemented production flows
+
+Production authentication is Google-only:
 
 ```text
-app -> features -> shared
-   \-> prototype -> shared
+Google credential -> /api/v1/auth/google -> verified Google identity
+                                      |-> access JWT
+                                      +-> hashed refresh session + HttpOnly cookie
+
+refresh cookie -> /api/v1/auth/refresh -> rotated token family
+sign out       -> /api/v1/auth/logout  -> revoked session + cleared cookie
 ```
 
-- `prototype/student/` owns explicitly non-production preview models, fixtures, state, and page components for the PX-001 experience milestone.
-- Production features and prototype modules may not import each other. `app` composes both.
-- `PrototypeProvider` (React context + `useReducer`) holds all preview state in memory. No browser storage, API calls, analytics, or cookies are used by prototype code.
-- Deterministic scenario factories provide new-student, active, risk, loading,
-  empty, recoverable-error, practice, mock, access, and state-loss states.
-  Diagnostic, practice, mock, and Progress presentation is derived from the
-  current in-memory answers/actions rather than a parallel fixed result.
-- Refresh loses all preview progress; the application shows an honest restart state.
-- A typed route manifest (`app/routes.ts`) is the single source of truth for navigation placement, labels, role visibility, availability, and requirement-area traceability.
-- Three layout components compose the authenticated experience:
-  `OnboardingLayout` (preview step flow with current, complete, and upcoming
-  state cues), `AppShellLayout` (desktop sidebar + mobile bottom nav), and
-  `PublicLayout`.
-- Guards enforce: anonymous → login, UNASSIGNED → activation, STUDENT + preview-incomplete → goals, STUDENT + preview-complete → Today, other role → unsupported.
-- Mobile primary navigation keeps Today, Learn, Practice, Progress, and More
-  reachable; Mock Exam and account/settings destinations live under More.
-- The Languages preview uses the production i18next interface-locale mechanism
-  while clearly signposting that permanent explanation and exam-language
-  editing belongs to later production slices.
-- The shell shows one restrained Preview badge; contextual labels identify fixture-backed values.
-- Profile groups production-backed identity separately from preview-only
-  settings and unavailable editing actions.
-- Generated API types are never expanded or disguised as prototype types.
+The API verifies signature, issuer, audience, expiry, verified email, and Google
+`sub`. Refresh tokens are stored only as hashes; replay revokes the family.
+Authentication is rate-limited, security events are persisted, and expired or
+old revoked sessions are cleaned up.
 
-## Implemented identity slice
+New accounts are `UNASSIGNED`. `POST /api/v1/student-profile` atomically creates
+one student profile and changes the account to `STUDENT`; it returns canonical
+current-user state and a replacement access token. The profile is private to
+its authenticated student.
 
-The current production identity slice is the Google-only qualification stated directly in the requirements. The browser obtains a Google ID credential; the API verifies signature, issuer, audience, expiry, and verified email and identifies the provider account by `sub`. The requirements permit a fixture-backed credential-entry preview in PX-002, but no production email/password account, credential, verification, recovery, or session behavior exists yet.
+Production email/password credentials, recovery, other role onboarding, profile
+editing, learning, family, content, commerce, tutoring, and AI behavior do not
+exist yet.
 
-```text
-Google credential ──► POST /api/v1/auth/google ──► provider verification
-                                           │
-                                           ├─► hashed refresh session in PostgreSQL
-                                           └─► access token in response + HttpOnly refresh cookie
+## Prototype boundaries
 
-HttpOnly cookie ──► POST /api/v1/auth/refresh ──► rotate refresh token family
-Sign out         ──► POST /api/v1/auth/logout  ──► revoke session + clear cookie
-```
+Both prototypes keep domain state in deterministic React context/reducer memory.
+That state makes no production API, browser-storage, cookie, analytics, or
+telemetry writes, and refresh may reset it.
 
-YukCSCA then issues a short-lived access JWT and a rotating refresh token. Refresh tokens are stored only as hashes, replay revokes the token family, logout revokes the session, authentication endpoints are rate-limited, security events are persisted, and expired/old revoked sessions are cleaned up.
+### PX-001 student preview
 
-New accounts are `UNASSIGNED`. The web routes them to the student-activation form. `POST /api/v1/student-profile` atomically creates the profile and moves the account to `STUDENT`; it returns canonical current-user state plus a replacement access token without rotating the refresh session. `GET /api/v1/student-profile/me` exposes only the authenticated student's own profile. Flyway migration `V3__student_profile.sql` owns the profile table and its unique account relationship.
+- `prototype/student/` owns goal, diagnostic, plan, learning, practice,
+  remediation, mock, language, access, and state-loss scenarios.
+- App guards connect production `STUDENT` activation to the preview while
+  preserving anonymous, `UNASSIGNED`, unsupported-role, and incomplete-preview
+  redirects.
+- Fixture academic state is visibly labelled Preview and never expands
+  generated API types.
 
-The repository does not yet implement production profile editing, other role onboarding, the P0 learning loop, parent linking, content management, assessment, billing, tutoring, or AI behavior.
+### PX-002 consumer preview
 
-## External integrations
+- `prototype/consumer/` owns public discovery, fixture credentials, role intent,
+  Parent/family, commerce, notification, account, and support journeys.
+- `PreviewCredentialSession` never becomes production `CurrentUser`, tokens,
+  cookies, or role. Google Student still uses production activation; fixture
+  Student enters PX-001; Parent intent remains preview-only.
+- Scope guards separately protect Student, Parent, and linked-recipient commerce
+  routes. Parent commerce requires one active linked fixture student.
+- Commerce fixtures demonstrate deterministic order IDs, immutable terminal
+  outcomes, provider authority, and exactly-once entitlement from a matching
+  Paid order. Payment instructions are visibly non-payable samples.
+- PX-002 is a low-fidelity, mostly text-led journey model, not a production UI
+  or data-model baseline. Each owning slice must re-read the latest requirements
+  and design guidance, implement under `features`, and deliberately reuse,
+  rewrite, or delete its prototype code.
 
-Provider calls belong behind application ports and infrastructure adapters. Domain code never depends directly on OAuth, LLM, payment, email, meeting, or storage SDKs. Deterministic services retain control of authorization, grading, mastery, feasibility, entitlements, publication, and money.
+## Integration rule
+
+External OAuth, email, payment, LLM, meeting, storage, and similar providers
+belong behind application ports and infrastructure adapters. Deterministic
+services—not providers or models—retain authority for access, grading, mastery,
+feasibility, publication, entitlements, and money.

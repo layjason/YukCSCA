@@ -1,6 +1,7 @@
 import type { UserRole } from '@/features/auth/auth.types';
 
 export type RouteAvailability = 'implemented' | 'prototype' | 'unavailable';
+export type RouteAudience = 'public' | 'student' | 'parent-preview' | 'account';
 
 export type NavigationPlacement = 'primary' | 'secondary' | 'hidden';
 export type MobileNavigationPlacement = 'primary' | 'more' | 'hidden';
@@ -11,6 +12,7 @@ export interface AppRouteDefinition {
   labelKey: string;
   availability: RouteAvailability;
   allowedRoles: UserRole[];
+  audience?: RouteAudience;
   navigation: NavigationPlacement;
   mobileNavigation?: MobileNavigationPlacement;
   requirementAreas: string[];
@@ -286,13 +288,189 @@ export const routeManifest: AppRouteDefinition[] = [
     mobileNavigation: 'primary',
     requirementAreas: [],
   },
+
+  // PX-002: Public routes
+  {
+    id: 'home',
+    path: '/',
+    labelKey: 'public.nav.home',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'public',
+    navigation: 'hidden',
+    requirementAreas: ['0.1'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'products',
+    path: '/products',
+    labelKey: 'public.nav.products',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'public',
+    navigation: 'hidden',
+    requirementAreas: ['11.1'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'trial',
+    path: '/trial',
+    labelKey: 'public.nav.trial',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'public',
+    navigation: 'hidden',
+    requirementAreas: ['11.1'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'for-parents',
+    path: '/for-parents',
+    labelKey: 'public.nav.forParents',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'public',
+    navigation: 'hidden',
+    requirementAreas: ['10.1'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'register',
+    path: '/register',
+    labelKey: 'public.nav.createAccount',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'public',
+    navigation: 'hidden',
+    requirementAreas: ['1.1'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'role-selection',
+    path: '/onboarding/role',
+    labelKey: 'role.title',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    navigation: 'hidden',
+    requirementAreas: ['1.2', '1.3'],
+    prototypeOnly: true,
+  },
+
+  // PX-002: Parent workspace
+  {
+    id: 'parent-home',
+    path: '/parent/home',
+    labelKey: 'parent.nav.home',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'parent-preview',
+    navigation: 'primary',
+    mobileNavigation: 'primary',
+    requirementAreas: ['10.1'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'parent-family',
+    path: '/parent/family',
+    labelKey: 'parent.nav.family',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'parent-preview',
+    navigation: 'primary',
+    mobileNavigation: 'primary',
+    requirementAreas: ['2.1', '2.2'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'parent-reports',
+    path: '/parent/reports',
+    labelKey: 'parent.nav.reports',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'parent-preview',
+    navigation: 'primary',
+    mobileNavigation: 'primary',
+    requirementAreas: ['10.2'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'parent-purchases',
+    path: '/parent/purchases',
+    labelKey: 'parent.nav.purchases',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'parent-preview',
+    navigation: 'primary',
+    mobileNavigation: 'primary',
+    requirementAreas: ['11.3'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'parent-account',
+    path: '/parent/account',
+    labelKey: 'parent.nav.account',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'parent-preview',
+    navigation: 'primary',
+    mobileNavigation: 'primary',
+    requirementAreas: ['1.3'],
+    prototypeOnly: true,
+  },
+
+  // PX-002: Commerce
+  {
+    id: 'checkout',
+    path: '/checkout',
+    labelKey: 'commerce.checkout.title',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'account',
+    navigation: 'hidden',
+    requirementAreas: ['11.3'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'orders',
+    path: '/orders',
+    labelKey: 'commerce.orders.title',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'account',
+    navigation: 'hidden',
+    requirementAreas: ['11.5'],
+    prototypeOnly: true,
+  },
+  {
+    id: 'support',
+    path: '/support',
+    labelKey: 'support.title',
+    availability: 'prototype',
+    allowedRoles: ['UNASSIGNED', 'STUDENT', 'PARENT', 'TUTOR', 'ADMIN'],
+    audience: 'account',
+    navigation: 'hidden',
+    requirementAreas: ['13.2'],
+    prototypeOnly: true,
+  },
 ];
 
-export const primaryNavRoutes = routeManifest.filter((r) => r.navigation === 'primary');
+export const primaryNavRoutes = routeManifest.filter(
+  (r) => r.navigation === 'primary' && (!r.audience || r.audience === 'student'),
+);
 export const mobilePrimaryNavRoutes = routeManifest.filter(
-  (route) => route.mobileNavigation === 'primary',
+  (route) =>
+    route.mobileNavigation === 'primary' && (!route.audience || route.audience === 'student'),
 );
 export const mobileMoreRoutes = routeManifest.filter((route) => route.mobileNavigation === 'more');
+
+export const parentNavRoutes = routeManifest.filter(
+  (r) => r.navigation === 'primary' && r.audience === 'parent-preview',
+);
+export const parentMobileNavRoutes = routeManifest.filter(
+  (r) => r.mobileNavigation === 'primary' && r.audience === 'parent-preview',
+);
+const PUBLIC_NAV_IDS = ['home', 'products', 'trial', 'for-parents'];
+export const publicNavRoutes = routeManifest.filter((route) => PUBLIC_NAV_IDS.includes(route.id));
 
 export function getRouteById(id: string): AppRouteDefinition | undefined {
   return routeManifest.find((r) => r.id === id);
