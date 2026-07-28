@@ -20,6 +20,7 @@ beforeEach(() => {
     status: 'anonymous',
     user: null,
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });
@@ -49,10 +50,9 @@ test('login page exposes both the preview credential form and production Google 
   expect(screen.getByText(/continue with google/i)).toBeInTheDocument();
 });
 
-test('registration page exposes both the preview credential form and production Google boundary', () => {
+test('registration page exposes both the email credential form and production Google boundary', () => {
   renderApp(['/register']);
   expect(screen.getByRole('textbox', { name: /email/i })).toBeInTheDocument();
-  expect(screen.getByLabelText(/^(kata sandi|password)$/i)).toBeInTheDocument();
   expect(screen.getByText(/continue with google/i)).toBeInTheDocument();
 });
 
@@ -73,6 +73,7 @@ test('routes an unassigned account to student activation via onboarding', async 
       onboardingCompleted: false,
     },
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });
@@ -96,6 +97,7 @@ test('routes a restored unassigned Google account from root to role selection', 
       onboardingCompleted: false,
     },
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });
@@ -119,6 +121,7 @@ test('routes a student with incomplete preview onboarding to goals', async () =>
       onboardingCompleted: true,
     },
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });
@@ -140,6 +143,7 @@ test('blocks a direct workspace link while preview onboarding is incomplete', as
       onboardingCompleted: true,
     },
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });
@@ -162,6 +166,7 @@ test('routes a student with complete preview onboarding to Today', async () => {
       onboardingCompleted: true,
     },
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });

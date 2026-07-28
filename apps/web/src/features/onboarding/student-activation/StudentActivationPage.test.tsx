@@ -28,6 +28,7 @@ beforeEach(() => {
       onboardingCompleted: false,
     },
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser,
   });

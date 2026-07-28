@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { AuthContext, type AuthContextValue } from './authContextValue';
-import { loginWithGoogle, logout as logoutApi, refreshSession } from './authApi';
-import type { AuthStatus, CurrentUser } from './auth.types';
+import {
+  loginWithCredentials,
+  loginWithGoogle,
+  logout as logoutApi,
+  refreshSession,
+} from './authApi';
+import type { AuthStatus, CredentialLoginRequest, CurrentUser } from './auth.types';
 
 export function AuthProvider({ children }: PropsWithChildren): React.JSX.Element {
   const [status, setStatus] = useState<AuthStatus>('loading');
@@ -31,6 +36,13 @@ export function AuthProvider({ children }: PropsWithChildren): React.JSX.Element
     setStatus('authenticated');
   }, []);
 
+  const loginCredentials = useCallback(async (request: CredentialLoginRequest) => {
+    const currentUser = await loginWithCredentials(request);
+    setUser(currentUser);
+    setStatus('authenticated');
+    return currentUser;
+  }, []);
+
   const logout = useCallback(async () => {
     await logoutApi();
     setUser(null);
@@ -43,8 +55,8 @@ export function AuthProvider({ children }: PropsWithChildren): React.JSX.Element
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, login, logout, replaceCurrentUser }),
-    [login, logout, replaceCurrentUser, status, user],
+    () => ({ status, user, login, loginCredentials, logout, replaceCurrentUser }),
+    [login, loginCredentials, logout, replaceCurrentUser, status, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
