@@ -46,6 +46,7 @@ beforeEach(() => {
     status: 'authenticated',
     user: student,
     login: vi.fn(),
+    loginCredentials: vi.fn(),
     logout: vi.fn(),
     replaceCurrentUser: vi.fn(),
   });
