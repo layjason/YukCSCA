@@ -18,6 +18,8 @@ When two words could describe the same concept, choose one canonical term and ad
 - **Tutor request:** Student/parent request handled and manually matched by platform operations; not a marketplace booking.
 - **Parent summary:** Limited progress, risk, and action information; it excludes private learning conversations by default.
 - **Account identity:** Authenticated platform identity created from a verified provider credential. It does not itself grant a Student, Parent, Tutor, or Admin product role. **Avoid:** using “account” when the intended concept is a role profile or relationship.
+- **Email-verification claim:** Expiring pre-account state created when verification is requested for an email address. It is not an account identity, password credential, role, or session and does not establish mailbox control until a valid single-use verification action is explicitly completed.
+- **Display name:** Optional presentation label for an account identity, supplied by a verified provider or an accepted role-profile activation flow. Its absence is valid. Never derive or persist it from an email address; a UI may use a localized presentation-only fallback.
 - **Role profile:** Actor-specific product data attached to an account identity, such as a student profile or parent profile.
 - **Parent-student relationship:** Explicit invitation/acceptance state that authorizes bounded parent access to one student. A parent profile alone grants no student visibility.
 - **Learning completion:** Evidence that a required activity or checkpoint was completed. Completion may contribute to mastery but is not equivalent to mastery.

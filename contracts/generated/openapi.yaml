@@ -5,6 +5,178 @@ info:
   summary: Contract-first API for YukCSCA
 tags: []
 paths:
+  /api/v1/auth/credential-registrations:
+    post:
+      operationId: AuthApi_startCredentialRegistration
+      description: Accepts a credential-registration request without revealing whether the canonical email is eligible or already owned.
+      parameters: []
+      responses:
+        '202':
+          description: The request has been accepted for processing, but processing has not yet completed.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.StartCredentialRegistrationRequest'
+  /api/v1/auth/credential-verifications/complete:
+    post:
+      operationId: AuthApi_completeCredentialVerification
+      description: Consumes a valid verification claim after explicit password and policy confirmation. It never creates a session.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.CredentialVerificationResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.CompleteCredentialVerificationRequest'
+  /api/v1/auth/credential-verifications/resend:
+    post:
+      operationId: AuthApi_resendCredentialVerification
+      description: Accepts a verification resend request without revealing whether the canonical email is eligible or already owned.
+      parameters: []
+      responses:
+        '202':
+          description: The request has been accepted for processing, but processing has not yet completed.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.ResendCredentialVerificationRequest'
+  /api/v1/auth/credentials/login:
+    post:
+      operationId: AuthApi_credentialLogin
+      description: Authenticates an existing email credential through the shared access-token and rotating refresh-cookie lifecycle.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Set-Cookie:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.CredentialLoginRequest'
   /api/v1/auth/google:
     post:
       operationId: AuthApi_googleLogin
@@ -284,6 +456,66 @@ components:
           format: int64
         user:
           $ref: '#/components/schemas/Auth.CurrentUser'
+    Auth.CompleteCredentialVerificationRequest:
+      type: object
+      required:
+        - token
+        - password
+        - termsVersion
+        - privacyNoticeVersion
+        - termsAccepted
+        - privacyNoticeAcknowledged
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 512
+        password:
+          type: string
+          minLength: 15
+          maxLength: 128
+        termsVersion:
+          type: string
+          minLength: 1
+          maxLength: 100
+        privacyNoticeVersion:
+          type: string
+          minLength: 1
+          maxLength: 100
+        termsAccepted:
+          type: boolean
+          enum:
+            - true
+        privacyNoticeAcknowledged:
+          type: boolean
+          enum:
+            - true
+    Auth.CredentialLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          maxLength: 320
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    Auth.CredentialVerificationOutcome:
+      type: string
+      enum:
+        - CREDENTIAL_ACCOUNT_CREATED
+        - SIGN_IN_WITH_GOOGLE
+    Auth.CredentialVerificationResult:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          $ref: '#/components/schemas/Auth.CredentialVerificationOutcome'
     Auth.CurrentUser:
       type: object
       required:
@@ -298,7 +530,9 @@ components:
         email:
           type: string
         displayName:
-          type: string
+          anyOf:
+            - type: string
+            - type: 'null'
         avatarUrl:
           anyOf:
             - type: string
@@ -317,6 +551,24 @@ components:
           minLength: 20
           maxLength: 10000
       description: A browser credential returned by Google Identity Services.
+    Auth.ResendCredentialVerificationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          maxLength: 320
+          format: email
+    Auth.StartCredentialRegistrationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          maxLength: 320
+          format: email
     Auth.UserRole:
       type: string
       enum:
