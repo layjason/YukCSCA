@@ -52,4 +52,15 @@ class SensitiveDtoLoggingTest {
             complete.termsVersion(),
             complete.privacyNoticeVersion());
   }
+
+  @Test
+  void redactsEveryPasswordRecoveryRequestFromStringRepresentation() {
+    var request = new PasswordRecoveryRequest("private@example.com");
+    var complete =
+        new CompletePasswordRecoveryRequest(
+            "private-recovery-token-value-123456", "private-password-value");
+
+    assertThat(request.toString()).doesNotContain(request.email());
+    assertThat(complete.toString()).doesNotContain(complete.token(), complete.password());
+  }
 }

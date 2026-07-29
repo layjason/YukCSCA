@@ -7,5 +7,7 @@ import java.util.UUID;
 public interface CredentialAuthenticatorStore {
   Optional<CredentialAuthenticator> findByUserId(UUID userId);
 
+  Optional<CredentialAuthenticator> findForUpdateByUserId(UUID userId);
+
   CredentialAuthenticator save(CredentialAuthenticator authenticator);
 }

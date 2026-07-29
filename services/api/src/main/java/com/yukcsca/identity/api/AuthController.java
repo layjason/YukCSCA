@@ -5,6 +5,7 @@ import com.yukcsca.identity.application.AuthService;
 import com.yukcsca.identity.application.AuthSettings;
 import com.yukcsca.identity.application.CredentialAuthService;
 import com.yukcsca.identity.application.InvalidCredentialException;
+import com.yukcsca.identity.application.PasswordRecoveryService;
 import com.yukcsca.identity.application.SecurityEventService;
 import com.yukcsca.identity.application.SessionService;
 import com.yukcsca.identity.domain.SecurityEventType;
@@ -40,6 +41,7 @@ public class AuthController {
   private final AuthSettings properties;
   private final SecurityEventService securityEvents;
   private final CredentialAuthService credentialAuthService;
+  private final PasswordRecoveryService passwordRecoveryService;
 
   public AuthController(
       AuthService authService,
@@ -47,13 +49,15 @@ public class AuthController {
       AccessTokenService accessTokenService,
       AuthSettings properties,
       SecurityEventService securityEvents,
-      CredentialAuthService credentialAuthService) {
+      CredentialAuthService credentialAuthService,
+      PasswordRecoveryService passwordRecoveryService) {
     this.authService = authService;
     this.sessionService = sessionService;
     this.accessTokenService = accessTokenService;
     this.properties = properties;
     this.securityEvents = securityEvents;
     this.credentialAuthService = credentialAuthService;
+    this.passwordRecoveryService = passwordRecoveryService;
   }
 
   @PostMapping("/credential-registrations")
@@ -99,6 +103,22 @@ public class AuthController {
     setRefreshCookie(response, credentialSession.rawRefreshToken(), properties.refreshTokenTtl());
     disableCaching(response);
     return authResponse;
+  }
+
+  @PostMapping("/password-recovery-requests")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public void requestPasswordRecovery(
+      @Valid @RequestBody PasswordRecoveryRequest request, HttpServletResponse response) {
+    passwordRecoveryService.requestRecovery(request.email());
+    disableCaching(response);
+  }
+
+  @PostMapping("/password-recoveries/complete")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void completePasswordRecovery(
+      @Valid @RequestBody CompletePasswordRecoveryRequest request, HttpServletResponse response) {
+    passwordRecoveryService.completeRecovery(request.token(), request.password());
+    disableCaching(response);
   }
 
   @PostMapping("/google")

@@ -39,12 +39,13 @@ make dev
 Compose Watch requires Docker Compose 2.22 or later. `make doctor` verifies this requirement.
 
 The local stack also starts the pinned Mailpit inbox at
-`http://localhost:8025` and routes credential-verification SMTP to port `1025`.
-Use only non-personal test addresses. The local verification secret, policy
-version IDs, sender, and HTTP origin are development placeholders; deployment
-must provide a separate secret, approved immutable policy artifacts, a verified
-sender/domain, bounded SMTP credentials, and an HTTPS verification origin
-before enabling credential enrollment.
+`http://localhost:8025` and routes credential-verification and
+password-recovery SMTP to port `1025`. Use only non-personal test addresses.
+The local verification/recovery secret, policy version IDs, sender, and HTTP
+origin are development placeholders; deployment must provide a separate
+secret, approved immutable policy artifacts, a verified sender/domain, bounded
+SMTP credentials, and an HTTPS origin before enabling credential enrollment or
+recovery.
 
 ### Host hot-reload and debugging
 
@@ -140,6 +141,11 @@ cd services/api && ./mvnw --batch-mode -Dit.test=AuthHttpIT verify
 # Credential lifecycle plus real Mailpit receipt
 cd services/api && ./mvnw --batch-mode \
   -Dit.test=CredentialAuthHttpIT,VerificationEmailMailpitIT verify
+
+# Password recovery, adjacent auth/session regressions, migration, and Mailpit
+cd services/api && ./mvnw --batch-mode \
+  -Dit.test=CredentialAuthHttpIT,AuthHttpIT,PasswordRecoveryHttpIT,DatabaseMigrationIT,VerificationEmailMailpitIT \
+  verify
 ```
 
 ## Playwright browser tests

@@ -40,6 +40,21 @@ Minor-user identity and relationships, learning conversations, assessment answer
 - SMTP delivery uses bounded timeouts and a PostgreSQL outbox with bounded
   exponential retry. Security events contain only event categories and
   account IDs where post-proof attribution is safe.
+- Password-recovery requests return one generic acknowledgement for eligible,
+  Google-only, and unknown identities. Only an eligible credential account
+  receives purpose-specific, expiring, single-use recovery state and an SMTP
+  delivery.
+- Recovery tokens use a separate HMAC purpose from verification tokens and are
+  stored only as SHA-256 digests. Resend cooldown, one-pending-claim uniqueness,
+  per-IP and digest-keyed identifier limits, bounded delivery retry, and
+  retention cleanup constrain abuse and stale state.
+- Completion serializes with credential sign-in and competing recovery
+  attempts, reuses the existing password policy and Argon2id encoder, consumes
+  the claim, replaces the password, and revokes every active refresh session in
+  one transaction. It issues no access token, refresh token, or cookie;
+  existing access JWTs expire naturally within 15 minutes.
+- Recovery request, delivery, rejection, and success events exclude raw email,
+  password, token, message, provider payload, and session credentials.
 
 ### Student activation
 
@@ -71,12 +86,13 @@ These controls must ship with the first feature that needs them:
   `CurrentUser`, access tokens, refresh sessions, accounts, roles, and guards.
   It may authorize fixture-backed preview routes only.
 - Preview verification and recovery must not send messages, mint tokens, reset
-  passwords, or claim production completion. Google and the accepted VS-002
-  credential slice are the active production-backed authentication methods.
+  passwords, or claim production completion. Google, VS-002 credential
+  authentication, and the VS-003 recovery backend are production-backed;
+  VS-003 frontend and end-to-end completion remain in progress.
 - VS-002 owns production registration, verification, credential login,
   abuse controls, audit behavior, and the shared session handoff. Fixture
-  identity must still remain isolated for PX-002-only consumers, and password
-  recovery remains deferred to VS-003.
+  identity must still remain isolated for PX-002-only consumers. VS-003 owns
+  production password recovery.
 
 ### Roles, parents, tutors, and administration
 

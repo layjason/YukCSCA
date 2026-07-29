@@ -92,4 +92,22 @@ class SessionServiceTest {
         .hasMessageContaining("reused");
     verify(repository).revokeActiveFamily(eq(familyId), eq(NOW));
   }
+
+  @Test
+  void revokesEveryActiveRefreshSessionForAnAccount() {
+    AuthSessionStore repository = mock(AuthSessionStore.class);
+    SessionService service =
+        new SessionService(
+            repository,
+            new RefreshTokenCodec(),
+            PROPERTIES,
+            mock(SecurityEventService.class),
+            CLOCK);
+    UUID userId = UUID.randomUUID();
+    when(repository.revokeActiveForUser(userId, NOW)).thenReturn(3);
+
+    assertThat(service.revokeAllForUser(userId)).isEqualTo(3);
+
+    verify(repository).revokeActiveForUser(userId, NOW);
+  }
 }
