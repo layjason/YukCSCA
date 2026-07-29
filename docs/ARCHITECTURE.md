@@ -54,11 +54,11 @@ The API currently contains `identity` and `profile` modules:
 
 Identity owns accounts, Google identities, roles, sessions, security events,
 credential authenticators, pending email-verification claims, policy evidence,
-verification delivery outbox state, and retention. Profile owns student
-activation and profile state, reaching identity only through an
-application-facing activation API. Modules never import another module's
-repository, JPA entity, controller, or infrastructure. New modules appear only
-with their first accepted use case.
+verification delivery outbox state, password-recovery claims and delivery
+state, and retention. Profile owns student activation and profile state,
+reaching identity only through an application-facing activation API. Modules
+never import another module's repository, JPA entity, controller, or
+infrastructure. New modules appear only with their first accepted use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
@@ -103,6 +103,12 @@ email -> pending claim + durable delivery outbox -> SMTP verification message
 valid explicit verification + password + active policies
       -> nullable-name UNASSIGNED account + Argon2id credential (no session)
 email + password -> shared access JWT + hashed rotating refresh session
+
+credential email -> generic recovery acknowledgement
+                 |-> eligible account: pending claim + durable SMTP outbox
+valid single-use recovery token + conforming password
+                 -> new Argon2id hash + consumed claim
+                 -> all active refresh sessions revoked (no new session)
 ```
 
 The API verifies signature, issuer, audience, expiry, verified email, and Google
@@ -117,14 +123,25 @@ The outbox retries bounded SMTP delivery without storing the raw token or
 message body. Credential-only accounts retain a null display name until an
 accepted role-profile activation supplies one.
 
+Password recovery reuses the credential password policy, HMAC secret, SMTP
+configuration, canonical-email serialization, and rate-limit conventions while
+keeping purpose-specific claim and outbox state. Requests return the same
+acknowledgement for credential, Google-only, and unknown identities. Recovery
+tokens are digest-only at rest, expiring, supersedable, and single-use.
+Successful completion replaces the password and revokes every active refresh
+session atomically; existing stateless access JWTs expire naturally within
+their configured 15-minute lifetime.
+
 New accounts are `UNASSIGNED`. `POST /api/v1/student-profile` atomically creates
 one student profile and changes the account to `STUDENT`; it returns canonical
 current-user state and a replacement access token. The profile is private to
 its authenticated student.
 
-Password recovery, other role onboarding, profile editing, learning, family,
-content, commerce, tutoring, and AI behavior do not exist yet. VS-002 is
-`DONE` after full implementation, verification, and product owner signoff.
+The password-recovery backend exists, while its production frontend and
+end-to-end evidence remain in progress under VS-003. Other role onboarding,
+profile editing, learning, family, content, commerce, tutoring, and AI behavior
+do not exist yet. VS-002 is `DONE` after full implementation, verification, and
+product owner signoff.
 
 ## Prototype boundaries
 

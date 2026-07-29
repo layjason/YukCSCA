@@ -83,6 +83,11 @@ public class SessionService {
         .orElse(null);
   }
 
+  @Transactional
+  public int revokeAllForUser(UUID userId) {
+    return sessionRepository.revokeActiveForUser(userId, clock.instant());
+  }
+
   private SessionToken issue(UserAccount user, UUID familyId, Instant now) {
     String rawToken = tokenCodec.generate();
     sessionRepository.save(

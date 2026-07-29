@@ -12,5 +12,7 @@ public interface AuthSessionStore {
 
   int revokeActiveFamily(UUID familyId, Instant revokedAt);
 
+  int revokeActiveForUser(UUID userId, Instant revokedAt);
+
   int deleteExpiredAndOldRevoked(Instant now, Instant revokedBefore);
 }
