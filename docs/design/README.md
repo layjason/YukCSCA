@@ -32,6 +32,8 @@ Prototype rules:
 
 A production UI is implemented only from an accepted slice. Its TypeSpec contract is just-in-time for that slice, and the frontend may proceed against a contract-backed mock while the backend is implemented.
 
+- **Dev Fallback Interceptor**: API fetch calls attempt the real backend endpoint first. If offline or `404`/`401` in local development (`import.meta.env.DEV`), they catch failures and return contract-backed mocks matching generated OpenAPI types; in production (`import.meta.env.DEV === false`), fallbacks are bypassed and real errors are thrown.
+
 The slice must record the route/navigation entry, complete state set, accessibility/localization behavior, and interaction intent before implementation.
 
 ## Agent UI task protocol
