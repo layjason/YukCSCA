@@ -7,6 +7,8 @@ import com.yukcsca.identity.application.CredentialRateLimitException;
 import com.yukcsca.identity.application.CredentialVerificationException;
 import com.yukcsca.identity.application.InvalidCredentialException;
 import com.yukcsca.identity.application.PasswordPolicyException;
+import com.yukcsca.identity.application.PasswordRecoveryConfigurationException;
+import com.yukcsca.identity.application.PasswordRecoveryException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,11 @@ public class AuthExceptionHandler {
     return problem(HttpStatus.BAD_REQUEST, "VERIFICATION_INVALID", exception.getMessage());
   }
 
+  @ExceptionHandler(PasswordRecoveryException.class)
+  ProblemDetail invalidRecovery(PasswordRecoveryException exception) {
+    return problem(HttpStatus.BAD_REQUEST, "RECOVERY_INVALID", exception.getMessage());
+  }
+
   @ExceptionHandler(PasswordPolicyException.class)
   ProblemDetail invalidPassword(PasswordPolicyException exception) {
     return problem(HttpStatus.BAD_REQUEST, "PASSWORD_POLICY_REJECTED", exception.getMessage());
@@ -53,6 +60,14 @@ public class AuthExceptionHandler {
         HttpStatus.INTERNAL_SERVER_ERROR,
         "CREDENTIAL_REGISTRATION_UNAVAILABLE",
         "Credential registration is temporarily unavailable.");
+  }
+
+  @ExceptionHandler(PasswordRecoveryConfigurationException.class)
+  ProblemDetail passwordRecoveryConfiguration(PasswordRecoveryConfigurationException exception) {
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "PASSWORD_RECOVERY_UNAVAILABLE",
+        "Password recovery is temporarily unavailable.");
   }
 
   @ExceptionHandler(CredentialRateLimitException.class)

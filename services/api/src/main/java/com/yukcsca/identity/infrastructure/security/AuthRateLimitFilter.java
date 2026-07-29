@@ -22,6 +22,8 @@ public final class AuthRateLimitFilter extends OncePerRequestFilter {
           "/api/v1/auth/credential-verifications/resend",
           "/api/v1/auth/credential-verifications/complete",
           "/api/v1/auth/credentials/login",
+          "/api/v1/auth/password-recovery-requests",
+          "/api/v1/auth/password-recoveries/complete",
           "/api/v1/auth/refresh");
   private static final String OVERFLOW_CLIENT = "__overflow__";
 

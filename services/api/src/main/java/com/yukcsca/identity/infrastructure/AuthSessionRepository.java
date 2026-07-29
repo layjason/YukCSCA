@@ -24,6 +24,14 @@ public interface AuthSessionRepository extends JpaRepository<AuthSession, UUID>,
           + "where session.familyId = :familyId and session.revokedAt is null")
   int revokeActiveFamily(@Param("familyId") UUID familyId, @Param("revokedAt") Instant revokedAt);
 
+  @Override
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "update AuthSession session set session.revokedAt = :revokedAt "
+          + "where session.user.id = :userId and session.revokedAt is null "
+          + "and session.expiresAt > :revokedAt")
+  int revokeActiveForUser(@Param("userId") UUID userId, @Param("revokedAt") Instant revokedAt);
+
   @Modifying(clearAutomatically = true)
   @Query(
       "delete from AuthSession session where session.expiresAt < :now "

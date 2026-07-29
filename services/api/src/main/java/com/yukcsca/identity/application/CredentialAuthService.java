@@ -154,6 +154,7 @@ public class CredentialAuthService {
   public CredentialSession authenticate(String email, String password) {
     String canonicalEmail = canonicalize(email);
     identifierRateLimiter.check("login", canonicalEmail);
+    emailLock.lock(canonicalEmail);
     String normalizedPassword = passwordPolicy.normalizeForAuthentication(password);
     UserAccount account = users.findByEmailIgnoreCase(canonicalEmail).orElse(null);
     CredentialAuthenticator authenticator =

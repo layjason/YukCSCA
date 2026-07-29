@@ -24,10 +24,11 @@ class DatabaseMigrationIT {
                 "select count(*) from information_schema.tables "
                     + "where table_name in ('auth_session', 'security_event', 'student_profile', "
                     + "'email_verification_claim', 'credential_authenticator', "
-                    + "'account_policy_acceptance', 'credential_email_outbox')");
+                    + "'account_policy_acceptance', 'credential_email_outbox', "
+                    + "'password_recovery_claim', 'password_recovery_email_outbox')");
         var result = statement.executeQuery()) {
       assertThat(result.next()).isTrue();
-      assertThat(result.getInt(1)).isEqualTo(7);
+      assertThat(result.getInt(1)).isEqualTo(9);
     }
   }
 }

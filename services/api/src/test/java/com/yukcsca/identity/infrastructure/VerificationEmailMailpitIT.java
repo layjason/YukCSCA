@@ -2,6 +2,8 @@ package com.yukcsca.identity.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.yukcsca.identity.application.PasswordRecoveryEmail;
+import com.yukcsca.identity.application.PasswordRecoveryEmailSender;
 import com.yukcsca.identity.application.VerificationEmail;
 import com.yukcsca.identity.application.VerificationEmailSender;
 import com.yukcsca.support.PostgresTestConfiguration;
@@ -38,6 +40,7 @@ class VerificationEmailMailpitIT {
           .waitingFor(Wait.forHttp("/readyz").forPort(8025));
 
   @Autowired VerificationEmailSender sender;
+  @Autowired PasswordRecoveryEmailSender recoverySender;
 
   @DynamicPropertySource
   static void mailProperties(DynamicPropertyRegistry registry) {
@@ -64,5 +67,27 @@ class VerificationEmailMailpitIT {
     assertThat(response.body())
         .contains("recipient@example.test")
         .contains("Verifikasi email YukCSCA");
+  }
+
+  @Test
+  void smtpAdapterDeliversTrilingualPasswordRecoveryMessageToMailpit() throws Exception {
+    recoverySender.send(
+        new PasswordRecoveryEmail(
+            "recovery@example.test",
+            "https://app.test/reset-password#token=non-secret-test-token"));
+
+    URI messagesEndpoint =
+        URI.create(
+            "http://" + MAILPIT.getHost() + ":" + MAILPIT.getMappedPort(8025) + "/api/v1/messages");
+    HttpResponse<String> response =
+        HttpClient.newHttpClient()
+            .send(
+                HttpRequest.newBuilder(messagesEndpoint).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body())
+        .contains("recovery@example.test")
+        .contains("Pulihkan kata sandi YukCSCA");
   }
 }

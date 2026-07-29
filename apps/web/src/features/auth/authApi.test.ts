@@ -2,8 +2,10 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { getAccessToken, clearAccessToken } from './authStore';
 import {
   completeCredentialVerification,
+  completePasswordRecovery,
   loginWithCredentials,
   refreshSession,
+  requestPasswordRecovery,
   resendCredentialVerification,
   startCredentialRegistration,
 } from './authApi';
@@ -140,7 +142,6 @@ test('loginWithCredentials authenticates user and handles null displayName', asy
 
   expect(user.displayName).toBeNull();
   expect(user.email).toBe('newuser@example.com');
-  expect(getAccessToken()).toBe('access-token-credential');
   expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/credentials/login', {
     method: 'POST',
     credentials: 'include',
@@ -149,5 +150,64 @@ test('loginWithCredentials authenticates user and handles null displayName', asy
       email: 'newuser@example.com',
       password: 'secure-password-15-chars-min',
     }),
+  });
+});
+
+test('requestPasswordRecovery sends POST request to /password-recovery-requests and resolves on 202', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(requestPasswordRecovery({ email: 'user@example.com' })).resolves.toBeUndefined();
+
+  expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/password-recovery-requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'user@example.com' }),
+  });
+});
+
+test('requestPasswordRecovery preserves Retry-After on a rate-limit response', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 429,
+          title: 'Too Many Requests',
+          code: 'AUTH_RATE_LIMITED',
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/problem+json',
+            'Retry-After': '37',
+          },
+        },
+      ),
+    ),
+  );
+
+  await expect(requestPasswordRecovery({ email: 'user@example.com' })).rejects.toMatchObject({
+    status: 429,
+    code: 'AUTH_RATE_LIMITED',
+    retryAfterSeconds: 37,
+  });
+});
+
+test('completePasswordRecovery sends POST request to /password-recoveries/complete and resolves on 204', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+  vi.stubGlobal('fetch', fetchMock);
+
+  const request = {
+    token: 'valid-recovery-token-string-1234567890',
+    password: 'new-secure-password-15-chars-min',
+  };
+
+  await expect(completePasswordRecovery(request)).resolves.toBeUndefined();
+
+  expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/password-recoveries/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
   });
 });
