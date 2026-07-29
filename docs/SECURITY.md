@@ -71,10 +71,9 @@ These controls must ship with the first feature that needs them:
   `CurrentUser`, access tokens, refresh sessions, accounts, roles, and guards.
   It may authorize fixture-backed preview routes only.
 - Preview verification and recovery must not send messages, mint tokens, reset
-  passwords, or claim production completion. Google remains the only
-  production-backed authentication method until a credential-authentication
-  vertical slice is accepted.
-- VS-002 now owns production registration, verification, credential login,
+  passwords, or claim production completion. Google and the accepted VS-002
+  credential slice are the active production-backed authentication methods.
+- VS-002 owns production registration, verification, credential login,
   abuse controls, audit behavior, and the shared session handoff. Fixture
   identity must still remain isolated for PX-002-only consumers, and password
   recovery remains deferred to VS-003.
