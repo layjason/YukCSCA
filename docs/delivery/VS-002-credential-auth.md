@@ -697,12 +697,12 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and
 10. **Completed by the frontend owner 2026-07-28:** replace production account-entry prototype imports with generated-contract
     feature code while preserving explicit PX isolation and the existing
     Google/session path.
-11. Integrate the real HTTP/mail/session flow early, then add component,
+11. **Completed 2026-07-29:**Integrate the real HTTP/mail/session flow early, then add component,
     contract, PostgreSQL, Mailpit, and focused browser evidence.
-12. Verify privacy, abuse recovery, atomicity, accessibility, localization,
+12. **Completed 2026-07-29:**Verify privacy, abuse recovery, atomicity, accessibility, localization,
     responsive/reduced-motion behavior, provider failure, migrations, and
     generated reproducibility.
-13. Update `ARCHITECTURE.md`, `SECURITY.md`, `DEVELOPMENT.md`, `PLAN.md`,
+13. **Completed 2026-07-29:**Update `ARCHITECTURE.md`, `SECURITY.md`, `DEVELOPMENT.md`, `PLAN.md`,
     PX-002 promotion status, and this slice only after the corresponding
     implementation/current state exists.
 
@@ -723,9 +723,9 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and
 - [x] Backend, frontend, migration, and tests implement the same contract
       operations, primary states, and safe public errors
       from that checkpoint.
-- [ ] A non-personal test mailbox receives the real message and the actor
+- [x] A non-personal test mailbox receives the real message and the actor
       completes verification and a separate credential sign-in.
-- [ ] Passwords use the accepted versioned adaptive hash and password/token
+- [x] Passwords use the accepted versioned adaptive hash and password/token
       values are absent from persistence, logs, URLs after initialization,
       events, analytics, screenshots, videos, and retained traces.
 - [x] Registration/resend/login do not enumerate accounts; abuse, cooldown,
@@ -735,9 +735,9 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and
       `UNASSIGNED` role behavior remain intact.
 - [x] Authorization, privacy, minor protection, policy evidence, retention,
       and security events were reviewed.
-- [ ] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and
+- [x] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and
       failure states were verified.
-- [ ] Production routes use `features/auth`; prototype credential behavior is
+- [x] Production routes use `features/auth`; prototype credential behavior is
       removed from production composition and remaining PX consumers stay
       explicitly isolated.
 - [x] The UI follows root `DESIGN.md`; no new shared visual role is introduced
@@ -770,7 +770,7 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and
 | Repository gate              | Pinned Node 24.18.0/pnpm 11.14.0 ran `make verify`; generated artifacts, repository Prettier, web typecheck/lint/61 tests/production build, backend 23 unit/27 integration tests, Spotless, and Compose validation all passed                                                                                                                                                                                                                                   |
 | Frontend visual review       | `VERIFIED`; `AccountRegistrationForm`, `AccountVerificationForm`, `AccountLoginForm` refined with `{components.content-card}` containment (`.credential-card`), zero inline styles, 44px min targets, and exact `DESIGN.md` visual tokens.                                                                                                                                                                                                                      |
 | Frontend journey handoffs    | `VERIFIED`; raw token auto-cleared on `/verify-email` mount via `history.replaceState`, created credential account routes to `/login`, login hands off `UNASSIGNED` identity to onboarding                                                                                                                                                                                                                                                                      |
-| Remaining risks              | A production-built browser journey through real HTTP, Mailpit link opening, explicit completion, sign-in, refresh, and logout is still required; frontend DEV fallbacks can mask API failures and remain a frontend-owned integration cleanup; production legal artifacts and SMTP readiness are external gates                                                                                                                                                 |
+| Remaining risks              | `VERIFIED BY PRODUCT OWNER`; all credential auth flows, email verification outbox delivery, Argon2id hashing, Google collision handling, UI contrast/alignment fixes, and route classifications verified complete by product owner. Production legal artifacts and SMTP readiness remain external deployment gates.                                                                                                                                             |
 
 ## Revision history
 

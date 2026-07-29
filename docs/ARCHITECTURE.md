@@ -123,9 +123,8 @@ current-user state and a replacement access token. The profile is private to
 its authenticated student.
 
 Password recovery, other role onboarding, profile editing, learning, family,
-content, commerce, tutoring, and AI behavior do not exist yet. VS-002 remains
-`VERIFYING` until its production-built browser journey and remaining edge
-evidence are complete.
+content, commerce, tutoring, and AI behavior do not exist yet. VS-002 is
+`DONE` after full implementation, verification, and product owner signoff.
 
 ## Prototype boundaries
 
