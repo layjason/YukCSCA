@@ -84,6 +84,10 @@ public class SecurityConfig {
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/v1/auth/google",
+                        "/api/v1/auth/credential-registrations",
+                        "/api/v1/auth/credential-verifications/resend",
+                        "/api/v1/auth/credential-verifications/complete",
+                        "/api/v1/auth/credentials/login",
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/logout")
                     .permitAll()
@@ -162,7 +166,7 @@ public class SecurityConfig {
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(
         List.of(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, "X-Request-Id"));
-    configuration.setExposedHeaders(List.of("X-Request-Id"));
+    configuration.setExposedHeaders(List.of("X-Request-Id", HttpHeaders.RETRY_AFTER));
     configuration.setAllowCredentials(true);
     configuration.setMaxAge(3600L);
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

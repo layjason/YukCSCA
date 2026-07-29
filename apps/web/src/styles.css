@@ -2342,6 +2342,13 @@ button {
   background: var(--color-canvas);
 }
 
+.public-site > main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .public-header {
   border-bottom: 1px solid var(--color-border);
   background: var(--color-canvas);
@@ -2793,9 +2800,74 @@ button {
 
 /* ===== PX-002: Credential auth ===== */
 .credential-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
   max-width: 440px;
   margin: 0 auto;
-  padding: var(--space-xxl) var(--space-lg);
+  padding: var(--space-xl) var(--space-md);
+  box-sizing: border-box;
+}
+
+.credential-card {
+  width: 100%;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl) var(--space-lg);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .credential-page {
+    max-width: 520px;
+    padding: var(--space-xxl) var(--space-xl);
+  }
+
+  .credential-card {
+    padding: 40px 36px;
+    border-radius: var(--radius-xl, 20px);
+    box-shadow:
+      0 6px 30px rgba(0, 0, 0, 0.06),
+      0 1px 3px rgba(0, 0, 0, 0.03);
+  }
+
+  .credential-page h1 {
+    font-size: 28px;
+  }
+
+  .credential-description,
+  .credential-page-subtitle {
+    font-size: 16px;
+    margin-bottom: var(--space-xl);
+  }
+
+  .credential-form {
+    gap: var(--space-lg);
+  }
+
+  .credential-field input:not([type='checkbox']) {
+    padding: 14px 16px;
+    min-height: 48px;
+  }
+
+  .credential-submit {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .credential-divider {
+    margin: var(--space-xl) 0;
+  }
+
+  .credential-links {
+    margin-top: var(--space-lg);
+    font-size: 15px;
+  }
 }
 
 .credential-page h1 {
@@ -2833,6 +2905,9 @@ button {
   border-radius: var(--radius-md);
   font-size: 16px;
   min-height: 44px;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  transition: border-color var(--motion-duration-quick) var(--motion-easing-default);
 }
 
 .credential-field input:not([type='checkbox']):focus-visible {
@@ -2848,6 +2923,7 @@ button {
 .credential-field-error {
   font-size: 13px;
   color: var(--color-danger);
+  margin-top: 2px;
 }
 
 .credential-password-wrapper,
@@ -2870,6 +2946,21 @@ button {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-ink);
+  transition:
+    background var(--motion-duration-quick) var(--motion-easing-default),
+    border-color var(--motion-duration-quick) var(--motion-easing-default);
+}
+
+.credential-password-toggle:hover,
+.credential-toggle-visibility:hover {
+  background: var(--color-surface-soft);
+  border-color: var(--color-border-strong);
+}
+
+.credential-password-toggle:focus-visible,
+.credential-toggle-visibility:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .credential-divider {
@@ -2909,6 +3000,25 @@ button {
   text-underline-offset: 3px;
 }
 
+.credential-links-spaced {
+  margin-top: var(--space-md);
+}
+
+.credential-actions-spaced {
+  margin-top: var(--space-lg);
+}
+
+.credential-full-link {
+  display: inline-block;
+  text-align: center;
+  width: 100%;
+}
+
+.credential-links a.btn-primary,
+a.credential-full-link.btn-primary {
+  color: var(--color-on-primary);
+}
+
 .credential-checkbox {
   display: flex;
   align-items: flex-start;
@@ -2920,6 +3030,15 @@ button {
   min-width: 20px;
   min-height: 20px;
   margin-top: 2px;
+}
+
+.credential-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-ink);
 }
 
 .credential-preview-badge {
@@ -2955,9 +3074,11 @@ button {
 }
 
 .credential-field-checkbox {
+  display: grid;
   grid-template-columns: auto 1fr;
   align-items: start;
   column-gap: var(--space-xs);
+  margin-top: var(--space-xs);
 }
 
 .credential-field-checkbox input[type='checkbox'] {
@@ -2971,8 +3092,8 @@ button {
 }
 
 .credential-password-requirements {
-  margin: 2px 0 0;
-  padding-left: var(--space-md);
+  margin: 4px 0 0;
+  padding-left: 0;
   color: var(--color-ink-muted);
   font-size: 12px;
 }
@@ -2987,20 +3108,38 @@ button {
 }
 
 .credential-google-production {
-  display: grid;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: var(--space-xs);
+  width: 100%;
 }
 
 .credential-production-label {
   margin: 0;
   color: var(--color-ink-muted);
   font-size: 13px;
+  text-align: center;
+}
+
+.google-sign-in-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .google-sign-in-slot {
   width: min(320px, 100%);
   min-height: 44px;
+}
+
+.google-sign-in-error {
+  margin-top: var(--space-xs);
+  color: var(--color-error, #d9383a);
+  font-size: 13px;
+  text-align: center;
+  max-width: 320px;
 }
 
 /* ===== PX-002: Role selection ===== */

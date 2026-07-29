@@ -15,6 +15,12 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID>,
 
   @Override
   @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select account from UserAccount account where account.email = :canonicalEmail")
+  Optional<UserAccount> findByCanonicalEmailForUpdate(
+      @Param("canonicalEmail") String canonicalEmail);
+
+  @Override
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select account from UserAccount account where account.id = :id")
   Optional<UserAccount> findByIdForUpdate(@Param("id") UUID id);
 }

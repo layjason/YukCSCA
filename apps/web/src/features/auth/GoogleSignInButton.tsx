@@ -67,14 +67,14 @@ export default function GoogleSignInButton({
   }, [clientId, onCredential, t]);
 
   return (
-    <div>
+    <div className="google-sign-in-container">
       <div
         className="google-sign-in-slot"
         ref={buttonRef}
         aria-label={t('auth.continueWithGoogle')}
       />
       {error ? (
-        <p className="error-message" role="alert">
+        <p className="google-sign-in-error error-message" role="alert">
           {error}
         </p>
       ) : null}

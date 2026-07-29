@@ -2,6 +2,9 @@ spring:
   task:
     scheduling:
       enabled: false
+  mail:
+    host: localhost
+    port: 1025
 
 yukcsca:
   auth:
@@ -17,6 +20,23 @@ yukcsca:
       requests: 3
       window: 1m
       max-clients: 100
+    credentials:
+      enabled: true
+      verification-secret: 01234567890123456789012345678901
+      verification-web-origin: https://app.test
+      terms-version: TERMS_V1
+      privacy-notice-version: PRIVACY_V1
+      mail-from: no-reply@app.test
+      claim-ttl: 30m
+      pending-retention: 24h
+      resend-cooldown: 60s
+      identifier-requests: 20
+      identifier-window: 5m
+      max-identifiers: 100
+      delivery-retry-base: 1s
+      delivery-max-attempts: 3
+      dispatch-interval: 1h
+      cleanup-interval: 1h
     session-maintenance:
       cleanup-interval: 1h
       retention: 30d

@@ -70,11 +70,13 @@ terminology, privacy explanation, money-state comprehension, responsive
 hierarchy, and future contract needs across several later slices. It does not
 authorize a broad production implementation.
 
-Production outcomes are recorded in `US-AUTH-03` and `US-AUTH-04`, with
-`VS-002` and `VS-003` reserved as proposed roadmap slices. Those IDs do not
-constitute accepted briefs or contracts. Exact account, password, verification,
-recovery, abuse-control, session, and provider semantics must be shaped when
-each vertical slice is selected.
+Production outcomes are recorded in `US-AUTH-03` and `US-AUTH-04`. `VS-002`
+has entered its own decision-gated production shaping with no contract or
+implementation yet; `VS-003` remains a proposed roadmap slice. Those IDs and
+the VS-002 shaping activity do not authorize TypeSpec, backend, persistence,
+provider, or production credential work inside PX-002. Exact account,
+password, verification, recovery, abuse-control, session, and provider
+semantics remain owned by their production slices.
 
 ## Completion qualification
 
@@ -747,11 +749,12 @@ reduced motion. It must not capture real or preview-entered passwords.
 - The current UI is mostly text-led with basic visual hierarchy and controls.
   It is sufficient to validate the connected preview but is not final
   production design and does not cover every normative requirement state.
-- Production credential outcomes exist as `US-AUTH-03` and `US-AUTH-04`, and
-  proposed roadmap IDs `VS-002` and `VS-003` now exist, but neither has an
-  accepted delivery brief, contract, provider decision, or implementation.
-  Create those artifacts only when each production vertical slice enters
-  shaping.
+- Production credential outcomes exist as `US-AUTH-03` and `US-AUTH-04`.
+  `VS-002` now has an accepted contract plus production feature/backend code and
+  is `VERIFYING`; its completed production journey and remaining edge evidence
+  are not implied by this PX milestone. `VS-003` remains proposed without a
+  delivery brief. The retained PX credential persona still authorizes only
+  fixture routes and must not become a production `CurrentUser`.
 - Production parent activation, family authorization, catalog, payment
   provider, entitlement, receipt, refund, notification, export/deletion, and
   support semantics still require their own human-reviewed vertical slices.

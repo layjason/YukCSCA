@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 import GoogleSignInButton from '@/features/auth/GoogleSignInButton';
-import { CredentialLoginPage } from '@/prototype/consumer/credential-auth/CredentialLoginPage';
+import { AccountLoginForm } from '@/features/auth/AccountLoginForm';
 
 export function AccountEntryPage(): React.JSX.Element {
   const { t } = useTranslation();
@@ -21,7 +21,7 @@ export function AccountEntryPage(): React.JSX.Element {
   }
 
   return (
-    <CredentialLoginPage
+    <AccountLoginForm
       googleControl={
         <div className="credential-google-production">
           <p className="credential-production-label">{t('credential.login.googleHint')}</p>

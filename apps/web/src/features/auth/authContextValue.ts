@@ -1,10 +1,11 @@
 import { createContext } from 'react';
-import type { AuthStatus, CurrentUser } from './auth.types';
+import type { AuthStatus, CredentialLoginRequest, CurrentUser } from './auth.types';
 
 export interface AuthContextValue {
   status: AuthStatus;
   user: CurrentUser | null;
   login(credential: string): Promise<void>;
+  loginCredentials(request: CredentialLoginRequest): Promise<CurrentUser>;
   logout(): Promise<void>;
   replaceCurrentUser(user: CurrentUser): void;
 }

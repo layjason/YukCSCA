@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+  '/api/v1/auth/credential-registrations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Accepts a credential-registration request without revealing whether the canonical email is eligible or already owned. */
+    post: operations['AuthApi_startCredentialRegistration'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/credential-verifications/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Consumes a valid verification claim after explicit password and policy confirmation. It never creates a session. */
+    post: operations['AuthApi_completeCredentialVerification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/credential-verifications/resend': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Accepts a verification resend request without revealing whether the canonical email is eligible or already owned. */
+    post: operations['AuthApi_resendCredentialVerification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/credentials/login': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Authenticates an existing email credential through the shared access-token and rotating refresh-cookie lifecycle. */
+    post: operations['AuthApi_credentialLogin'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/auth/google': {
     parameters: {
       query?: never;
@@ -114,10 +182,30 @@ export interface components {
       expiresInSeconds: number;
       user: components['schemas']['Auth.CurrentUser'];
     };
+    'Auth.CompleteCredentialVerificationRequest': {
+      token: string;
+      password: string;
+      termsVersion: string;
+      privacyNoticeVersion: string;
+      /** @enum {boolean} */
+      termsAccepted: true;
+      /** @enum {boolean} */
+      privacyNoticeAcknowledged: true;
+    };
+    'Auth.CredentialLoginRequest': {
+      /** Format: email */
+      email: string;
+      password: string;
+    };
+    /** @enum {string} */
+    'Auth.CredentialVerificationOutcome': 'CREDENTIAL_ACCOUNT_CREATED' | 'SIGN_IN_WITH_GOOGLE';
+    'Auth.CredentialVerificationResult': {
+      outcome: components['schemas']['Auth.CredentialVerificationOutcome'];
+    };
     'Auth.CurrentUser': {
       id: components['schemas']['uuid'];
       email: string;
-      displayName: string;
+      displayName: string | null;
       avatarUrl?: string | null;
       role: components['schemas']['Auth.UserRole'];
       onboardingCompleted: boolean;
@@ -125,6 +213,14 @@ export interface components {
     /** @description A browser credential returned by Google Identity Services. */
     'Auth.GoogleLoginRequest': {
       credential: string;
+    };
+    'Auth.ResendCredentialVerificationRequest': {
+      /** Format: email */
+      email: string;
+    };
+    'Auth.StartCredentialRegistrationRequest': {
+      /** Format: email */
+      email: string;
     };
     /** @enum {string} */
     'Auth.UserRole': 'UNASSIGNED' | 'STUDENT' | 'PARENT' | 'TUTOR' | 'ADMIN';
@@ -195,6 +291,221 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  AuthApi_startCredentialRegistration: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Auth.StartCredentialRegistrationRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has been accepted for processing, but processing has not yet completed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AuthApi_completeCredentialVerification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Auth.CompleteCredentialVerificationRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Auth.CredentialVerificationResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AuthApi_resendCredentialVerification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Auth.ResendCredentialVerificationRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has been accepted for processing, but processing has not yet completed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AuthApi_credentialLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Auth.CredentialLoginRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Set-Cookie': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Auth.AuthResponse'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
   AuthApi_googleLogin: {
     parameters: {
       query?: never;

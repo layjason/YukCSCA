@@ -7,7 +7,7 @@
 | Field | Value |
 | --- | --- |
 | Requirement baseline | English/Chinese V1.2, 2026-07-24 |
-| Story baseline | `USER_STORIES.md` version 0.2.2 |
+| Story baseline | `USER_STORIES.md` version 0.2.6 |
 | Audit date | 2026-07-28 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
@@ -22,7 +22,7 @@ during shaping.
 
 | Requirement | Requirement title | Candidate stories | Coverage note |
 | --- | --- | --- | --- |
-| 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-AUTH-03`, `US-AUTH-04`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-000`; next selected `VS-002`; proposed `VS-003`, `VS-005`, `VS-011`. PX-002 remains fixture-only. |
+| 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-AUTH-03`, `US-AUTH-04`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-000`; decision-gated shaping `VS-002`; proposed `VS-003`, `VS-005`, `VS-011`. PX-002 remains fixture-only. |
 | 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | Owners: delivered `VS-001`; proposed `VS-004`, `VS-005`, `VS-010`. |
 | 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-001`; proposed `VS-005`, `VS-011`. |
 | 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | Owners: proposed `VS-004`, `VS-014`, `VS-017`; language dimensions remain independent. |

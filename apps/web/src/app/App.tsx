@@ -45,7 +45,7 @@ import { TrialPage } from '@/prototype/consumer/public/TrialPage';
 import { ForParentsPage } from '@/prototype/consumer/public/ForParentsPage';
 import { PrivacyPage } from '@/prototype/consumer/public/PrivacyPage';
 import { TermsPage } from '@/prototype/consumer/public/TermsPage';
-import { VerifyEmailPage } from '@/prototype/consumer/credential-auth/VerifyEmailPage';
+import { AccountVerificationPage } from '@/app/AccountVerificationPage';
 import { ForgotPasswordPage } from '@/prototype/consumer/credential-auth/ForgotPasswordPage';
 import { RoleSelectionPage } from '@/prototype/consumer/role-selection/RoleSelectionPage';
 import { ParentOnboardingPage } from '@/prototype/consumer/parent/ParentOnboardingPage';
@@ -124,7 +124,7 @@ const routeElements = {
   terms: <TermsPage />,
   register: <AccountRegistrationPage />,
   login: <AccountEntryPage />,
-  'verify-email': <VerifyEmailPage />,
+  'verify-email': <AccountVerificationPage />,
   'forgot-password': <ForgotPasswordPage />,
   'credential-login': <Navigate to={getRouteById('login').path} replace />,
   unsupported: <UnsupportedRolePage />,

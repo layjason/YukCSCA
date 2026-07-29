@@ -11,5 +11,7 @@ public interface UserAccountStore {
 
   Optional<UserAccount> findByEmailIgnoreCase(String email);
 
+  Optional<UserAccount> findByCanonicalEmailForUpdate(String canonicalEmail);
+
   UserAccount save(UserAccount user);
 }

@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.2.2
-**Updated:** 2026-07-24
+**Backlog version:** 0.2.6
+**Updated:** 2026-07-28
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.  
@@ -127,28 +127,55 @@ The user can return without signing in again while the refresh session is valid,
 
 **Closed-loop outcome**
 
-A verified email address belongs to exactly one credential account, and valid
-credentials establish an authenticated YukCSCA session without inferring a
-product role.
+An eligible verified email address becomes exactly one credential account, an
+email already owned by another authentication method keeps that account
+unchanged, and valid credentials establish an authenticated YukCSCA session
+without inferring a product role.
 
 **Main flow**
 
-1. Enter an email address and a password that satisfies the accepted policy.
-2. Confirm the password and accept the applicable Terms and Privacy notice.
-3. Receive and complete email verification.
-4. Sign in with the verified email and password.
-5. Continue to role-specific onboarding while the account remains unassigned.
+1. Enter an email address and request verification.
+2. Receive the verification message and open its valid link.
+3. Choose and confirm a password that satisfies the accepted policy, accept
+   the active universal Terms version, and acknowledge the active Privacy
+   Notice version.
+4. Explicitly complete verification so the credential account is created
+   without issuing a session.
+5. Sign in with the verified email and password.
+6. Continue to role-specific onboarding while the account remains unassigned.
 
 **Acceptance Criteria**
 
-- Given a valid unused email address and conforming password, when registration
-  is submitted, then one unverified credential account is created and the
-  password is stored only through an accepted password-hashing design.
-- Given an unverified account, when sign-in is attempted, then no authenticated
-  session is issued and a safe verification path is offered.
-- Given a valid, unexpired, single-use verification credential, when
-  verification succeeds, then the email becomes verified exactly once without
-  creating a duplicate account.
+- Given a valid unused email address, when verification is requested, then one
+  expiring email-verification claim and eligible delivery attempt are created
+  without creating an account, password credential, role, or session.
+- Given a pending verification claim or an email without a verified credential,
+  when sign-in is attempted, then no authenticated session is issued and a safe
+  verification restart path is offered without disclosing account state.
+- Given a valid, unexpired, single-use verification credential, a conforming
+  confirmed password, acceptance of the active universal Terms version, and
+  acknowledgement of the active Privacy Notice version, when the user
+  explicitly completes verification, then the credential is consumed and
+  exactly one verified `UNASSIGNED` credential account plus accepted password
+  hash and minimum version/timestamp policy evidence are created atomically
+  without issuing a session.
+- Given role-neutral credential registration, then it does not collect age or
+  infer role, minor status, guardian identity, or guardian consent; those
+  consequences belong to the accepted role-activation flow.
+- Given a credential-only account before role-profile activation, then its
+  display name is absent, no profile name is collected, and no name is derived
+  or persisted from the email address. API consumers accept a null display
+  name and may show a localized presentation-only fallback that is never
+  persisted.
+- Given production Terms or Privacy content/version configuration is missing,
+  when credential enrollment is attempted, then no account is created and
+  Google sign-in remains available.
+- Given a valid verification credential for an email already bound to an
+  existing Google account, when completion is attempted, then the claim is
+  closed without creating or storing a password credential, account, link, or
+  session; the existing account remains unchanged and the user is directed to
+  sign in with Google. Adding a password or linking methods requires an
+  authenticated existing account and remains outside this story.
 - Given a verified account and valid credentials, when sign-in succeeds, then
   a secure YukCSCA session is created and a new account remains `UNASSIGNED`.
 - Given an unknown email, wrong password, malformed request, expired
@@ -160,8 +187,9 @@ product role.
   accounts and a verification credential cannot be reused.
 
 **Not included in this story:** Password recovery, production Parent/Student
-activation, social-account linking, multi-factor authentication, or a
-user-facing session manager.
+activation or profile-data collection, authenticated password addition or
+social-account linking, multi-factor authentication, or a user-facing session
+manager.
 
 ### US-AUTH-04 — Recover an email/password account
 
