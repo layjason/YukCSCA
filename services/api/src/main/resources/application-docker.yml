@@ -2,3 +2,8 @@ management:
   endpoint:
     health:
       show-details: never
+
+spring:
+  mail:
+    host: ${SMTP_HOST:mailpit}
+    port: ${SMTP_PORT:1025}

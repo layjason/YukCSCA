@@ -3,6 +3,9 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/yukcsca}
     username: ${DB_USERNAME:yukcsca}
     password: ${DB_PASSWORD:yukcsca-local}
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
 
 logging:
   level:
@@ -20,3 +23,10 @@ yukcsca:
     issuer: ${YUKCSCA_AUTH_ISSUER:http://localhost:8080}
     web-origin: ${YUKCSCA_WEB_ORIGIN:http://localhost:5173}
     cookie-secure: ${YUKCSCA_COOKIE_SECURE:false}
+    credentials:
+      enabled: ${YUKCSCA_CREDENTIAL_AUTH_ENABLED:true}
+      verification-secret: ${YUKCSCA_VERIFICATION_SECRET:local-verification-secret-32-bytes-minimum}
+      verification-web-origin: ${YUKCSCA_VERIFICATION_WEB_ORIGIN:http://localhost:5173}
+      terms-version: ${YUKCSCA_TERMS_VERSION:TERMS_V1}
+      privacy-notice-version: ${YUKCSCA_PRIVACY_NOTICE_VERSION:PRIVACY_V1}
+      mail-from: ${YUKCSCA_VERIFICATION_MAIL_FROM:no-reply@yukcsca.local}

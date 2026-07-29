@@ -17,6 +17,30 @@ Minor-user identity and relationships, learning conversations, assessment answer
 - Allowed browser origins and refresh-cookie attributes are configured and integration-tested.
 - Expired and old revoked sessions are removed by a retention job.
 
+### Email credentials
+
+- Registration creates only a canonical, expiring email-verification claim and
+  durable SMTP outbox entry. It creates no account, password credential, role,
+  or session before explicit verification completion.
+- Verification links carry the raw credential in the browser fragment. The
+  server stores only its SHA-256 digest and reconstructs outbound retry tokens
+  from a random claim ID plus a separate HMAC secret.
+- Passwords are normalized to NFC, checked as 15–128 Unicode code points
+  against a local whole-password blocklist, and stored only with the versioned
+  `{argon2id-v1}` encoder at 19 MiB, two iterations, and parallelism one.
+- Credential completion atomically consumes the claim, creates one nullable-name
+  `UNASSIGNED` account and authenticator, and records only the configured Terms
+  version, Privacy Notice version, and server acceptance time. It issues no
+  session.
+- A valid claim that collides with an existing Google-owned canonical email is
+  closed without adding a password, policy evidence, account, link, or session.
+- Registration and resend remain generic; credential login uses dummy hash work
+  for unknown identities. Per-IP and digest-keyed per-identifier budgets bound
+  anonymous work without durable raw IP, email, password, or token values.
+- SMTP delivery uses bounded timeouts and a PostgreSQL outbox with bounded
+  exponential retry. Security events contain only event categories and
+  account IDs where post-proof attribution is safe.
+
 ### Student activation
 
 - Student activation accepts only an authenticated account whose authoritative database role is `UNASSIGNED`; other assigned roles are rejected.
@@ -50,9 +74,10 @@ These controls must ship with the first feature that needs them:
   passwords, or claim production completion. Google remains the only
   production-backed authentication method until a credential-authentication
   vertical slice is accepted.
-- A production credential-authentication slice must separately define secure
-  password storage, contact verification, recovery-token lifecycle, abuse
-  controls, session issuance, audit behavior, and a TypeSpec contract.
+- VS-002 now owns production registration, verification, credential login,
+  abuse controls, audit behavior, and the shared session handoff. Fixture
+  identity must still remain isolated for PX-002-only consumers, and password
+  recovery remains deferred to VS-003.
 
 ### Roles, parents, tutors, and administration
 

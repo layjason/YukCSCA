@@ -53,10 +53,12 @@ The API currently contains `identity` and `profile` modules:
 ```
 
 Identity owns accounts, Google identities, roles, sessions, security events,
-and retention. Profile owns student activation and profile state, reaching
-identity only through an application-facing activation API. Modules never
-import another module's repository, JPA entity, controller, or infrastructure.
-New modules appear only with their first accepted use case.
+credential authenticators, pending email-verification claims, policy evidence,
+verification delivery outbox state, and retention. Profile owns student
+activation and profile state, reaching identity only through an
+application-facing activation API. Modules never import another module's
+repository, JPA entity, controller, or infrastructure. New modules appear only
+with their first accepted use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
@@ -87,7 +89,7 @@ app -> features -> shared
 
 ## Implemented production flows
 
-Production authentication is Google-only:
+Production authentication supports Google and the VS-002 credential boundary:
 
 ```text
 Google credential -> /api/v1/auth/google -> verified Google identity
@@ -96,6 +98,11 @@ Google credential -> /api/v1/auth/google -> verified Google identity
 
 refresh cookie -> /api/v1/auth/refresh -> rotated token family
 sign out       -> /api/v1/auth/logout  -> revoked session + cleared cookie
+
+email -> pending claim + durable delivery outbox -> SMTP verification message
+valid explicit verification + password + active policies
+      -> nullable-name UNASSIGNED account + Argon2id credential (no session)
+email + password -> shared access JWT + hashed rotating refresh session
 ```
 
 The API verifies signature, issuer, audience, expiry, verified email, and Google
@@ -103,14 +110,22 @@ The API verifies signature, issuer, audience, expiry, verified email, and Google
 Authentication is rate-limited, security events are persisted, and expired or
 old revoked sessions are cleaned up.
 
+Credential verification tokens are HMAC-bound to random claim IDs,
+digest-only at rest, purpose-specific, expiring, and single-use. PostgreSQL
+serializes canonical-email ownership across Google and credential creation.
+The outbox retries bounded SMTP delivery without storing the raw token or
+message body. Credential-only accounts retain a null display name until an
+accepted role-profile activation supplies one.
+
 New accounts are `UNASSIGNED`. `POST /api/v1/student-profile` atomically creates
 one student profile and changes the account to `STUDENT`; it returns canonical
 current-user state and a replacement access token. The profile is private to
 its authenticated student.
 
-Production email/password credentials, recovery, other role onboarding, profile
-editing, learning, family, content, commerce, tutoring, and AI behavior do not
-exist yet.
+Password recovery, other role onboarding, profile editing, learning, family,
+content, commerce, tutoring, and AI behavior do not exist yet. VS-002 remains
+`VERIFYING` until its production-built browser journey and remaining edge
+evidence are complete.
 
 ## Prototype boundaries
 

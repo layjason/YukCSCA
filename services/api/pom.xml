@@ -22,6 +22,7 @@
     <maven.compiler.release>21</maven.compiler.release>
     <jacoco.version>0.8.15</jacoco.version>
     <spotless.version>3.8.0</spotless.version>
+    <bouncycastle.version>1.84</bouncycastle.version>
   </properties>
 
   <dependencies>
@@ -44,6 +45,15 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>${bouncycastle.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

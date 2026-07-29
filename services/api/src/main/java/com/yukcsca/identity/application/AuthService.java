@@ -15,6 +15,7 @@ public class AuthService {
   private final GoogleTokenVerifier googleTokenVerifier;
   private final AuthIdentityStore identityRepository;
   private final UserAccountStore userRepository;
+  private final CanonicalEmailLock emailLock;
   private final SecurityEventService securityEvents;
   private final Clock clock;
 
@@ -22,11 +23,13 @@ public class AuthService {
       GoogleTokenVerifier googleTokenVerifier,
       AuthIdentityStore identityRepository,
       UserAccountStore userRepository,
+      CanonicalEmailLock emailLock,
       SecurityEventService securityEvents,
       Clock clock) {
     this.googleTokenVerifier = googleTokenVerifier;
     this.identityRepository = identityRepository;
     this.userRepository = userRepository;
+    this.emailLock = emailLock;
     this.securityEvents = securityEvents;
     this.clock = clock;
   }
@@ -53,16 +56,16 @@ public class AuthService {
   }
 
   private UserAccount createGoogleUser(GoogleIdentity identity) {
-    if (userRepository.findByEmailIgnoreCase(identity.email()).isPresent()) {
+    String canonicalEmail = identity.email().trim().toLowerCase(java.util.Locale.ROOT);
+    emailLock.lock(canonicalEmail);
+    if (userRepository.findByCanonicalEmailForUpdate(canonicalEmail).isPresent()) {
       throw new AuthConflictException(
           "An account already exists for this email and must be linked explicitly.");
     }
     Instant now = clock.instant();
-    int separator = identity.email().indexOf('@');
-    String fallbackName = separator > 0 ? identity.email().substring(0, separator) : "YukCSCA user";
     String displayName =
         identity.displayName() == null || identity.displayName().isBlank()
-            ? fallbackName
+            ? "YukCSCA user"
             : identity.displayName();
     UserAccount user =
         userRepository.save(

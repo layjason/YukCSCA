@@ -23,6 +23,11 @@ public class SecurityEventService {
     repository.save(new SecurityEvent(type, userId, clock.instant()));
   }
 
+  @Transactional
+  public void recordWithinTransaction(SecurityEventType type, UUID userId) {
+    repository.save(new SecurityEvent(type, userId, clock.instant()));
+  }
+
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void recordStudentActivation(UUID userId) {
     repository.save(
