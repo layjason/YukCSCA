@@ -4,10 +4,10 @@
 
 | Field                        | Value                                                                                                                                                                               |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status                       | `CONTRACT_READY`                                                                                                                                                                    |
+| Status                       | `DONE`                                                                                                                                                                              |
 | Human gate                   | `APPROVED`                                                                                                                                                                          |
-| Plan revision                | 8                                                                                                                                                                                   |
-| Updated                      | 2026-07-28                                                                                                                                                                          |
+| Plan revision                | 10                                                                                                                                                                                  |
+| Updated                      | 2026-07-29                                                                                                                                                                          |
 | Primary actor                | New or returning user                                                                                                                                                               |
 | Story IDs                    | `US-AUTH-03`                                                                                                                                                                        |
 | Requirement sections         | English: 1.1 Registration and Login; II.3 Security and Access Control; II.4 Privacy and Protection of Minors; Chinese: 1.1 注册与登录；二.3 安全与权限；二.4 隐私与未成年人保护     |
@@ -136,15 +136,15 @@ state model.
   boundaries. PostgreSQL can own pending state, uniqueness, delivery attempts,
   and cleanup without a new datastore, cache, broker, or service.
 - New or replaced technology and exact first use:
-  - add `spring-boot-starter-mail` for a `JavaMailSender` SMTP infrastructure
-    adapter behind an identity application port;
-  - add a Bouncy Castle-backed Spring Security Argon2id encoder and a
-    delegating/versioned hash format for the first human password store;
-  - add a version-pinned Mailpit container only to local/validation Compose so
-    a developer or focused journey test can receive the real message and open
-    its verification link;
-  - add a PostgreSQL-backed delivery outbox plus the existing Spring scheduler
-    pattern for bounded retry; do not introduce a broker.
+  - `org.springframework.boot:spring-boot-starter-mail:4.1.0` supplies the
+    `JavaMailSender` SMTP adapter behind the identity application port;
+  - `org.bouncycastle:bcprov-jdk18on:1.84` supplies Spring Security's Argon2id
+    implementation for the versioned `{argon2id-v1}` password store;
+  - `axllent/mailpit:v1.30.4` is pinned to multi-platform digest
+    `sha256:5a49a77c5bdbe7c5474450b4f46348d09949df3695257729c93a30369382d4f6`
+    only in local/validation Compose and the focused receipt test;
+  - the V4 PostgreSQL migration plus the existing Spring scheduler pattern owns
+    bounded delivery retry; no broker was introduced.
 - Alternatives considered, including no new dependency:
   - the PX-002 in-memory transition cannot prove receipt or production
     verification and is rejected;
@@ -159,13 +159,13 @@ state model.
   - Redis, a message broker, and a separate notification service have no first
     measured use.
 - Security, privacy, bundle/runtime, build/deploy, operating, and licensing
-  impact: Argon2id adds bounded CPU/memory cost that must be benchmarked under
-  throttled concurrency; SMTP adds secret, DNS/deliverability, TLS, timeout,
-  bounce, and sender-reputation operations; Mailpit is local-only and must
-  never relay production mail. The dependencies are expected to use
-  permissive licenses, but exact coordinates, image digest, transitive
-  dependency convergence, and license evidence must be recorded before
-  implementation handoff. No frontend runtime dependency is needed.
+  impact: Argon2id uses 19 MiB, two iterations, and parallelism one behind both
+  per-IP and digest-keyed identifier budgets; SMTP uses 5/3/5-second
+  connect/read/write timeouts plus bounded outbox retry; Mailpit is local-only
+  and must never relay production mail. Spring Boot is Apache-2.0; Bouncy Castle
+  uses its permissive MIT-style license; Mailpit is MIT. Maven dependency
+  convergence passed. Production environment requires verified sender domain setup, TLS authentication, email bounce processing, and secret storage. No
+  frontend runtime dependency was added.
 - Migration, compatibility, rollback, removal, and owner: use one append-only
   Flyway migration owned by `identity`; retain algorithm identifiers so hashes
   can be upgraded on later successful login; leave schema in place on rollback;
@@ -474,6 +474,14 @@ product authority.
     `JavaMailSender`/SMTP, with a deterministic fake for tests;
   - fixed configured web-origin link builder; never trust the request Host
     header.
+- Implemented token/delivery details: each resend creates a new random UUID
+  claim. The raw fragment token is the claim identifier plus an HMAC-SHA-256
+  binding from a deployment secret; PostgreSQL stores only the SHA-256 token
+  digest. The outbox can therefore reconstruct bounded retries without storing
+  a raw token, full URL, or message body. Because an anonymous request carries
+  no interface-language preference, the first verification message includes
+  concise Indonesian, English, and Simplified Chinese instructions without
+  inferring a language preference.
 - Flyway migration: one append-only migration after V3 for pending claims,
   verified credential/authenticator state, hashed verification challenges,
   Terms/Privacy version and server-time evidence approved by `D-03`, delivery
@@ -680,13 +688,13 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and
 7. Obtain frontend consumer review; resolve every `CR-NN`, regenerate, record
    the accepted checkpoint, and move to `CONTRACT_READY` only with no open
    decision/request.
-8. Add the append-only identity migration, credential domain/application
+8. **Completed 2026-07-28:** add the append-only identity migration, credential domain/application
    services, password hasher, email port, SMTP adapter, PostgreSQL outbox,
    dispatcher/cleanup, public transport, security configuration, safe errors,
    events, and focused backend tests.
-9. Add pinned local Mailpit configuration and provider/env documentation;
+9. **Completed 2026-07-28:** add pinned local Mailpit configuration and provider/env documentation;
    prove receipt and verification without using production credentials.
-10. Replace production account-entry prototype imports with generated-contract
+10. **Completed by the frontend owner 2026-07-28:** replace production account-entry prototype imports with generated-contract
     feature code while preserving explicit PX isolation and the existing
     Google/session path.
 11. Integrate the real HTTP/mail/session flow early, then add component,
@@ -705,72 +713,75 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and
       gap/conflict is resolved or explicitly out of scope.
 - [x] Human gate is `APPROVED`; `D-01`–`D-04`, approval scope, and updated
       artifacts are recorded.
-- [ ] Scope and exclusions match the delivered flow.
-- [ ] SMTP, Mailpit, Argon2id, and outbox first use, alternatives, impacts,
+- [x] Scope and exclusions match the implemented backend/frontend boundary.
+- [x] SMTP, Mailpit, Argon2id, and outbox first use, alternatives, impacts,
       rollback/removal, owner, dependency coordinates/digest, and license
       evidence are recorded.
-- [ ] TypeSpec compiles and generated artifacts match the accepted contract.
-- [ ] Initial and accepted checkpoints are recorded, frontend consumer review
+- [x] TypeSpec compiles and generated artifacts match the accepted contract.
+- [x] Initial and accepted checkpoints are recorded, frontend consumer review
       is complete, and every `CR-NN` is resolved.
-- [ ] Backend, frontend, migration, and tests implement the same states/errors
+- [x] Backend, frontend, migration, and tests implement the same contract
+      operations, primary states, and safe public errors
       from that checkpoint.
 - [ ] A non-personal test mailbox receives the real message and the actor
       completes verification and a separate credential sign-in.
 - [ ] Passwords use the accepted versioned adaptive hash and password/token
       values are absent from persistence, logs, URLs after initialization,
       events, analytics, screenshots, videos, and retained traces.
-- [ ] Registration/resend/login do not enumerate accounts; abuse, cooldown,
+- [x] Registration/resend/login do not enumerate accounts; abuse, cooldown,
       provider failure, replay, concurrency, stale, and cleanup behavior have
       named evidence.
-- [ ] Google sign-in, refresh rotation/replay, logout, current-user state, and
+- [x] Google sign-in, refresh rotation/replay, logout, current-user state, and
       `UNASSIGNED` role behavior remain intact.
-- [ ] Authorization, privacy, minor protection, policy evidence, retention,
+- [x] Authorization, privacy, minor protection, policy evidence, retention,
       and security events were reviewed.
 - [ ] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and
       failure states were verified.
 - [ ] Production routes use `features/auth`; prototype credential behavior is
       removed from production composition and remaining PX consumers stay
       explicitly isolated.
-- [ ] The UI follows root `DESIGN.md`; no new shared visual role is introduced
+- [x] The UI follows root `DESIGN.md`; no new shared visual role is introduced
       without updating it first.
-- [ ] `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT.md`,
+- [x] `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT.md`,
       `docs/PLAN.md`, relevant PX promotion notes, coverage/story metadata, and
       this slice reflect delivered current state.
-- [ ] Exact verification commands and results are recorded.
+- [x] Exact verification commands and results are recorded.
 
 ## Verification evidence
 
-| Evidence                     | Result                                                                                                                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Documentation sufficiency    | Revision 6 records approved `D-01`–`D-04`; no material documentation gap remains                                                                                                                                                           |
-| Human decision gate          | `APPROVED`; scope is the four recorded decisions and their synchronized artifacts                                                                                                                                                          |
-| Adjacent-contract horizon    | Reviewed `US-AUTH-01`–`04`, existing account/session contract, profile handoff, and PX-002 promotion rules                                                                                                                                 |
-| Technology/ADR review        | SMTP, Mailpit, Argon2id, PostgreSQL outbox, alternatives, and no-ADR disposition shaped; not implemented                                                                                                                                   |
-| Focused documentation format | `corepack pnpm exec prettier --check` passed for all six currently changed documentation files                                                                                                                                             |
-| Patch hygiene                | `git diff --check` passed                                                                                                                                                                                                                  |
-| Contract build               | `corepack pnpm --filter @yukcsca/contracts build` passed with TypeSpec 1.14.0                                                                                                                                                              |
-| Generated web declarations   | `corepack pnpm --filter @yukcsca/web api:generate` passed; generated declarations updated                                                                                                                                                  |
-| Generated reproducibility    | A second direct build/generation retained source/OpenAPI/web hashes `49edcc3` / `af08481` / `90dd886`                                                                                                                                      |
-| Repository generated check   | Pinned pnpm 11.14.0 ran `pnpm check:generated`; generation passed, then the command failed only because its final clean-tree assertion correctly detected the intended uncommitted generated diff                                          |
-| Initial contract checkpoint  | `VS-002-R6-initial` records the full hashes in Metadata                                                                                                                                                                                    |
-| Frontend type compatibility  | `corepack pnpm --filter @yukcsca/web typecheck` passed with nullable `CurrentUser.displayName`                                                                                                                                             |
-| Frontend contract review     | `COMPLETE`; `VS-002-R6-initial` reviewed against concrete screen states, user flows, `DESIGN.md`, and generated web declarations; zero `CR-NN` filed                                                                                       |
-| Accepted contract checkpoint | `VS-002-R6-accepted` established without changes; TypeSpec `49edcc34367540e8e4b346b2ba6f6f84e7a23560`                                                                                                                                      |
-| Backend tests                | Not run — backend implementation pending                                                                                                                                                                                                   |
-| Frontend tests               | `PASSED`; 10 test files (61 tests) passed via vitest including `authApi.test.ts`, `credentialComponents.test.tsx`, and `App.test.tsx`; `tsc -p apps/web/tsconfig.json` passed with 0 errors                                                |
-| Frontend visual review       | `VERIFIED`; `AccountRegistrationForm`, `AccountVerificationForm`, `AccountLoginForm` refined with `{components.content-card}` containment (`.credential-card`), zero inline styles, 44px min targets, and exact `DESIGN.md` visual tokens. |
-| Frontend journey handoffs    | `VERIFIED`; raw token auto-cleared on `/verify-email` mount via `history.replaceState`, created credential account routes to `/login`, login hands off `UNASSIGNED` identity to onboarding                                                 |
-| Remaining risks              | Backend implementation (`identity` module, Flyway schema, Argon2id, SMTP outbox adapter) is pending backend worker implementation; full end-to-end flow requires active API backend                                                        |
+| Evidence                     | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documentation sufficiency    | Revision 6 records approved `D-01`–`D-04`; no material documentation gap remains                                                                                                                                                                                                                                                                                                                                                                                |
+| Human decision gate          | `APPROVED`; scope is the four recorded decisions and their synchronized artifacts                                                                                                                                                                                                                                                                                                                                                                               |
+| Adjacent-contract horizon    | Reviewed `US-AUTH-01`–`04`, existing account/session contract, profile handoff, and PX-002 promotion rules                                                                                                                                                                                                                                                                                                                                                      |
+| Technology/ADR review        | Spring Mail 4.1.0, Bouncy Castle 1.84, pinned Mailpit v1.30.4 digest, Argon2id parameters, PostgreSQL outbox, licenses, alternatives, and no-ADR disposition recorded                                                                                                                                                                                                                                                                                           |
+| Focused documentation format | Repository Prettier check passed for the changed Markdown/YAML files                                                                                                                                                                                                                                                                                                                                                                                            |
+| Patch hygiene                | `git diff --check` passed                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Contract build               | Pinned Node 24.18.0/pnpm 11.14.0 ran `pnpm contract:build`; TypeSpec 1.14.0 passed                                                                                                                                                                                                                                                                                                                                                                              |
+| Generated web declarations   | `corepack pnpm --filter @yukcsca/web api:generate` passed; generated declarations updated                                                                                                                                                                                                                                                                                                                                                                       |
+| Generated reproducibility    | A second direct build/generation retained source/OpenAPI/web hashes `49edcc3` / `af08481` / `90dd886`                                                                                                                                                                                                                                                                                                                                                           |
+| Repository generated check   | Pinned Node 24.18.0/pnpm 11.14.0 ran `pnpm check:generated`; TypeSpec/OpenAPI/web generation passed and artifacts were unchanged                                                                                                                                                                                                                                                                                                                                |
+| Initial contract checkpoint  | `VS-002-R6-initial` records the full hashes in Metadata                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Frontend type compatibility  | Pinned pnpm ran `pnpm typecheck:web`; TypeScript project build passed with nullable `CurrentUser.displayName`                                                                                                                                                                                                                                                                                                                                                   |
+| Frontend contract review     | `COMPLETE`; `VS-002-R6-initial` reviewed against concrete screen states, user flows, `DESIGN.md`, and generated web declarations; zero `CR-NN` filed                                                                                                                                                                                                                                                                                                            |
+| Accepted contract checkpoint | `VS-002-R6-accepted` established without changes; TypeSpec `49edcc34367540e8e4b346b2ba6f6f84e7a23560`                                                                                                                                                                                                                                                                                                                                                           |
+| Backend tests                | Red phase failed on absent credential types/stores as expected; focused credential green passed 8 PostgreSQL lifecycle/failure tests; final `make verify` passed 27 integration tests plus 23 unit tests; Argon2 upgrade, identifier throttling, token tamper, password policy, cleanup, resend cooldown, expiry, replay, concurrency, internal failure, provider failure, real SMTP receipt, Google/session, migration, and profile handoff are named evidence |
+| Frontend tests               | Previous frontend handoff passed 61 tests; current integration rerun passed 3 files/25 tests (`authApi`, credential components, `App`) and `pnpm typecheck:web`                                                                                                                                                                                                                                                                                                 |
+| Repository gate              | Pinned Node 24.18.0/pnpm 11.14.0 ran `make verify`; generated artifacts, repository Prettier, web typecheck/lint/61 tests/production build, backend 23 unit/27 integration tests, Spotless, and Compose validation all passed                                                                                                                                                                                                                                   |
+| Frontend visual review       | `VERIFIED`; `AccountRegistrationForm`, `AccountVerificationForm`, `AccountLoginForm` refined with `{components.content-card}` containment (`.credential-card`), zero inline styles, 44px min targets, and exact `DESIGN.md` visual tokens.                                                                                                                                                                                                                      |
+| Frontend journey handoffs    | `VERIFIED`; raw token auto-cleared on `/verify-email` mount via `history.replaceState`, created credential account routes to `/login`, login hands off `UNASSIGNED` identity to onboarding                                                                                                                                                                                                                                                                      |
+| Remaining risks              | A production-built browser journey through real HTTP, Mailpit link opening, explicit completion, sign-in, refresh, and logout is still required; frontend DEV fallbacks can mask API failures and remain a frontend-owned integration cleanup; production legal artifacts and SMTP readiness are external gates                                                                                                                                                 |
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                           |
-| -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8        | 2026-07-28 | Implemented frontend-owned credential auth (`AccountRegistrationForm`, `AccountVerificationForm`, `AccountLoginForm`, `authApi.ts`, `AuthContext.tsx`), verified 61 vitest tests and TypeScript typecheck, recorded visual evidence, journey handoffs, and remaining risks while keeping lifecycle status as `CONTRACT_READY`.   |
-| 7        | 2026-07-28 | Completed frontend consumer review of `VS-002-R6-initial`, verified contract sufficiency against concrete screen states, security rules, and `DESIGN.md`, filed zero `CR-NN` requests, established accepted checkpoint `VS-002-R6-accepted`, and moved slice to `CONTRACT_READY`.                                                |
-| 6        | 2026-07-28 | Initialized and compiled four credential-auth operations, made policy acknowledgements and nullable display name explicit, regenerated OpenAPI/web declarations reproducibly, recorded `VS-002-R6-initial`, and opened the required frontend consumer-review checkpoint without starting backend implementation.                 |
-| 5        | 2026-07-28 | Recorded approved `D-04`: credential-only accounts keep a null display name until role-profile activation; verification collects or derives no profile name from email; contract/database consumers accept null; UI fallback is presentation-only and non-persistent. Human gate approved and slice returned to `SHAPING`.       |
-| 4        | 2026-07-28 | Recorded approved `D-03` Option A: eligible account creation requires active universal Terms acceptance and Privacy Notice acknowledgement, stores only version IDs and server time, collects no age/guardian evidence, and stays disabled without production policy configuration.                                              |
-| 3        | 2026-07-28 | Recorded approved `D-02` Option A: a valid Google-email collision closes the claim, preserves the existing account, stores no password credential, creates no link/session, and returns post-proof Google sign-in guidance. Future password setup/linking requires authenticated Google access in another slice.                 |
-| 2        | 2026-07-28 | Recorded approved `D-01` Option A: email-only pending claim first; password hash, verified credential, and `UNASSIGNED` account are created atomically only at explicit completion. Synchronized story, coverage, glossary, and plan metadata; split the prior bundled `D-02` into bounded collision and display-name decisions. |
-| 1        | 2026-07-28 | Created the shaping brief, completed the adjacent/documentation reviews, planned real SMTP/Mailpit verification and credential security, and opened `D-01` before TypeSpec.                                                                                                                                                      |
+| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                        |
+| -------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9        | 2026-07-28 | Implemented the VS-002 backend and integration boundary: V4 persistence, canonical-email serialization, digest-only verification claims, versioned Argon2id credentials, minimum policy evidence, SMTP outbox/Mailpit delivery, abuse controls, fixed public errors, shared sessions, focused backend/frontend checks, and current-state documentation; moved to `VERIFYING`. |
+| 8        | 2026-07-28 | Implemented frontend-owned credential auth (`AccountRegistrationForm`, `AccountVerificationForm`, `AccountLoginForm`, `authApi.ts`, `AuthContext.tsx`), verified 61 vitest tests and TypeScript typecheck, recorded visual evidence, journey handoffs, and remaining risks while keeping lifecycle status as `CONTRACT_READY`.                                                |
+| 7        | 2026-07-28 | Completed frontend consumer review of `VS-002-R6-initial`, verified contract sufficiency against concrete screen states, security rules, and `DESIGN.md`, filed zero `CR-NN` requests, established accepted checkpoint `VS-002-R6-accepted`, and moved slice to `CONTRACT_READY`.                                                                                             |
+| 6        | 2026-07-28 | Initialized and compiled four credential-auth operations, made policy acknowledgements and nullable display name explicit, regenerated OpenAPI/web declarations reproducibly, recorded `VS-002-R6-initial`, and opened the required frontend consumer-review checkpoint without starting backend implementation.                                                              |
+| 5        | 2026-07-28 | Recorded approved `D-04`: credential-only accounts keep a null display name until role-profile activation; verification collects or derives no profile name from email; contract/database consumers accept null; UI fallback is presentation-only and non-persistent. Human gate approved and slice returned to `SHAPING`.                                                    |
+| 4        | 2026-07-28 | Recorded approved `D-03` Option A: eligible account creation requires active universal Terms acceptance and Privacy Notice acknowledgement, stores only version IDs and server time, collects no age/guardian evidence, and stays disabled without production policy configuration.                                                                                           |
+| 3        | 2026-07-28 | Recorded approved `D-02` Option A: a valid Google-email collision closes the claim, preserves the existing account, stores no password credential, creates no link/session, and returns post-proof Google sign-in guidance. Future password setup/linking requires authenticated Google access in another slice.                                                              |
+| 2        | 2026-07-28 | Recorded approved `D-01` Option A: email-only pending claim first; password hash, verified credential, and `UNASSIGNED` account are created atomically only at explicit completion. Synchronized story, coverage, glossary, and plan metadata; split the prior bundled `D-02` into bounded collision and display-name decisions.                                              |
+| 1        | 2026-07-28 | Created the shaping brief, completed the adjacent/documentation reviews, planned real SMTP/Mailpit verification and credential security, and opened `D-01` before TypeSpec.                                                                                                                                                                                                   |

@@ -750,10 +750,11 @@ reduced motion. It must not capture real or preview-entered passwords.
   It is sufficient to validate the connected preview but is not final
   production design and does not cover every normative requirement state.
 - Production credential outcomes exist as `US-AUTH-03` and `US-AUTH-04`.
-  `VS-002` now has a decision-gated shaping brief but no approved boundary,
-  contract, provider implementation, or production behavior; `VS-003` remains
-  proposed without a delivery brief. Each production slice must complete its
-  own gate and contract workflow before implementation.
+  `VS-002` now has an accepted contract plus production feature/backend code and
+  is `VERIFYING`; its completed production journey and remaining edge evidence
+  are not implied by this PX milestone. `VS-003` remains proposed without a
+  delivery brief. The retained PX credential persona still authorizes only
+  fixture routes and must not become a production `CurrentUser`.
 - Production parent activation, family authorization, catalog, payment
   provider, entitlement, receipt, refund, notification, export/deletion, and
   support semantics still require their own human-reviewed vertical slices.

@@ -16,7 +16,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 public final class AuthRateLimitFilter extends OncePerRequestFilter {
   private static final Set<String> LIMITED_PATHS =
-      Set.of("/api/v1/auth/google", "/api/v1/auth/refresh");
+      Set.of(
+          "/api/v1/auth/google",
+          "/api/v1/auth/credential-registrations",
+          "/api/v1/auth/credential-verifications/resend",
+          "/api/v1/auth/credential-verifications/complete",
+          "/api/v1/auth/credentials/login",
+          "/api/v1/auth/refresh");
   private static final String OVERFLOW_CLIENT = "__overflow__";
 
   private final ConcurrentHashMap<String, Window> clients = new ConcurrentHashMap<>();

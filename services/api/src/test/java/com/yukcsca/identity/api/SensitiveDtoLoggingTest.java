@@ -27,4 +27,29 @@ class SensitiveDtoLoggingTest {
         .contains("accessToken=<redacted>", "tokenType=Bearer", "expiresInSeconds=900")
         .doesNotContain(response.accessToken(), user.email(), user.displayName());
   }
+
+  @Test
+  void redactsEveryCredentialRequestFromStringRepresentation() {
+    var start = new StartCredentialRegistrationRequest("private@example.com");
+    var resend = new ResendCredentialVerificationRequest("private@example.com");
+    var login = new CredentialLoginRequest("private@example.com", "private-password-value");
+    var complete =
+        new CompleteCredentialVerificationRequest(
+            "private-verification-token-value-123456",
+            "private-password-value",
+            "TERMS_V1",
+            "PRIVACY_V1",
+            true,
+            true);
+
+    assertThat(start.toString()).doesNotContain(start.email());
+    assertThat(resend.toString()).doesNotContain(resend.email());
+    assertThat(login.toString()).doesNotContain(login.email(), login.password());
+    assertThat(complete.toString())
+        .doesNotContain(
+            complete.token(),
+            complete.password(),
+            complete.termsVersion(),
+            complete.privacyNoticeVersion());
+  }
 }

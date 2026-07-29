@@ -17,6 +17,11 @@ spring:
     enabled: true
   jackson:
     time-zone: UTC
+  mail:
+    properties:
+      '[mail.smtp.connectiontimeout]': 5000
+      '[mail.smtp.timeout]': 3000
+      '[mail.smtp.writetimeout]': 5000
 
 server:
   shutdown: graceful
@@ -57,6 +62,23 @@ yukcsca:
       requests: ${YUKCSCA_AUTH_RATE_LIMIT_REQUESTS:20}
       window: ${YUKCSCA_AUTH_RATE_LIMIT_WINDOW:1m}
       max-clients: ${YUKCSCA_AUTH_RATE_LIMIT_MAX_CLIENTS:10000}
+    credentials:
+      enabled: ${YUKCSCA_CREDENTIAL_AUTH_ENABLED:false}
+      verification-secret: ${YUKCSCA_VERIFICATION_SECRET:}
+      verification-web-origin: ${YUKCSCA_VERIFICATION_WEB_ORIGIN:}
+      terms-version: ${YUKCSCA_TERMS_VERSION:}
+      privacy-notice-version: ${YUKCSCA_PRIVACY_NOTICE_VERSION:}
+      mail-from: ${YUKCSCA_VERIFICATION_MAIL_FROM:}
+      claim-ttl: ${YUKCSCA_VERIFICATION_CLAIM_TTL:30m}
+      pending-retention: ${YUKCSCA_VERIFICATION_RETENTION:24h}
+      resend-cooldown: ${YUKCSCA_VERIFICATION_RESEND_COOLDOWN:60s}
+      identifier-requests: ${YUKCSCA_CREDENTIAL_IDENTIFIER_REQUESTS:10}
+      identifier-window: ${YUKCSCA_CREDENTIAL_IDENTIFIER_WINDOW:5m}
+      max-identifiers: ${YUKCSCA_CREDENTIAL_MAX_IDENTIFIERS:10000}
+      delivery-retry-base: ${YUKCSCA_MAIL_RETRY_BASE:30s}
+      delivery-max-attempts: ${YUKCSCA_MAIL_MAX_ATTEMPTS:5}
+      dispatch-interval: ${YUKCSCA_MAIL_DISPATCH_INTERVAL:5s}
+      cleanup-interval: ${YUKCSCA_CREDENTIAL_CLEANUP_INTERVAL:1h}
     session-maintenance:
       cleanup-interval: ${YUKCSCA_SESSION_CLEANUP_INTERVAL:1h}
       retention: ${YUKCSCA_SESSION_RETENTION:30d}

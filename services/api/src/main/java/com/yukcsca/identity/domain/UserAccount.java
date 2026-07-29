@@ -18,7 +18,7 @@ public class UserAccount {
   @Column(nullable = false, unique = true, length = 320)
   private String email;
 
-  @Column(name = "display_name", nullable = false, length = 160)
+  @Column(name = "display_name", length = 160)
   private String displayName;
 
   @Column(name = "avatar_url")
@@ -58,6 +58,11 @@ public class UserAccount {
         displayName.trim(),
         avatarUrl,
         now);
+  }
+
+  public static UserAccount createCredentialUser(String email, Instant now) {
+    return new UserAccount(
+        UUID.randomUUID(), email.trim().toLowerCase(Locale.ROOT), null, null, now);
   }
 
   public UUID getId() {

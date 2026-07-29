@@ -3,6 +3,7 @@ package com.yukcsca.identity.api;
 import com.yukcsca.identity.application.AccessTokenService;
 import com.yukcsca.identity.application.AuthService;
 import com.yukcsca.identity.application.AuthSettings;
+import com.yukcsca.identity.application.CredentialAuthService;
 import com.yukcsca.identity.application.InvalidCredentialException;
 import com.yukcsca.identity.application.SecurityEventService;
 import com.yukcsca.identity.application.SessionService;
@@ -38,18 +39,66 @@ public class AuthController {
   private final AccessTokenService accessTokenService;
   private final AuthSettings properties;
   private final SecurityEventService securityEvents;
+  private final CredentialAuthService credentialAuthService;
 
   public AuthController(
       AuthService authService,
       SessionService sessionService,
       AccessTokenService accessTokenService,
       AuthSettings properties,
-      SecurityEventService securityEvents) {
+      SecurityEventService securityEvents,
+      CredentialAuthService credentialAuthService) {
     this.authService = authService;
     this.sessionService = sessionService;
     this.accessTokenService = accessTokenService;
     this.properties = properties;
     this.securityEvents = securityEvents;
+    this.credentialAuthService = credentialAuthService;
+  }
+
+  @PostMapping("/credential-registrations")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public void startCredentialRegistration(
+      @Valid @RequestBody StartCredentialRegistrationRequest request,
+      HttpServletResponse response) {
+    credentialAuthService.startRegistration(request.email());
+    disableCaching(response);
+  }
+
+  @PostMapping("/credential-verifications/resend")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public void resendCredentialVerification(
+      @Valid @RequestBody ResendCredentialVerificationRequest request,
+      HttpServletResponse response) {
+    credentialAuthService.resendVerification(request.email());
+    disableCaching(response);
+  }
+
+  @PostMapping("/credential-verifications/complete")
+  public CredentialVerificationResult completeCredentialVerification(
+      @Valid @RequestBody CompleteCredentialVerificationRequest request,
+      HttpServletResponse response) {
+    var outcome =
+        credentialAuthService.completeVerification(
+            request.token(),
+            request.password(),
+            request.termsVersion(),
+            request.privacyNoticeVersion(),
+            request.termsAccepted(),
+            request.privacyNoticeAcknowledged());
+    disableCaching(response);
+    return new CredentialVerificationResult(outcome);
+  }
+
+  @PostMapping("/credentials/login")
+  public AuthResponse credentialLogin(
+      @Valid @RequestBody CredentialLoginRequest request, HttpServletResponse response) {
+    CredentialAuthService.CredentialSession credentialSession =
+        credentialAuthService.authenticate(request.email(), request.password());
+    AuthResponse authResponse = responseFor(credentialSession.account());
+    setRefreshCookie(response, credentialSession.rawRefreshToken(), properties.refreshTokenTtl());
+    disableCaching(response);
+    return authResponse;
   }
 
   @PostMapping("/google")

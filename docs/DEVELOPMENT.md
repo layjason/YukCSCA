@@ -38,6 +38,14 @@ make dev
 
 Compose Watch requires Docker Compose 2.22 or later. `make doctor` verifies this requirement.
 
+The local stack also starts the pinned Mailpit inbox at
+`http://localhost:8025` and routes credential-verification SMTP to port `1025`.
+Use only non-personal test addresses. The local verification secret, policy
+version IDs, sender, and HTTP origin are development placeholders; deployment
+must provide a separate secret, approved immutable policy artifacts, a verified
+sender/domain, bounded SMTP credentials, and an HTTPS verification origin
+before enabling credential enrollment.
+
 ### Host hot-reload and debugging
 
 For the fastest frontend hot-module reload, Spring debugging, or direct IDE attachment:
@@ -88,6 +96,8 @@ pnpm check:generated
 
 Public API work updates the contract, backend HTTP boundary, frontend generated types/client behavior, and positive plus negative/edge tests together. Regeneration must leave no diff.
 
+- **Dev Fallback Interceptors**: Frontend API clients attempt real fetch calls first and catch network/404/401 failures during local development (`import.meta.env.DEV`), returning contract-backed mocks matching generated OpenAPI types. Mocks are bypassed in production.
+
 ## Design and visual verification
 
 Root [`DESIGN.md`](../DESIGN.md) defines the visual and interaction language; [`docs/design/README.md`](design/README.md) defines the agent workflow. Product behavior still comes from the accepted slice and requirements.
@@ -126,6 +136,10 @@ cd services/api && ./mvnw --batch-mode -Dtest=SessionServiceTest test
 
 # One Java integration-test class through Failsafe/Testcontainers
 cd services/api && ./mvnw --batch-mode -Dit.test=AuthHttpIT verify
+
+# Credential lifecycle plus real Mailpit receipt
+cd services/api && ./mvnw --batch-mode \
+  -Dit.test=CredentialAuthHttpIT,VerificationEmailMailpitIT verify
 ```
 
 ## Playwright browser tests
