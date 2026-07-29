@@ -120,6 +120,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/auth/password-recoveries/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Consumes a valid single-use recovery credential, replaces the password, and revokes every active refresh session without issuing a new session. */
+    post: operations['AuthApi_completePasswordRecovery'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/password-recovery-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Accepts a password-recovery request without revealing whether the canonical email belongs to an eligible credential account. */
+    post: operations['AuthApi_requestPasswordRecovery'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/auth/refresh': {
     parameters: {
       query?: never;
@@ -192,6 +226,10 @@ export interface components {
       /** @enum {boolean} */
       privacyNoticeAcknowledged: true;
     };
+    'Auth.CompletePasswordRecoveryRequest': {
+      token: string;
+      password: string;
+    };
     'Auth.CredentialLoginRequest': {
       /** Format: email */
       email: string;
@@ -213,6 +251,10 @@ export interface components {
     /** @description A browser credential returned by Google Identity Services. */
     'Auth.GoogleLoginRequest': {
       credential: string;
+    };
+    'Auth.PasswordRecoveryRequest': {
+      /** Format: email */
+      email: string;
     };
     'Auth.ResendCredentialVerificationRequest': {
       /** Format: email */
@@ -630,6 +672,106 @@ export interface operations {
       401: {
         headers: {
           'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AuthApi_completePasswordRecovery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Auth.CompletePasswordRecoveryRequest'];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AuthApi_requestPasswordRecovery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Auth.PasswordRecoveryRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has been accepted for processing, but processing has not yet completed. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
           [name: string]: unknown;
         };
         content: {

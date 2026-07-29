@@ -293,6 +293,80 @@ paths:
                 $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
+  /api/v1/auth/password-recoveries/complete:
+    post:
+      operationId: AuthApi_completePasswordRecovery
+      description: Consumes a valid single-use recovery credential, replaces the password, and revokes every active refresh session without issuing a new session.
+      parameters: []
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.CompletePasswordRecoveryRequest'
+  /api/v1/auth/password-recovery-requests:
+    post:
+      operationId: AuthApi_requestPasswordRecovery
+      description: Accepts a password-recovery request without revealing whether the canonical email belongs to an eligible credential account.
+      parameters: []
+      responses:
+        '202':
+          description: The request has been accepted for processing, but processing has not yet completed.
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.PasswordRecoveryRequest'
   /api/v1/auth/refresh:
     post:
       operationId: AuthApi_refresh
@@ -490,6 +564,20 @@ components:
           type: boolean
           enum:
             - true
+    Auth.CompletePasswordRecoveryRequest:
+      type: object
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 512
+        password:
+          type: string
+          minLength: 15
+          maxLength: 128
     Auth.CredentialLoginRequest:
       type: object
       required:
@@ -551,6 +639,15 @@ components:
           minLength: 20
           maxLength: 10000
       description: A browser credential returned by Google Identity Services.
+    Auth.PasswordRecoveryRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          maxLength: 320
+          format: email
     Auth.ResendCredentialVerificationRequest:
       type: object
       required:

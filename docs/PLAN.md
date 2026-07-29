@@ -7,11 +7,11 @@
 | Field                        | Value                                                                                                |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Plan ID                      | `YUK-P0-DELIVERY`                                                                                    |
-| Plan version                 | `0.4.9`                                                                                              |
+| Plan version                 | `0.4.12`                                                                                             |
 | Updated                      | 2026-07-29                                                                                           |
 | Current baseline             | `VS-001` student-account activation — `DONE`                                                         |
 | Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE` |
-| Current production slice     | [`VS-002`](delivery/VS-002-credential-auth.md) credential authentication — `DONE`                    |
+| Current production slice     | [`VS-003`](delivery/VS-003-credential-recovery.md) credential recovery — `CONTRACT_READY`            |
 | Requirement baseline         | English/Chinese V1.2, 2026-07-24                                                                     |
 | Story baseline               | `USER_STORIES.md` version 0.2.6                                                                      |
 
@@ -77,20 +77,20 @@ Each row is a capability-sized closed loop. A row may group tightly coupled stor
 
 ### Phase A — Identity, profiles, family, and administration
 
-| Slice                                             | User-observable outcome                                                            | Stories                    | Main dependency                        | Status     |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- | -------------------------------------- | ---------- |
-| [`VS-000`](delivery/VS-000-google-auth.md)        | Sign in, restore a secure session, inspect current identity, and sign out          | `US-AUTH-01`, `US-AUTH-02` | Baseline                               | `DONE`     |
-| [`VS-001`](delivery/VS-001-student-activation.md) | Activate one student profile from an `UNASSIGNED` identity                         | `US-PROF-01`               | `VS-000`                               | `DONE`     |
-| [`VS-002`](delivery/VS-002-credential-auth.md)    | Register, verify, and sign in with production credentials without inferring a role | `US-AUTH-03`               | `VS-000`; email and abuse decisions    | `DONE`     |
-| `VS-003`                                          | Recover a credential account through a non-enumerating single-use flow             | `US-AUTH-04`               | `VS-002`; session-revocation decisions | `PROPOSED` |
-| `VS-004`                                          | Maintain a student profile and permanent explanation-language preference           | `US-PROF-02`, `US-LANG-01` | `VS-001`                               | `PROPOSED` |
-| `VS-005`                                          | Activate and maintain a parent profile with contact reverification                 | `US-PROF-03`, `US-PROF-04` | `VS-000`                               | `PROPOSED` |
-| `VS-006`                                          | Parent creates a pending student who can later activate that identity              | `US-FAM-00`, `US-FAM-04`   | `VS-005`                               | `PROPOSED` |
-| `VS-007`                                          | Student invites a parent who accepts an authorized primary relationship            | `US-FAM-01`, `US-FAM-02`   | `VS-001`, `VS-005`                     | `PROPOSED` |
-| `VS-008`                                          | Student or parent unlinks while preserving required history                        | `US-FAM-03`                | `VS-007`; ownership decisions          | `PROPOSED` |
-| `VS-009`                                          | Request and retrieve a privacy-safe personal-data export                           | `US-ACCOUNT-02`            | Activated account                      | `PROPOSED` |
-| `VS-010`                                          | Request and complete or hold account deletion with visible consequences            | `US-ACCOUNT-01`            | Activated account; blocker decisions   | `PROPOSED` |
-| `VS-011`                                          | Authorized admins manage permissions, accounts, and relationships with audit       | `US-ADMIN-01`, `US-ADM-01` | `VS-000`; relevant account state       | `PROPOSED` |
+| Slice                                              | User-observable outcome                                                            | Stories                    | Main dependency                      | Status           |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- | ------------------------------------ | ---------------- |
+| [`VS-000`](delivery/VS-000-google-auth.md)         | Sign in, restore a secure session, inspect current identity, and sign out          | `US-AUTH-01`, `US-AUTH-02` | Baseline                             | `DONE`           |
+| [`VS-001`](delivery/VS-001-student-activation.md)  | Activate one student profile from an `UNASSIGNED` identity                         | `US-PROF-01`               | `VS-000`                             | `DONE`           |
+| [`VS-002`](delivery/VS-002-credential-auth.md)     | Register, verify, and sign in with production credentials without inferring a role | `US-AUTH-03`               | `VS-000`; email and abuse decisions  | `DONE`           |
+| [`VS-003`](delivery/VS-003-credential-recovery.md) | Recover a credential account through a non-enumerating single-use flow             | `US-AUTH-04`               | `VS-002`                             | `CONTRACT_READY` |
+| `VS-004`                                           | Maintain a student profile and permanent explanation-language preference           | `US-PROF-02`, `US-LANG-01` | `VS-001`                             | `PROPOSED`       |
+| `VS-005`                                           | Activate and maintain a parent profile with contact reverification                 | `US-PROF-03`, `US-PROF-04` | `VS-000`                             | `PROPOSED`       |
+| `VS-006`                                           | Parent creates a pending student who can later activate that identity              | `US-FAM-00`, `US-FAM-04`   | `VS-005`                             | `PROPOSED`       |
+| `VS-007`                                           | Student invites a parent who accepts an authorized primary relationship            | `US-FAM-01`, `US-FAM-02`   | `VS-001`, `VS-005`                   | `PROPOSED`       |
+| `VS-008`                                           | Student or parent unlinks while preserving required history                        | `US-FAM-03`                | `VS-007`; ownership decisions        | `PROPOSED`       |
+| `VS-009`                                           | Request and retrieve a privacy-safe personal-data export                           | `US-ACCOUNT-02`            | Activated account                    | `PROPOSED`       |
+| `VS-010`                                           | Request and complete or hold account deletion with visible consequences            | `US-ACCOUNT-01`            | Activated account; blocker decisions | `PROPOSED`       |
+| `VS-011`                                           | Authorized admins manage permissions, accounts, and relationships with audit       | `US-ADMIN-01`, `US-ADM-01` | `VS-000`; relevant account state     | `PROPOSED`       |
 
 ### Phase B — Academic content control plane
 
@@ -170,6 +170,9 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 | Version | Date       | Change                                                                                                                                                                                                                                                                        |
 | ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0.4.12  | 2026-07-29 | Recorded completed frontend consumer review of `VS-003-R3-initial`, zero `CR-NN` requests, and accepted checkpoint `VS-003-R4-accepted`; moved `VS-003` to `CONTRACT_READY` while leaving implementation unstarted pending explicit worktree assignment.                      |
+| 0.4.11  | 2026-07-29 | Recorded approved `VS-003` `D-01` Option A: successful password reset revokes all active refresh sessions while existing stateless access JWTs expire naturally within 15 minutes; returned the slice to `SHAPING` for contract initialization.                               |
+| 0.4.10  | 2026-07-29 | Selected and shaped `VS-003` credential recovery, completed its adjacent-contract and documentation-sufficiency review, and moved it to `AWAITING_DECISION` for the explicit post-reset session-revocation policy before TypeSpec or implementation.                          |
 | 0.4.9   | 2026-07-29 | Verified complete VS-002 credential authentication flow (email registration, Mailpit outbox delivery, Argon2id hashing, Google collision handling, UI contrast/alignment fixes, and test evidence); moved VS-002 to `DONE`.                                                   |
 | 0.4.8   | 2026-07-28 | Implemented the VS-002 identity migration, credential lifecycle, versioned Argon2id hashing, policy evidence, SMTP outbox/Mailpit delivery, abuse controls, public transport, and focused backend/frontend integration evidence; moved the slice to `VERIFYING`.              |
 | 0.4.7   | 2026-07-28 | Completed frontend consumer review of `VS-002` initial TypeSpec contract, verified complete screen states and user flows against `DESIGN.md` and generated declarations, established `VS-002-R6-accepted` with zero `CR-NN` requests, and moved `VS-002` to `CONTRACT_READY`. |

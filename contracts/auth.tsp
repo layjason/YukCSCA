@@ -52,6 +52,22 @@ model CredentialLoginRequest {
   password: string;
 }
 
+model PasswordRecoveryRequest {
+  @format("email")
+  @maxLength(320)
+  email: string;
+}
+
+model CompletePasswordRecoveryRequest {
+  @minLength(32)
+  @maxLength(512)
+  token: string;
+
+  @minLength(15)
+  @maxLength(128)
+  password: string;
+}
+
 enum CredentialVerificationOutcome {
   CREDENTIAL_ACCOUNT_CREATED,
   SIGN_IN_WITH_GOOGLE,
@@ -100,6 +116,10 @@ model LogoutResponse {
   @header("Set-Cookie") setCookie: string;
 }
 
+model PasswordRecoveryCompletedResponse {
+  @statusCode statusCode: 204;
+}
+
 @route("/api/v1/auth")
 interface AuthApi {
   @doc("Accepts a credential-registration request without revealing whether the canonical email is eligible or already owned.")
@@ -136,6 +156,24 @@ interface AuthApi {
     AuthCookieResponse
     | YukCSCA.BadRequestResponse
     | YukCSCA.UnauthorizedResponse
+    | YukCSCA.TooManyRequestsResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Accepts a password-recovery request without revealing whether the canonical email belongs to an eligible credential account.")
+  @post
+  @route("/password-recovery-requests")
+  requestPasswordRecovery(@body request: PasswordRecoveryRequest):
+    CredentialActionAcceptedResponse
+    | YukCSCA.BadRequestResponse
+    | YukCSCA.TooManyRequestsResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Consumes a valid single-use recovery credential, replaces the password, and revokes every active refresh session without issuing a new session.")
+  @post
+  @route("/password-recoveries/complete")
+  completePasswordRecovery(@body request: CompletePasswordRecoveryRequest):
+    PasswordRecoveryCompletedResponse
+    | YukCSCA.BadRequestResponse
     | YukCSCA.TooManyRequestsResponse
     | YukCSCA.InternalServerErrorResponse;
 
