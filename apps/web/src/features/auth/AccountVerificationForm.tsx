@@ -177,7 +177,7 @@ export function AccountVerificationForm(): React.JSX.Element {
             </p>
           </div>
 
-          <div className="credential-links credential-actions-spaced">
+          <div className="credential-actions-spaced">
             <Link
               to={emailHint ? `/login?email=${encodeURIComponent(emailHint)}` : '/login'}
               className="btn btn-primary credential-full-link"
@@ -205,7 +205,7 @@ export function AccountVerificationForm(): React.JSX.Element {
             </p>
           </div>
 
-          <div className="credential-links credential-actions-spaced">
+          <div className="credential-actions-spaced">
             <Link to="/login" className="btn btn-primary credential-full-link">
               {t('auth.continueWithGoogle', 'Continue with Google')}
             </Link>
@@ -230,7 +230,7 @@ export function AccountVerificationForm(): React.JSX.Element {
             </p>
           </div>
 
-          <div className="credential-links credential-actions-spaced">
+          <div className="credential-actions-spaced">
             <Link to="/register" className="btn btn-primary credential-full-link">
               {t('credential.verify.restartRegistration', 'Request a new verification link')}
             </Link>
