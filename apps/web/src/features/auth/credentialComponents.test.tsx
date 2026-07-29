@@ -9,6 +9,7 @@ import { ResetPasswordForm } from './ResetPasswordForm';
 import * as authApi from './authApi';
 import { AuthContext } from './authContextValue';
 import type { CurrentUser } from './auth.types';
+import { ApiError } from '@/shared/api/httpClient';
 
 vi.mock('./authApi', async () => {
   const actual = await vi.importActual<typeof import('./authApi')>('./authApi');
@@ -217,6 +218,29 @@ describe('ForgotPasswordForm', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent(/terdaftar|eligible/i);
   });
+
+  test('shows the server retry interval when recovery requests are rate limited', async () => {
+    vi.mocked(authApi.requestPasswordRecovery).mockRejectedValue(
+      new ApiError(429, { code: 'AUTH_RATE_LIMITED' }, 37),
+    );
+
+    render(
+      <MemoryRouter>
+        <ForgotPasswordForm />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: /alamat email|email address/i }), {
+      target: { value: 'user@example.com' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /kirim tautan pemulihan|send recovery link/i,
+      }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('37');
+  });
 });
 
 describe('ResetPasswordForm', () => {
@@ -239,7 +263,11 @@ describe('ResetPasswordForm', () => {
     const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
 
     render(
-      <MemoryRouter initialEntries={['/reset-password?token=valid-test-recovery-token']}>
+      <MemoryRouter
+        initialEntries={[
+          '/reset-password#token=valid-test-recovery-token&email=user%40example.com',
+        ]}
+      >
         <ResetPasswordForm />
       </MemoryRouter>,
     );
@@ -260,6 +288,14 @@ describe('ResetPasswordForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/15/);
     expect(mockComplete).not.toHaveBeenCalled();
 
+    // Contract maximum validation
+    fireEvent.change(passwordInput, { target: { value: 'a'.repeat(129) } });
+    fireEvent.change(confirmInput, { target: { value: 'a'.repeat(129) } });
+    fireEvent.click(submitBtn);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/128/);
+    expect(mockComplete).not.toHaveBeenCalled();
+
     // Valid 15+ character password
     fireEvent.change(passwordInput, { target: { value: 'new-secure-password-15-chars' } });
     fireEvent.change(confirmInput, { target: { value: 'new-secure-password-15-chars' } });
@@ -276,5 +312,39 @@ describe('ResetPasswordForm', () => {
     expect(
       screen.getByRole('link', { name: /masuk dengan kata sandi baru|sign in with new password/i }),
     ).toHaveAttribute('href', '/login');
+  });
+
+  test('keeps a valid link retryable when the reset API is unavailable', async () => {
+    vi.mocked(authApi.completePasswordRecovery).mockRejectedValue(new TypeError('network failed'));
+
+    render(
+      <MemoryRouter initialEntries={['/reset-password#token=valid-test-recovery-token']}>
+        <ResetPasswordForm />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^kata sandi baru$|^new password$/i), {
+      target: { value: 'new-secure-password-15-chars' },
+    });
+    fireEvent.change(screen.getByLabelText(/konfirmasi kata sandi baru|confirm new password/i), {
+      target: { value: 'new-secure-password-15-chars' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /^atur ulang kata sandi$|^reset password$/i,
+      }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/sementara|temporarily/i);
+    expect(
+      screen.getByRole('button', {
+        name: /^atur ulang kata sandi$|^reset password$/i,
+      }),
+    ).toBeEnabled();
+    expect(screen.getByLabelText(/^kata sandi baru$|^new password$/i)).toHaveValue('');
+    expect(screen.getByLabelText(/konfirmasi kata sandi baru|confirm new password/i)).toHaveValue(
+      '',
+    );
+    expect(screen.queryByRole('heading', { name: /tidak valid|invalid/i })).not.toBeInTheDocument();
   });
 });

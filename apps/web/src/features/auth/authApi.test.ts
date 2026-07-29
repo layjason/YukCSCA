@@ -166,6 +166,34 @@ test('requestPasswordRecovery sends POST request to /password-recovery-requests 
   });
 });
 
+test('requestPasswordRecovery preserves Retry-After on a rate-limit response', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 429,
+          title: 'Too Many Requests',
+          code: 'AUTH_RATE_LIMITED',
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/problem+json',
+            'Retry-After': '37',
+          },
+        },
+      ),
+    ),
+  );
+
+  await expect(requestPasswordRecovery({ email: 'user@example.com' })).rejects.toMatchObject({
+    status: 429,
+    code: 'AUTH_RATE_LIMITED',
+    retryAfterSeconds: 37,
+  });
+});
+
 test('completePasswordRecovery sends POST request to /password-recoveries/complete and resolves on 204', async () => {
   const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
   vi.stubGlobal('fetch', fetchMock);

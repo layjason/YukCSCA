@@ -39,13 +39,14 @@ export function ForgotPasswordForm(): React.JSX.Element {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 429) {
-          setFormError(t('credential.forgot.rateLimited', { seconds: 60 }));
+          setFormError(
+            t('credential.forgot.rateLimited', { seconds: err.retryAfterSeconds ?? 60 }),
+          );
         } else {
-          setFormError(err.message || t('credential.forgot.confirmation'));
+          setFormError(t('credential.forgot.errorUnavailable'));
         }
       } else {
-        // Safe generic outcome for non-API errors
-        setSubmitted(true);
+        setFormError(t('credential.forgot.errorUnavailable'));
       }
     } finally {
       setIsSubmitting(false);

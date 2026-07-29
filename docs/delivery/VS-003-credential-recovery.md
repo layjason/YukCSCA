@@ -4,10 +4,10 @@
 
 | Field                        | Value                                                                      |
 | ---------------------------- | -------------------------------------------------------------------------- |
-| Status                       | `IN_PROGRESS`                                                              |
+| Status                       | `DONE`                                                                     |
 | Human gate                   | `APPROVED`                                                                 |
-| Plan revision                | 6                                                                          |
-| Updated                      | 2026-07-29                                                                 |
+| Plan revision                | 8                                                                          |
+| Updated                      | 2026-07-30                                                                 |
 | Primary actor                | User with a verified email credential account                              |
 | Story IDs                    | `US-AUTH-04`                                                               |
 | Requirement sections         | English: 1.1; Chinese: 1.1                                                 |
@@ -391,56 +391,66 @@ begins.
 5. **Completed 2026-07-29:** add V5 recovery persistence, purpose-specific
    token/claim/outbox behavior, application transactions, HTTP transport,
    configuration, security events, cleanup, and focused backend tests.
-6. Frontend owner promotes production recovery from the prototype boundary and
-   records component/visual/accessibility evidence.
-7. Integrate the real request/mail/reset/login/session flow and record exact
-   focused evidence.
-8. Update current-state architecture, security, development, plan, and this
-   slice only after the corresponding behavior exists.
+6. **Completed 2026-07-30:** frontend owner promoted production recovery from
+   the prototype boundary and recorded component evidence; code-surface review
+   repaired the fragment-link handoff, retry handling, and 15–128-character
+   validation.
+7. **Completed 2026-07-30:** product owner reviewed the integrated recovery
+   journey and reported no journey-side problems, accepting the request,
+   mailbox-link, reset, sign-in/session, responsive, localization, and
+   accessibility checklist.
+8. **Completed 2026-07-30:** synchronized current-state architecture, security,
+   development, plan, and slice evidence and moved VS-003 to `DONE`.
 
 ## Definition of done
 
-- [ ] Requirement/story references remain correct.
+- [x] Requirement/story references remain correct.
 - [x] Documentation sufficiency review is complete and `D-01` is resolved.
 - [x] Human gate is `APPROVED` for the recorded scope.
-- [ ] Scope and exclusions match the delivered recovery flow.
+- [x] Scope and exclusions match the delivered recovery flow.
 - [x] Existing stack is sufficient; no new dependency or ADR is required.
 - [x] TypeSpec compiles and generated artifacts match the accepted contract.
 - [x] Initial and accepted checkpoints plus frontend consumer review are recorded with no open `CR-NN`.
-- [ ] Backend, frontend, migration, and tests implement the same states and errors.
-- [ ] Request, delivery, reset, old-password rejection, new-password sign-in, and the selected session consequence have named evidence.
-- [ ] Unknown, Google-only, invalid, expired, replayed, superseded, throttled, concurrent, provider-failure, and stale cases do not leak account state or secret values.
-- [ ] Password/token values are absent from persistence, logs, URLs after initialization, retained screenshots, video, and traces.
-- [ ] Authorization, privacy, minor safety, retention, and security events were reviewed.
-- [ ] Production recovery lives in `features/auth`; prototype-only behavior remains isolated or is deleted.
-- [ ] Mobile, keyboard, screen-reader, localization, low-bandwidth, and reduced-motion evidence is recorded.
-- [ ] `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT.md`, `docs/PLAN.md`, and this slice reflect implemented current state.
-- [ ] Exact verification commands and results are recorded.
+- [x] Backend, frontend, migration, and tests implement the same states and errors.
+- [x] Request, delivery, reset, old-password rejection, new-password sign-in, and the selected session consequence have named evidence.
+- [x] Unknown, Google-only, invalid, expired, replayed, superseded, throttled, concurrent, provider-failure, and stale cases do not leak account state or secret values.
+- [x] Password/token values are absent from persistence, logs, URLs after initialization, retained screenshots, video, and traces.
+- [x] Authorization, privacy, minor safety, retention, and security events were reviewed.
+- [x] Production recovery lives in `features/auth`; prototype-only behavior remains isolated or is deleted.
+- [x] Mobile, keyboard, screen-reader, localization, low-bandwidth, and reduced-motion evidence is recorded.
+- [x] `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/DEVELOPMENT.md`, `docs/PLAN.md`, and this slice reflect implemented current state.
+- [x] Exact verification commands and results are recorded.
 
 ## Verification evidence
 
-| Evidence                     | Result                                                                                                                                                                                                                                                                      |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Documentation sufficiency    | Revision 2 complete; `D-01` resolves the only material gap.                                                                                                                                                                                                                 |
-| Human decision gate          | `APPROVED`; Option A revokes all active refresh sessions while existing access JWTs expire naturally within 15 minutes.                                                                                                                                                     |
-| Adjacent-contract horizon    | Reviewed `US-AUTH-01`–`04`, VS-002 credential state, session rotation/replay/logout, current TypeSpec, recovery preview route, and future account-security boundaries.                                                                                                      |
-| Technology/ADR review        | Existing stack sufficient; no new dependency or ADR.                                                                                                                                                                                                                        |
-| Contract build               | Pinned Node 24/pnpm 11.14.0 ran `pnpm contract:build` twice; TypeSpec 1.14.0 passed.                                                                                                                                                                                        |
-| Initial contract checkpoint  | `VS-003-R3-initial`: TypeSpec `0729b08b40d9221e6312926b1fc5411a76912fe7`; OpenAPI `51f8be67d048384da19bdfb79eeb078fd6362cd2`; web declarations `486429c5499d0fe66be31a3d3cc42c0136f5d82e`.                                                                                  |
-| Frontend contract review     | `COMPLETE`: Reviewed `VS-003-R3-initial` generated declarations (`openapi.ts`) against proposed `ForgotPasswordForm` and `ResetPasswordForm`, routes, states, and `DESIGN.md`. Established `VS-003-R4-accepted`. Zero `CR-NN` requests required.                            |
-| Accepted contract checkpoint | `VS-003-R4-accepted`: TypeSpec `0729b08b40d9221e6312926b1fc5411a76912fe7`; OpenAPI `51f8be67d048384da19bdfb79eeb078fd6362cd2`; web declarations `486429c5499d0fe66be31a3d3cc42c0136f5d82e`.                                                                                 |
-| Generated reproducibility    | Second contract build and web generation retained all three initial-checkpoint hashes.                                                                                                                                                                                      |
-| Frontend type compatibility  | Pinned pnpm ran `pnpm typecheck:web`; TypeScript project build passed against the generated recovery operations.                                                                                                                                                            |
-| Backend implementation       | V5 adds recovery claim/outbox state. Identity now provides generic request acknowledgement, purpose-bound digest-only tokens, bounded SMTP retry/cleanup, atomic password replacement, exact-once completion, and all-active-refresh-session revocation without auto-login. |
-| Backend focused tests        | `cd services/api && ./mvnw --batch-mode spotless:apply -Dit.test=PasswordRecoveryHttpIT verify` passed: 27 unit tests and 9 recovery HTTP integration tests, zero failures/errors/skips; Spotless passed.                                                                   |
-| Backend regression tests     | `cd services/api && ./mvnw --batch-mode -Dit.test=CredentialAuthHttpIT,AuthHttpIT,PasswordRecoveryHttpIT,DatabaseMigrationIT,VerificationEmailMailpitIT verify` passed: 27 unit tests and 29 integration tests, zero failures/errors/skips; Spotless passed.                |
-| Frontend tests               | Not run — frontend implementation follows after backend marks `CONTRACT_READY`.                                                                                                                                                                                             |
-| End-to-end/manual flow       | Not run.                                                                                                                                                                                                                                                                    |
+| Evidence                     | Result                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documentation sufficiency    | Revision 2 complete; `D-01` resolves the only material gap.                                                                                                                                                                                                                                                                                              |
+| Human decision gate          | `APPROVED`; Option A revokes all active refresh sessions while existing access JWTs expire naturally within 15 minutes.                                                                                                                                                                                                                                  |
+| Adjacent-contract horizon    | Reviewed `US-AUTH-01`–`04`, VS-002 credential state, session rotation/replay/logout, current TypeSpec, recovery preview route, and future account-security boundaries.                                                                                                                                                                                   |
+| Technology/ADR review        | Existing stack sufficient; no new dependency or ADR.                                                                                                                                                                                                                                                                                                     |
+| Contract build               | Pinned Node 24/pnpm 11.14.0 ran `pnpm contract:build` twice; TypeSpec 1.14.0 passed.                                                                                                                                                                                                                                                                     |
+| Initial contract checkpoint  | `VS-003-R3-initial`: TypeSpec `0729b08b40d9221e6312926b1fc5411a76912fe7`; OpenAPI `51f8be67d048384da19bdfb79eeb078fd6362cd2`; web declarations `486429c5499d0fe66be31a3d3cc42c0136f5d82e`.                                                                                                                                                               |
+| Frontend contract review     | `COMPLETE`: Reviewed `VS-003-R3-initial` generated declarations (`openapi.ts`) against proposed `ForgotPasswordForm` and `ResetPasswordForm`, routes, states, and `DESIGN.md`. Established `VS-003-R4-accepted`. Zero `CR-NN` requests required.                                                                                                         |
+| Accepted contract checkpoint | `VS-003-R4-accepted`: TypeSpec `0729b08b40d9221e6312926b1fc5411a76912fe7`; OpenAPI `51f8be67d048384da19bdfb79eeb078fd6362cd2`; web declarations `486429c5499d0fe66be31a3d3cc42c0136f5d82e`.                                                                                                                                                              |
+| Generated reproducibility    | Second contract build and web generation retained all three initial-checkpoint hashes.                                                                                                                                                                                                                                                                   |
+| Frontend type compatibility  | Pinned pnpm ran `pnpm typecheck:web`; TypeScript project build passed against the generated recovery operations.                                                                                                                                                                                                                                         |
+| Backend implementation       | V5 adds recovery claim/outbox state. Identity now provides generic request acknowledgement, purpose-bound digest-only tokens, bounded SMTP retry/cleanup, atomic password replacement, exact-once completion, and all-active-refresh-session revocation without auto-login.                                                                              |
+| Backend focused tests        | `cd services/api && ./mvnw --batch-mode spotless:apply -Dit.test=PasswordRecoveryHttpIT verify` passed: 27 unit tests and 9 recovery HTTP integration tests, zero failures/errors/skips; Spotless passed.                                                                                                                                                |
+| Backend regression tests     | `cd services/api && ./mvnw --batch-mode -Dit.test=CredentialAuthHttpIT,AuthHttpIT,PasswordRecoveryHttpIT,DatabaseMigrationIT,VerificationEmailMailpitIT verify` passed: 27 unit tests and 29 integration tests, zero failures/errors/skips; Spotless passed.                                                                                             |
+| Frontend focused tests       | Reviewer ran `pnpm --filter @yukcsca/web exec vitest run src/features/auth/credentialComponents.test.tsx src/features/auth/authApi.test.ts`: 2 files and 18 tests passed, including the real fragment-link handoff, token removal, 15–128-character validation, retryable network failure, and `Retry-After`.                                            |
+| Frontend static checks       | Reviewer ran `pnpm typecheck:web`, `pnpm lint:web`, and focused Prettier checking with pinned Node 24/pnpm 11.14.0; all passed.                                                                                                                                                                                                                          |
+| Contract reproducibility     | Reviewer ran `pnpm check:generated` with pinned Node 24/pnpm 11.14.0; TypeSpec 1.14.0 compiled and generated OpenAPI/frontend declarations remained unchanged.                                                                                                                                                                                           |
+| Backend/database review      | Reviewer ran `cd services/api && ./mvnw --batch-mode clean -Dit.test=PasswordRecoveryHttpIT,DatabaseMigrationIT verify`: 27 unit tests and 10 PostgreSQL/Flyway integration tests passed; Spotless and JaCoCo report generation passed.                                                                                                                  |
+| End-to-end/manual flow       | Product owner confirmed in chat on 2026-07-30 that the journey review was complete with no problems, accepting the reviewer handoff checklist for request/non-enumeration, real fragment-link reset, old/new password and session consequences, responsive layouts, keyboard/accessibility, reduced motion, and Indonesian/English/Chinese presentation. |
+| Completion disposition       | Backend/database, contract, frontend component/static, security/privacy, migration, and product-owner journey evidence are complete; VS-003 moved to `DONE` without expanding its accepted scope.                                                                                                                                                        |
 
 ## Revision history
 
 | Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                |
 | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 8        | 2026-07-30 | Recorded the product owner's completed journey review with no reported problems, closed the remaining integrated-flow and experience evidence, synchronized current-state documentation, and moved VS-003 from `IN_PROGRESS` to `DONE`.                                                                                                                                               |
+| 7        | 2026-07-30 | Integrated and code-surface reviewed the production frontend; repaired the backend-emitted fragment-token handoff, localized retryable failure handling, contract-length validation, and `Retry-After` presentation; recorded focused frontend, contract, PostgreSQL/Flyway, and static evidence without changing `IN_PROGRESS` or claiming product-owner journey acceptance.         |
 | 6        | 2026-07-29 | Implemented the accepted backend boundary: V5 recovery persistence, purpose-bound token and outbox delivery, generic requests, atomic password replacement and refresh-session revocation, cleanup/security events, focused PostgreSQL/HTTP/concurrency/Mailpit evidence, and current-state documentation; moved the slice to `IN_PROGRESS` pending frontend and integrated evidence. |
 | 5        | 2026-07-29 | Backend owner verified the completed frontend consumer review, confirmed zero open `CR-NN` requests and unchanged accepted hashes, moved the slice to `CONTRACT_READY`, and recorded that implementation remains unstarted pending explicit product-owner worktree assignment.                                                                                                        |
 | 4        | 2026-07-29 | Completed frontend consumer review of VS-003 initial contract (`VS-003-R3-initial`), verified screen states and user flows against `DESIGN.md` and generated declarations, confirmed zero `CR-NN` requests, established accepted contract checkpoint `VS-003-R4-accepted`, and completed frontend/experience plan sections.                                                           |

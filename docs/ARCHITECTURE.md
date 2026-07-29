@@ -137,11 +137,14 @@ one student profile and changes the account to `STUDENT`; it returns canonical
 current-user state and a replacement access token. The profile is private to
 its authenticated student.
 
-The password-recovery backend exists, while its production frontend and
-end-to-end evidence remain in progress under VS-003. Other role onboarding,
+The VS-003 password-recovery backend and production frontend are `DONE` after
+focused contract, PostgreSQL/Flyway, backend, frontend, security/privacy, and
+product-owner journey evidence. The frontend consumes the generated recovery
+contract, reads fragment or query credentials, removes them from browser
+history, and exposes retry and return-to-sign-in states. Other role onboarding,
 profile editing, learning, family, content, commerce, tutoring, and AI behavior
-do not exist yet. VS-002 is `DONE` after full implementation, verification, and
-product owner signoff.
+do not exist yet. VS-002 is also `DONE` after full implementation, verification,
+and product owner signoff.
 
 ## Prototype boundaries
 

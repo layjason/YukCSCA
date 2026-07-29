@@ -796,16 +796,17 @@
       "backToLogin": "Back to sign in",
       "errorEmailRequired": "Email is required.",
       "errorEmailFormat": "Enter a valid email address.",
+      "errorUnavailable": "Password recovery is temporarily unavailable. Please try again.",
       "rateLimited": "Too many recovery attempts. Please try again in {{seconds}} seconds."
     },
     "reset": {
       "title": "Create new password",
-      "description": "Please enter a new password for your account. It must be at least 15 characters long.",
+      "description": "Please enter a new password for your account. It must be 15 to 128 characters long.",
       "password": "New password",
       "confirmPassword": "Confirm new password",
       "showPassword": "Show password",
       "hidePassword": "Hide password",
-      "passwordMinRequirement": "Password must be at least 15 characters long.",
+      "passwordMinRequirement": "Password must be 15 to 128 characters long.",
       "submit": "Reset password",
       "submitting": "Resetting password…",
       "successTitle": "Password reset successful!",
@@ -815,11 +816,12 @@
       "invalidTokenDescription": "This password recovery link is invalid, expired, or has already been used.",
       "requestNewLink": "Request a new recovery link",
       "errorPasswordRequired": "Password is required.",
-      "errorPasswordMin": "Password must be at least 15 characters long.",
+      "errorPasswordLength": "Password must be 15 to 128 characters long.",
       "errorConfirmRequired": "Please confirm your new password.",
       "errorPasswordMismatch": "Passwords do not match.",
       "errorPolicyRejected": "The new password does not meet the security policy.",
-      "rateLimited": "Too many reset attempts. Please try again later."
+      "errorUnavailable": "Password reset is temporarily unavailable. Please try again.",
+      "rateLimited": "Too many reset attempts. Please try again in {{seconds}} seconds."
     }
   },
   "role": {

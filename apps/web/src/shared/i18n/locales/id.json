@@ -796,16 +796,17 @@
       "backToLogin": "Kembali ke halaman masuk",
       "errorEmailRequired": "Email wajib diisi.",
       "errorEmailFormat": "Masukkan alamat email yang valid.",
+      "errorUnavailable": "Pemulihan kata sandi sementara tidak tersedia. Silakan coba lagi.",
       "rateLimited": "Terlalu banyak percobaan pemulihan. Silakan coba lagi dalam {{seconds}} detik."
     },
     "reset": {
       "title": "Buat kata sandi baru",
-      "description": "Masukkan kata sandi baru untuk akun Anda. Kata sandi harus minimal 15 karakter.",
+      "description": "Masukkan kata sandi baru untuk akun Anda. Kata sandi harus terdiri dari 15 hingga 128 karakter.",
       "password": "Kata sandi baru",
       "confirmPassword": "Konfirmasi kata sandi baru",
       "showPassword": "Tampilkan kata sandi",
       "hidePassword": "Sembunyikan kata sandi",
-      "passwordMinRequirement": "Kata sandi harus minimal 15 karakter.",
+      "passwordMinRequirement": "Kata sandi harus terdiri dari 15 hingga 128 karakter.",
       "submit": "Atur ulang kata sandi",
       "submitting": "Mengatur ulang kata sandi…",
       "successTitle": "Kata sandi berhasil diatur ulang!",
@@ -815,11 +816,12 @@
       "invalidTokenDescription": "Tautan pemulihan kata sandi ini tidak valid, telah kadaluwarsa, atau sudah pernah digunakan.",
       "requestNewLink": "Minta tautan pemulihan baru",
       "errorPasswordRequired": "Kata sandi wajib diisi.",
-      "errorPasswordMin": "Kata sandi harus minimal 15 karakter.",
+      "errorPasswordLength": "Kata sandi harus terdiri dari 15 hingga 128 karakter.",
       "errorConfirmRequired": "Konfirmasi kata sandi baru Anda.",
       "errorPasswordMismatch": "Kata sandi tidak cocok.",
       "errorPolicyRejected": "Kata sandi baru tidak memenuhi kebijakan keamanan.",
-      "rateLimited": "Terlalu banyak percobaan pengaturan ulang. Silakan coba lagi nanti."
+      "errorUnavailable": "Pengaturan ulang kata sandi sementara tidak tersedia. Silakan coba lagi.",
+      "rateLimited": "Terlalu banyak percobaan pengaturan ulang. Silakan coba lagi dalam {{seconds}} detik."
     }
   },
   "role": {

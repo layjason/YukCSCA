@@ -796,16 +796,17 @@
       "backToLogin": "返回登录",
       "errorEmailRequired": "请输入邮箱。",
       "errorEmailFormat": "请输入有效的邮箱地址。",
+      "errorUnavailable": "密码找回暂时不可用，请重试。",
       "rateLimited": "重置尝试次数过多，请在 {{seconds}} 秒后重试。"
     },
     "reset": {
       "title": "创建新密码",
-      "description": "请为您的账户设置新密码。密码长度至少需为 15 个字符。",
+      "description": "请为您的账户设置新密码。密码长度必须为 15 至 128 个字符。",
       "password": "新密码",
       "confirmPassword": "确认新密码",
       "showPassword": "显示密码",
       "hidePassword": "隐藏密码",
-      "passwordMinRequirement": "密码长度必须至少为 15 个字符。",
+      "passwordMinRequirement": "密码长度必须为 15 至 128 个字符。",
       "submit": "重置密码",
       "submitting": "重置中…",
       "successTitle": "密码重置成功！",
@@ -815,11 +816,12 @@
       "invalidTokenDescription": "此密码重置链接无效、已过期或已被使用。",
       "requestNewLink": "请求新的重置链接",
       "errorPasswordRequired": "请输入密码。",
-      "errorPasswordMin": "密码长度必须至少为 15 个字符。",
+      "errorPasswordLength": "密码长度必须为 15 至 128 个字符。",
       "errorConfirmRequired": "请确认新密码。",
       "errorPasswordMismatch": "两次输入的密码不一致。",
       "errorPolicyRejected": "新密码不符合安全策略要求。",
-      "rateLimited": "重置尝试次数过多，请稍后再试。"
+      "errorUnavailable": "密码重置暂时不可用，请重试。",
+      "rateLimited": "重置尝试次数过多，请在 {{seconds}} 秒后重试。"
     }
   },
   "role": {

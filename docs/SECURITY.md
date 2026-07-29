@@ -87,8 +87,9 @@ These controls must ship with the first feature that needs them:
   It may authorize fixture-backed preview routes only.
 - Preview verification and recovery must not send messages, mint tokens, reset
   passwords, or claim production completion. Google, VS-002 credential
-  authentication, and the VS-003 recovery backend are production-backed;
-  VS-003 frontend and end-to-end completion remain in progress.
+  authentication, and the VS-003 recovery backend and frontend are
+  production-backed; VS-003 is `DONE` after automated security/privacy evidence
+  and product-owner journey review.
 - VS-002 owns production registration, verification, credential login,
   abuse controls, audit behavior, and the shared session handoff. Fixture
   identity must still remain isolated for PX-002-only consumers. VS-003 owns

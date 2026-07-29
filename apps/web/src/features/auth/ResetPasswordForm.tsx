@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { completePasswordRecovery } from './authApi';
 import { ApiError } from '@/shared/api/httpClient';
 
+const MIN_PASSWORD_LENGTH = 15;
+const MAX_PASSWORD_LENGTH = 128;
+
 export function ResetPasswordForm(): React.JSX.Element {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const [token, setToken] = useState<string>('');
   const [tokenChecked, setTokenChecked] = useState(false);
@@ -26,14 +29,17 @@ export function ResetPasswordForm(): React.JSX.Element {
   const [invalidToken, setInvalidToken] = useState(false);
 
   useEffect(() => {
-    const rawToken = searchParams.get('token')?.trim() || '';
+    const hashToken = new URLSearchParams(location.hash.slice(1)).get('token');
+    const queryToken = new URLSearchParams(location.search).get('token');
+    const rawToken = (hashToken ?? queryToken)?.trim() ?? '';
+
     if (rawToken) {
       setToken(rawToken);
       // Immediately strip the sensitive recovery token from the visible URL history
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     setTokenChecked(true);
-  }, [searchParams]);
+  }, [location.hash, location.search]);
 
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault();
@@ -43,11 +49,12 @@ export function ResetPasswordForm(): React.JSX.Element {
     setConfirmError('');
     setFormError('');
 
+    const passwordLength = Array.from(password).length;
     if (!password) {
       setPasswordError(t('credential.reset.errorPasswordRequired'));
       hasError = true;
-    } else if (password.length < 15) {
-      setPasswordError(t('credential.reset.errorPasswordMin'));
+    } else if (passwordLength < MIN_PASSWORD_LENGTH || passwordLength > MAX_PASSWORD_LENGTH) {
+      setPasswordError(t('credential.reset.errorPasswordLength'));
       hasError = true;
     }
 
@@ -67,22 +74,29 @@ export function ResetPasswordForm(): React.JSX.Element {
 
     try {
       await completePasswordRecovery({ token, password });
+      setPassword('');
+      setConfirmPassword('');
+      setToken('');
       setIsSubmitted(true);
     } catch (err) {
+      setPassword('');
+      setConfirmPassword('');
+
       if (err instanceof ApiError) {
         if (err.status === 429) {
-          setFormError(t('credential.reset.rateLimited'));
+          setFormError(t('credential.reset.rateLimited', { seconds: err.retryAfterSeconds ?? 60 }));
         } else if (err.status === 400) {
-          if (err.code === 'RECOVERY_INVALID' || err.message.includes('invalid')) {
+          if (err.code === 'RECOVERY_INVALID') {
+            setToken('');
             setInvalidToken(true);
           } else {
             setPasswordError(t('credential.reset.errorPolicyRejected'));
           }
         } else {
-          setFormError(err.message || t('credential.reset.errorPolicyRejected'));
+          setFormError(t('credential.reset.errorUnavailable'));
         }
       } else {
-        setInvalidToken(true);
+        setFormError(t('credential.reset.errorUnavailable'));
       }
     } finally {
       setIsSubmitting(false);
@@ -99,7 +113,7 @@ export function ResetPasswordForm(): React.JSX.Element {
     );
   }
 
-  if (invalidToken || !token) {
+  if (!isSubmitted && (invalidToken || !token)) {
     return (
       <div className="credential-page">
         <div className="credential-card">
