@@ -24,7 +24,6 @@ export function AccountRegistrationPage(): React.JSX.Element {
     <AccountRegistrationForm
       googleControl={
         <div className="credential-google-production">
-          <p className="credential-production-label">{t('credential.register.googleHint')}</p>
           <GoogleSignInButton onCredential={login} />
         </div>
       }

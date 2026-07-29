@@ -15,4 +15,8 @@ export type CredentialVerificationResult =
 export type CredentialVerificationOutcome =
   components['schemas']['Auth.CredentialVerificationOutcome'];
 
+export type PasswordRecoveryRequest = components['schemas']['Auth.PasswordRecoveryRequest'];
+export type CompletePasswordRecoveryRequest =
+  components['schemas']['Auth.CompletePasswordRecoveryRequest'];
+
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
