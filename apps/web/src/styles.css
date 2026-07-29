@@ -2985,6 +2985,14 @@ button {
   margin: var(--space-lg) 0;
 }
 
+.credential-forgot-link-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  font-size: 14px;
+  margin-top: 4px;
+  margin-bottom: var(--space-xs);
+}
+
 .credential-links,
 .credential-alt-action {
   display: flex;
@@ -2993,6 +3001,7 @@ button {
   margin-top: var(--space-sm);
 }
 
+.credential-forgot-link-wrapper a,
 .credential-links a,
 .credential-alt-action a {
   color: var(--color-primary);
@@ -3113,13 +3122,6 @@ a.credential-full-link.btn-primary {
   align-items: center;
   gap: var(--space-xs);
   width: 100%;
-}
-
-.credential-production-label {
-  margin: 0;
-  color: var(--color-ink-muted);
-  font-size: 13px;
-  text-align: center;
 }
 
 .google-sign-in-container {

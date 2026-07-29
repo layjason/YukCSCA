@@ -159,6 +159,12 @@ export function AccountLoginForm({ googleControl }: AccountLoginFormProps): Reac
             )}
           </div>
 
+          <div className="credential-forgot-link-wrapper">
+            <Link to="/forgot-password">
+              {t('credential.login.forgotPassword', 'Forgot your password?')}
+            </Link>
+          </div>
+
           <button
             type="submit"
             className="credential-submit btn btn-primary"

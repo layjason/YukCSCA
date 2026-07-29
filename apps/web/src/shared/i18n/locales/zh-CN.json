@@ -786,17 +786,40 @@
       "errorInvalidCredentials": "邮箱或密码错误。"
     },
     "forgot": {
-      "title": "重置密码",
-      "description": "输入您的邮箱，如果账户存在，我们将发送重置链接。",
-      "email": "邮箱地址",
+      "title": "重置您的密码",
+      "description": "请输入您的电子邮箱地址。如果该邮箱已注册，我们将向您发送重置链接。",
+      "email": "电子邮箱地址",
       "emailHint": "请输入与您账户关联的邮箱地址。",
       "submit": "发送重置链接",
-      "submitting": "发送中…",
-      "confirmation": "如果该邮箱已注册，重置链接已发送。",
+      "submitting": "发送链接中…",
+      "confirmation": "如果该邮箱已注册，密码重置链接已发送，请检查您的收件箱。",
       "backToLogin": "返回登录",
       "errorEmailRequired": "请输入邮箱。",
       "errorEmailFormat": "请输入有效的邮箱地址。",
-      "previewNote": "这是预览。未发送真实邮件。"
+      "rateLimited": "重置尝试次数过多，请在 {{seconds}} 秒后重试。"
+    },
+    "reset": {
+      "title": "创建新密码",
+      "description": "请为您的账户设置新密码。密码长度至少需为 15 个字符。",
+      "password": "新密码",
+      "confirmPassword": "确认新密码",
+      "showPassword": "显示密码",
+      "hidePassword": "隐藏密码",
+      "passwordMinRequirement": "密码长度必须至少为 15 个字符。",
+      "submit": "重置密码",
+      "submitting": "重置中…",
+      "successTitle": "密码重置成功！",
+      "successDescription": "您的密码已更新。为了保障您的账户安全，其他设备上的所有活动登录会话均已撤销。",
+      "signInWithNewPassword": "使用新密码登录",
+      "invalidTokenTitle": "重置链接无效或已过期",
+      "invalidTokenDescription": "此密码重置链接无效、已过期或已被使用。",
+      "requestNewLink": "请求新的重置链接",
+      "errorPasswordRequired": "请输入密码。",
+      "errorPasswordMin": "密码长度必须至少为 15 个字符。",
+      "errorConfirmRequired": "请确认新密码。",
+      "errorPasswordMismatch": "两次输入的密码不一致。",
+      "errorPolicyRejected": "新密码不符合安全策略要求。",
+      "rateLimited": "重置尝试次数过多，请稍后再试。"
     }
   },
   "role": {
