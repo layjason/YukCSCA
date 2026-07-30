@@ -1,10 +1,10 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.2.6
-**Updated:** 2026-07-28
+**Backlog version:** 0.3.1
+**Updated:** 2026-07-30
 **Status:** Supporting decomposition; non-normative
 
-**Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.  
+**Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.
 **Source authority:** The paired YukCSCA requirements remain normative. This backlog decomposes those requirements into implementable user outcomes and must not override them.
 
 ## 1. How this backlog should be used
@@ -40,6 +40,8 @@ Each story below contains:
 6. Mastery requires evidence; opening content, watching video, or receiving an LLM opinion is never enough.
 7. Parent access is summary-first and never includes complete private conversations or notes by default.
 8. Tutoring purchase creates a request for manual matching, not an instant named-tutor booking.
+9. Direct subject preparation, contextual Q&A, topic practice, mistake remediation, and the core mock lifecycle do not require an active study plan; only stories that explicitly read or update a plan may depend on one.
+10. Official syllabus topics remain separate from YukCSCA-authored learning objectives and content. The pilot uses simple Draft, Published, and Archived states, and each assessment attempt saves the exact question data shown to the student.
 
 ## 3. Proposed story backlog
 
@@ -81,7 +83,7 @@ A verified Google identity becomes one authenticated YukCSCA account with no inf
 - Given a newly created account, when sign-in succeeds, then the account remains unassigned and receives no student, parent, tutor, or admin permissions automatically.
 - Given repeated sign-in with the same Google identity, when authentication succeeds, then no duplicate YukCSCA account is created.
 
-**Not included in this story:** Student profile creation, parent linking, tutor approval, and admin provisioning.
+**Not included in this story:** Student profile creation, parent linking, tutor approval, and admin account setup.
 
 ### US-AUTH-02 — Restore and end a session
 
@@ -439,47 +441,48 @@ The subject retains its identity while its exam-language track changes through a
 
 1. Open the confirmed subject settings.
 2. Choose another supported exam language.
-3. Review changes to terminology, question versions, diagnostics, and future plan tasks.
+3. Review changes to terminology, future questions, diagnostics, and future plan tasks.
 4. Confirm the change.
 
 **Acceptance Criteria**
 
-- Given a supported subject-language combination, when the student proposes a change, then the impact on terminology tasks, question versions, diagnostics, entitlements, and the active plan is shown before confirmation.
+- Given a supported subject-language combination, when the student proposes a change, then the impact on terminology tasks, future questions, diagnostics, entitlements, and the active plan is shown before confirmation.
 - Given confirmation, then future work uses the new exam-language track while historical attempts remain attached to their original track.
 - Given a required or purchased track conflict, then the platform shows the risk or entitlement limitation and does not silently discard access or progress.
 - Given the update fails, then the previous confirmed exam language and active plan remain intact.
 
 **Not included in this story:** Changing the default explanation language.
 
-### US-ADMIN-01 — Provision an admin account
+### US-ADMIN-01 — Configure the first platform admin account
 
 - **Priority:** P0
-- **Actor:** Authorized platform owner
+- **Actor:** Platform owner
 - **Requirement reference:** 1.1, 1.3, 14.1
 
 **User story**
 
-> As a platform owner, I want to provision an admin with limited permissions so that back-office access is controlled.
+> As the platform owner, I want to set one verified account as the first platform admin so that the pilot admin dashboard can be used without building admin-account management first.
 
 **Closed-loop outcome**
 
-An internal account receives only explicitly assigned administrative permission groups.
+The configured account signs in normally and can open the pilot admin dashboard. Other users do not receive admin access.
 
 **Main flow**
 
-1. Find or create the internal identity.
-2. Assign one or more permission groups.
-3. Activate the admin account.
-4. Verify access to allowed back-office areas only.
+1. Add one verified email address or provider identity to the deployment configuration.
+2. Let that person sign in through the existing login flow.
+3. Recognise the exact account as the platform admin.
+4. Open the admin dashboard and record important admin actions.
 
 **Acceptance Criteria**
 
-- Given an authorized platform owner, when an admin is provisioned, then the action records operator, time, assigned permissions, and outcome.
-- Given an admin with only content permission, when finance or user-management functions are requested, then access is denied.
-- Given a public user, when admin self-registration is attempted, then no admin account is created.
-- Given a disabled admin, when sign-in or a privileged action is attempted, then access is denied.
+- Given the exact configured identity, when the user signs in successfully, then the account can access the admin features delivered in the pilot.
+- Given any other identity, when the user signs in, then no admin access is granted automatically.
+- Given the application starts more than once, then the same account remains the admin and no duplicate account or role is created.
+- Given an important admin action, then the admin account, time, result, and required reason are recorded.
+- Given the pilot UI, then there is no public admin registration, admin invitation, admin-account creation page, or permission-management page.
 
-**Not included in this story:** Detailed staff organization hierarchy or arbitrary impersonation.
+**Not included in this story:** A second admin account, separate admin roles, delegated permissions, or self-service admin account management.
 
 ### US-ACCOUNT-01 — Request account deletion
 
@@ -725,7 +728,7 @@ A validated goal profile becomes the current planning input.
 
 **Not included in this story:** Subject confirmation and diagnostic assessment.
 
-### US-GOAL-02 — Receive recommended exam subjects
+### US-GOAL-02 — Receive sourced exam-subject recommendations
 
 - **Priority:** P0
 - **Actor:** Student
@@ -733,25 +736,26 @@ A validated goal profile becomes the current planning input.
 
 **User story**
 
-> As a student, I want YukCSCA to recommend likely CSCA subjects and exam languages so that I know what to prepare.
+> As a student, I want sourced CSCA subject and exam-language recommendations so that I can distinguish verified requirements from provisional guidance.
 
 **Closed-loop outcome**
 
-The system produces an explainable recommendation based on the current target information and verified requirement data.
+The system produces an explainable recommendation set whose claims retain authority, applicability, and freshness evidence.
 
 **Main flow**
 
-1. Complete or update target information.
-2. Request subject matching.
-3. Review each recommended subject and exam language with its reason and source state.
-4. Proceed to confirmation.
+1. Complete or update target information, or request a provisional recommendation.
+2. Run subject matching against current verified requirement records.
+3. Review each subject-language recommendation, source, applicability, and confidence/status.
+4. Proceed to confirmation or choose a direct preparation track.
 
 **Acceptance Criteria**
 
-- Given sufficient target information and verified rules, when matching runs, then the system lists the recommended subject-language combinations and explains why.
-- Given conflicting or incomplete university requirements, then the system shows alternatives or uncertainty instead of presenting one combination as certain.
-- Given a requirement source, then its version or last verification date is visible.
-- Given no reliable match, then the student is told what information is missing and may choose a provisional path.
+- Given sufficient target information and verified rules, when matching runs, then each recommendation shows its reason, authority, source locator, effective/verification date, and applicability conditions.
+- Given conflicting or incomplete reliable requirements, then the system shows alternatives or uncertainty rather than presenting one combination as certain.
+- Given a stale or review-due source, then the recommendation is visibly qualified and cannot be presented as currently verified.
+- Given no reliable match, then the student is told what evidence is missing and may choose a provisional or direct-preparation path.
+- Given the student already knows the required subjects, then they can bypass matching without fabricating a recommendation.
 
 **Not included in this story:** Final subject confirmation and commercial entitlement purchase.
 
@@ -845,35 +849,37 @@ The submitted attempt produces an evidence-based report separated by mathematics
 
 **Not included in this story:** Predicting a guaranteed exam score.
 
-### US-PLAN-01 — Generate and confirm the first-week plan
+### US-PLAN-01 — Generate and confirm the first feasible plan
 
 - **Priority:** P0
 - **Actor:** Student
-- **Requirement reference:** 3.4
+- **Requirement reference:** 3.4, 3.5
 
 **User story**
 
-> As a student, I want a first-week plan after diagnosis so that I can immediately begin structured study.
+> As a student, I want YukCSCA to propose a feasible initial plan from my goals and available evidence so that I can begin structured study without discarding work already completed.
 
 **Closed-loop outcome**
 
-A bounded seven-day plan is generated and becomes active only after the student reviews its intensity.
+A bounded plan proposal uses current goal, workload, diagnostic, practice, mistake, remediation, and mock evidence and becomes active only after review and confirmation.
 
 **Main flow**
 
-1. Complete a valid diagnostic.
-2. Review the proposed first-week tasks and estimated time.
-3. Adjust study intensity within allowed limits.
-4. Confirm the plan.
+1. Request guided planning after recording the required goal inputs.
+2. Review the evidence basis, priorities, tasks, workload, and risk.
+3. Adjust intensity or choose an allowed feasibility response.
+4. Confirm the proposed plan version.
 
 **Acceptance Criteria**
 
-- Given a completed diagnostic and goal profile, when plan generation runs, then a first-week sequence is created from target subjects, weaknesses, prerequisites, and available time.
-- Given the proposed workload, then every task has an estimated duration and completion criterion.
-- Given the student changes intensity, then the proposed tasks and total time update before confirmation.
-- Given confirmation, then the plan becomes active without deleting diagnostic evidence.
+- Given sufficient goal, workload, and learner evidence, when generation runs, then the proposal explains which diagnostic, practice, mistake, remediation, or mock evidence affected each priority.
+- Given no prior practice or mock evidence, then a valid diagnostic may provide the minimum learner evidence; missing evidence is never invented.
+- Given existing direct-preparation evidence, then it is retained and can influence the proposal rather than being reset by onboarding.
+- Given insufficient workload or learner evidence, then the result is provisional or blocked with the missing inputs identified.
+- Given the student confirms the current proposal version, then exactly that version becomes active.
+- Given the proposal became stale before confirmation, then activation is rejected safely and a refreshed proposal is shown.
 
-**Not included in this story:** Long-term feasibility and daily dynamic reprioritization.
+**Not included in this story:** Daily task completion and later reprioritization.
 
 ### US-PLAN-02 — Assess plan feasibility
 
@@ -978,7 +984,7 @@ The student can locate a learning unit and see readiness information before star
 
 **Closed-loop outcome**
 
-A versioned coverage map separates platform content coverage from the student's personal progress.
+A coverage map tied to a named official syllabus version separates product content coverage from the student's personal progress.
 
 **Main flow**
 
@@ -1079,7 +1085,7 @@ The student can consume the lesson through supported media controls and return t
 
 **Acceptance Criteria**
 
-- Given a supported video lesson, then playback speed, subtitles, and a text summary are available according to the published content version.
+- Given a supported video lesson, then playback speed, subtitles, and a text summary are available according to the published content.
 - Given saved lesson progress, when the student returns, then the last valid position is restored without marking the checkpoint complete.
 - Given low bandwidth or media failure, then a meaningful text alternative and retry state are available.
 - Given the student marks viewing complete, then the lesson-view state changes but mastery still requires assessment evidence.
@@ -1206,7 +1212,7 @@ A bounded practice set is created, completed, scored, and linked to learning evi
 
 **Not included in this story:** Plan-generated practice and mock exams.
 
-### US-PRACTICE-02 — Complete practice from the daily plan
+### US-PRACTICE-02 — Complete plan-assigned practice
 
 - **Priority:** P0
 - **Actor:** Student
@@ -1214,27 +1220,28 @@ A bounded practice set is created, completed, scored, and linked to learning evi
 
 **User story**
 
-> As a student, I want to open practice directly from today's plan so that I do not need to choose what to study next.
+> As a student with an active plan, I want to complete the practice assigned by that plan so that the task and subsequent orchestration use my real evidence.
 
 **Closed-loop outcome**
 
-The assigned practice closes its task and influences subsequent tasks.
+A submitted practice result updates the referenced plan task or is safely held for reconciliation when the plan version is stale.
 
 **Main flow**
 
-1. Open today's task list.
-2. Start an assigned practice task.
-3. Complete and submit it.
-4. Return to the plan with updated progress and next tasks.
+1. Open an assigned practice task from the active plan.
+2. Complete the disclosed set in the subject's exam language.
+3. Submit the set.
+4. Review task completion and any proposed later-plan effect.
 
 **Acceptance Criteria**
 
-- Given a plan practice task, when opened, then its subject, exam language, knowledge points, and purpose match the assignment.
-- Given completion, then daily progress updates automatically and only once.
-- Given mistakes or weak evidence, then subsequent tasks may include remediation or review.
-- Given an unfinished task, then it remains incomplete and can be rescheduled according to plan rules.
+- Given an active plan task, when opened, then the assignment shows the target objective, expected effort, selection reason, and plan version.
+- Given completion against the current plan version, then the task and daily progress update once.
+- Given a stale, replaced, paused, or unavailable plan, then submitted evidence is preserved but no unrelated plan is modified.
+- Given an item retry or duplicate result callback, then plan progress is not counted twice.
+- Given no active plan, then this route is unavailable while topic practice remains available through `US-PRACTICE-01`.
 
-**Not included in this story:** Student-created topic practice.
+**Not included in this story:** Generating a study plan or approving material reprioritization.
 
 ### US-HINT-01 — Request tiered hints
 
@@ -1292,7 +1299,7 @@ An incorrect attempt creates or updates one traceable mistake record.
 - Given an incorrect scored response, then a mistake entry is created or its existing record is updated.
 - Given the entry, then latest attempt, error count, linked knowledge point, hints/language assistance, and current review status are visible.
 - Given duplicate processing or page refresh, then the same attempt does not increment the error count twice.
-- Given an invalidated or disabled question version, then the mistake record remains explainable against its historical version.
+- Given a question is later edited or archived, then the mistake record still shows the exact question used in the original attempt.
 
 **Not included in this story:** Student error-cause note and scheduled revalidation.
 
@@ -1448,7 +1455,7 @@ One session ends with a recorded summary and plan update rather than an open-end
 
 **Not included in this story:** General-purpose unrestricted chatting.
 
-### US-AGENT-04 — Ask a contextual question
+### US-AGENT-04 — Ask a grounded contextual question
 
 - **Priority:** P0
 - **Actor:** Student
@@ -1456,27 +1463,28 @@ One session ends with a recorded summary and plan update rather than an open-end
 
 **User story**
 
-> As a student, I want to ask a question from a lesson, practice item, mistake, or mock report so that I do not need to restate the context.
+> As a student, I want to ask from my current learning context so that I receive a grounded explanation without needing an active study plan.
 
 **Closed-loop outcome**
 
-The answer uses the authorized learning context, correct language dimensions, and an explicit confidence/source label.
+The student receives a traceable answer, an explicit insufficiency response, or a human-review path from authorised context.
 
 **Main flow**
 
-1. Open a learning context.
-2. Ask a question.
-3. Receive an answer in the current explanation language with exam terms preserved.
-4. Follow links or escalate when confirmation is required.
+1. Ask from a lesson, item, mistake, terminology entry, or remediation unit.
+2. Review the answer in the current explanation language with exam terminology preserved.
+3. Inspect source basis or report the answer when needed.
 
 **Acceptance Criteria**
 
-- Given a question opened from a supported context, then the agent receives that context and does not require the student to copy it manually.
-- Given the subject's exam language and student's explanation language, then the response preserves exam terms while explaining in the chosen language.
-- Given an answer, then it is labeled as course-verified, inferred explanation, or requiring tutor/human confirmation.
-- Given low confidence or disputed content, then the agent offers a report or human-review path rather than inventing certainty.
+- Given authorised current context, when the student asks, then the answer uses the exact lesson or question context provided and only the relevant bounded learner evidence.
+- Given no active study plan, then the question remains available.
+- Given reviewed source support, then the answer is labelled as a reviewed-source answer and retains traceable references.
+- Given a derived explanation, then it is visibly distinguished from official or reviewed source wording.
+- Given insufficient or conflicting evidence, then the agent says so and offers feedback or human review instead of guessing.
+- Given formal timed mock mode, then contextual answer tools are unavailable until submission.
 
-**Not included in this story:** Parent access to the full conversation.
+**Not included in this story:** Guided-session orchestration or plan reprioritization.
 
 ### US-AGENT-05 — Approve a major plan reprioritization
 
@@ -1629,36 +1637,66 @@ The report turns raw results into navigable issue categories.
 
 **Not included in this story:** Guaranteed score prediction.
 
-### US-MOCK-05 — Complete post-mock remediation and retest
+### US-MOCK-05A — Start recommended follow-up practice without a study plan
 
 - **Priority:** P0
 - **Actor:** Student
-- **Requirement reference:** 7.4
+- **Requirement reference:** 7.4A
 
 **User story**
 
-> As a student, I want prioritized remediation added to my plan and a later retest so that a mock leads to measurable improvement.
+> As a student, I want clear recommendations after a mock so that I can immediately work on my weakest areas even when I do not have a study plan.
 
 **Closed-loop outcome**
 
-Mock weaknesses create ranked tasks and later validation evidence.
+The mock report recommends concrete next actions and lets the student open one of them without implying that the study plan has been changed.
 
 **Main flow**
 
-1. Review the prioritized remediation list.
-2. Confirm it into the study plan.
-3. Complete the assigned remediation.
-4. Take a short reassessment or later mock.
-5. Compare the new evidence.
+1. Open the completed mock report.
+2. Review the recommended lessons, mistake reviews, terminology practice, targeted questions, or pacing actions.
+3. Read the evidence and reason for each recommendation.
+4. Start one recommended action directly.
 
 **Acceptance Criteria**
 
-- Given a mock report, then the remediation list is ranked by expected value, prerequisite need, and urgency rather than question order.
-- Given confirmation, then remediation tasks enter the active plan without deleting previous tasks or results.
-- Given remediation completion, then a reassessment path becomes available.
-- Given retest evidence, then mastery and plan priorities update while both before-and-after results remain visible.
+- Given a completed mock with enough evidence, then the report ranks useful next actions and explains why each one is recommended.
+- Given no active study plan, then the student can still open and complete a recommended lesson, review, or practice task.
+- Given insufficient evidence, then the platform marks the recommendation as uncertain or omits it rather than presenting it as fact.
+- Given a recommendation has not been added to a study plan, then the interface does not claim that the plan was updated.
 
-**Not included in this story:** Claiming causation or score improvement from one immediate retest.
+**Not included in this story:** Changing an active study plan.
+
+### US-MOCK-05B — Add selected mock recommendations to the study plan
+
+- **Priority:** P0
+- **Actor:** Student
+- **Requirement reference:** 7.4B
+
+**User story**
+
+> As a student with an active study plan, I want to review and confirm which mock recommendations should be added so that my plan changes intentionally and I can later check whether I improved.
+
+**Closed-loop outcome**
+
+The student confirms selected recommendations, the current plan is updated once, and later results can be compared with the original mock.
+
+**Main flow**
+
+1. Select recommendations from a mock report.
+2. Review their effect on workload, priorities, and dates.
+3. Confirm the update to the current study plan.
+4. Complete the follow-up work and a focused recheck or later mock.
+5. Compare the original and later results.
+
+**Acceptance Criteria**
+
+- Given an active current plan, when recommendations are selected, then the workload and priority changes are shown before confirmation.
+- Given student confirmation, then the selected actions are added to the current plan once.
+- Given the plan changed, was paused, or was replaced before confirmation, then the update is stopped and the student is asked to review the latest plan.
+- Given later evidence, then the platform compares it with the original mock without replacing the original report.
+
+**Not included in this story:** Automatically changing a plan without student confirmation.
 
 ## Epic G — Motivation, Parent Support, and Notifications
 ### US-MOT-01 — Set and complete a daily goal
@@ -2228,7 +2266,7 @@ One ticket is created with category, description, ownership, and safe contextual
 **Acceptance Criteria**
 
 - Given a valid issue, when submitted, then a trackable ticket is created and visible to the requester.
-- Given a question or AI dispute, then the ticket links the relevant versioned question, course, or conversation context without requiring the user to copy sensitive data.
+- Given a question or AI dispute, then the ticket links the relevant attempt question copy, course, or conversation context without requiring the user to copy sensitive data.
 - Given unauthorized context, then it is not attached or disclosed.
 - Given repeated submission caused by retry, then the platform avoids unintended duplicate tickets where an idempotency key is available.
 
@@ -2237,12 +2275,12 @@ One ticket is created with category, description, ownership, and safe contextual
 ### US-SUPPORT-02 — Resolve a support ticket
 
 - **Priority:** P0
-- **Actor:** Authorized support admin
+- **Actor:** First platform admin
 - **Requirement reference:** 13.2, 14.9
 
 **User story**
 
-> As a support admin, I want to review, reply to, and close a ticket so that users receive a traceable resolution.
+> As the first platform admin, I want to review, reply to, and close a ticket so that users receive a traceable resolution.
 
 **Closed-loop outcome**
 
@@ -2258,7 +2296,7 @@ The ticket moves through owned states with replies, evidence, and closure reason
 
 **Acceptance Criteria**
 
-- Given an authorized support admin, then only ticket data necessary for the assigned category is visible.
+- Given the first platform admin, then only ticket data necessary to resolve the issue is shown.
 - Given a reply or state change, then operator, timestamp, and outcome are recorded.
 - Given an academic or AI dispute requiring review, then the ticket can be escalated without being falsely marked resolved.
 - Given closure, then the requester sees the final response and can reopen or appeal only according to policy.
@@ -2269,12 +2307,12 @@ The ticket moves through owned states with replies, evidence, and closure reason
 ### US-ADM-01 — Maintain users and relationship disputes
 
 - **Priority:** P0
-- **Actor:** Authorized support or user-management admin
+- **Actor:** First platform admin
 - **Requirement reference:** 14.2
 
 **User story**
 
-> As an authorized admin, I want to search accounts and resolve lifecycle or relationship issues so that access problems are handled without altering learning outcomes.
+> As the first platform admin, I want to search accounts and resolve lifecycle or relationship issues so that access problems are handled without altering learning outcomes.
 
 **Closed-loop outcome**
 
@@ -2289,142 +2327,144 @@ A permitted user or relationship case ends in a reasoned, audited state change o
 
 **Acceptance Criteria**
 
-- Given an authorized admin, then student, parent, tutor, and account-status searches return only fields allowed by the admin's permission group.
+- Given the first platform admin, then student, parent, tutor, and account-status searches return only the minimum fields needed for the selected operation.
 - Given a suspension, restoration, deletion progression, contact correction, or relationship decision, then operator, timestamp, reason, previous state, and outcome are audited.
-- Given an admin without the required permission, when the action is attempted, then it is denied without disclosing unnecessary private data.
+- Given a non-Admin identity, when a back-office action is attempted, then it is denied without disclosing unnecessary private data.
 - Given any user-management action, then the admin cannot arbitrarily edit mastery, diagnostic results, mock scores, or private conversations.
 
-**Not included in this story:** Content, finance, and tutoring-workflow administration.
+**Not included in this story:** Content, finance, tutoring-workflow administration, or multi-admin permission management.
 
-### US-ADM-02 — Publish reviewed learning content
-
-- **Priority:** P0
-- **Actor:** Content admin and academic reviewer
-- **Requirement reference:** 14.4
-
-**User story**
-
-> As a content team, I want a review workflow so that only complete and academically approved learning content becomes public.
-
-**Closed-loop outcome**
-
-A content version moves through Draft, Pending Review, Published, Revision Required, or Unpublished with separation of author and reviewer evidence.
-
-**Main flow**
-
-1. Create or edit a draft version.
-2. Submit it for completeness and academic review.
-3. Record review findings.
-4. Publish an approved version or return it for revision.
-
-**Acceptance Criteria**
-
-- Given a draft missing required structure or source data, then it cannot be published.
-- Given a pending version, then an authorized reviewer can approve or request revision with a reason.
-- Given successful required reviews, then a versioned item can be published with publication metadata.
-- Given a correction to published content, then history remains explainable through a new version or recorded revision rather than silent destructive overwrite.
-
-**Not included in this story:** Automated AI publication without human review.
-
-### US-ADM-03 — Maintain syllabus mappings and coverage
+### US-ADM-02 — Add learning objectives, content, and syllabus mappings
 
 - **Priority:** P0
-- **Actor:** Content admin
+- **Actor:** First platform admin
 - **Requirement reference:** 4.2, 14.4
 
 **User story**
 
-> As a content admin, I want to maintain official syllabus versions and mappings so that public coverage and student plans remain trustworthy.
+> As the first platform admin, I want to add YukCSCA learning objectives, map them to official syllabus topics, and publish lessons, terminology, questions, and remediation content so that students can use the first complete learning path.
 
 **Closed-loop outcome**
 
-A versioned official knowledge point is linked to platform resources and coverage status through a reviewed change.
+YukCSCA learning objectives and topic mappings are defined, and valid content moves from Draft to Published for the student learning experience.
 
 **Main flow**
 
-1. Create or update an official syllabus version with source metadata.
-2. Map courses, questions, terminology, assessments, and mocks.
-3. Review missing required content.
-4. Publish the coverage update.
+1. Add YukCSCA learning objectives and map each objective to one or more official syllabus topics.
+2. Add terminology, a lesson, questions, explanations, and remediation content.
+3. Fix missing links, language fields, formulas or files, answers, scoring, and source information.
+4. Preview and publish the content and topic mappings.
 
 **Acceptance Criteria**
 
-- Given a syllabus version, then official source, publication/version date, and last verification date are required.
-- Given mappings, then platform coverage can be calculated without using student personal progress.
-- Given an official syllabus change, then impacted products, diagnostics, content, and student plans can be identified.
-- Given incomplete required content, then the subject cannot be labeled Full Syllabus Coverage.
+- Given a YukCSCA learning objective, then it has its own ID, is mapped to one or more official syllabus topics with a short rationale, and is never presented as official syllabus wording.
+- Given new content, then it has a stable ID and can be reused by different YukCSCA clients without storing frontend routes or page-layout fields.
+- Given missing required information or broken links, then publication is blocked with clear errors.
+- Given valid content, when it is published, then students can read it through the learning experience and track coverage against the syllabus version.
+- Given publication fails, then the draft remains unpublished and existing published content remains available.
+- Given published content is later corrected, then completed attempts and reports continue to use the content the student originally received.
 
-**Not included in this story:** Authoring the underlying course or question content.
+**Not included in this story:** Multiple reviewer roles, complex release management, or a general-purpose CMS.
 
-### US-ADM-04 — Publish a reviewed question or mock
+### US-ADM-03 — Add an official CSCA syllabus version
 
 - **Priority:** P0
-- **Actor:** Question-bank admin and reviewer
+- **Actor:** First platform admin
+- **Requirement reference:** 4.2, 14.4
+
+**User story**
+
+> As the first platform admin, I want to record an official CSCA syllabus version and its topic hierarchy so that official exam requirements can be tracked.
+
+**Closed-loop outcome**
+
+One official syllabus version, its source, effective dates, and its official topic hierarchy are published and available for reference.
+
+**Main flow**
+
+1. Record the official syllabus authority, source locator, effective dates, and official topic structure.
+2. Compare it with the previously stored version when one exists.
+3. Review and publish the official syllabus version.
+
+**Acceptance Criteria**
+
+- Given an official source, then the authority, source link or locator, publication or effective date, last checked date, and exact topic labels are stored.
+- Given an official syllabus topic, then it remains distinct from platform learning objectives and is identified as official wording.
+- Given a newer syllabus version, then added, removed, or changed topics are shown before it is published.
+- Given a coverage claim, then it names the syllabus version used for the calculation.
+
+**Not included in this story:** Student mastery calculation or copying protected official questions.
+
+### US-ADM-04 — Publish questions and create one mock paper
+
+- **Priority:** P0
+- **Actor:** First platform admin
 - **Requirement reference:** 14.5
 
 **User story**
 
-> As an academic operations user, I want to create and review questions and mock configurations so that scored assessments are controlled and versioned.
+> As the first platform admin, I want to publish valid questions and select them for a mock paper so that students can take the first complete mock exam.
 
 **Closed-loop outcome**
 
-A question version and mock composition become available only after required validation and review.
+Published questions are selected for one valid mock paper, and each student attempt keeps the exact question and scoring data it used.
 
 **Main flow**
 
-1. Create the question stem, response model, answer, explanation, difficulty, knowledge point, and exam language.
-2. Add optional language assistance and equivalent versions.
-3. Submit for review.
-4. Include approved items in a configured mock and publish it.
+1. Add or import draft questions and their supported exam-language content.
+2. Set the mock paper's subject, language, duration, scoring, visibility, and question list.
+3. Fix any unpublished question, invalid score, broken link, or missing source information.
+4. Publish the questions and mock paper.
 
 **Acceptance Criteria**
 
-- Given a scored question, then answer, explanation, exam language, knowledge point, difficulty, and source status are required before publication.
-- Given a question correction, then existing historical attempts remain associated with the version they used.
-- Given a mock, then question count, time limit, composition, visibility, and publication state are explicit.
-- Given a disabled or disputed item, then it can be removed from future delivery without erasing past reports.
+- Given a draft question, then the admin can edit its text, choices, answer or scoring rule, explanation, language, difficulty, and related syllabus topics or learning objectives.
+- Given a mock paper, then it contains only selected published questions that match its subject and exam language.
+- Given a student starts an attempt, then the attempt saves the exact question text, choices, answer, and scoring information used at that time.
+- Given a question is edited later, then completed attempts and scores do not change.
+- Given an invalid or unpublished question, then the mock paper cannot be published and a clear error is shown.
 
-**Not included in this story:** Statistical item calibration after large-scale usage.
+**Not included in this story:** Automatic adaptive question selection or student attempt execution.
 
-### US-ADM-05 — Verify content source and authorization
+### US-ADM-05 — Check content sources and permissions
 
 - **Priority:** P0
-- **Actor:** Content admin or legal reviewer
-- **Requirement reference:** 14.6; copyright NFR
+- **Actor:** First platform admin
+- **Requirement reference:** 14.6
 
 **User story**
 
-> As a content reviewer, I want every asset to have a verified provenance record so that YukCSCA does not sell unauthorized material.
+> As the first platform admin, I want to record where academic content came from and whether YukCSCA may use it so that unverified or unlicensed material is not published.
 
 **Closed-loop outcome**
 
-A content item is publishable only when its source type, authorization, reviewer, and permitted usage are valid.
+Each publishable syllabus source, lesson, question, explanation, remediation item, or file has enough source and permission information, or publication remains blocked.
 
 **Main flow**
 
-1. Open the asset's source ledger.
-2. Select platform-original, licensed, open-license, factual reference, or user-uploaded.
-3. Record source, authorization evidence, scope, and reviewer.
-4. Approve or block publication.
+1. Open a draft content item or file.
+2. Record its author or provider, source, source type, and permission or licence information when required.
+3. Mark the source check as complete or needing correction.
+4. Publish only after the required information is complete.
 
 **Acceptance Criteria**
 
-- Given formal paid content, then a non-unknown provenance status and permitted usage scope are mandatory.
-- Given expired, missing, or incompatible authorization, then publication is blocked or the content is unpublished.
-- Given an official exam claim, then unauthorized content cannot be marketed as an official past paper or leaked question.
-- Given a provenance change, then the audit history remains available.
+- Given a publishable item, then its author or provider, source, source type, permission basis, and review status are visible.
+- Given required source or permission information is missing, then publication is blocked.
+- Given an official website is used as a factual source, then citation of facts is kept separate from permission to copy protected pages, databases, or questions.
+- Given content is replaced, then the replacement records its own source and permission information.
 
-**Not included in this story:** External legal determination beyond recorded authorization evidence.
+**Not included in this story:** Separate rights-review roles or complex licence-expiry management.
 
 ### US-ADM-06 — Review AI answer quality
 
 - **Priority:** P0
-- **Actor:** Academic quality admin
+- **Actor:** First platform admin
 - **Requirement reference:** 14.8, 14.9; AI quality NFR
 
 **User story**
 
-> As an academic reviewer, I want to investigate disputed or low-confidence AI answers so that incorrect guidance can be corrected and contained.
+> As the first platform admin, I want to investigate disputed or low-confidence AI answers so that incorrect guidance can be corrected and contained.
 
 **Closed-loop outcome**
 
@@ -2449,27 +2489,27 @@ A flagged answer receives a reviewed disposition and may trigger content correct
 ### US-ADM-07 — View privacy-safe operating analytics
 
 - **Priority:** P0
-- **Actor:** Authorized operations admin
+- **Actor:** First platform admin
 - **Requirement reference:** 14.10; observability NFR
 
 **User story**
 
-> As an operations admin, I want decision-useful product and service metrics so that I can improve activation, learning, payments, and support without reading private conversations.
+> As the first platform admin, I want decision-useful product and service metrics so that I can improve activation, learning, payments, and support without reading private conversations.
 
 **Closed-loop outcome**
 
-Authorized staff can view aggregated funnel, learning, commerce, and service metrics with defined scope and freshness.
+The platform admin can view aggregated funnel, learning, commerce, and service metrics with defined definitions and freshness.
 
 **Main flow**
 
-1. Choose an allowed dashboard.
+1. Choose an available dashboard.
 2. Filter by date, subject, exam language, or operational dimension.
 3. Review definitions and data freshness.
-4. Export or act only within permission.
+4. Export or act only through the available audited action.
 
 **Acceptance Criteria**
 
-- Given an authorized admin, then only metrics in their permission scope are visible.
+- Given a non-Admin identity, then operating analytics are not visible.
 - Given analytics, then private conversation text and unnecessary minor-identifying data are excluded by default.
 - Given a metric, then its definition, period, and freshness are available.
 - Given externally published learning-effectiveness claims, then sample, time period, and calculation method must be disclosed.
@@ -2479,12 +2519,12 @@ Authorized staff can view aggregated funnel, learning, commerce, and service met
 ### US-FINOPS-01 — Reconcile a payment exception
 
 - **Priority:** P0
-- **Actor:** Authorized finance admin
+- **Actor:** First platform admin
 - **Requirement reference:** 14.7
 
 **User story**
 
-> As a finance admin, I want to investigate payment exceptions and apply controlled adjustments so that orders, refunds, and entitlements remain consistent.
+> As the first platform admin, I want to investigate payment exceptions and apply controlled adjustments so that orders, refunds, and entitlements remain consistent.
 
 **Closed-loop outcome**
 
@@ -2499,7 +2539,7 @@ A payment exception ends in an audited reconciliation across gateway, order, ref
 
 **Acceptance Criteria**
 
-- Given an authorized finance admin, then order search supports payment channel, payer, entitlement recipient, and payment status without exposing unrelated learning data.
+- Given the first platform admin, then order search supports payment channel, payer, entitlement recipient, and payment status without exposing unrelated learning data.
 - Given a manual refund or entitlement adjustment, then a reason is required and the previous and resulting states are audited.
 - Given a duplicate callback or repeated admin submission, then financial and entitlement changes are applied exactly once.
 - Given evidence is insufficient or provider state is unresolved, then the case remains pending rather than being forced into a paid or refunded state.

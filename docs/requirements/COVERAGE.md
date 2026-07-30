@@ -6,9 +6,9 @@
 
 | Field | Value |
 | --- | --- |
-| Requirement baseline | English/Chinese V1.2, 2026-07-24 |
-| Story baseline | `USER_STORIES.md` version 0.2.6 |
-| Audit date | 2026-07-28 |
+| Requirement baseline | English/Chinese V1.3, 2026-07-30 |
+| Story baseline | `USER_STORIES.md` version 0.3.1 |
+| Audit date | 2026-07-30 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
 | P2 exact-reference coverage | **1 / 3 functional sections** |
@@ -22,57 +22,57 @@ during shaping.
 
 | Requirement | Requirement title | Candidate stories | Coverage note |
 | --- | --- | --- | --- |
-| 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-AUTH-03`, `US-AUTH-04`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-000`; decision-gated shaping `VS-002`; proposed `VS-003`, `VS-005`, `VS-011`. PX-002 remains fixture-only. |
-| 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | Owners: delivered `VS-001`; proposed `VS-004`, `VS-005`, `VS-010`. |
-| 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-001`; proposed `VS-005`, `VS-011`. |
-| 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | Owners: proposed `VS-004`, `VS-014`, `VS-017`; language dimensions remain independent. |
-| 2.1 | Parent Creates a Student Account | `US-FAM-00`, `US-FAM-04` | Owner: proposed `VS-006`, including both sides of the pending-to-activated lifecycle. |
-| 2.2 | Student Invites a Parent to Link | `US-FAM-01`, `US-FAM-02` | Owner: proposed `VS-007`. |
-| 2.3 | Relationship Management | `US-FAM-03` | Owner: proposed `VS-008`. |
-| 3.1 | Academic Goals and Required Profile Information | `US-GOAL-01` | Owner: proposed `VS-014`. |
-| 3.2 | Automatic CSCA Subject Matching and Prefill | `US-GOAL-02` | Owner: proposed `VS-014`. |
+| 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-AUTH-03`, `US-AUTH-04`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-000`, `VS-002`, `VS-003`; proposed `VS-005`, `VS-023`. PX-002 remains fixture-only where qualified. |
+| 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | Owners: delivered `VS-001`; proposed `VS-004`, `VS-023`, `VS-028`. |
+| 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-001`; proposed `VS-005`, `VS-023`. |
+| 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | Owners: proposed `VS-004`, `VS-008`, `VS-014`; language dimensions remain independent. |
+| 2.1 | Parent Creates a Student Account | `US-FAM-00`, `US-FAM-04` | Owner: proposed `VS-024`, including pending-to-activated lifecycle. |
+| 2.2 | Student Invites a Parent to Link | `US-FAM-01`, `US-FAM-02` | Owner: proposed `VS-025`. |
+| 2.3 | Relationship Management | `US-FAM-03` | Owner: proposed `VS-026`. |
+| 3.1 | Academic Goals and Required Profile Information | `US-GOAL-01` | Owner: proposed `VS-014`; goal input does not gate direct preparation. |
+| 3.2 | Automatic CSCA Subject Matching and Prefill | `US-GOAL-02` | Owner: proposed `VS-014`; claims retain source, applicability, freshness, and uncertainty. |
 | 3.3 | Manual Subject Adjustments | `US-GOAL-03` | Owner: proposed `VS-014`. |
-| 3.4 | Baseline Diagnostic Assessment | `US-DIAG-01`, `US-DIAG-02`, `US-PLAN-01` | Owner: proposed `VS-015`, preserving the diagnostic-to-first-plan loop. |
-| 3.5 | Study-Plan Feasibility Assessment | `US-PLAN-02`, `US-PLAN-03` | Owner: proposed `VS-015`. |
-| 4.1 | Course Catalog and Launch Scope | `US-COURSE-01` | Owners: proposed `VS-013`, `VS-016`. |
-| 4.2 | Official Syllabus Mapping and Course Coverage Map | `US-SYL-01`, `US-ADM-03` | Owners: proposed `VS-012`, `VS-013`, `VS-016`. |
-| 4.3 | Micro-Lesson Content | `US-COURSE-02`, `US-COURSE-04` | Owners: proposed `VS-013`, `VS-017`. |
-| 4.4 | Explanation-Language and Exam-Language Bridging | `US-LANG-03`, `US-COURSE-02` | Owners: proposed `VS-004`, `VS-014`, `VS-017`. |
-| 4.5 | Chinese Mathematics Terminology Preview and In-Question Support | `US-TERM-01`, `US-TERM-02`, `US-TERM-03` | Owner: proposed `VS-018`, keeping the terminology evidence loop coherent. |
-| 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: proposed `VS-013`, `VS-017`. |
-| 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: proposed `VS-019`. |
-| 5.2 | Study-Plan Practice | `US-PRACTICE-02` | Owner: proposed `VS-019`. |
-| 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01` | Owners: proposed `VS-018`, `VS-019`. |
-| 5.4 | Mistake Notebook | `US-MISTAKE-01`, `US-MISTAKE-02`, `US-MISTAKE-03` | Owner: proposed `VS-019`. |
-| 6.1 | Daily Task Entry Point | `US-AGENT-01`, `US-AGENT-02` | Owner: proposed `VS-020`. |
-| 6.2 | Guided Learning Sessions | `US-AGENT-03` | Owner: proposed `VS-021`. |
-| 6.3 | Contextual Questions and Answers | `US-AGENT-04` | Owner: proposed `VS-021`. |
-| 6.4 | Automatic Remediation and Plan Reprioritization | `US-AGENT-05` | Owner: proposed `VS-021`; material reprioritization still requires student approval. |
-| 7.1 | Mock-Exam Selection | `US-MOCK-01`, `US-TRIAL-03` | Owners: proposed `VS-023`, `VS-027`. |
-| 7.2 | Exam Experience | `US-MOCK-02`, `US-MOCK-03`, `US-TRIAL-03` | Owners: proposed `VS-023`, `VS-027`; timed recovery and exactly-once submission remain coupled. |
-| 7.3 | Results and Analysis | `US-MOCK-04`, `US-TRIAL-03` | Owners: proposed `VS-023`, `VS-027`. |
-| 7.4 | Post-Mock Remediation Loop | `US-MOCK-05` | Owner: proposed `VS-024`. |
-| 8.1 | Daily Goals and Learning Streaks | `US-MOT-01`, `US-MOT-02` | Owner: proposed `VS-020`. |
-| 8.3 | Weekly Review | `US-WEEK-01` | Owner: proposed `VS-020`. |
-| 10.1 | Learning Overview | `US-PARENT-01` | Owner: proposed `VS-026`. |
-| 10.2 | Weekly Reports and Risk Alerts | `US-PARENT-02`, `US-PARENT-03` | Owner: proposed `VS-026`. |
-| 10.3 | Payment and Tutoring Management | `US-PARENT-04`, `US-PAY-01` | Owners: proposed `VS-028`, `VS-029`; P1 tutoring workflow remains outside P0. |
-| 10.4 | Privacy Boundaries | `US-FAM-02`, `US-PARENT-01` | Owner: proposed `VS-026`; relationship authorization originates in `VS-007`. |
-| 11.1 | Free Trial | `US-TRIAL-01`, `US-TRIAL-02`, `US-TRIAL-03` | Owner: proposed `VS-027`. |
-| 11.2 | Products and Entitlements | `US-TRIAL-01`, `US-PRODUCT-01` | Owner: proposed `VS-027`. |
-| 11.3 | Indonesian Local Payment Methods | `US-PAY-01`, `US-PAY-02` | Owner: proposed `VS-028`. |
-| 11.4 | Automatic and Manual Renewal | `US-RENEW-01` | Owner: proposed `VS-031`; P0 remains manual renewal plus expiry reminder. |
-| 11.5 | Orders, Receipts, and Refunds | `US-PAY-02`, `US-ORDER-01`, `US-REFUND-01` | Owners: proposed `VS-028`, `VS-030`. |
-| 13.1 | Learning Notifications | `US-NOTIFY-01`, `US-NOTIFY-02` | Owner: proposed `VS-025`. |
-| 13.2 | Customer Service and Issue Reporting | `US-SUPPORT-01`, `US-SUPPORT-02` | Owner: proposed `VS-032`. |
-| 14.1 | Admin Accounts and Permissions | `US-ADMIN-01` | Owner: proposed `VS-011`. |
-| 14.2 | User and Relationship Management | `US-ADM-01` | Owner: proposed `VS-011`; admin actions do not edit learning outcomes. |
-| 14.4 | Course, Syllabus, and Content Management | `US-ADM-02`, `US-ADM-03` | Owners: proposed `VS-012`, `VS-013`. |
-| 14.5 | Question Bank and Mock-Exam Management | `US-ADM-04` | Owner: proposed `VS-013`. |
-| 14.6 | Content Source and Authorization Ledger | `US-ADM-05` | Owner: proposed `VS-012`. |
-| 14.7 | Order, Payment, and Refund Management | `US-FINOPS-01` | Owner: proposed `VS-030`. |
-| 14.9 | AI and Content Quality Management | `US-SUPPORT-02`, `US-ADM-06` | Owners: proposed `VS-022`, `VS-032`. |
-| 14.10 | Operating Analytics | `US-ADM-07` | Owner: proposed `VS-033`. |
+| 3.4 | Baseline Diagnostic Assessment | `US-DIAG-01`, `US-DIAG-02` | Owner: proposed `VS-015`; diagnostic uses the shared assessment-attempt boundary and does not auto-activate a plan. |
+| 3.5 | Study-Plan Feasibility Assessment | `US-PLAN-01`, `US-PLAN-02`, `US-PLAN-03` | Owner: proposed `VS-016`; may use existing practice/mistake/mock evidence. |
+| 4.1 | Course Catalog and Launch Scope | `US-COURSE-01` | Owners: proposed `VS-007`, `VS-008`. |
+| 4.2 | Official Syllabus Source and Platform Curriculum Alignment | `US-SYL-01`, `US-ADM-03` | Owners: proposed `VS-006`, `VS-007`, `VS-008`; official syllabus topics remain distinct from platform objectives. |
+| 4.3 | Focused Learning-Unit Content | `US-COURSE-02`, `US-COURSE-04` | Owners: proposed `VS-007`, `VS-008`; video is optional. |
+| 4.4 | Explanation-Language and Exam-Language Bridging | `US-LANG-03`, `US-COURSE-02` | Owners: proposed `VS-004`, `VS-008`, `VS-014`. |
+| 4.5 | Chinese Mathematics Terminology Preview and In-Question Support | `US-TERM-01`, `US-TERM-02`, `US-TERM-03` | Owner: proposed `VS-010`. |
+| 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: proposed `VS-007`, `VS-009`. |
+| 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: proposed `VS-009`; plan-independent. |
+| 5.2 | Plan-Assigned Practice | `US-PRACTICE-02` | Owner: proposed `VS-017`; explicitly requires an active plan. |
+| 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01` | Owners: proposed `VS-009`, `VS-010`. |
+| 5.4 | Mistake Notebook and Immediate Remediation | `US-MISTAKE-01`, `US-MISTAKE-02`, `US-MISTAKE-03` | Owner: proposed `VS-009`; immediate remediation is plan-independent. |
+| 6.1 | Daily Task Entry Point | `US-AGENT-01`, `US-AGENT-02` | Owner: proposed `VS-017`; requires an active plan. |
+| 6.2 | Guided Learning Sessions | `US-AGENT-03` | Owner: proposed `VS-018`; follows plan creation because it records a plan effect. |
+| 6.3 | Contextual Questions and Answers | `US-AGENT-04` | Owners: proposed `VS-011`, `VS-013`; `VS-011` owns lesson/item/mistake/remediation Q&A; `VS-013` adds mock-report Q&A context. |
+| 6.4 | Plan Remediation and Reprioritization | `US-AGENT-05` | Owner: proposed `VS-019`; material changes require confirmation and current plan version. |
+| 7.1 | Mock-Exam Selection | `US-MOCK-01`, `US-TRIAL-03` | Owners: proposed `VS-012`, `VS-030`; no plan dependency. |
+| 7.2 | Exam Experience | `US-MOCK-02`, `US-MOCK-03`, `US-TRIAL-03` | Owners: proposed `VS-012`, `VS-030`; timed recovery and exactly-once submission remain coupled. |
+| 7.3 | Results and Analysis | `US-MOCK-04`, `US-TRIAL-03` | Owners: proposed `VS-013`, `VS-030`; no plan dependency. |
+| 7.4 | Post-Mock Remediation Candidates, Plan Integration, and Revalidation | `US-MOCK-05A`, `US-MOCK-05B` | `7.4A` owner: proposed `VS-013`; `7.4B` owner: proposed `VS-019`. |
+| 8.1 | Daily Goals and Learning Streaks | `US-MOT-01`, `US-MOT-02` | Owner: proposed `VS-017`. |
+| 8.3 | Weekly Review | `US-WEEK-01` | Owner: proposed `VS-017`. |
+| 10.1 | Learning Overview | `US-PARENT-01` | Owner: proposed `VS-035`. |
+| 10.2 | Weekly Reports and Risk Alerts | `US-PARENT-02`, `US-PARENT-03` | Owner: proposed `VS-035`. |
+| 10.3 | Payment and Tutoring Management | `US-PARENT-04`, `US-PAY-01` | Owners: proposed `VS-031`, `VS-032`; P1 tutoring workflow remains outside P0. |
+| 10.4 | Privacy Boundaries | `US-FAM-02`, `US-PARENT-01` | Owners: proposed `VS-025`, `VS-035`. |
+| 11.1 | Free Trial | `US-TRIAL-01`, `US-TRIAL-02`, `US-TRIAL-03` | Owner: proposed `VS-030`. |
+| 11.2 | Products and Entitlements | `US-TRIAL-01`, `US-PRODUCT-01` | Owners: proposed `VS-030`, `VS-031`. |
+| 11.3 | Indonesian Local Payment Methods | `US-PAY-01`, `US-PAY-02` | Owner: proposed `VS-031`. |
+| 11.4 | Automatic and Manual Renewal | `US-RENEW-01` | Owner: proposed `VS-036`; P0 remains manual renewal plus expiry reminder. |
+| 11.5 | Orders, Receipts, and Refunds | `US-PAY-02`, `US-ORDER-01`, `US-REFUND-01` | Owners: proposed `VS-031`, `VS-033`. |
+| 13.1 | Learning Notifications | `US-NOTIFY-01`, `US-NOTIFY-02` | Owner: proposed `VS-034`. |
+| 13.2 | Customer Service and Issue Reporting | `US-SUPPORT-01`, `US-SUPPORT-02` | Owner: proposed `VS-021`. |
+| 14.1 | First Platform Admin | `US-ADMIN-01` | Owner: proposed `VS-005`; first platform admin setup precedes broad admin operations. |
+| 14.2 | User and Relationship Management | `US-ADM-01` | Owner: proposed `VS-029`; admin actions do not edit learning outcomes. |
+| 14.4 | Syllabus and Learning-Content Management | `US-ADM-02`, `US-ADM-03` | Owners: proposed `VS-006`, `VS-007`; syllabus topics and platform objectives are mapped cleanly. |
+| 14.5 | Question and Mock-Paper Management | `US-ADM-04` | Owner: proposed `VS-007`; published questions are selected for mock paper. |
+| 14.6 | Content Source and Rights Records | `US-ADM-05` | Owners: proposed `VS-006`, `VS-007`; content retains provenance and permission evidence. |
+| 14.7 | Order, Payment, and Refund Management | `US-FINOPS-01` | Owner: proposed `VS-033`. |
+| 14.9 | AI and Content Quality Management | `US-SUPPORT-02`, `US-ADM-06` | Owners: proposed `VS-020`, `VS-021`. |
+| 14.10 | Operating Analytics | `US-ADM-07` | Owner: proposed `VS-022`. |
 
 ## Escalating insufficient coverage during shaping
 
