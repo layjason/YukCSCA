@@ -72,7 +72,9 @@
     "languages": "语言",
     "family": "家庭",
     "access": "权限",
-    "more": "更多"
+    "more": "更多",
+    "backToDashboard": "返回仪表板",
+    "backToProfile": "返回个人资料"
   },
   "shell": {
     "navLabel": "主导航",
@@ -450,7 +452,30 @@
     "settingsLabel": "个人设置",
     "editUnavailable": "资料编辑暂不可用。",
     "identityNote": "此信息来自您已验证的账户。",
-    "productionLabel": "生产支持的账户身份"
+    "productionLabel": "生产支持的账户身份",
+    "learnerTitle": "学习者资料",
+    "accountTitle": "账户身份",
+    "preferredName": "常用名",
+    "birthYear": "出生年份",
+    "currentGrade": "年级",
+    "city": "城市",
+    "defaultExplanationLanguage": "默认讲解语言",
+    "birthYearNote": "出生年份仅用于内容个性化，不作法定年龄验证。",
+    "languageNote": "默认讲解语言独立于界面语言和考试语言。",
+    "save": "保存个人资料",
+    "saving": "保存中...",
+    "saveSuccess": "个人资料已成功更新。",
+    "loadError": "加载学生个人资料失败。",
+    "saveError": "更新个人资料失败。",
+    "retry": "重试",
+    "noChanges": "没有要保存的更改。",
+    "selectPlaceholder": "选择年级",
+    "errors": {
+      "required": "此项为必填项。",
+      "tooLong": "文本过长。",
+      "birthYearRange": "出生年份必须在有效范围内。",
+      "unsupported": "不支持的值。"
+    }
   },
   "settings": {
     "languagesTitle": "语言设置",
@@ -464,8 +489,11 @@
     "languageNote": "界面语言、讲解语言和考试语言相互独立。更改其一不会影响其他。",
     "examLanguageWarning": "更改考试语言可能会改变题集、术语任务、诊断需求和计划可行性。",
     "historyNote": "更改讲解语言时，您的学习记录保持不变。",
-    "explanationOwnership": "此页面展示预览学术偏好。预览中不提供永久编辑。",
+    "explanationOwnership": "此设置决定学术讲解内容的默认语言。",
     "examOwnership": "示例考试轨道仅供预览。生产环境中的更改需要影响审查。",
+    "saveLanguage": "保存讲解语言",
+    "savingLanguage": "正在保存语言...",
+    "languageSaved": "默认讲解语言已成功保存。",
     "family": {
       "noParent": "当前没有关联的家长。",
       "inviteEntry": "邀请家长（即将推出）",

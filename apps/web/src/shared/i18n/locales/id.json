@@ -72,7 +72,9 @@
     "languages": "Bahasa",
     "family": "Keluarga",
     "access": "Akses",
-    "more": "Lainnya"
+    "more": "Lainnya",
+    "backToDashboard": "Kembali ke Beranda",
+    "backToProfile": "Kembali ke Profil"
   },
   "shell": {
     "navLabel": "Navigasi utama",
@@ -450,7 +452,30 @@
     "settingsLabel": "Pengaturan profil",
     "editUnavailable": "Pengeditan profil belum tersedia.",
     "identityNote": "Informasi ini berasal dari akun terautentikasi Anda.",
-    "productionLabel": "Identitas akun berbasis produksi"
+    "productionLabel": "Identitas akun berbasis produksi",
+    "learnerTitle": "Informasi Pelajar",
+    "accountTitle": "Identitas Akun",
+    "preferredName": "Nama Panggilan",
+    "birthYear": "Tahun Lahir",
+    "currentGrade": "Kelas",
+    "city": "Kota / Kabupaten",
+    "defaultExplanationLanguage": "Bahasa Penjelasan Utama",
+    "birthYearNote": "Tahun lahir digunakan untuk penyesuaian materi dan bukan verifikasi usia legal.",
+    "languageNote": "Bahasa penjelasan utama bersifat independen dari bahasa antarmuka dan bahasa ujian.",
+    "save": "Simpan profil",
+    "saving": "Menyimpan...",
+    "saveSuccess": "Profil berhasil diperbarui.",
+    "loadError": "Gagal memuat profil pelajar.",
+    "saveError": "Gagal memperbarui profil.",
+    "retry": "Coba lagi",
+    "noChanges": "Tidak ada perubahan untuk disimpan.",
+    "selectPlaceholder": "Pilih kelas",
+    "errors": {
+      "required": "Bidang ini wajib diisi.",
+      "tooLong": "Teks terlalu panjang.",
+      "birthYearRange": "Tahun lahir harus berada dalam rentang yang valid.",
+      "unsupported": "Nilai tidak didukung."
+    }
   },
   "settings": {
     "languagesTitle": "Pengaturan bahasa",
@@ -464,8 +489,11 @@
     "languageNote": "Bahasa antarmuka, penjelasan, dan ujian bersifat independen. Mengubah satu tidak mengubah yang lain.",
     "examLanguageWarning": "Mengubah bahasa ujian dapat mengubah set soal, tugas terminologi, kebutuhan diagnostik, dan kelayakan rencana.",
     "historyNote": "Riwayat belajar Anda tetap ada saat bahasa penjelasan berubah.",
-    "explanationOwnership": "Layar ini menampilkan preferensi akademik pratinjau. Pengeditan permanen belum tersedia dalam Pratinjau.",
+    "explanationOwnership": "Setelan ini menentukan bahasa default untuk penjelasan materi akademik Anda.",
     "examOwnership": "Jalur ujian contoh hanya untuk pratinjau. Perubahan produksi memerlukan tinjauan dampak.",
+    "saveLanguage": "Simpan bahasa penjelasan",
+    "savingLanguage": "Menyimpan bahasa...",
+    "languageSaved": "Bahasa penjelasan utama berhasil disimpan.",
     "family": {
       "noParent": "Tidak ada orang tua yang terhubung saat ini.",
       "inviteEntry": "Undang orang tua (segera hadir)",

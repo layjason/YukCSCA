@@ -810,18 +810,35 @@ button {
 
 /* ─── Profile ───────────────────────────────────────────────────────────── */
 
+.profile-identity,
+.profile-learner-section {
+  margin-bottom: var(--space-2xl, 2rem);
+  padding: var(--space-lg, 1.5rem);
+  background: var(--color-canvas, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.profile-learner-section form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg, 1.5rem);
+  margin-top: var(--space-md, 1rem);
+}
+
 .profile-identity dl {
   display: grid;
-  gap: var(--space-sm);
-  margin: var(--space-lg) 0;
+  gap: var(--space-md, 1rem);
+  margin: var(--space-md) 0 0;
 }
 
 .profile-identity dl div {
   display: grid;
-  grid-template-columns: minmax(72px, 100px) 1fr;
+  grid-template-columns: minmax(90px, 120px) 1fr;
   gap: var(--space-sm);
   padding-bottom: var(--space-sm);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle, #f3f4f6);
 }
 
 .profile-identity dt {
@@ -833,6 +850,64 @@ button {
   margin: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+/* ─── Back Button & Navigation Arrows ────────────────────────────────────── */
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--color-border-strong, #e5e7eb);
+  background: var(--color-canvas, #ffffff);
+  color: var(--color-ink, #374151);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  margin-bottom: var(--space-lg, 1.25rem);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.back-btn:hover {
+  background: var(--color-surface-soft, #f9fafb);
+  border-color: var(--color-ink-muted, #9ca3af);
+  color: var(--color-ink-strong, #111827);
+  transform: translateX(-3px);
+}
+
+.back-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.back-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.back-btn:hover .back-arrow {
+  transform: translateX(-3px);
+}
+
+.nav-chevron-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-ink-muted, #9ca3af);
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
+}
+
+.profile-links a:hover .nav-chevron-arrow {
+  color: var(--color-ink-strong, #111827);
+  transform: translateX(3px);
 }
 
 .profile-links ul {
@@ -847,14 +922,19 @@ button {
 .profile-links a {
   display: flex;
   align-items: center;
-  min-height: 44px;
+  justify-content: space-between;
+  min-height: 48px;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-ink);
   text-decoration: none;
   font-weight: 550;
-  transition: background-color var(--motion-instant) var(--ease-standard);
+  background: var(--color-canvas, #ffffff);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .profile-links a:hover {
@@ -4728,4 +4808,148 @@ a.credential-full-link.btn-primary {
   .product-detail-overview {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Toast Notifications (DESIGN.md Aligned) ────────────────────────────── */
+
+.toast-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 420px;
+  width: calc(100vw - 3rem);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .toast-container {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.toast {
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1.25rem;
+  border-radius: var(--radius-md, 12px);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  box-shadow:
+    0 8px 24px rgba(23, 23, 23, 0.08),
+    0 2px 6px rgba(23, 23, 23, 0.04);
+  animation: toast-slide-down var(--motion-standard, 0.24s) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes toast-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: toast-fade-in 0.15s linear forwards;
+  }
+  @keyframes toast-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+.toast-success {
+  background: var(--color-semantic-success-soft, #e0f1e6);
+  color: var(--color-semantic-success, #1f7a45);
+  border: 1px solid var(--color-border-strong, #b8b8b0);
+}
+
+.toast-info {
+  background: var(--color-semantic-info-soft, #e2edf8);
+  color: var(--color-semantic-info, #315b8a);
+  border: 1px solid var(--color-border-strong, #b8b8b0);
+}
+
+.toast-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill, 999px);
+  flex-shrink: 0;
+}
+
+.toast-success .toast-icon-wrapper {
+  background: rgba(31, 122, 69, 0.15);
+  color: var(--color-semantic-success, #1f7a45);
+}
+
+.toast-info .toast-icon-wrapper {
+  background: rgba(49, 91, 138, 0.15);
+  color: var(--color-semantic-info, #315b8a);
+}
+
+.toast-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.toast-body {
+  flex: 1;
+  font-weight: 600;
+}
+
+.toast-message {
+  display: block;
+}
+
+.toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  border: none;
+  color: currentColor;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.25rem;
+  flex-shrink: 0;
+  transition:
+    opacity var(--motion-quick, 0.16s) ease,
+    background-color var(--motion-quick, 0.16s) ease;
+}
+
+.toast-close:hover,
+.toast-close:focus-visible {
+  opacity: 1;
+  background: rgba(23, 23, 23, 0.08);
+}
+
+.toast-close-icon {
+  width: 16px;
+  height: 16px;
 }
