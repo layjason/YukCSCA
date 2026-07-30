@@ -33,4 +33,10 @@ public class SecurityEventService {
     repository.save(
         new SecurityEvent(SecurityEventType.STUDENT_ACTIVATION_SUCCEEDED, userId, clock.instant()));
   }
+
+  @Transactional
+  public void recordStudentProfileUpdate(UUID userId) {
+    repository.save(
+        new SecurityEvent(SecurityEventType.STUDENT_PROFILE_UPDATED, userId, clock.instant()));
+  }
 }
