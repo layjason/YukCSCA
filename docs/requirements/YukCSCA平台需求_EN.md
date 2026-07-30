@@ -1,7 +1,7 @@
 # YukCSCA Platform Requirements Summary
 
-**Version:** V1.2
-**Date:** 2026-07-24
+**Version:** V1.3
+**Date:** 2026-07-30
 **Target Market:** Indonesian high school students planning to pursue undergraduate study in China, and their families
 
 > **NORMATIVE PRODUCT AUTHORITY:** This document and its paired Chinese version are the sole authoritative product requirements for YukCSCA. Architecture descriptions, implementation plans, contracts, issues, and code may implement or propose a subset, but they do not amend or override these requirements. Both language versions must change together.
@@ -10,6 +10,7 @@
 
 | Version | Date       | Change                                                                                  |
 | ------- | ---------- | --------------------------------------------------------------------------------------- |
+| V1.3    | 2026-07-30 | Separated direct preparation from plan orchestration, split plan-independent mock remediation from plan integration, and introduced a portable academic-content direction. |
 | V1.2    | 2026-07-24 | Qualified fixture-backed email/password previews while preserving Google-only production authentication. |
 | V1.1    | 2026-07-20 | Added stable navigation and revision history. |
 | V1      | 2026-07-19 | Established the initial consolidated normative requirements baseline.                   |
@@ -56,9 +57,12 @@
 
 YukCSCA is an Indonesia-localized learning platform that uses **CSCA preparation as the initial entry point and undergraduate study preparation for China as the long-term scenario**. The first iteration offers **Mathematics in English and Mathematics in Chinese** as the core purchasable subjects. Both tracks share the same mathematical knowledge framework while providing courses, questions, terminology training, and mock exams in different exam languages. Physics, Chemistry, and Professional Chinese will be added later. The platform provides official syllabus mapping, diagnostic assessment, study-plan feasibility assessment, personalized planning, micro-lessons, practice, mistake review, mock exams, an agentic tutor, and a platform-managed one-on-one tutoring service when necessary.
 
-The platform is not merely a question bank, course player, or general-purpose chatbot. It helps students complete the following sustainable learning loop:
+The platform is not merely a question bank, course player, or general-purpose chatbot. It supports two valid preparation entry paths:
 
-> **Confirm academic goals → Match required exam subjects → Diagnose current ability → Generate a plan → Assess plan feasibility → Learn and practice → Check mastery → Identify causes of errors → Automatically remediate and review → Validate through mock exams → Reprioritize the plan → Escalate to human tutoring when necessary**
+1. **Direct preparation:** choose a supported subject and exam-language track → learn, practise, and take mocks → collect evidence and follow-up recommendations → optionally create a study plan.
+2. **Guided preparation:** record a target → review sourced subject requirements → complete a diagnostic → generate and confirm a feasible study plan → use daily orchestration.
+
+Both paths converge on the same reviewed content, assessment-attempt, mastery-evidence, mistake, remediation, and mock models. A goal, diagnostic, or active study plan must not gate disclosed trial access or direct subject preparation unless a specific capability explicitly reads or updates a plan.
 
 After the first phase has been validated, the platform will gradually support additional needs such as university and major information, CSCA requirement matching, application timelines, Professional Chinese, HSK, academic terminology, and pre-departure preparation, giving students reasons to continue using the platform after completing the CSCA exam.
 
@@ -133,7 +137,7 @@ The first version explicitly will not:
 
 ### 0.2 Primary Platform Roles
 
-The platform has only four primary front-end roles: **Student, Parent, Tutor, and Admin**. Content operations, academic review, customer service, and finance are treated as internal Admin permission groups rather than separate front-end roles.
+The platform has only four primary front-end roles: **Student, Parent, Tutor, and Admin**. In the pilot, the first Admin account performs all delivered admin responsibilities. Separate admin roles are introduced only when the platform adds more administrators.
 
 #### 0.2.1 Student
 
@@ -300,12 +304,12 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Academic content, AI answers, and university information change over time and may contain errors.
 - Unreviewed tutors, unknown-source content, and exaggerated marketing damage trust.
 - Payment, entitlement, refund, and tutor-settlement states may become inconsistent.
-- Giving every administrator full access increases privacy and operational risk.
+- As the operations team grows, giving every administrator full access would increase privacy and operational risk.
 - Without event data, the team cannot determine whether features actually improve learning.
 
 **Required Capabilities:**
 
-- Manage internal Admin permissions and audit records by responsibility.
+- Use one Admin account in the pilot and record important admin actions; define separate admin roles before adding more administrators.
 - Search for and handle issues involving students, parents, tutors, and linked relationships.
 - Review and maintain the internal tutor pool, including subjects, languages, specialist areas, availability, internal pricing, workload, ratings, and service status.
 - Review paid tutoring requests, contact students or parents through external chat, record the result, and manually match a tutor.
@@ -361,9 +365,9 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 1.1 Registration and Login (P0)
 
-> **Pilot delivery qualification:** The first bounded pilot uses Google sign-in only. Email/password registration and password recovery remain long-term P0 requirements but are not acceptance criteria for this Google-only pilot. Student, parent, tutor, and administrator provisioning beyond the current `UNASSIGNED` identity is implemented only in the relevant P0 vertical slice. This qualification is part of the requirements and does not depend on an external plan or architecture decision.
+> **Pilot delivery qualification:** The initial bounded pilot launched with Google sign-in. Production credential registration and login were subsequently delivered by `VS-002`, and credential recovery by `VS-003`.
 
-> **PX-002 prototype qualification:** PX-002 may represent the long-term P0 email/password account-entry experience through deterministic frontend fixtures alongside production Google sign-in. The frontend prototype presents conventional email/password registration, verification, login, and recovery, but the credential path remains fixture-backed and does not create production accounts, sessions, credentials, verification messages, or password-reset operations. Google remains the only production-backed authentication method until a credential-authentication slice is accepted. Production email/password authentication remains a required later P0 capability. This preview does not close that production authentication outcome; a dedicated credential-authentication vertical slice and contract must be shaped before production implementation.
+> **PX-002 prototype qualification:** PX-002 originally represented the email/password account-entry experience through deterministic frontend fixtures alongside production Google sign-in. Production credential registration and sign-in were subsequently delivered by `VS-002`, and credential recovery by `VS-003`. The prototype qualification no longer limits the production authentication methods currently available.
 
 - **Independent student registration:** Students can register using at least email. Mobile-number or third-party login may be introduced gradually according to launch channels. Students enter the platform after verification. Intent: reduce initial friction while avoiding excessive authentication integrations in the first version.
 - **Parent registration:** Parents can register independent parent accounts and later create or link a student. Intent: support parents as decision-makers and payers.
@@ -384,7 +388,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 - Each role can access only functions and data related to its responsibilities.
 - The same natural person may have parent and payer capabilities, but student-learning records and parent profiles remain separate.
-- Internal Admin permissions can be configured by content, customer service, tutoring, finance, and other responsibilities, while the front end still exposes only the four primary roles.
+- The pilot has one Admin account with all delivered admin features. Separate Admin permissions are only needed when more administrators are introduced; the front end still exposes only the four primary roles.
 
 ### 1.4 Learning and Language Preferences (P0)
 
@@ -424,45 +428,46 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 3.1 Academic Goals and Required Profile Information (P0)
 
-- Students provide target enrollment year, exam date, target university, target major, program or scholarship type, language of instruction, and weekly available study time. Intent: provide sufficient context for subject matching and avoid forcing students to guess exam subjects without understanding the rules.
-- Students may save one or more university and major targets and designate one as the primary target. The first version must support at least one primary target through the complete subject-matching and planning workflow.
-- When a student does not yet know a specific university, the student may provide a broad major category, expected language of instruction, and application type. The system produces a provisional recommendation clearly labeled “inferred from broad category.”
-- After target information changes, the system recalculates potential changes to subjects, exam languages, and the study plan, but does not remove existing tasks or progress before student confirmation.
+- Students may record a target exam date, weekly availability, preferred study days, target universities, majors, scholarship context, and intended language of instruction.
+- The goal profile is required for sourced subject matching, feasibility assessment, and study-plan orchestration, but it does not gate direct preparation for a supported subject/exam-language track.
+- Students may mark university or major choices as undecided and continue with a clearly labelled provisional preparation path.
+- One current primary target is used for the first complete matching and planning flow; additional targets may remain comparison inputs.
+- Later goal changes retain historical learning evidence and mark affected recommendations or plans for recalculation.
 
 ### 3.2 Automatic CSCA Subject Matching and Prefill (P0)
 
-- The system automatically prefills recommended or required CSCA subjects based on the student’s target university, target major, language of instruction, application type, enrollment year, and other necessary conditions.
-- Matching results distinguish at least four statuses: **Explicitly Required, System Recommended, Pending Confirmation, and Manually Added**, preventing inferences from being presented as official requirements.
-- Each subject also records the exam language, such as Mathematics (English) or Mathematics (Chinese). These two Mathematics tracks are officially supported in the first iteration.
-- Each university requirement displays a source link, publication date, or last verification date. Conflicts, expired information, or insufficient information are clearly marked “Pending Confirmation.”
-- On the confirmation page, students see why the system selected each subject before confirming the diagnostic assessment and study plan.
+- The platform recommends likely CSCA subjects and exam languages from the student's target information and verified university, major, scholarship, or programme requirements.
+- Every recommendation is an evidence-backed claim with authority, source locator, effective date, last verification date, applicability conditions, and a status such as verified, conflicting, provisional, or insufficient evidence.
+- Where reliable requirements conflict or are incomplete, the platform shows alternatives and uncertainty rather than presenting one combination as certain.
+- Target-university requirements remain authoritative for subject selection; YukCSCA recommendations do not replace official admission guidance.
+- A student who already knows the required subject combination may bypass automatic matching and proceed to manual confirmation or direct preparation.
 
 ### 3.3 Manual Subject Adjustments (P0)
 
-- Students can manually add other available subjects on top of the system-prefilled list, for example to prepare for requirements across multiple target universities.
-- When manually adding a subject, the student selects the exam language and may record a reason or linked target.
-- A subject marked “Explicitly Required” by a reliable source cannot be silently removed. The student may choose not to prepare it, but must see a risk warning and actively confirm the choice.
-- When a manually added subject is removed, the system explains that future course, diagnostic, and plan tasks for that subject will stop, while historical learning records are retained.
-- When changes to target information alter the subject combination, the system shows newly added, retained, and potentially removable subjects, and updates the plan only after student confirmation.
+- Students can accept, remove, or add a supported subject/exam-language track before confirmation.
+- When a manual change may not satisfy a selected target requirement, the platform shows the affected target, evidence source, and risk before confirmation.
+- Mathematics (English) and Mathematics (Chinese) share canonical mathematical objectives while retaining distinct exam-language terminology, item variants, assistance rules, and mock forms.
+- Removing a subject stops future subject-specific plan tasks but preserves historical lessons, attempts, reports, and remediation evidence.
+- When verified target data changes, the platform shows added, retained, and potentially removed subject differences and requires confirmation before updating an active plan.
 
 ### 3.4 Baseline Diagnostic Assessment (P0)
 
-- Students complete topic-based diagnostic assessments for confirmed target subjects in the corresponding exam language.
-- Mathematics in English and Mathematics in Chinese share the same mathematical diagnostic framework, while Mathematics in Chinese additionally assesses foundational terminology and question-stem comprehension.
-- Results display overall level, topic mastery, typical errors, exam-language comprehension, and a recommended starting point.
-- Students may resume after leaving midway, but results are generated only after the minimum valid response volume is reached.
-- After completion, the system automatically generates the first-week plan and allows the student to confirm or adjust study intensity.
+- Students may complete a topic-based diagnostic for a confirmed subject and exam language; direct learning, practice, and mocks remain available without completing a diagnostic unless a product or entitlement explicitly requires it.
+- English Mathematics and Chinese Mathematics use the shared canonical mathematical framework; Chinese Mathematics additionally measures terminology and question-stem comprehension.
+- Diagnostic delivery uses the shared assessment-attempt model with a diagnostic purpose and a configured question set rather than a separate incompatible exam subsystem.
+- An interrupted attempt can resume under the applicable attempt rules, and a final report is produced only after the minimum valid evidence threshold is met.
+- Results show overall level, topic evidence, typical errors, language-comprehension evidence where applicable, evidence gaps, and a recommended starting point.
+- Diagnostic completion may propose planning inputs, but it does not automatically activate or silently overwrite a study plan.
 
 ### 3.5 Study-Plan Feasibility Assessment (P0)
 
-- The system assesses whether the current study plan can be completed before the exam using the exam date, confirmed subjects, diagnostic results, weekly available study time, remaining course workload, and required review tasks. Intent: prevent the system from generating a formally complete but practically impossible plan.
-- Results display at least the remaining time before the exam, weekly available study time, estimated required study time, current personal syllabus progress, and plan-risk level.
-- Risk levels include at least **On Track, At Risk, and High Risk**, with the main reasons for the classification explained.
-- When available time is insufficient, the system provides actionable adjustments, including increasing weekly study time, prioritizing high-importance or high-risk topics, reducing non-core tasks, or changing the target exam date.
-- The system recalculates feasibility when the student changes the exam date, weekly available study time, target subjects, exam language, or study intensity.
-- When a plan is clearly infeasible, the system must not continue generating daily tasks without warning the student.
-- After the student confirms an adjustment, the system updates daily tasks, stage goals, and estimated completion time, while preserving all existing learning records.
-
+- When a student requests guided planning, the system compares the exam date, confirmed subjects, weekly availability, reviewed curriculum workload, diagnostic evidence, and available lesson/practice/mistake/mock evidence. Intent: avoid generating a formally complete but practically impossible plan.
+- A feasibility classification is calculated only when workload estimates and learner evidence are sufficient; otherwise the system shows provisional or insufficient-evidence status and identifies what is missing.
+- The result shows time remaining, weekly available time, estimated required time, current platform-curriculum progress, evidence basis, and risk level.
+- Risk states include at least **on track, at risk, and high risk**, with explainable reasons.
+- Where current effort is insufficient, the platform proposes actionable adjustments such as increasing study time, prioritising high-importance or high-risk objectives, reducing non-core tasks, or changing the target date.
+- Changes to target date, availability, subject, exam language, curriculum release, or study intensity trigger recalculation without deleting historical evidence.
+- A plan becomes active only after the student reviews the workload and confirms the current proposal. If the proposal has become stale, activation is rejected safely and a refreshed proposal is shown.
 <a id="courses-materials"></a>
 
 ## 4. Courses and Learning Materials
@@ -474,25 +479,26 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - The first iteration provides both **Mathematics (English)** and **Mathematics (Chinese)**. They share the same mathematical knowledge structure, formulas, difficulty, and mastery model, while providing terminology, examples, practice, and mock exams in the corresponding exam language.
 - Physics, Chemistry, and Professional Chinese are introduced later according to market data and content readiness, using the same learning architecture rather than redesigning the complete workflow for each new subject.
 
-### 4.2 Official Syllabus Mapping and Course Coverage Map (P0)
+### 4.2 Official Syllabus Source and YukCSCA Topic Mapping (P0)
 
-- For each sold subject, the platform establishes an item-by-item mapping between platform course content and the official CSCA exam syllabus. Intent: help students and parents confirm course scope and ensure that content development follows a unified, verifiable exam scope.
-- The coverage map follows the official syllabus structure of modules, topics, and knowledge points, and links each item to relevant courses, practice, in-course assessments, and mock-exam content.
-- The platform publicly displays the official syllabus name, version or publication date, official source link, and last verification date. Users can open the official source directly for comparison.
-- Platform content status distinguishes at least **Fully Covered, Partially Covered, In Development, and Not Yet Covered**. Incomplete content must not be presented as fully covered.
-- Personal learning status distinguishes at least **Not Started, In Progress, Review Needed, Learned, and Stably Mastered**. Personal learning progress and platform content coverage must be shown separately.
-- Students can open the relevant course, practice, mistake review, terminology, or revision task directly from a syllabus knowledge point.
-- Personal syllabus progress cannot be based only on opening a course or watching a video. It must incorporate in-course assessment, practice performance, mistake revalidation, and mock-exam results.
-- Mathematics in English and Mathematics in Chinese share the same mathematical syllabus, but separately display coverage of questions, terminology training, language support, and mock exams in each exam language.
-- When the official syllabus changes, the platform displays added, removed, and changed items between versions and indicates the effects on current courses, products, and student plans.
+- For every sold subject, the platform stores the official CSCA syllabus version, source link or locator, publication or effective date, last checked date, and the syllabus's original module and topic labels.
+- Official syllabus topics remain separate from YukCSCA-authored learning objectives, prerequisites, common-error categories, lessons, questions, and remediation content. YukCSCA-authored content must never be presented as official syllabus wording.
+- A YukCSCA learning objective may map to one or more official syllabus topics. Each mapping keeps a short reason and the person who last reviewed it.
+- The coverage page shows the selected official syllabus version, its mapped YukCSCA learning objectives, and whether related lessons, practice, checkpoints, and mocks are available.
+- Product coverage uses at least **Fully Covered, Partially Covered, In Development, and Not Covered**. A “full coverage” claim is calculated against one named official syllabus version, not against the number of topics YukCSCA has created.
+- Personal learning status uses at least **Not Started, Learning, Review Due, Learned, and Stable Mastery** and is displayed separately from product coverage.
+- Students can open the related lesson, practice, mistake review, terminology, or remediation content from a syllabus topic or learning objective.
+- Personal progress is updated from checkpoints, practice, rechecks, and mocks; opening a page or watching a video alone does not prove mastery.
+- When the official syllabus changes, the platform keeps the old and new versions, shows changed topics and affected mappings, and leaves historical attempts and reports unchanged.
 
-### 4.3 Micro-Lesson Content (P0)
+### 4.3 Focused Learning-Unit Content (P0)
 
-- Support short videos, text-and-image explanations, formulas, worked examples, and terminology cards.
-- Each micro-lesson focuses on one assessable learning objective, avoiding long videos that cannot demonstrate mastery.
-- Videos, text, and explanations use the student’s default explanation-language version. If a specific language is unavailable, the system clearly displays available languages and provides a comprehensible fallback.
-- Videos include subtitles and text summaries for low-bandwidth access and later review.
-- Students can change playback speed, resume from the previous position, and mark lessons complete.
+- A focused learning unit targets one assessable platform learning objective and may use structured text, formulas, diagrams, worked examples, terminology cards, short video, interactive blocks, or a reviewed combination.
+- Video is optional and must not block publication when an accessible, academically complete alternative exists.
+- Content variants use the student's explanation language where available while retaining canonical formulas, definitions, objective identity, and exam-language terminology.
+- Missing explanation-language or exam-language variants are explicit; the system must not silently substitute a different exam language.
+- Video or audio variants provide captions/transcripts and low-bandwidth alternatives.
+- Students can resume supported media or content position and mark completion, but completion alone does not establish mastery.
 
 ### 4.4 Explanation-Language and Exam-Language Bridging (P0)
 
@@ -500,7 +506,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Students can select a default explanation language in Settings and temporarily switch it within a learning session. The system must not assume that all students use Bahasa Indonesia.
 - Mathematics (English) displays English questions and terminology by default; Mathematics (Chinese) displays Chinese questions and terminology by default.
 - Key terminology uses the same internal term identifier and mathematical meaning across explanation languages to prevent conceptual drift between translations.
-- Changing the explanation language does not change exam subjects. Changing the exam language causes the system to rematch terminology tasks, question versions, and diagnostic requirements.
+- Changing the explanation language does not change exam subjects. Changing the exam language causes the system to update terminology tasks, future questions, and diagnostic requirements for the selected language.
 
 ### 4.5 Chinese Mathematics Terminology Preview and In-Question Support (P0)
 
@@ -530,15 +536,17 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 5.1 Topic Practice (P0)
 
-- Students can select practice by subject, module, topic, difficulty, and exam language. When entering from the study plan, the question language follows the exam language of that subject by default.
-- Each practice session shows the number of questions and estimated completion time.
-- Depending on the activity settings, feedback is shown immediately after each response or after the full set is submitted.
+- Students can start practice without a study plan by subject, official syllabus topic, YukCSCA learning objective, difficulty, and exam language.
+- Each practice set shows item count, expected time, assessment purpose, and the published question set used.
+- Feedback may be immediate or after set submission according to the disclosed mode.
+- Topic-practice evidence can later inform a diagnostic report or plan, but an active plan is not required to begin or complete the set.
 
-### 5.2 Study-Plan Practice (P0)
+### 5.2 Plan-Assigned Practice (P0)
 
-- The system generates practice tasks directly from the daily plan.
-- Tasks cover new knowledge, recent mistakes, and older knowledge due for spaced review.
-- Completion automatically updates daily progress and subsequent tasks.
+- This capability requires an active study plan and reads the plan-assigned task, target objective, expected effort, and plan version.
+- Assigned practice may combine new objectives, recent mistakes, remediation tasks, and spaced review according to confirmed priorities.
+- Completion updates the assigned task and may propose later task changes through the plan-orchestration boundary.
+- If the referenced plan version is stale, replaced, paused, or unavailable, the platform preserves submitted evidence and requests safe reconciliation instead of silently updating another plan.
 
 ### 5.3 Hints, Language Assistance, and Solutions (P0)
 
@@ -548,12 +556,13 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Correct answers obtained after strong hints or a full meaning explanation are not treated as independent mastery. The system reduces the contribution of that attempt to mastery and schedules a no-assistance reassessment.
 - AI-generated supplementary explanations must be grounded in reviewed questions, solutions, and course materials, and should use the student’s default explanation language. Low-confidence responses provide an option for human review or feedback.
 
-### 5.4 Mistake Notebook (P0)
+### 5.4 Mistake Notebook and Immediate Remediation (P0)
 
-- Incorrect responses are added automatically to the mistake notebook, recording the latest attempt, error count, associated knowledge point, hints used, and error type. Error types include at least knowledge gap, calculation error, question or terminology misinterpretation, carelessness, and time management.
-- Students can add a personal explanation or note about the cause of the mistake.
-- The system schedules the mistake for later practice and updates its status after a correct response.
-- A question is not permanently removed after one potentially lucky correct response. Stable mastery is determined through later performance.
+- Incorrect responses enter the mistake record with the attempt question copy, latest response, error count, related learning objective and syllabus topics, assistance used, and an error cause such as a conceptual gap, prerequisite gap, terminology misunderstanding, carelessness, or time management.
+- Students can add a private error explanation or note.
+- The platform can offer and complete an immediate deterministic remediation action without an active study plan.
+- Scheduling remediation into future dates or changing plan priorities requires the plan-orchestration capability and the applicable confirmation rules.
+- A mistake is not permanently closed after one guessed or assisted correct answer; revalidation evidence determines whether stable mastery has improved.
 
 ### 5.5 Bookmarks and Challenge Practice (P1)
 
@@ -578,16 +587,19 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 6.3 Contextual Questions and Answers (P0)
 
-- Students can ask questions directly within courses, practice questions, mistake records, and mock-exam reports.
-- The agent understands the current learning context, subject exam language, student’s default explanation language, and recent mistakes, reducing repeated explanations by the student.
-- The agent responds in the student’s default explanation language while retaining the English or Chinese exam terminology of the current subject. The student may temporarily switch the explanation language during the current session.
-- Responses distinguish among “course-verified content,” “inferred explanation,” and “content requiring tutor confirmation.”
+- Students can ask from a lesson, assessment item, mistake, terminology entry, remediation unit, or mock report without requiring an active study plan.
+- The agent receives only the authorised current lesson, question, mistake, or mock context, the subject exam language, the current explanation language, and relevant recent learning evidence.
+- Answers default to the student's explanation language while preserving the subject's English or Chinese exam terminology.
+- Answers distinguish **reviewed-source answer**, **derived explanation**, and **insufficient evidence / human review required**; they must not imply that a model-generated explanation is official.
+- The sources and exact lesson or question content used for the answer are traceable, and the student can report a disputed answer.
 
-### 6.4 Automatic Remediation and Plan Reprioritization (P0)
+### 6.4 Plan Remediation and Reprioritization (P0)
 
-- When a student repeatedly fails the same knowledge point, the agent first distinguishes between a mathematical knowledge problem and an exam-language comprehension problem, then provides a more foundational explanation, terminology task, or prerequisite task.
-- When a mock exam or stage assessment reveals a new weakness, the system adjusts the weighting of future learning tasks.
-- All major plan changes are explained to the student and require student confirmation.
+- This capability requires an active study plan; follow-up recommendations may already exist from lessons, mistakes, diagnostics, or mocks without being added to a study plan.
+- The system distinguishes minor deterministic ordering within confirmed priorities from a material change to subject weighting, workload, dates, or learning goals.
+- Minor changes remain explainable and auditable. Material changes show the evidence, expected impact, and affected tasks and require student confirmation before becoming active.
+- Reprioritization compares against an explicit plan version; stale or concurrently changed plans are not overwritten.
+- The agent proposes or explains changes, but deterministic planning rules and confirmed product state remain authoritative.
 
 ### 6.5 Escalation to Human Tutoring (P1)
 
@@ -620,12 +632,13 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Reports distinguish actionable issues such as weak knowledge, calculation error or carelessness, terminology and question comprehension, translation dependency, reading speed, and time management.
 - Students can open solutions, mistake review, or related courses directly from the report.
 
-### 7.4 Post-Mock Remediation Loop (P0)
+### 7.4 Post-Mock Recommendations, Study-Plan Update, and Recheck (P0)
 
-- The system generates a prioritized remediation list from the report.
-- The list is automatically added to the subsequent study plan.
-- After completing remediation, the student can take a short reassessment or another mock exam to validate improvement.
-
+- **7.4A — Follow-up recommendations:** After analysing a mock, the platform recommends the most useful next actions, such as reviewing a lesson, revisiting mistakes, practising terminology, completing targeted questions, or improving pacing. Students can start these actions even when they do not have an active study plan.
+- Each recommendation shows the evidence and reason behind it and clearly indicates that it has not yet been added to a study plan.
+- **7.4B — Add to study plan:** When an active study plan exists, the platform shows how the selected recommendations would affect workload and priorities. The student must confirm before the plan is updated.
+- If the study plan has changed, been paused, or is unavailable, the recommendations remain accessible and no other plan is changed.
+- After completing the follow-up work, the student may take a focused recheck or later mock. The platform compares the new evidence with the original result without replacing the original report.
 <a id="motivation"></a>
 
 ## 8. Learning Motivation and Self-Management
@@ -811,7 +824,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Manual contact and matching may use external channels such as WhatsApp, but the final tutor, time, meeting, materials, homework, feedback, and state must be recorded in the platform.
 - Platform messages do not support open friend requests, group chat, or private messaging with unassigned tutors.
 - Important actions such as meeting links, cancellation, rescheduling, and homework submission must use structured platform functions rather than relying only on chat.
-- Platform messages retain the sender and timestamp. Admins can access them according to permissions when handling a complaint.
+- Platform messages retain the sender and timestamp. The platform Admin can access only the information necessary to handle a complaint; later multi-admin access must be scoped before use.
 
 ### 9.19 Rating, Disputes, and Settlement (P1)
 
@@ -950,11 +963,12 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ## 14. Back-Office Administration
 
-### 14.1 Admin Accounts and Permissions (P0)
+### 14.1 First Platform Admin (P0)
 
-- Admin accounts are created and disabled by the platform.
-- Back-office permissions can be assigned by user management, content, tutoring, customer service, finance, and other responsibilities.
-- Critical actions retain the operator, timestamp, reason, and outcome.
+- The pilot has one platform admin account. The account is identified through deployment configuration and signs in through the same verified login flow as other users.
+- Public admin registration is not allowed. The pilot does not need an admin invitation flow, an admin-account creation page, or a permission-management page.
+- The first admin can use all admin features delivered in the pilot. Important admin actions record the admin account, time, result, and a reason when one is required.
+- Before a second admin account is introduced, the platform must define the required roles and permissions.
 
 ### 14.2 User and Relationship Management (P0)
 
@@ -971,30 +985,30 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Approve, reject, request additional evidence, suspend, restore, or deactivate tutors.
 - Support internal filtering by subject, language, time, workload, and service status for manual matching.
 
-### 14.4 Course, Syllabus, and Content Management (P0)
+### 14.4 Syllabus and Learning-Content Management (P0)
 
-- Manage subjects, exam languages, explanation-language versions, modules, topics, courses, videos, handouts, terminology, and versions. One mathematical knowledge point can be linked to English question versions, Chinese question versions, and multiple explanation-language content versions.
-- Manage official CSCA syllabus versions, modules, topics, knowledge points, official source links, publication dates, and last verification dates.
-- Map courses, questions, terminology, in-course assessments, and mock exams to one or more official syllabus knowledge points.
-- The back office displays coverage of courses, practice, assessments, mock exams, and language versions for every syllabus knowledge point and identifies items that lack required content.
-- Admins can maintain platform content coverage status and separately review calculations for platform coverage and individual student progress.
-- When the official syllabus changes, Admins can compare versions and confirm the impact on courses, products, diagnostics, and student plans.
-- A subject can be labeled “Full Syllabus Coverage” on the product page only after meeting platform-defined content-completeness standards and passing review.
-- Content supports Draft, Pending Review, Published, Revision Required, and Unpublished states.
-- Content must pass at least completeness and academic review before publication.
+- The first platform admin manages the pilot's academic content.
+- Official CSCA syllabus versions and syllabus topics are stored separately from YukCSCA's own learning objectives, prerequisites, common mistakes, terminology, lessons, questions, explanations, and remediation content.
+- Content uses stable IDs and reusable fields so the same data can later be used by the web app, a mobile app, or another YukCSCA client. Frontend routes, page layout, and temporary interface state are not stored as academic content.
+- Content has three simple states: Draft, Published, and Archived. The admin can create and edit content directly. A basic CSV or JSON import may be added when it clearly saves time, but it is not required for the first release.
+- Before publication, the platform checks required links, supported languages, formulas or files, question answers and scoring, and source or permission information. Invalid content remains in Draft, while existing Published content stays available.
+- When published content is corrected, completed attempts and reports continue to use the exact content that was shown at the time.
 
-### 14.5 Question Bank and Mock-Exam Management (P0)
+### 14.5 Question and Mock-Paper Management (P0)
 
-- Create and edit question stems, options, correct answers, explanations, difficulty, knowledge points, exam language, optional language-assistance entries, and equivalent question versions.
-- Questions support review, versioning, disabling, and error-report handling.
-- Manage mock-exam question count, time limit, composition, visibility, and publication status.
+- A question records its subject, exam language, question text, answer choices when needed, correct answer or scoring rule, explanation, difficulty, related syllabus topics or learning objectives, and publication status.
+- The admin can create, edit, publish, and archive questions. Draft questions can be changed freely.
+- The admin creates a diagnostic, practice set, checkpoint, or mock paper by setting its purpose, subject, exam language, duration, scoring, visibility, and the published questions it contains.
+- When a student starts an attempt, the platform saves the exact question text, choices, answer, and scoring information used for that attempt. Correct answers, scoring keys, and solutions remain server-side and are not exposed to the client before the allowed submission or feedback point. Later question edits do not change completed attempts or their scores.
+- Before publication, the platform checks that every selected question is published and compatible with the assessment. A published set or mock paper may later be archived or replaced without affecting past attempts.
 
-### 14.6 Content Source and Authorization Ledger (P0)
+### 14.6 Content Source and Rights Records (P0)
 
-- Each course, question, video, and handout records content type, author or provider, source, authorization method, reviewer, and permitted usage scope.
-- Content types include at least platform-original, licensed, open-license, factual reference, and user-uploaded content.
-- Content with unverified origin or authorization cannot be published as formal paid content.
-- The platform must not market unauthorized official exam questions as “official past papers” or “leaked questions.”
+- Each official syllabus source, paid lesson, question, explanation, remediation asset, and media asset records the relevant author/provider, source locator or internal authorship, source type, permission or licence basis, and review state.
+- Source types include at least platform original, commissioned, licensed, open licence, factual reference, and user upload.
+- Content that lacks the required source or permission evidence cannot be published.
+- Official websites may support factual claims about exam structure, dates, policies, and syllabi, but their pages, databases, or protected questions must not be copied beyond the permitted use.
+- Advanced rights-expiry automation, territory/audience matrices, package-level rights rollups, and dedicated rights-review roles are later-stage capabilities.
 
 ### 14.7 Order, Payment, and Refund Management (P0)
 
@@ -1022,7 +1036,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 - View user-flagged incorrect answers, low-confidence responses, and frequently disputed content.
 - Review AI accuracy and complaints by explanation language, exam language, subject, and knowledge point, avoiding evaluation in only one language.
-- Admins or academic reviewers can correct reference content, terminology definitions, and language versions, with all changes versioned.
+- Admins or academic reviewers can correct reference content, terminology definitions, and language content; the platform records what changed and when.
 - AI answering can be temporarily disabled or routed to human handling for high-risk or repeatedly incorrect content.
 
 ### 14.10 Operating Analytics (P0)
@@ -1061,13 +1075,13 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 ## 3. Security and Access Control
 
 - All platform traffic uses encrypted transport, and passwords are stored using secure password hashing.
-- Role and Admin permissions follow the principle of least privilege.
+- Product roles follow the principle of least privilege. The first Admin account is the only admin identity in the pilot; separate Admin permissions must be defined before additional administrators are added.
 - Critical back-office actions, refunds, content publication, relationship changes, and tutor-status changes retain audit logs.
 - The platform does not store full bank-card information directly. Sensitive payment information is handled by compliant payment providers.
 - Controls and alerts are established for abnormal login activity, brute-force attempts, bulk scraping, and content theft.
 - External meeting links, lesson PDFs, homework PDFs, and feedback PDFs require identity and formal-booking authorization and must not use permanent public-access links.
 - PDF uploads enforce file-type and file-size limits and undergo basic malicious-file checks before access is allowed.
-- Only authorized Admins can view the full internal tutor pool, internal pricing, workload, candidate matches, and external-contact records.
+- Only the first platform Admin can view the full internal tutor pool, internal pricing, workload, candidate matches, and external-contact records during the pilot. Access rules must be defined before additional administrators are added.
 
 <a id="privacy-minors"></a>
 
@@ -1095,13 +1109,13 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ## 6. Content Copyright and Source Traceability
 
-- The platform publishes only original, licensed, open-license, or lawfully referencable content.
-- Exam structure, dates, and university requirements on official websites may be cited as factual sources, but protected web content, databases, or exam questions cannot be copied without authorization.
-- Every paid learning item must be traceable to its author, source, authorization, and review record.
-- Videos use self-produced, commissioned, or licensed materials, with scripts, asset sources, and publication permissions retained.
-- Users uploading materials must confirm that they have the right to upload them. The platform supports prompt takedown and investigation after complaints.
-- Tutor-published or Admin-entered text, PDFs, and homework materials record the actual provider, system operator, and permitted scope. Use within one tutoring service does not automatically grant permission for public distribution.
-- Student homework text and PDFs are used only for teaching, feedback, dispute handling, and study-plan updates and must not be publicly shared or reused commercially without authorization.
+- The platform publishes only original, commissioned, licensed, open-licence, or lawfully referenced content.
+- Official sites may be cited as factual sources for exam structure, dates, policies, and syllabi, but their pages, databases, and protected questions must not be copied without permission.
+- Paid learning content, official syllabus sources, questions, explanations, remediation content, and assets remain traceable to their author/provider, source, permission basis, and review state.
+- Replacing a lesson, question, translation, or media asset does not automatically transfer the prior source or permission evidence to the replacement.
+- User-uploaded content requires upload authority and supports timely restriction, takedown, and investigation.
+- Tutor or admin-entered teaching materials retain the actual provider, system recorder, permitted audience, and reuse boundary.
+- Student submissions are used only for authorised teaching, feedback, dispute handling, and learning-state updates and are not republished as commercial content without explicit lawful permission.
 
 <a id="localization-accessibility"></a>
 
@@ -1131,11 +1145,12 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ## 9. Maintainability and Content Updates
 
-- Courses, questions, university requirements, the internal tutor pool, tutoring requests, matching, bookings, meetings, materials, homework, and notifications can be updated through the back office without republishing the client application each time.
-- Historical content versions are retained so that past score reports remain explainable.
-- University requirements, exam policies, and official exam syllabuses display the version, official source, and last verification date, with reminders for scheduled re-review.
-- Historical syllabus mappings and change records are retained after updates so that existing scores, plans, and coverage reports remain explainable.
-- The content model manages official syllabus knowledge points, mathematical knowledge, exam-language versions, and explanation-language versions as separate layers. This allows subjects and languages to reuse the same structure rather than redesigning the complete workflow for every addition.
+- Courses, official syllabus versions, learning objectives, topic mappings, terminology, lessons, questions, remediation content, university requirements, tutoring operations, and notifications can be updated through the admin dashboard without republishing every client.
+- Academic content uses stable IDs and reusable fields so the same source can serve multiple YukCSCA clients or future platforms.
+- The pilot uses simple Draft, Published, and Archived states. Each attempt stores the question and scoring data that the student received so later edits do not change historical attempts, reports, mastery evidence, or plan decisions.
+- Official requirements and syllabus sources show authority, version/effective date, source locator, last verification date, and review-due status.
+- Changes to the official syllabus remain distinguishable from changes to YukCSCA-authored learning content.
+- Basic structured import or export may be added later when it reduces manual work; it is not required for the first release.
 
 <a id="observability-operations"></a>
 
