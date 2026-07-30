@@ -36,7 +36,7 @@ import { MockInstructionsPage } from '@/prototype/student/mock-exam/MockInstruct
 import { MockSessionPage } from '@/prototype/student/mock-exam/MockSessionPage';
 import { MockResultPage } from '@/prototype/student/mock-exam/MockResultPage';
 import { ProgressPage } from '@/prototype/student/progress/ProgressPage';
-import { LanguagesPage } from '@/prototype/student/settings/LanguagesPage';
+import { LanguagesPage } from '@/features/profile/LanguagesPage';
 import { FamilyPage } from '@/prototype/student/settings/FamilyPage';
 import { AccessPage } from '@/prototype/student/settings/AccessPage';
 import { ProductsPage } from '@/prototype/consumer/public/ProductsPage';

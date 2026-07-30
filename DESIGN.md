@@ -240,6 +240,13 @@ components:
     typography: '{typography.body-sm}'
     rounded: '{rounded.md}'
     padding: 12px 16px
+  toast-notification:
+    backgroundColor: '{colors.semantic-success-soft}'
+    textColor: '{colors.semantic-success}'
+    borderColor: '{colors.border-strong}'
+    typography: '{typography.body-sm}'
+    rounded: '{rounded.md}'
+    padding: 14px 20px
   progress-track:
     backgroundColor: '{colors.surface-soft}'
     textColor: '{colors.ink-muted}'
@@ -489,7 +496,7 @@ Pastel blocks may contain white sub-surfaces when a form or dense table needs st
 
 ### Feedback
 
-Use feedback components for local, actionable messages. A toast is suitable for a low-risk background acknowledgement; errors that block the current task stay in the task region.
+Use feedback components for local, actionable messages. `{components.toast-notification}` is suitable for a low-risk background acknowledgement or language independence notice. It renders via React portal directly to `document.body` at fixed top-right (`top: 1.5rem; right: 1.5rem; z-index: 99999`) on desktop and top-floating full-width (`top: 1rem; left: 1rem; right: 1rem`) on mobile. Toasts use `{colors.semantic-success-soft}` or `{colors.semantic-info-soft}` with a matching circular icon badge indicator and a manual close button; errors that block the current task stay in the task region.
 
 ## Anti-slop rules
 
