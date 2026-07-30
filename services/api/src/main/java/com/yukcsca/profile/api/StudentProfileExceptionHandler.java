@@ -2,8 +2,10 @@ package com.yukcsca.profile.api;
 
 import com.yukcsca.identity.application.InvalidCredentialException;
 import com.yukcsca.profile.application.ProfileAccessDeniedException;
+import com.yukcsca.profile.application.ProfileField;
 import com.yukcsca.profile.application.ProfileValidationException;
 import com.yukcsca.profile.application.ProfileViolation;
+import com.yukcsca.profile.application.ProfileViolationCode;
 import com.yukcsca.profile.application.RoleAlreadyAssignedException;
 import java.util.List;
 import org.slf4j.Logger;
@@ -15,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import tools.jackson.databind.exc.InvalidNullException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 @RestControllerAdvice(assignableTypes = StudentProfileController.class)
 public class StudentProfileExceptionHandler {
@@ -27,7 +31,23 @@ public class StudentProfileExceptionHandler {
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  ResponseEntity<ValidationProblemResponse> malformedRequest() {
+  ResponseEntity<ValidationProblemResponse> malformedRequest(
+      HttpMessageNotReadableException exception) {
+    if (exception.getMostSpecificCause() instanceof MismatchedInputException mismatchedInput
+        && !mismatchedInput.getPath().isEmpty()) {
+      String wireName = mismatchedInput.getPath().getLast().getPropertyName();
+      for (ProfileField field : ProfileField.values()) {
+        if (field.wireName().equals(wireName)) {
+          return validationProblemResponse(
+              List.of(
+                  new ProfileViolation(
+                      field,
+                      mismatchedInput instanceof InvalidNullException
+                          ? ProfileViolationCode.REQUIRED
+                          : ProfileViolationCode.UNSUPPORTED)));
+        }
+      }
+    }
     return validationProblemResponse(List.of());
   }
 

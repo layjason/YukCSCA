@@ -72,7 +72,9 @@
     "languages": "Languages",
     "family": "Family",
     "access": "Access",
-    "more": "More"
+    "more": "More",
+    "backToDashboard": "Back to Dashboard",
+    "backToProfile": "Back to Profile"
   },
   "shell": {
     "navLabel": "Main navigation",
@@ -450,7 +452,31 @@
     "settingsLabel": "Profile settings",
     "editUnavailable": "Profile editing is not yet available.",
     "identityNote": "This information comes from your authenticated account.",
-    "productionLabel": "Production-backed account identity"
+    "productionLabel": "Production-backed account identity",
+    "learnerTitle": "Learner Profile",
+    "accountTitle": "Account Identity",
+    "preferredName": "Preferred Name",
+    "birthYear": "Birth Year",
+    "currentGrade": "Current Grade",
+    "city": "City",
+    "defaultExplanationLanguage": "Default Explanation Language",
+    "birthYearNote": "Birth year is used for learning content personalization, not legal age verification.",
+    "languageNote": "Default explanation language is independent from interface language and exam language.",
+    "save": "Save profile",
+    "saving": "Saving...",
+    "saveSuccess": "Profile updated successfully.",
+    "loadError": "Failed to load student profile.",
+    "saveError": "Failed to update profile.",
+    "retry": "Try again",
+    "dismissNotification": "Dismiss notification",
+    "noChanges": "No changes to save.",
+    "selectPlaceholder": "Select grade",
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "Text is too long.",
+      "birthYearRange": "Birth year must be within the valid range.",
+      "unsupported": "Value is not supported."
+    }
   },
   "settings": {
     "languagesTitle": "Language settings",
@@ -464,8 +490,11 @@
     "languageNote": "Interface, explanation, and exam languages are independent. Changing one does not change the others.",
     "examLanguageWarning": "Changing exam language may change question sets, terminology tasks, diagnostic needs, and plan feasibility.",
     "historyNote": "Your learning history remains when explanation language changes.",
-    "explanationOwnership": "This screen shows a preview academic preference. Permanent editing is not available in Preview.",
-    "examOwnership": "The sample exam track is preview-only. Production changes require an impact review.",
+    "explanationOwnership": "This setting sets your default language for academic explanation content.",
+    "examOwnership": "Exam language is managed separately for each subject and cannot be changed here.",
+    "saveLanguage": "Save explanation language",
+    "savingLanguage": "Saving language...",
+    "languageSaved": "Default explanation language updated successfully.",
     "family": {
       "noParent": "No parent is currently linked.",
       "inviteEntry": "Invite a parent (coming soon)",

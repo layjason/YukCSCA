@@ -56,13 +56,16 @@ Minor-user identity and relationships, learning conversations, assessment answer
 - Recovery request, delivery, rejection, and success events exclude raw email,
   password, token, message, provider payload, and session credentials.
 
-### Student activation
+### Student profile
 
 - Student activation accepts only an authenticated account whose authoritative database role is `UNASSIGNED`; other assigned roles are rejected.
 - Profile creation and the one-way transition to `STUDENT` share one transaction and a unique account constraint. A same-account retry returns the existing profile instead of creating another.
 - Only birth year is collected for age-appropriate behavior, using a rolling Asia/Jakarta range corresponding to ages 12 through 21. It is not represented as legal age verification, and parent linking is not required by this slice.
 - Activation returns a replacement short-lived access token carrying the new role while leaving the refresh session unchanged. The durable success event contains the account identifier and event time, not submitted profile fields or Google credentials.
-- Student-profile request, response, activation, and shared current-user string representations redact personal fields. Validation failures are converted to stable field/code pairs before framework exception logging can render rejected values.
+- Profile updates derive ownership from the verified JWT, require the authoritative `STUDENT` role, and lock the existing account-owned profile row. They validate every supplied field before mutation and cannot change the profile ID, owning account, account role, creation time, or authentication session.
+- Students may correct birth year only within the same rolling Asia/Jakarta range. This self-reported field remains age-appropriate personalization data rather than legal-age or guardian-consent evidence.
+- Empty and identical updates are successful no-ops. An effective update and its durable event commit together; the event stores only its category, pseudonymous account ID, and time, never old/new profile values.
+- Student-profile request, response, activation, and shared current-user string representations redact personal fields. Validation failures, including explicit null update fields, are converted to stable field/code pairs before framework exception logging can render rejected values.
 
 ### Repository and delivery
 
@@ -93,7 +96,9 @@ These controls must ship with the first feature that needs them:
 - VS-002 owns production registration, verification, credential login,
   abuse controls, audit behavior, and the shared session handoff. Fixture
   identity must still remain isolated for PX-002-only consumers. VS-003 owns
-  production password recovery.
+  production password recovery. VS-004 owns the production student-profile
+  update boundary and is `DONE` after focused authorization/privacy evidence
+  and product-owner journey acceptance.
 
 ### Roles, parents, tutors, and administration
 

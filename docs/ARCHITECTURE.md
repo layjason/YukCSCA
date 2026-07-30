@@ -55,8 +55,9 @@ The API currently contains `identity` and `profile` modules:
 Identity owns accounts, Google identities, roles, sessions, security events,
 credential authenticators, pending email-verification claims, policy evidence,
 verification delivery outbox state, password-recovery claims and delivery
-state, and retention. Profile owns student activation and profile state,
-reaching identity only through an application-facing activation API. Modules
+state, and retention. Profile owns student activation and student-owned profile
+maintenance, reaching identity only through application-facing account,
+authentication, and security-event APIs. Modules
 never import another module's repository, JPA entity, controller, or
 infrastructure. New modules appear only with their first accepted use case.
 
@@ -137,14 +138,29 @@ one student profile and changes the account to `STUDENT`; it returns canonical
 current-user state and a replacement access token. The profile is private to
 its authenticated student.
 
+`PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
+for the authenticated owning `STUDENT`. The application validates the complete
+patch before mutation, locks the existing profile row, treats empty or
+identical patches as successful no-ops, and returns the authoritative private
+profile without changing identity, role, or session state. Effective updates
+and their value-free security event commit in one transaction. The endpoint
+uses the existing V3 schema; no migration or new dependency is required.
+
 The VS-003 password-recovery backend and production frontend are `DONE` after
 focused contract, PostgreSQL/Flyway, backend, frontend, security/privacy, and
 product-owner journey evidence. The frontend consumes the generated recovery
 contract, reads fragment or query credentials, removes them from browser
 history, and exposes retry and return-to-sign-in states. Other role onboarding,
-profile editing, learning, family, content, commerce, tutoring, and AI behavior
-do not exist yet. VS-002 is also `DONE` after full implementation, verification,
-and product owner signoff.
+learning, family, content, commerce, tutoring, and AI behavior do not exist yet.
+The VS-004 backend and production profile/default-language settings frontend are
+`DONE` after contract, PostgreSQL/Flyway, backend, frontend, route-boundary,
+security/privacy, code-surface, and product-owner journey evidence. The
+independently production-accessible student settings surface is deliberately
+limited to `/app/profile` and `/app/profile/languages`; `/app/more` remains
+inside the preview-workspace gate, and learning, family, access, commerce, and
+other workspace destinations remain prototype-only or unimplemented until their
+owning slices are accepted. VS-002 is also `DONE` after full implementation,
+verification, and product owner signoff.
 
 ## Prototype boundaries
 

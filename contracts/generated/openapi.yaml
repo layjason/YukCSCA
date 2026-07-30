@@ -480,6 +480,19 @@ paths:
       responses:
         '200':
           description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
           content:
             application/json:
               schema:
@@ -507,6 +520,67 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    patch:
+      operationId: StudentProfileApi_updateMyStudentProfile
+      description: Partially updates the authenticated student's own profile. Omitted fields remain unchanged. Birth year remains bounded profile data and is not legal-age verification. Explanation language remains independent from interface and exam language.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile.StudentProfile'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Profile.ValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Profile.UpdateMyStudentProfileRequest'
       security:
         - BearerAuth: []
 components:
@@ -799,6 +873,27 @@ components:
         updatedAt:
           type: string
           format: date-time
+    Profile.UpdateMyStudentProfileRequest:
+      type: object
+      properties:
+        preferredName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        birthYear:
+          type: integer
+          format: int32
+          description: A corrected birth year in the inclusive range from the current Asia/Jakarta year minus 21 through the current year minus 12. It is not legal-age verification.
+        currentGrade:
+          $ref: '#/components/schemas/Profile.StudentGrade'
+        city:
+          type: string
+          minLength: 1
+          maxLength: 120
+        defaultExplanationLanguage:
+          $ref: '#/components/schemas/Profile.ExplanationLanguage'
+          description: Changes explanatory content defaults only; it does not change interface or exam language.
+      description: A partial update to the authenticated student's own profile. Omitted fields remain unchanged; an empty or identical update is a successful no-op.
     Profile.ValidationProblem:
       type: object
       required:

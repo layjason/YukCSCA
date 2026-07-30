@@ -63,3 +63,20 @@ test('uses the current access token and replaces it from activation response', a
   );
   expect(getAccessToken()).toBe('student-access-token');
 });
+
+test('preserves the current access token when activation fails', async () => {
+  setAccessToken('unassigned-access-token');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+
+  await expect(
+    activateStudentProfile({
+      preferredName: 'Ayu',
+      birthYear: 2009,
+      currentGrade: 'GRADE_11',
+      city: 'Jakarta',
+      defaultExplanationLanguage: 'id',
+    }),
+  ).rejects.toThrow('Request failed');
+
+  expect(getAccessToken()).toBe('unassigned-access-token');
+});
