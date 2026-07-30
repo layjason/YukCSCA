@@ -468,6 +468,7 @@
     "loadError": "加载学生个人资料失败。",
     "saveError": "更新个人资料失败。",
     "retry": "重试",
+    "dismissNotification": "关闭通知",
     "noChanges": "没有要保存的更改。",
     "selectPlaceholder": "选择年级",
     "errors": {
@@ -490,7 +491,7 @@
     "examLanguageWarning": "更改考试语言可能会改变题集、术语任务、诊断需求和计划可行性。",
     "historyNote": "更改讲解语言时，您的学习记录保持不变。",
     "explanationOwnership": "此设置决定学术讲解内容的默认语言。",
-    "examOwnership": "示例考试轨道仅供预览。生产环境中的更改需要影响审查。",
+    "examOwnership": "考试语言按科目单独管理，无法在此处更改。",
     "saveLanguage": "保存讲解语言",
     "savingLanguage": "正在保存语言...",
     "languageSaved": "默认讲解语言已成功保存。",

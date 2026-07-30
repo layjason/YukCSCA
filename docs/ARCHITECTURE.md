@@ -152,9 +152,15 @@ product-owner journey evidence. The frontend consumes the generated recovery
 contract, reads fragment or query credentials, removes them from browser
 history, and exposes retry and return-to-sign-in states. Other role onboarding,
 learning, family, content, commerce, tutoring, and AI behavior do not exist yet.
-The VS-004 backend is implemented and focused-tested; its production settings
-frontend and integrated journey evidence remain pending. VS-002 is also `DONE`
-after full implementation, verification, and product owner signoff.
+The VS-004 backend and production profile/default-language settings frontend are
+`DONE` after contract, PostgreSQL/Flyway, backend, frontend, route-boundary,
+security/privacy, code-surface, and product-owner journey evidence. The
+independently production-accessible student settings surface is deliberately
+limited to `/app/profile` and `/app/profile/languages`; `/app/more` remains
+inside the preview-workspace gate, and learning, family, access, commerce, and
+other workspace destinations remain prototype-only or unimplemented until their
+owning slices are accepted. VS-002 is also `DONE` after full implementation,
+verification, and product owner signoff.
 
 ## Prototype boundaries
 

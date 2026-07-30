@@ -326,6 +326,12 @@ class StudentProfileHttpIT {
         .andExpect(jsonPath("$.violations[0].field").value("city"))
         .andExpect(jsonPath("$.violations[0].code").value("REQUIRED"));
 
+    update(token, "{\"birthYear\":\"not-a-year\"}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+        .andExpect(jsonPath("$.violations[0].field").value("birthYear"))
+        .andExpect(jsonPath("$.violations[0].code").value("UNSUPPORTED"));
+
     assertThat(getProfile(token)).isEqualTo(before);
     assertThat(securityEvents.countByEventType(SecurityEventType.STUDENT_PROFILE_UPDATED)).isZero();
   }

@@ -468,6 +468,7 @@
     "loadError": "Gagal memuat profil pelajar.",
     "saveError": "Gagal memperbarui profil.",
     "retry": "Coba lagi",
+    "dismissNotification": "Tutup notifikasi",
     "noChanges": "Tidak ada perubahan untuk disimpan.",
     "selectPlaceholder": "Pilih kelas",
     "errors": {
@@ -490,7 +491,7 @@
     "examLanguageWarning": "Mengubah bahasa ujian dapat mengubah set soal, tugas terminologi, kebutuhan diagnostik, dan kelayakan rencana.",
     "historyNote": "Riwayat belajar Anda tetap ada saat bahasa penjelasan berubah.",
     "explanationOwnership": "Setelan ini menentukan bahasa default untuk penjelasan materi akademik Anda.",
-    "examOwnership": "Jalur ujian contoh hanya untuk pratinjau. Perubahan produksi memerlukan tinjauan dampak.",
+    "examOwnership": "Bahasa ujian dikelola terpisah untuk setiap mata pelajaran dan tidak dapat diubah di sini.",
     "saveLanguage": "Simpan bahasa penjelasan",
     "savingLanguage": "Menyimpan bahasa...",
     "languageSaved": "Bahasa penjelasan utama berhasil disimpan.",

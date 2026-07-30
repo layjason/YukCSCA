@@ -18,6 +18,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import tools.jackson.databind.exc.InvalidNullException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 @RestControllerAdvice(assignableTypes = StudentProfileController.class)
 public class StudentProfileExceptionHandler {
@@ -32,13 +33,18 @@ public class StudentProfileExceptionHandler {
   @ExceptionHandler(HttpMessageNotReadableException.class)
   ResponseEntity<ValidationProblemResponse> malformedRequest(
       HttpMessageNotReadableException exception) {
-    if (exception.getMostSpecificCause() instanceof InvalidNullException invalidNull
-        && !invalidNull.getPath().isEmpty()) {
-      String wireName = invalidNull.getPath().getLast().getPropertyName();
+    if (exception.getMostSpecificCause() instanceof MismatchedInputException mismatchedInput
+        && !mismatchedInput.getPath().isEmpty()) {
+      String wireName = mismatchedInput.getPath().getLast().getPropertyName();
       for (ProfileField field : ProfileField.values()) {
         if (field.wireName().equals(wireName)) {
           return validationProblemResponse(
-              List.of(new ProfileViolation(field, ProfileViolationCode.REQUIRED)));
+              List.of(
+                  new ProfileViolation(
+                      field,
+                      mismatchedInput instanceof InvalidNullException
+                          ? ProfileViolationCode.REQUIRED
+                          : ProfileViolationCode.UNSUPPORTED)));
         }
       }
     }

@@ -1,6 +1,6 @@
 # YukCSCA
 
-YukCSCA is a mobile-first CSCA learning platform for Indonesian high-school students and their families. The repository currently provides a development-ready contract/web/API baseline, hardened Google identity and session behavior, and completed email-credential authentication and recovery slices; the P0 learning loop has not been implemented.
+YukCSCA is a mobile-first CSCA learning platform for Indonesian high-school students and their families. The repository currently provides a development-ready contract/web/API baseline, hardened Google identity and session behavior, completed email-credential authentication and recovery slices, and completed production student profile/default-explanation-language settings; the P0 learning loop has not been implemented.
 
 ## Product requirements
 

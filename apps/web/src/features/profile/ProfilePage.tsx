@@ -218,7 +218,7 @@ export function ProfilePage(): React.JSX.Element {
                   type="button"
                   className="toast-close"
                   onClick={() => setToast(null)}
-                  aria-label="Dismiss notification"
+                  aria-label={t('profile.dismissNotification')}
                 >
                   <svg className="toast-close-icon" viewBox="0 0 20 20" fill="currentColor">
                     <path

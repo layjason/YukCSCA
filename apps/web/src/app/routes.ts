@@ -9,6 +9,7 @@ export type RouteAccess =
   | 'commerce-preview'
   | 'preview-context'
   | 'production-auth'
+  | 'student-settings'
   | 'student-onboarding-preview'
   | 'student-workspace-preview';
 
@@ -770,10 +771,10 @@ export const routeManifest = defineRoutes([
     '/app/profile',
     'nav.profile',
     'implemented',
-    'student-workspace-preview',
+    'student-settings',
     'student',
     'primary',
-    ['1.3', '1.4'],
+    ['1.2', '1.4'],
     false,
     'more',
   ),
@@ -782,7 +783,7 @@ export const routeManifest = defineRoutes([
     '/app/profile/languages',
     'nav.languages',
     'implemented',
-    'student-workspace-preview',
+    'student-settings',
     'student',
     'secondary',
     ['1.4'],

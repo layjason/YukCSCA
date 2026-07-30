@@ -96,7 +96,9 @@ These controls must ship with the first feature that needs them:
 - VS-002 owns production registration, verification, credential login,
   abuse controls, audit behavior, and the shared session handoff. Fixture
   identity must still remain isolated for PX-002-only consumers. VS-003 owns
-  production password recovery.
+  production password recovery. VS-004 owns the production student-profile
+  update boundary and is `DONE` after focused authorization/privacy evidence
+  and product-owner journey acceptance.
 
 ### Roles, parents, tutors, and administration
 

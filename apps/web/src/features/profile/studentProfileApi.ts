@@ -22,15 +22,12 @@ export async function getMyStudentProfile(): Promise<StudentProfile> {
     const response = await fetch(PROFILE_ME_URL, {
       headers: authorizationHeaders(false),
     });
-    if (
-      isDevFallback() &&
-      (response.status === 404 || response.status === 401 || response.status >= 500)
-    ) {
+    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
       return devMockProfile;
     }
     return await parseJsonResponse<StudentProfile>(response);
   } catch (err) {
-    if (isDevFallback() && (!(err instanceof ApiError) || err.status >= 500)) {
+    if (isDevFallback() && !(err instanceof ApiError)) {
       return devMockProfile;
     }
     throw err;
@@ -46,10 +43,7 @@ export async function updateMyStudentProfile(
       headers: authorizationHeaders(true),
       body: JSON.stringify(request),
     });
-    if (
-      isDevFallback() &&
-      (response.status === 404 || response.status === 401 || response.status >= 500)
-    ) {
+    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
       devMockProfile = {
         ...devMockProfile,
         ...request,
@@ -59,7 +53,7 @@ export async function updateMyStudentProfile(
     }
     return await parseJsonResponse<StudentProfile>(response);
   } catch (err) {
-    if (isDevFallback() && (!(err instanceof ApiError) || err.status >= 500)) {
+    if (isDevFallback() && !(err instanceof ApiError)) {
       devMockProfile = {
         ...devMockProfile,
         ...request,

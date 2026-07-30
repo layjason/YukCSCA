@@ -4,9 +4,9 @@
 
 | Field                        | Value                                                                                                                    |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Status                       | `IN_PROGRESS`                                                                                                            |
+| Status                       | `DONE`                                                                                                                   |
 | Human gate                   | `APPROVED`                                                                                                               |
-| Plan revision                | 5                                                                                                                        |
+| Plan revision                | 7                                                                                                                        |
 | Updated                      | 2026-07-31                                                                                                               |
 | Primary actor                | Authenticated `STUDENT`                                                                                                  |
 | Story IDs                    | `US-PROF-02`, `US-LANG-01`                                                                                               |
@@ -16,7 +16,7 @@
 | TypeSpec source              | `contracts/profile.tsp`                                                                                                  |
 | API operations               | `getMyStudentProfile`, `updateMyStudentProfile`                                                                          |
 | Backend/slice owner          | Backend vertical-slice worker; existing `profile` module                                                                 |
-| Frontend owner               | Frontend consumer worker; separate frontend implementation worktree                                                      |
+| Frontend owner               | Frontend consumer worker; implementation merged into the integration branch                                              |
 | Initial contract checkpoint  | `VS-004-R3-initial` — TypeSpec `a2e093e79a2f1d7bf860fbbc35ed5cf300cd2ac3`                                                |
 | Accepted contract checkpoint | `VS-004-R4-accepted` — TypeSpec `a2e093e79a2f1d7bf860fbbc35ed5cf300cd2ac3`                                               |
 
@@ -466,43 +466,48 @@ language` action per visible task region; navigation/back is secondary.
    zero `CR-NN`.
 5. **Completed in revision 4:** the backend agent recorded the unchanged
    accepted checkpoint and moved the slice to `CONTRACT_READY`.
-6. **Backend completed in revision 5; frontend remains independently owned:**
-   both workers implement separately from `VS-004-R4-accepted`. The backend
-   extended the existing aggregate/service/HTTP boundary; the frontend rewrites
-   the accepted production settings surfaces in its worktree.
-7. Integrate the real HTTP flow early and add focused backend, frontend, privacy,
-   route-boundary, and journey evidence.
-8. Advance through `IN_PROGRESS` and `VERIFYING` only with named evidence; mark
-   `DONE` only after the product owner completes the real profile/language
-   journey and every acceptance criterion is evidenced.
+6. **Completed before revision 6:** both workers implemented separately from
+   `VS-004-R4-accepted`, then their backend and frontend commits were merged
+   into the integration branch.
+7. **Completed in revision 6:** code-surface review repaired production-settings
+   routing and restored-session root decisions, canonical-load recovery,
+   server-failure handling, activation/mock isolation, actionable
+   malformed-field validation, localized notification controls, and
+   shared-token CSS drift; focused contract, PostgreSQL/Flyway, frontend test,
+   type, and lint evidence passed.
+8. **Completed in revision 7:** the product owner accepted the bounded
+   production Profile and Languages journey with no reported problems,
+   confirmed that the currently limited production settings destination set is
+   correct, and moved the slice to `DONE` without starting another production
+   slice.
 
 ## Definition of done
 
-- [ ] Requirement/story references remain correct.
-- [ ] Documentation sufficiency review is complete and every material
+- [x] Requirement/story references remain correct.
+- [x] Documentation sufficiency review is complete and every material
       gap/conflict is resolved or explicitly out of scope.
-- [ ] Human gate is `NOT_REQUIRED` or `APPROVED`; approval scope and updated
+- [x] Human gate is `NOT_REQUIRED` or `APPROVED`; approval scope and updated
       artifacts are recorded.
-- [ ] Scope and exclusions match the delivered flow.
-- [ ] The existing stack is confirmed sufficient; no speculative dependency or
+- [x] Scope and exclusions match the delivered flow.
+- [x] The existing stack is confirmed sufficient; no speculative dependency or
       service is introduced.
-- [ ] TypeSpec compiles and generated artifacts match the accepted contract.
-- [ ] Initial and accepted contract checkpoints are recorded, frontend consumer
+- [x] TypeSpec compiles and generated artifacts match the accepted contract.
+- [x] Initial and accepted contract checkpoints are recorded, frontend consumer
       review is complete, and every contract request is resolved.
-- [ ] Backend, frontend, migration disposition, and tests implement the same
+- [x] Backend, frontend, migration disposition, and tests implement the same
       states and errors from that checkpoint.
-- [ ] All acceptance criteria have named evidence.
-- [ ] Authorization, privacy, minor safety, and audit behavior were reviewed.
-- [ ] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and
+- [x] All acceptance criteria have named evidence.
+- [x] Authorization, privacy, minor safety, and audit behavior were reviewed.
+- [x] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and
       failure states were verified.
-- [ ] Frontend route/component/style ownership and prototype
+- [x] Frontend route/component/style ownership and prototype
       reuse/rewrite/deletion are recorded.
-- [ ] UI follows root `DESIGN.md`; no shared design-system change is expected.
-- [ ] Explanation, interface, temporary, and exam language remain independent.
-- [ ] Observability contains no unnecessary private content.
-- [ ] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, and
+- [x] UI follows root `DESIGN.md`; no shared design-system change is expected.
+- [x] Explanation, interface, temporary, and exam language remain independent.
+- [x] Observability contains no unnecessary private content.
+- [x] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, and
       `docs/requirements/COVERAGE.md` reflect the delivered result.
-- [ ] Exact verification commands and results are recorded.
+- [x] Exact verification commands and results are recorded.
 
 ## Verification evidence
 
@@ -515,16 +520,22 @@ language` action per visible task region; navigation/back is secondary.
 | Accepted contract checkpoint | `VS-004-R4-accepted`: TypeSpec `a2e093e79a2f1d7bf860fbbc35ed5cf300cd2ac3`; OpenAPI `c13ff9c30d5e1879be6439aee3e84516b3be645b`; web declarations `233d3610f673ae42d04806047a34aac7415fd24f`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Technology/ADR review        | Completed — existing stack is sufficient; no ADR or new dependency.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Backend tests                | `PASS` — repository-root CI command `services/api/mvnw --batch-mode -f services/api/pom.xml verify`: 29 unit tests and all 43 PostgreSQL/Testcontainers/Mailpit integration tests passed with zero failures/errors/skips; Flyway validated and applied all five migrations; Spotless passed. The domain regression fixes profile timestamps to PostgreSQL microsecond precision so mutation responses equal subsequent reads. The 13 `StudentProfileHttpIT` tests cover successful partial/birth-year/language persistence, unchanged identity/session state, invalid/null rollback, `401`/`403`, empty/identical no-op, row-serialized disjoint concurrency, private headers, effective-change events, and accepted/rejected value logging. |
-| Frontend tests               | Not run in this backend worktree — frontend implementation and evidence remain independently owned.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Frontend visual review       | Not assessed in this backend worktree — frontend implementation and evidence remain independently owned.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| End-to-end/manual flow       | Not run from the backend worktree — requires integrated frontend/backend state and product-owner journey evidence.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Code-surface review          | `PASS_WITH_REPAIRS` — reviewer inspected the merged contract, generated artifacts, V3 schema, backend transaction/locking/validation/event behavior, production routes/guards, frontend API/state handling, localization, prototype isolation, and focused tests. Repairs removed prototype-onboarding gating and the restored-session root redirect from production settings, stopped `500` responses and activation failures from becoming mock success, added canonical language-load recovery, removed fabricated exam/temporary-language presentation, restored localized notification controls and shared CSS tokens, and returned malformed `birthYear` input as an actionable field violation.                                       |
+| Frontend tests               | `PASS` — `pnpm --filter @yukcsca/web exec vitest run src/app/App.test.tsx src/features/onboarding/student-activation/studentProfileApi.test.ts src/features/profile/studentProfileApi.test.ts src/features/profile/ProfilePage.test.tsx src/features/profile/LanguagesPage.test.tsx`: 5 files and 33 tests passed, including restored-session and direct production-settings access before prototype onboarding, canonical load/retry, preserved save input, authoritative response replacement, field errors, and activation-token preservation.                                                                                                                                                                                            |
+| Frontend static checks       | `PASS` — `pnpm typecheck:web` and `pnpm lint:web` completed with zero errors or warnings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Reviewer backend regression  | `PASS` — `services/api/mvnw --batch-mode -Dit.test=StudentProfileHttpIT verify`: 29 unit tests and all 13 PostgreSQL/Testcontainers profile integration tests passed; Flyway validated and applied V1–V5; Spotless passed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Frontend visual review       | `ACCEPTED — PRODUCT_OWNER_REVIEW`: product owner confirmed in chat on 2026-07-31 that the bounded current Profile and Languages experience has no reported problems. This acceptance covers the implemented production settings journey and does not promote prototype learning, family, access, or commerce routes.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| End-to-end/manual flow       | `ACCEPTED — PRODUCT_OWNER_REVIEW`: product owner accepted the integrated profile/default-language journey and confirmed that access limited to `/app/profile` and `/app/profile/languages` is correct for now. These are the only student settings routes independently available outside prototype workspace gates; no next production slice was selected or started.                                                                                                                                                                                                                                                                                                                                                                       |
+| Completion disposition       | Contract, backend/database, frontend component/static, security/privacy, route-boundary, and product-owner journey evidence are complete; VS-004 moved to `DONE` without expanding its accepted scope.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                     |
-| -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5        | 2026-07-31 | Implemented and focused-tested the backend at `VS-004-R4-accepted`: atomic partial updates, student-only ownership, rolling birth-year correction, locked no-op/concurrent behavior, private responses, and value-free effective-change events. Moved the slice to `IN_PROGRESS` pending frontend and integrated evidence. |
-| 4        | 2026-07-31 | Recorded completed zero-request frontend consumer review of `VS-004-R3-initial`, established matching accepted checkpoint `VS-004-R4-accepted`, and moved the slice to `CONTRACT_READY` for separate backend/frontend implementation worktrees.                                                                            |
-| 3        | 2026-07-31 | Initialized and compiled additive `PATCH /api/v1/student-profile/me`, generated and reviewed OpenAPI/web declarations, confirmed generated TypeScript consumption, recorded `VS-004-R3-initial`, and opened frontend consumer review without starting implementation.                                                      |
-| 2        | 2026-07-31 | Recorded product-owner approval of `D-01` Option A: a student may correct birth year within the existing rolling range; it remains non-legal age evidence, history is preserved, and audit evidence excludes both values. Returned the slice to `SHAPING`.                                                                 |
-| 1        | 2026-07-31 | Selected and shaped the student-profile/default-language maintenance boundary, completed the adjacent-contract and documentation-sufficiency review, and opened `D-01` for the post-activation birth-year correction policy before TypeSpec or implementation.                                                             |
+| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                            |
+| -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7        | 2026-07-31 | Recorded product-owner acceptance of the bounded production Profile and Languages journey with no reported problems, confirmed that the two independently production-accessible settings routes are the correct currently available student destinations, synchronized current-state documentation, and moved VS-004 from `IN_PROGRESS` to `DONE` without starting another slice. |
+| 6        | 2026-07-31 | Integrated code-surface review repaired production route and restored-session availability, canonical language-load recovery, server/mock and activation isolation, malformed-field validation, localization, and CSS-token drift; recorded focused contract, PostgreSQL/Flyway, frontend test, type, and lint evidence while retaining `IN_PROGRESS` for product-owner review.   |
+| 5        | 2026-07-31 | Implemented and focused-tested the backend at `VS-004-R4-accepted`: atomic partial updates, student-only ownership, rolling birth-year correction, locked no-op/concurrent behavior, private responses, and value-free effective-change events. Moved the slice to `IN_PROGRESS` pending frontend and integrated evidence.                                                        |
+| 4        | 2026-07-31 | Recorded completed zero-request frontend consumer review of `VS-004-R3-initial`, established matching accepted checkpoint `VS-004-R4-accepted`, and moved the slice to `CONTRACT_READY` for separate backend/frontend implementation worktrees.                                                                                                                                   |
+| 3        | 2026-07-31 | Initialized and compiled additive `PATCH /api/v1/student-profile/me`, generated and reviewed OpenAPI/web declarations, confirmed generated TypeScript consumption, recorded `VS-004-R3-initial`, and opened frontend consumer review without starting implementation.                                                                                                             |
+| 2        | 2026-07-31 | Recorded product-owner approval of `D-01` Option A: a student may correct birth year within the existing rolling range; it remains non-legal age evidence, history is preserved, and audit evidence excludes both values. Returned the slice to `SHAPING`.                                                                                                                        |
+| 1        | 2026-07-31 | Selected and shaped the student-profile/default-language maintenance boundary, completed the adjacent-contract and documentation-sufficiency review, and opened `D-01` for the post-activation birth-year correction policy before TypeSpec or implementation.                                                                                                                    |

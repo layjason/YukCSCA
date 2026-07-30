@@ -468,6 +468,7 @@
     "loadError": "Failed to load student profile.",
     "saveError": "Failed to update profile.",
     "retry": "Try again",
+    "dismissNotification": "Dismiss notification",
     "noChanges": "No changes to save.",
     "selectPlaceholder": "Select grade",
     "errors": {
@@ -490,7 +491,7 @@
     "examLanguageWarning": "Changing exam language may change question sets, terminology tasks, diagnostic needs, and plan feasibility.",
     "historyNote": "Your learning history remains when explanation language changes.",
     "explanationOwnership": "This setting sets your default language for academic explanation content.",
-    "examOwnership": "The sample exam track is preview-only. Production changes require an impact review.",
+    "examOwnership": "Exam language is managed separately for each subject and cannot be changed here.",
     "saveLanguage": "Save explanation language",
     "savingLanguage": "Saving language...",
     "languageSaved": "Default explanation language updated successfully.",

@@ -8,7 +8,7 @@
 | --- | --- |
 | Requirement baseline | English/Chinese V1.3, 2026-07-30 |
 | Story baseline | `USER_STORIES.md` version 0.3.1 |
-| Audit date | 2026-07-30 |
+| Audit date | 2026-07-31 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
 | P2 exact-reference coverage | **1 / 3 functional sections** |
@@ -23,9 +23,9 @@ during shaping.
 | Requirement | Requirement title | Candidate stories | Coverage note |
 | --- | --- | --- | --- |
 | 1.1 | Registration and Login | `US-AUTH-01`, `US-AUTH-02`, `US-AUTH-03`, `US-AUTH-04`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-000`, `VS-002`, `VS-003`; proposed `VS-005`, `VS-023`. PX-002 remains fixture-only where qualified. |
-| 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | Owners: delivered `VS-001`; proposed `VS-004`, `VS-023`, `VS-028`. |
+| 1.2 | Profile Management | `US-PROF-01`, `US-PROF-02`, `US-PROF-03`, `US-PROF-04`, `US-ACCOUNT-01` | Owners: delivered `VS-001`, `VS-004`; proposed `VS-023`, `VS-028`. |
 | 1.3 | Roles and Permissions | `US-PROF-01`, `US-PROF-03`, `US-ADMIN-01` | Owners: delivered `VS-001`; proposed `VS-005`, `VS-023`. |
-| 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | Owners: proposed `VS-004`, `VS-008`, `VS-014`; language dimensions remain independent. |
+| 1.4 | Learning and Language Preferences | `US-LANG-01`, `US-LANG-02`, `US-LANG-03` | Owners: delivered `VS-004`; proposed `VS-008`, `VS-014`; language dimensions remain independent. |
 | 2.1 | Parent Creates a Student Account | `US-FAM-00`, `US-FAM-04` | Owner: proposed `VS-024`, including pending-to-activated lifecycle. |
 | 2.2 | Student Invites a Parent to Link | `US-FAM-01`, `US-FAM-02` | Owner: proposed `VS-025`. |
 | 2.3 | Relationship Management | `US-FAM-03` | Owner: proposed `VS-026`. |
@@ -37,7 +37,7 @@ during shaping.
 | 4.1 | Course Catalog and Launch Scope | `US-COURSE-01` | Owners: proposed `VS-007`, `VS-008`. |
 | 4.2 | Official Syllabus Source and Platform Curriculum Alignment | `US-SYL-01`, `US-ADM-03` | Owners: proposed `VS-006`, `VS-007`, `VS-008`; official syllabus topics remain distinct from platform objectives. |
 | 4.3 | Focused Learning-Unit Content | `US-COURSE-02`, `US-COURSE-04` | Owners: proposed `VS-007`, `VS-008`; video is optional. |
-| 4.4 | Explanation-Language and Exam-Language Bridging | `US-LANG-03`, `US-COURSE-02` | Owners: proposed `VS-004`, `VS-008`, `VS-014`. |
+| 4.4 | Explanation-Language and Exam-Language Bridging | `US-LANG-03`, `US-COURSE-02` | Owners: delivered `VS-004`; proposed `VS-008`, `VS-014`. |
 | 4.5 | Chinese Mathematics Terminology Preview and In-Question Support | `US-TERM-01`, `US-TERM-02`, `US-TERM-03` | Owner: proposed `VS-010`. |
 | 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: proposed `VS-007`, `VS-009`. |
 | 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: proposed `VS-009`; plan-independent. |

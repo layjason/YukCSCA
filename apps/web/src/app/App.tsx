@@ -99,6 +99,8 @@ export default function App(): React.JSX.Element {
       </Route>
 
       <Route element={<StudentExperienceGuard />}>
+        <Route element={<AppShellLayout />}>{renderRoutes('student-settings')}</Route>
+
         <Route element={<OnboardingLayout />}>
           <Route element={<PreviewOnboardingGuard />}>
             {renderRoutes('student-onboarding-preview')}

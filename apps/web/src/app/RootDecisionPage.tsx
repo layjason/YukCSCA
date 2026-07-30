@@ -37,11 +37,7 @@ export function RootDecisionPage(): React.JSX.Element {
     if (user?.role === 'STUDENT') {
       return (
         <Navigate
-          to={
-            studentPreviewState.onboardingStep === 'complete'
-              ? '/app/today'
-              : '/onboarding/student/goals'
-          }
+          to={studentPreviewState.onboardingStep === 'complete' ? '/app/today' : '/app/profile'}
           replace
         />
       );

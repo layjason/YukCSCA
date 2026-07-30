@@ -812,24 +812,23 @@ button {
 
 .profile-identity,
 .profile-learner-section {
-  margin-bottom: var(--space-2xl, 2rem);
-  padding: var(--space-lg, 1.5rem);
-  background: var(--color-canvas, #ffffff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
 .profile-learner-section form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg, 1.5rem);
-  margin-top: var(--space-md, 1rem);
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
 }
 
 .profile-identity dl {
   display: grid;
-  gap: var(--space-md, 1rem);
+  gap: var(--space-md);
   margin: var(--space-md) 0 0;
 }
 
@@ -838,7 +837,7 @@ button {
   grid-template-columns: minmax(90px, 120px) 1fr;
   gap: var(--space-sm);
   padding-bottom: var(--space-sm);
-  border-bottom: 1px solid var(--color-border-subtle, #f3f4f6);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .profile-identity dt {
@@ -859,25 +858,24 @@ button {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: var(--radius-pill, 999px);
-  border: 1px solid var(--color-border-strong, #e5e7eb);
-  background: var(--color-canvas, #ffffff);
-  color: var(--color-ink, #374151);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-canvas);
+  color: var(--color-ink);
   font-weight: 600;
   font-size: 0.875rem;
   text-decoration: none;
-  margin-bottom: var(--space-lg, 1.25rem);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  margin-bottom: var(--space-lg);
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
+    background-color var(--motion-quick) var(--ease-standard),
+    border-color var(--motion-quick) var(--ease-standard),
+    transform var(--motion-quick) var(--ease-standard);
 }
 
 .back-btn:hover {
-  background: var(--color-surface-soft, #f9fafb);
-  border-color: var(--color-ink-muted, #9ca3af);
-  color: var(--color-ink-strong, #111827);
+  background: var(--color-surface-soft);
+  border-color: var(--color-ink-muted);
+  color: var(--color-ink);
   transform: translateX(-3px);
 }
 
@@ -889,7 +887,7 @@ button {
 .back-arrow {
   font-size: 1.1rem;
   line-height: 1;
-  transition: transform 0.15s ease;
+  transition: transform var(--motion-quick) var(--ease-standard);
 }
 
 .back-btn:hover .back-arrow {
@@ -899,14 +897,14 @@ button {
 .nav-chevron-arrow {
   font-size: 1.1rem;
   line-height: 1;
-  color: var(--color-ink-muted, #9ca3af);
+  color: var(--color-ink-muted);
   transition:
-    transform 0.15s ease,
-    color 0.15s ease;
+    transform var(--motion-quick) var(--ease-standard),
+    color var(--motion-quick) var(--ease-standard);
 }
 
 .profile-links a:hover .nav-chevron-arrow {
-  color: var(--color-ink-strong, #111827);
+  color: var(--color-ink);
   transform: translateX(3px);
 }
 
@@ -930,11 +928,11 @@ button {
   color: var(--color-ink);
   text-decoration: none;
   font-weight: 550;
-  background: var(--color-canvas, #ffffff);
+  background: var(--color-canvas);
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
+    background-color var(--motion-quick) var(--ease-standard),
+    border-color var(--motion-quick) var(--ease-standard),
+    transform var(--motion-quick) var(--ease-standard);
 }
 
 .profile-links a:hover {
@@ -1555,6 +1553,13 @@ button {
   margin: 0 0 var(--space-sm);
 }
 
+.settings-section form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
 .privacy-note-section .privacy-note {
   margin: 0;
 }
@@ -1817,8 +1822,7 @@ button {
   max-width: 640px;
 }
 
-.more-links ul,
-.profile-links ul {
+.more-links ul {
   list-style: none;
   margin: var(--space-lg) 0 0;
   padding: 0;
@@ -1826,8 +1830,7 @@ button {
   gap: var(--space-sm);
 }
 
-.more-links a,
-.profile-links a {
+.more-links a {
   display: block;
   min-height: 48px;
   padding: var(--space-md);
@@ -1839,26 +1842,21 @@ button {
 }
 
 .more-links a strong,
-.more-links a span,
-.profile-links a strong,
-.profile-links a span {
+.more-links a span {
   display: block;
 }
 
-.more-links a span,
-.profile-links a span {
+.more-links a span {
   margin-top: var(--space-xxs);
   color: var(--color-ink-muted);
   font-size: 0.85rem;
 }
 
-.more-links a:hover,
-.profile-links a:hover {
+.more-links a:hover {
   background: var(--color-surface-soft);
 }
 
-.more-links a:focus-visible,
-.profile-links a:focus-visible {
+.more-links a:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -4843,13 +4841,11 @@ a.credential-full-link.btn-primary {
   align-items: center;
   gap: 0.875rem;
   padding: 0.875rem 1.25rem;
-  border-radius: var(--radius-md, 12px);
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
   line-height: 1.45;
-  box-shadow:
-    0 8px 24px rgba(23, 23, 23, 0.08),
-    0 2px 6px rgba(23, 23, 23, 0.04);
-  animation: toast-slide-down var(--motion-standard, 0.24s) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  box-shadow: var(--shadow-floating);
+  animation: toast-slide-down var(--motion-standard) var(--ease-standard) forwards;
 }
 
 @keyframes toast-slide-down {
@@ -4865,28 +4861,20 @@ a.credential-full-link.btn-primary {
 
 @media (prefers-reduced-motion: reduce) {
   .toast {
-    animation: toast-fade-in 0.15s linear forwards;
-  }
-  @keyframes toast-fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    animation: none;
   }
 }
 
 .toast-success {
-  background: var(--color-semantic-success-soft, #e0f1e6);
-  color: var(--color-semantic-success, #1f7a45);
-  border: 1px solid var(--color-border-strong, #b8b8b0);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  border: 1px solid var(--color-border-strong);
 }
 
 .toast-info {
-  background: var(--color-semantic-info-soft, #e2edf8);
-  color: var(--color-semantic-info, #315b8a);
-  border: 1px solid var(--color-border-strong, #b8b8b0);
+  background: var(--color-info-soft);
+  color: var(--color-info);
+  border: 1px solid var(--color-border-strong);
 }
 
 .toast-icon-wrapper {
@@ -4895,18 +4883,18 @@ a.credential-full-link.btn-primary {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   flex-shrink: 0;
 }
 
 .toast-success .toast-icon-wrapper {
-  background: rgba(31, 122, 69, 0.15);
-  color: var(--color-semantic-success, #1f7a45);
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
 }
 
 .toast-info .toast-icon-wrapper {
-  background: rgba(49, 91, 138, 0.15);
-  color: var(--color-semantic-info, #315b8a);
+  background: color-mix(in srgb, var(--color-info) 15%, transparent);
+  color: var(--color-info);
 }
 
 .toast-icon {
@@ -4929,7 +4917,7 @@ a.credential-full-link.btn-primary {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-pill, 999px);
+  border-radius: var(--radius-pill);
   background: transparent;
   border: none;
   color: currentColor;
@@ -4939,14 +4927,14 @@ a.credential-full-link.btn-primary {
   margin-left: 0.25rem;
   flex-shrink: 0;
   transition:
-    opacity var(--motion-quick, 0.16s) ease,
-    background-color var(--motion-quick, 0.16s) ease;
+    opacity var(--motion-quick) var(--ease-standard),
+    background-color var(--motion-quick) var(--ease-standard);
 }
 
 .toast-close:hover,
 .toast-close:focus-visible {
   opacity: 1;
-  background: rgba(23, 23, 23, 0.08);
+  background: color-mix(in srgb, var(--color-ink) 8%, transparent);
 }
 
 .toast-close-icon {

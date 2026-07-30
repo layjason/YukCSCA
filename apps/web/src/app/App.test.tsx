@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import App from './App';
+import { clearAccessToken, setAccessToken } from '@/features/auth/authStore';
 import { PrototypeProvider } from '@/prototype/student/PrototypeProvider';
 import { ConsumerProvider } from '@/prototype/consumer/state/ConsumerProvider';
 
@@ -109,6 +110,52 @@ test('routes a restored unassigned Google account from root to role selection', 
   ).toBeInTheDocument();
 });
 
+test('routes a restored student from root to production Profile when preview state resets', async () => {
+  useAuthMock.mockReturnValue({
+    status: 'authenticated',
+    user: {
+      id: '00000000-0000-0000-0000-000000000001',
+      email: 'student@example.com',
+      displayName: 'Test Student',
+      avatarUrl: null,
+      role: 'STUDENT',
+      onboardingCompleted: true,
+    },
+    login: vi.fn(),
+    loginCredentials: vi.fn(),
+    logout: vi.fn(),
+    replaceCurrentUser: vi.fn(),
+  });
+  setAccessToken('student-access-token');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: '00000000-0000-0000-0000-000000000002',
+          preferredName: 'Canonical Name',
+          birthYear: 2009,
+          currentGrade: 'GRADE_11',
+          city: 'Jakarta',
+          defaultExplanationLanguage: 'id',
+          createdAt: '2026-07-22T00:00:00Z',
+          updatedAt: '2026-07-22T00:00:00Z',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    ),
+  );
+
+  try {
+    renderApp(['/']);
+    expect(await screen.findByDisplayValue('Canonical Name')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /target akademik/i })).not.toBeInTheDocument();
+  } finally {
+    clearAccessToken();
+    vi.unstubAllGlobals();
+  }
+});
+
 test('routes a student with incomplete preview onboarding to goals', async () => {
   useAuthMock.mockReturnValue({
     status: 'authenticated',
@@ -152,6 +199,52 @@ test('blocks a direct workspace link while preview onboarding is incomplete', as
 
   expect(await screen.findByRole('heading', { name: /target akademik/i })).toBeInTheDocument();
   expect(screen.getByText(/dimulai ulang|started again/i)).toBeInTheDocument();
+});
+
+test('allows an authenticated student to open production Profile before preview onboarding', async () => {
+  useAuthMock.mockReturnValue({
+    status: 'authenticated',
+    user: {
+      id: '00000000-0000-0000-0000-000000000001',
+      email: 'student@example.com',
+      displayName: 'Test Student',
+      avatarUrl: null,
+      role: 'STUDENT',
+      onboardingCompleted: true,
+    },
+    login: vi.fn(),
+    loginCredentials: vi.fn(),
+    logout: vi.fn(),
+    replaceCurrentUser: vi.fn(),
+  });
+  setAccessToken('student-access-token');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: '00000000-0000-0000-0000-000000000002',
+          preferredName: 'Canonical Name',
+          birthYear: 2009,
+          currentGrade: 'GRADE_11',
+          city: 'Jakarta',
+          defaultExplanationLanguage: 'id',
+          createdAt: '2026-07-22T00:00:00Z',
+          updatedAt: '2026-07-22T00:00:00Z',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    ),
+  );
+
+  try {
+    renderApp(['/app/profile']);
+    expect(await screen.findByDisplayValue('Canonical Name')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /target akademik/i })).not.toBeInTheDocument();
+  } finally {
+    clearAccessToken();
+    vi.unstubAllGlobals();
+  }
 });
 
 test('routes a student with complete preview onboarding to Today', async () => {

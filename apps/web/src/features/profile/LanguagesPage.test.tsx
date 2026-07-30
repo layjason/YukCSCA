@@ -111,4 +111,66 @@ describe('LanguagesPage', () => {
 
     expect(screen.getByText(/independen/i)).toBeInTheDocument();
   });
+
+  test('shows a retry state instead of a fabricated explanation language when loading fails', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(initialProfile), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter>
+        <LanguagesPage />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/failed to load|gagal memuat/i);
+    expect(
+      screen.queryByLabelText(/bahasa penjelasan utama|default explanation language/i),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /try again|coba lagi/i }));
+
+    expect(
+      await screen.findByLabelText(/bahasa penjelasan utama|default explanation language/i),
+    ).toHaveValue('id');
+  });
+
+  test('preserves the selected explanation language after a recoverable save failure', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(initialProfile), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter>
+        <LanguagesPage />
+      </MemoryRouter>,
+    );
+
+    const langSelect = await screen.findByLabelText(
+      /bahasa penjelasan utama|default explanation language/i,
+    );
+    fireEvent.change(langSelect, { target: { value: 'en' } });
+    fireEvent.click(
+      screen.getByRole('button', { name: /save explanation language|simpan bahasa/i }),
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /failed to update|gagal memperbarui/i,
+    );
+    expect(langSelect).toHaveValue('en');
+  });
 });

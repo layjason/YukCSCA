@@ -15,7 +15,8 @@ export function LanguagesPage(): React.JSX.Element {
   const [initialLanguage, setInitialLanguage] = useState<ExplanationLanguage>('id');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   useEffect(() => {
@@ -24,21 +25,24 @@ export function LanguagesPage(): React.JSX.Element {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  useEffect(() => {
-    async function load(): Promise<void> {
-      setLoading(true);
-      setError(null);
-      try {
-        const profile = await getMyStudentProfile();
-        setDefaultExplanationLanguage(profile.defaultExplanationLanguage);
-        setInitialLanguage(profile.defaultExplanationLanguage);
-      } catch {
-        // Safe fallback if offline or in preview context
-      } finally {
-        setLoading(false);
-      }
+  async function loadProfile(): Promise<void> {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const profile = await getMyStudentProfile();
+      setDefaultExplanationLanguage(profile.defaultExplanationLanguage);
+      setInitialLanguage(profile.defaultExplanationLanguage);
+    } catch {
+      setLoadError(t('profile.loadError'));
+    } finally {
+      setLoading(false);
     }
-    void load();
+  }
+
+  useEffect(() => {
+    void loadProfile();
+    // Loading is intentionally tied to route entry; locale changes must not refetch profile state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleExplanationLanguageChange(newLang: ExplanationLanguage): void {
@@ -54,7 +58,7 @@ export function LanguagesPage(): React.JSX.Element {
   async function handleSaveExplanationLanguage(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setToast(null);
-    setError(null);
+    setSaveError(null);
 
     if (defaultExplanationLanguage === initialLanguage) {
       setToast({ message: t('profile.noChanges'), type: 'info' });
@@ -68,7 +72,7 @@ export function LanguagesPage(): React.JSX.Element {
       setInitialLanguage(updated.defaultExplanationLanguage);
       setToast({ message: t('settings.languageSaved'), type: 'success' });
     } catch {
-      setError(t('profile.saveError'));
+      setSaveError(t('profile.saveError'));
     } finally {
       setSaving(false);
     }
@@ -106,7 +110,7 @@ export function LanguagesPage(): React.JSX.Element {
                   type="button"
                   className="toast-close"
                   onClick={() => setToast(null)}
-                  aria-label="Dismiss notification"
+                  aria-label={t('profile.dismissNotification')}
                 >
                   <svg className="toast-close-icon" viewBox="0 0 20 20" fill="currentColor">
                     <path
@@ -152,6 +156,15 @@ export function LanguagesPage(): React.JSX.Element {
 
         {loading ? (
           <p className="task-meta">{t('shell.loading')}</p>
+        ) : loadError ? (
+          <>
+            <p className="error-message" role="alert">
+              {loadError}
+            </p>
+            <button type="button" className="btn-secondary" onClick={() => void loadProfile()}>
+              {t('profile.retry')}
+            </button>
+          </>
         ) : (
           <form onSubmit={(event) => void handleSaveExplanationLanguage(event)} noValidate>
             <div className="form-group">
@@ -173,9 +186,9 @@ export function LanguagesPage(): React.JSX.Element {
               </select>
             </div>
 
-            {error ? (
+            {saveError ? (
               <p className="error-message" role="alert">
-                {error}
+                {saveError}
               </p>
             ) : null}
 
@@ -188,14 +201,7 @@ export function LanguagesPage(): React.JSX.Element {
 
       <section className="settings-section" aria-labelledby="exam-lang-heading">
         <h2 id="exam-lang-heading">{t('settings.examLanguage')}</h2>
-        <p className="task-meta">{t('fixture.subjects.mathEnglishName')}: English</p>
         <p>{t('settings.examOwnership')}</p>
-        <p className="exam-language-warning">{t('settings.examLanguageWarning')}</p>
-      </section>
-
-      <section className="settings-section" aria-labelledby="temp-lang-heading">
-        <h2 id="temp-lang-heading">{t('settings.tempExplanation')}</h2>
-        <p>{t('lesson.tempLanguageNote')}</p>
       </section>
     </div>
   );
