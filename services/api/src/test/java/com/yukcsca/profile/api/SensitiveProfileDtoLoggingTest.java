@@ -27,6 +27,22 @@ class SensitiveProfileDtoLoggingTest {
   }
 
   @Test
+  void redactsStudentProfileUpdateFieldsFromStringRepresentation() {
+    var request =
+        new UpdateMyStudentProfileRequest(
+            "Private Updated Name", 2008, "GRADE_12", "Private Updated City", "zh-CN");
+
+    assertThat(request.toString())
+        .isEqualTo("UpdateMyStudentProfileRequest[profileFields=<redacted>]")
+        .doesNotContain(
+            request.preferredName(),
+            request.birthYear().toString(),
+            request.currentGrade(),
+            request.city(),
+            request.defaultExplanationLanguage());
+  }
+
+  @Test
   void redactsStudentProfileResponseAndAuthenticationFromStringRepresentation() {
     var profile =
         new StudentProfileResponse(

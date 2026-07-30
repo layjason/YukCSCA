@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -79,6 +80,45 @@ public class StudentProfile {
         city,
         defaultExplanationLanguage,
         now);
+  }
+
+  /**
+   * Applies a validated partial update and advances the modification time only when persisted
+   * profile data changes. Null arguments mean that the corresponding field was omitted.
+   */
+  public boolean update(
+      String preferredName,
+      Integer birthYear,
+      StudentGrade currentGrade,
+      String city,
+      ExplanationLanguage defaultExplanationLanguage,
+      Instant now) {
+    boolean changed = false;
+    if (preferredName != null && !Objects.equals(this.preferredName, preferredName)) {
+      this.preferredName = preferredName;
+      changed = true;
+    }
+    if (birthYear != null && this.birthYear != birthYear) {
+      this.birthYear = birthYear;
+      changed = true;
+    }
+    if (currentGrade != null && this.currentGrade != currentGrade) {
+      this.currentGrade = currentGrade;
+      changed = true;
+    }
+    if (city != null && !Objects.equals(this.city, city)) {
+      this.city = city;
+      changed = true;
+    }
+    if (defaultExplanationLanguage != null
+        && this.defaultExplanationLanguage != defaultExplanationLanguage) {
+      this.defaultExplanationLanguage = defaultExplanationLanguage;
+      changed = true;
+    }
+    if (changed) {
+      this.updatedAt = now;
+    }
+    return changed;
   }
 
   public UUID getId() {

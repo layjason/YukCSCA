@@ -7,5 +7,7 @@ import java.util.UUID;
 public interface StudentProfileStore {
   Optional<StudentProfile> findByAccountId(UUID accountId);
 
+  Optional<StudentProfile> findByAccountIdForUpdate(UUID accountId);
+
   StudentProfile save(StudentProfile profile);
 }

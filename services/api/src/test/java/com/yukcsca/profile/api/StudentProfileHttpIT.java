@@ -2,8 +2,10 @@ package com.yukcsca.profile.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItems;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,6 +24,11 @@ import com.yukcsca.support.PostgresTestConfiguration;
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -218,6 +225,173 @@ class StudentProfileHttpIT {
   }
 
   @Test
+  void updatesOwnProfileAndExplanationLanguageWithoutChangingIdentityOrSession() throws Exception {
+    String token = activateStudent("profile-update", "profile-update@example.com");
+    JsonNode before = getProfile(token);
+    long sessionsBefore = sessions.count();
+
+    MvcResult update =
+        update(
+                token,
+                """
+                {
+                  "preferredName": "  Sari  ",
+                  "birthYear": %d,
+                  "currentGrade": "GRADE_12",
+                  "city": "  Bandung  ",
+                  "defaultExplanationLanguage": "zh-CN"
+                }
+                """
+                    .formatted(currentYear() - 16))
+            .andExpect(status().isOk())
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+            .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
+            .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
+            .andExpect(jsonPath("$.id").value(before.get("id").asText()))
+            .andExpect(jsonPath("$.preferredName").value("Sari"))
+            .andExpect(jsonPath("$.birthYear").value(currentYear() - 16))
+            .andExpect(jsonPath("$.currentGrade").value("GRADE_12"))
+            .andExpect(jsonPath("$.city").value("Bandung"))
+            .andExpect(jsonPath("$.defaultExplanationLanguage").value("zh-CN"))
+            .andReturn();
+
+    JsonNode updated = json.readTree(update.getResponse().getContentAsString());
+    assertThat(updated.get("createdAt").asText()).isEqualTo(before.get("createdAt").asText());
+    assertThat(updated.get("updatedAt").asText()).isNotEqualTo(before.get("updatedAt").asText());
+    assertThat(getProfile(token)).isEqualTo(updated);
+    assertThat(sessions.count()).isEqualTo(sessionsBefore);
+    assertThat(users.findAll())
+        .singleElement()
+        .extracting(user -> user.getRole())
+        .isEqualTo(UserRole.STUDENT);
+    assertThat(securityEvents.countByEventType(SecurityEventType.STUDENT_PROFILE_UPDATED))
+        .isEqualTo(1);
+  }
+
+  @Test
+  void treatsEmptyAndIdenticalUpdatesAsNoops() throws Exception {
+    String token = activateStudent("profile-noop", "profile-noop@example.com");
+    JsonNode before = getProfile(token);
+
+    update(token, "{}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.updatedAt").value(before.get("updatedAt").asText()));
+    update(token, "{\"city\":\"  Jakarta  \"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.updatedAt").value(before.get("updatedAt").asText()));
+
+    assertThat(getProfile(token)).isEqualTo(before);
+    assertThat(securityEvents.countByEventType(SecurityEventType.STUDENT_PROFILE_UPDATED)).isZero();
+  }
+
+  @Test
+  void rejectsInvalidOrNullUpdatesWithoutPartialPersistence() throws Exception {
+    String token = activateStudent("profile-invalid", "profile-invalid@example.com");
+    JsonNode before = getProfile(token);
+
+    update(
+            token,
+            """
+            {
+              "preferredName": " ",
+              "birthYear": %d,
+              "currentGrade": "GRADE_9",
+              "city": " ",
+              "defaultExplanationLanguage": "fr"
+            }
+            """
+                .formatted(currentYear() - 11))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+        .andExpect(
+            jsonPath(
+                "$.violations[*].field",
+                hasItems(
+                    "preferredName",
+                    "birthYear",
+                    "currentGrade",
+                    "city",
+                    "defaultExplanationLanguage")));
+
+    update(token, "{\"preferredName\":\"" + "x".repeat(161) + "\"}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.violations[0].field").value("preferredName"))
+        .andExpect(jsonPath("$.violations[0].code").value("TOO_LONG"));
+
+    update(token, "{\"city\":null}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+        .andExpect(jsonPath("$.violations[0].field").value("city"))
+        .andExpect(jsonPath("$.violations[0].code").value("REQUIRED"));
+
+    assertThat(getProfile(token)).isEqualTo(before);
+    assertThat(securityEvents.countByEventType(SecurityEventType.STUDENT_PROFILE_UPDATED)).isZero();
+  }
+
+  @Test
+  void requiresAuthenticationAndStudentRoleForUpdates() throws Exception {
+    update(null, "{\"city\":\"Bandung\"}")
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")))
+        .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+
+    String unassignedToken = login("profile-update-unassigned", "update-unassigned@example.com");
+    update(unassignedToken, "{\"city\":\"Bandung\"}")
+        .andExpect(status().isForbidden())
+        .andExpect(
+            header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+        .andExpect(jsonPath("$.code").value("STUDENT_PROFILE_FORBIDDEN"));
+
+    assertThat(profiles.count()).isZero();
+    assertThat(securityEvents.countByEventType(SecurityEventType.STUDENT_PROFILE_UPDATED)).isZero();
+  }
+
+  @Test
+  void serializesConcurrentDisjointUpdatesWithoutLosingEitherField() throws Exception {
+    String token = activateStudent("profile-concurrent", "profile-concurrent@example.com");
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<MvcResult> nameUpdate =
+          executor.submit(
+              () -> {
+                if (!start.await(5, TimeUnit.SECONDS)) {
+                  throw new IllegalStateException("Concurrent update did not start.");
+                }
+                return update(token, "{\"preferredName\":\"Concurrent Name\"}")
+                    .andExpect(status().isOk())
+                    .andReturn();
+              });
+      Future<MvcResult> cityUpdate =
+          executor.submit(
+              () -> {
+                if (!start.await(5, TimeUnit.SECONDS)) {
+                  throw new IllegalStateException("Concurrent update did not start.");
+                }
+                return update(token, "{\"city\":\"Surabaya\"}")
+                    .andExpect(status().isOk())
+                    .andReturn();
+              });
+
+      start.countDown();
+      nameUpdate.get(15, TimeUnit.SECONDS);
+      cityUpdate.get(15, TimeUnit.SECONDS);
+    } finally {
+      executor.shutdownNow();
+    }
+
+    JsonNode profile = getProfile(token);
+    assertThat(profile.get("preferredName").asText()).isEqualTo("Concurrent Name");
+    assertThat(profile.get("city").asText()).isEqualTo("Surabaya");
+    assertThat(securityEvents.countByEventType(SecurityEventType.STUDENT_PROFILE_UPDATED))
+        .isEqualTo(2);
+  }
+
+  @Test
   void doesNotLogRejectedProfileValues(CapturedOutput output) throws Exception {
     String privateName = "private-student-name-" + UUID.randomUUID();
     String request = validRequest(currentYear() - 17).replace("Ayu", privateName.repeat(8));
@@ -226,6 +400,23 @@ class StudentProfileHttpIT {
         .andExpect(status().isBadRequest());
 
     assertThat(output.getAll()).doesNotContain(privateName);
+  }
+
+  @Test
+  void doesNotLogAcceptedProfileUpdateValues(CapturedOutput output) throws Exception {
+    String token = activateStudent("private-update-log", "private-update-log@example.com");
+    String privateName = "private-updated-name-" + UUID.randomUUID();
+    String privateCity = "private-updated-city-" + UUID.randomUUID();
+
+    update(
+            token,
+            """
+            {"preferredName":"%s","city":"%s"}
+            """
+                .formatted(privateName, privateCity))
+        .andExpect(status().isOk());
+
+    assertThat(output.getAll()).doesNotContain(privateName, privateCity);
   }
 
   private void assertValidation(
@@ -268,6 +459,40 @@ class StudentProfileHttpIT {
       builder.header(HttpHeaders.AUTHORIZATION, bearer(token));
     }
     return mvc.perform(builder);
+  }
+
+  private org.springframework.test.web.servlet.ResultActions update(String token, String request)
+      throws Exception {
+    var builder =
+        patch("/api/v1/student-profile/me")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(request);
+    if (token != null) {
+      builder.header(HttpHeaders.AUTHORIZATION, bearer(token));
+    }
+    return mvc.perform(builder);
+  }
+
+  private String activateStudent(String subject, String email) throws Exception {
+    MvcResult result =
+        activate(login(subject, email), validRequest(currentYear() - 17))
+            .andExpect(status().isCreated())
+            .andReturn();
+    return json.readTree(result.getResponse().getContentAsString())
+        .get("authentication")
+        .get("accessToken")
+        .asText();
+  }
+
+  private JsonNode getProfile(String token) throws Exception {
+    MvcResult result =
+        mvc.perform(
+                get("/api/v1/student-profile/me").header(HttpHeaders.AUTHORIZATION, bearer(token)))
+            .andExpect(status().isOk())
+            .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+            .andExpect(header().string(HttpHeaders.PRAGMA, "no-cache"))
+            .andReturn();
+    return json.readTree(result.getResponse().getContentAsString());
   }
 
   private static String validRequest(int birthYear) {
