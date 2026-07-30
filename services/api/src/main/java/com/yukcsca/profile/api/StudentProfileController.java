@@ -12,6 +12,7 @@ import com.yukcsca.profile.application.ProfileViolationCode;
 import com.yukcsca.profile.application.StudentActivationCommand;
 import com.yukcsca.profile.application.StudentActivationResult;
 import com.yukcsca.profile.application.StudentProfileService;
+import com.yukcsca.profile.application.StudentProfileUpdateCommand;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,18 +52,7 @@ public class StudentProfileController {
       @Valid @RequestBody ActivateStudentProfileRequest request,
       BindingResult validation,
       HttpServletResponse response) {
-    if (validation.hasErrors()) {
-      throw new ProfileValidationException(
-          validation.getFieldErrors().stream()
-              .map(
-                  error ->
-                      new ProfileViolation(
-                          ProfileField.fromWireName(error.getField()),
-                          "Size".equals(error.getCode())
-                              ? ProfileViolationCode.TOO_LONG
-                              : ProfileViolationCode.REQUIRED))
-              .toList());
-    }
+    rejectInvalidFields(validation);
     UUID accountId = UUID.fromString(jwt.getSubject());
     StudentActivationResult result =
         profiles.activate(
@@ -91,6 +82,41 @@ public class StudentProfileController {
       @AuthenticationPrincipal Jwt jwt, HttpServletResponse response) {
     disableCaching(response);
     return StudentProfileResponse.from(profiles.getOwnProfile(UUID.fromString(jwt.getSubject())));
+  }
+
+  @PatchMapping("/me")
+  public StudentProfileResponse updateMyProfile(
+      @AuthenticationPrincipal Jwt jwt,
+      @Valid @RequestBody UpdateMyStudentProfileRequest request,
+      BindingResult validation,
+      HttpServletResponse response) {
+    rejectInvalidFields(validation);
+    StudentProfileResponse profile =
+        StudentProfileResponse.from(
+            profiles.updateOwnProfile(
+                UUID.fromString(jwt.getSubject()),
+                new StudentProfileUpdateCommand(
+                    request.preferredName(),
+                    request.birthYear(),
+                    request.currentGrade(),
+                    request.city(),
+                    request.defaultExplanationLanguage())));
+    disableCaching(response);
+    return profile;
+  }
+
+  private static void rejectInvalidFields(BindingResult validation) {
+    if (!validation.hasErrors()) return;
+    throw new ProfileValidationException(
+        validation.getFieldErrors().stream()
+            .map(
+                error ->
+                    new ProfileViolation(
+                        ProfileField.fromWireName(error.getField()),
+                        "Size".equals(error.getCode())
+                            ? ProfileViolationCode.TOO_LONG
+                            : ProfileViolationCode.REQUIRED))
+            .toList());
   }
 
   private static void disableCaching(HttpServletResponse response) {
