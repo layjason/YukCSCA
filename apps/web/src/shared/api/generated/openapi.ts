@@ -201,7 +201,8 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /** @description Partially updates the authenticated student's own profile. Omitted fields remain unchanged. Birth year remains bounded profile data and is not legal-age verification. Explanation language remains independent from interface and exam language. */
+    patch: operations['StudentProfileApi_updateMyStudentProfile'];
     trace?: never;
   };
 }
@@ -316,6 +317,19 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    /** @description A partial update to the authenticated student's own profile. Omitted fields remain unchanged; an empty or identical update is a successful no-op. */
+    'Profile.UpdateMyStudentProfileRequest': {
+      preferredName?: string;
+      /**
+       * Format: int32
+       * @description A corrected birth year in the inclusive range from the current Asia/Jakarta year minus 21 through the current year minus 12. It is not legal-age verification.
+       */
+      birthYear?: number;
+      currentGrade?: components['schemas']['Profile.StudentGrade'];
+      city?: string;
+      /** @description Changes explanatory content defaults only; it does not change interface or exam language. */
+      defaultExplanationLanguage?: components['schemas']['Profile.ExplanationLanguage'];
     };
     'Profile.ValidationProblem': {
       /** @enum {string} */
@@ -923,10 +937,75 @@ export interface operations {
       /** @description The request has succeeded. */
       200: {
         headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
           [name: string]: unknown;
         };
         content: {
           'application/json': components['schemas']['Profile.StudentProfile'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  StudentProfileApi_updateMyStudentProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Profile.UpdateMyStudentProfileRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Profile.StudentProfile'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Profile.ValidationProblem'];
         };
       };
       /** @description Access is unauthorized. */

@@ -65,6 +65,25 @@ model ActivateStudentProfileRequest {
   defaultExplanationLanguage: ExplanationLanguage;
 }
 
+@doc("A partial update to the authenticated student's own profile. Omitted fields remain unchanged; an empty or identical update is a successful no-op.")
+model UpdateMyStudentProfileRequest {
+  @minLength(1)
+  @maxLength(160)
+  preferredName?: string;
+
+  @doc("A corrected birth year in the inclusive range from the current Asia/Jakarta year minus 21 through the current year minus 12. It is not legal-age verification.")
+  birthYear?: int32;
+
+  currentGrade?: StudentGrade;
+
+  @minLength(1)
+  @maxLength(120)
+  city?: string;
+
+  @doc("Changes explanatory content defaults only; it does not change interface or exam language.")
+  defaultExplanationLanguage?: ExplanationLanguage;
+}
+
 model StudentProfile {
   id: YukCSCA.uuid;
   preferredName: string;
@@ -74,6 +93,13 @@ model StudentProfile {
   defaultExplanationLanguage: ExplanationLanguage;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
+}
+
+model PrivateStudentProfileResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "no-store";
+  @header("Pragma") pragma: "no-cache";
+  @body body: StudentProfile;
 }
 
 model StudentActivationResult {
@@ -109,7 +135,18 @@ interface StudentProfileApi {
   @route("/me")
   @useAuth(BearerAuth)
   getMyStudentProfile():
-    StudentProfile
+    PrivateStudentProfileResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Partially updates the authenticated student's own profile. Omitted fields remain unchanged. Birth year remains bounded profile data and is not legal-age verification. Explanation language remains independent from interface and exam language.")
+  @patch
+  @route("/me")
+  @useAuth(BearerAuth)
+  updateMyStudentProfile(@body request: UpdateMyStudentProfileRequest):
+    PrivateStudentProfileResponse
+    | StudentProfileValidationResponse
     | YukCSCA.UnauthorizedResponse
     | YukCSCA.ForbiddenResponse
     | YukCSCA.InternalServerErrorResponse;
