@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.3.1
-**Updated:** 2026-07-30
+**Backlog version:** 0.3.2
+**Updated:** 2026-07-31
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.
@@ -984,18 +984,20 @@ The student can locate a learning unit and see readiness information before star
 
 **Closed-loop outcome**
 
-A coverage map tied to a named official syllabus version separates product content coverage from the student's personal progress.
+A localized coverage map tied to a named official syllabus source version separates product content coverage from the student's personal progress.
 
 **Main flow**
 
 1. Open the syllabus coverage map.
-2. Review official syllabus metadata and source.
-3. Expand a module or knowledge point.
+2. Review the localized syllabus outline and compact official-source action.
+3. Expand an outline item or knowledge point.
 4. See platform coverage and personal learning status separately.
 
 **Acceptance Criteria**
 
-- Given a sold subject, then the map shows official syllabus name, version/publication date, source link, and last verification date.
+- Given a sold subject, then the map shows the official authority, version, declared date or Not Stated status, last verification date, and one visually distinct source action.
+- Given a syllabus outline, then YukCSCA-authored summaries are available in Bahasa Indonesia, English, and Simplified Chinese and are not labelled as official wording.
+- Given the official source action, then it opens the admin-maintained official link without repeating a long source disclaimer on every outline item.
 - Given a knowledge point, then platform coverage uses only Fully Covered, Partially Covered, In Development, or Not Yet Covered.
 - Given a linked student, then personal status is displayed separately from platform coverage.
 - Given incomplete content, then no product or map label implies full coverage.
@@ -2342,7 +2344,7 @@ A permitted user or relationship case ends in a reasoned, audited state change o
 
 **User story**
 
-> As the first platform admin, I want to add YukCSCA learning objectives, map them to official syllabus topics, and publish lessons, terminology, questions, and remediation content so that students can use the first complete learning path.
+> As the first platform admin, I want to add YukCSCA learning objectives, map them to syllabus outline items, and publish lessons, terminology, questions, and remediation content so that students can use the first complete learning path.
 
 **Closed-loop outcome**
 
@@ -2350,14 +2352,14 @@ YukCSCA learning objectives and topic mappings are defined, and valid content mo
 
 **Main flow**
 
-1. Add YukCSCA learning objectives and map each objective to one or more official syllabus topics.
+1. Add YukCSCA learning objectives and map each objective to one or more syllabus outline items.
 2. Add terminology, a lesson, questions, explanations, and remediation content.
 3. Fix missing links, language fields, formulas or files, answers, scoring, and source information.
 4. Preview and publish the content and topic mappings.
 
 **Acceptance Criteria**
 
-- Given a YukCSCA learning objective, then it has its own ID, is mapped to one or more official syllabus topics with a short rationale, and is never presented as official syllabus wording.
+- Given a YukCSCA learning objective, then it has its own ID, is mapped to one or more syllabus outline items with a short rationale, and remains distinct from the localized outline summary.
 - Given new content, then it has a stable ID and can be reused by different YukCSCA clients without storing frontend routes or page-layout fields.
 - Given missing required information or broken links, then publication is blocked with clear errors.
 - Given valid content, when it is published, then students can read it through the learning experience and track coverage against the syllabus version.
@@ -2374,26 +2376,28 @@ YukCSCA learning objectives and topic mappings are defined, and valid content mo
 
 **User story**
 
-> As the first platform admin, I want to record an official CSCA syllabus version and its topic hierarchy so that official exam requirements can be tracked.
+> As the first platform admin, I want to record an official CSCA syllabus source and publish a localized outline so that official exam requirements can be tracked without copying protected wording.
 
 **Closed-loop outcome**
 
-One official syllabus version, its source, effective dates, and its official topic hierarchy are published and available for reference.
+One official syllabus source version, its available date metadata, compact source action, and YukCSCA-authored outline summaries in Bahasa Indonesia, English, and Simplified Chinese are published.
 
 **Main flow**
 
-1. Record the official syllabus authority, source locator, effective dates, and official topic structure.
-2. Compare it with the previously stored version when one exists.
-3. Review and publish the official syllabus version.
+1. Record the official syllabus authority, admin-maintained source link, edition, available declared dates, last checked date, and source locations.
+2. Write or edit concise Bahasa Indonesia, English, and Simplified Chinese outline summaries that follow the source structure without copying its wording.
+3. Compare the source record and outline with the previously stored version when one exists.
+4. Preview the source action and publish the syllabus version.
 
 **Acceptance Criteria**
 
-- Given an official source, then the authority, source link or locator, publication or effective date, last checked date, and exact topic labels are stored.
-- Given an official syllabus topic, then it remains distinct from platform learning objectives and is identified as official wording.
-- Given a newer syllabus version, then added, removed, or changed topics are shown before it is published.
+- Given an official source, then the authority, validated source link or locator, edition, declared publication/effective date or Not Stated status, and last checked date are stored.
+- Given a syllabus outline item, then its Bahasa Indonesia, English, and Simplified Chinese summaries retain source position/order and are identified as YukCSCA-authored rather than official wording.
+- Given a student-facing source reference, then it is presented as one compact, accessible source action with authority, edition, and last checked date rather than repetitive explanatory text.
+- Given a newer syllabus version, then added, removed, or changed outline items and mappings are shown before it is published.
 - Given a coverage claim, then it names the syllabus version used for the calculation.
 
-**Not included in this story:** Student mastery calculation or copying protected official questions.
+**Not included in this story:** Student mastery calculation, copying protected official wording/questions, or automated source scraping.
 
 ### US-ADM-04 — Publish questions and create one mock paper
 
@@ -2452,6 +2456,7 @@ Each publishable syllabus source, lesson, question, explanation, remediation ite
 - Given a publishable item, then its author or provider, source, source type, permission basis, and review status are visible.
 - Given required source or permission information is missing, then publication is blocked.
 - Given an official website is used as a factual source, then citation of facts is kept separate from permission to copy protected pages, databases, or questions.
+- Given an official syllabus source, then the admin can maintain its validated link and students receive a compact source action rather than copied protected wording.
 - Given content is replaced, then the replacement records its own source and permission information.
 
 **Not included in this story:** Separate rights-review roles or complex licence-expiry management.

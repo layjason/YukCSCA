@@ -5,6 +5,554 @@ info:
   summary: Contract-first API for YukCSCA
 tags: []
 paths:
+  /api/v1/admin/academic-images:
+    post:
+      operationId: AcademicAdminApi_uploadAcademicImage
+      description: Uploads one bounded PNG or JPEG diagram with its minimal source basis.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicImage'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.UploadAcademicImageRequest'
+            encoding:
+              file:
+                contentType: image/png, image/jpeg
+              provenance:
+                contentType: application/json
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-images/{id}:
+    get:
+      operationId: AcademicAdminApi_getAcademicImage
+      description: Returns one immutable, administrator-only academic image.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - private, max-age=31536000, immutable
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            image/png:
+              schema:
+                contentMediaType: image/png
+            image/jpeg:
+              schema:
+                contentMediaType: image/jpeg
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages:
+    get:
+      operationId: AcademicAdminApi_listAcademicPackages
+      description: Lists the pilot academic packages visible to the authenticated administrator.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.AcademicPackageSummary'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    post:
+      operationId: AcademicAdminApi_createAcademicPackage
+      description: Creates the single pilot Mathematics package as an empty draft.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicPackage'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.CreateAcademicPackageRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages/{id}:
+    get:
+      operationId: AcademicAdminApi_getAcademicPackage
+      description: Returns the administrator's current draft and active published-revision summary.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicPackage'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages/{id}/draft:
+    put:
+      operationId: AcademicAdminApi_saveAcademicPackageDraft
+      description: Replaces the package draft when its expected revision is current. Stale writes fail without merging.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicPackage'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.SaveAcademicPackageDraftRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages/{id}:archive:
+    post:
+      operationId: AcademicAdminApi_archiveAcademicPackage
+      description: Archives the package without deleting its revisions, images, or audit history.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicPackage'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.ArchiveAcademicPackageRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages/{id}:publish:
+    post:
+      operationId: AcademicAdminApi_publishAcademicPackage
+      description: Validates and atomically publishes the current package draft as a new immutable active revision.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicPackage'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.PublishAcademicPackageRequest'
+      security:
+        - BearerAuth: []
   /api/v1/auth/credential-registrations:
     post:
       operationId: AuthApi_startCredentialRegistration
@@ -585,6 +1133,843 @@ paths:
         - BearerAuth: []
 components:
   schemas:
+    AcademicAdmin.AcademicImage:
+      type: object
+      required:
+        - id
+        - mediaType
+        - byteSize
+        - width
+        - height
+        - sha256
+        - provenance
+        - createdAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        mediaType:
+          type: string
+          enum:
+            - image/png
+            - image/jpeg
+        byteSize:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 5242880
+        width:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 4096
+        height:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 4096
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        provenance:
+          $ref: '#/components/schemas/AcademicAdmin.ProvenanceRecord'
+        createdAt:
+          type: string
+          format: date-time
+    AcademicAdmin.AcademicPackage:
+      type: object
+      required:
+        - id
+        - subject
+        - status
+        - draftRevision
+        - activeRevision
+        - hasUnpublishedChanges
+        - draft
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          type: string
+          enum:
+            - MATHEMATICS
+        status:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicPackageStatus'
+        draftRevision:
+          type: integer
+          format: int64
+        activeRevision:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.PublishedRevisionSummary'
+            - type: 'null'
+        hasUnpublishedChanges:
+          type: boolean
+          description: True when the saved draft differs from the active published revision; false after a successful publication.
+        draft:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicPackageDraft'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AcademicAdmin.AcademicPackageDraft:
+      type: object
+      required:
+        - officialSyllabus
+        - outlineItems
+        - learningObjectives
+        - resources
+        - questions
+        - mocks
+      properties:
+        officialSyllabus:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialSyllabus'
+        outlineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.SyllabusOutlineItem'
+        learningObjectives:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.LearningObjective'
+        resources:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - title
+              - outlineItemIds
+              - objectiveIds
+              - versions
+              - provenance
+            properties:
+              id:
+                $ref: '#/components/schemas/uuid'
+              kind:
+                $ref: '#/components/schemas/AcademicAdmin.StudyResourceKind'
+              title:
+                $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+              outlineItemIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              objectiveIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              versions:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+              provenance:
+                $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceRecord'
+        questions:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - stem
+              - options
+              - explanations
+              - outlineItemIds
+              - objectiveIds
+              - provenance
+            properties:
+              id:
+                $ref: '#/components/schemas/uuid'
+              examLanguage:
+                $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+              difficulty:
+                $ref: '#/components/schemas/AcademicAdmin.QuestionDifficulty'
+              stem:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+              options:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.QuestionOption'
+              correctOptionKey:
+                type: string
+                minLength: 1
+                maxLength: 40
+              explanations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+              outlineItemIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              objectiveIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              provenance:
+                $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceRecord'
+        mocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.MockPaperRecord'
+          maxItems: 1
+    AcademicAdmin.AcademicPackageDraftInput:
+      type: object
+      required:
+        - officialSyllabus
+        - outlineItems
+        - learningObjectives
+        - resources
+        - questions
+        - mocks
+      properties:
+        officialSyllabus:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialSyllabus'
+        outlineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.SyllabusOutlineItem'
+        learningObjectives:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.LearningObjective'
+        resources:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - title
+              - outlineItemIds
+              - objectiveIds
+              - versions
+              - provenance
+            properties:
+              id:
+                $ref: '#/components/schemas/uuid'
+              kind:
+                $ref: '#/components/schemas/AcademicAdmin.StudyResourceKind'
+              title:
+                $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+              outlineItemIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              objectiveIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              versions:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+              provenance:
+                $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+        questions:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - stem
+              - options
+              - explanations
+              - outlineItemIds
+              - objectiveIds
+              - provenance
+            properties:
+              id:
+                $ref: '#/components/schemas/uuid'
+              examLanguage:
+                $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+              difficulty:
+                $ref: '#/components/schemas/AcademicAdmin.QuestionDifficulty'
+              stem:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+              options:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.QuestionOption'
+              correctOptionKey:
+                type: string
+                minLength: 1
+                maxLength: 40
+              explanations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+              outlineItemIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              objectiveIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+              provenance:
+                $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+        mocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.MockPaper'
+          maxItems: 1
+    AcademicAdmin.AcademicPackageStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PUBLISHED
+        - ARCHIVED
+    AcademicAdmin.AcademicPackageSummary:
+      type: object
+      required:
+        - id
+        - subject
+        - status
+        - draftRevision
+        - activeRevision
+        - hasUnpublishedChanges
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          type: string
+          enum:
+            - MATHEMATICS
+        status:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicPackageStatus'
+        draftRevision:
+          type: integer
+          format: int64
+        activeRevision:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.PublishedRevisionSummary'
+            - type: 'null'
+        hasUnpublishedChanges:
+          type: boolean
+          description: True when the package has saved draft changes that are not in the active published revision.
+        updatedAt:
+          type: string
+          format: date-time
+    AcademicAdmin.AcademicValidationCode:
+      type: string
+      enum:
+        - REQUIRED
+        - INVALID
+        - UNSUPPORTED
+        - OUT_OF_RANGE
+        - DUPLICATE
+        - INCOMPATIBLE
+        - MISSING_PERMISSION
+        - STALE_REVISION
+    AcademicAdmin.AcademicValidationProblem:
+      type: object
+      required:
+        - code
+        - violations
+      properties:
+        code:
+          type: string
+          enum:
+            - ACADEMIC_VALIDATION_FAILED
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicValidationViolation'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AcademicAdmin.AcademicValidationViolation:
+      type: object
+      required:
+        - path
+        - code
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 500
+        code:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicValidationCode'
+    AcademicAdmin.ArchiveAcademicPackageRequest:
+      type: object
+      required:
+        - expectedDraftRevision
+        - reason
+      properties:
+        expectedDraftRevision:
+          type: integer
+          format: int64
+          minimum: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    AcademicAdmin.ContentBlock:
+      anyOf:
+        - $ref: '#/components/schemas/AcademicAdmin.TextContentBlock'
+        - $ref: '#/components/schemas/AcademicAdmin.MathContentBlock'
+        - $ref: '#/components/schemas/AcademicAdmin.ImageContentBlock'
+    AcademicAdmin.ContentOrigin:
+      type: string
+      enum:
+        - YUKCSCA_ORIGINAL
+        - LICENSED
+        - OPEN_LICENSE
+    AcademicAdmin.CreateAcademicPackageRequest:
+      type: object
+      required:
+        - subject
+      properties:
+        subject:
+          type: string
+          enum:
+            - MATHEMATICS
+    AcademicAdmin.DraftProvenanceInput:
+      type: object
+      properties:
+        origin:
+          $ref: '#/components/schemas/AcademicAdmin.ContentOrigin'
+        provider:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 200
+        sourceLocator:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 2000
+        permissionReference:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 1000
+    AcademicAdmin.DraftProvenanceRecord:
+      type: object
+      required:
+        - authorUserId
+        - reviewedByUserId
+        - reviewedAt
+      properties:
+        authorUserId:
+          $ref: '#/components/schemas/uuid'
+        reviewedByUserId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        reviewedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      allOf:
+        - $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+    AcademicAdmin.ExamLanguage:
+      type: string
+      enum:
+        - en
+        - zh-CN
+    AcademicAdmin.ExamStructure:
+      type: object
+      properties:
+        durationMinutes:
+          type: number
+          enum:
+            - 60
+        totalPoints:
+          type: number
+          enum:
+            - 100
+        questionCount:
+          type: number
+          enum:
+            - 48
+        questionType:
+          type: string
+          enum:
+            - SINGLE_ANSWER
+        examLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+          maxItems: 2
+    AcademicAdmin.ExplanationLanguage:
+      type: string
+      enum:
+        - id
+        - en
+        - zh-CN
+    AcademicAdmin.ImageContentBlock:
+      type: object
+      required:
+        - kind
+        - imageId
+        - altText
+        - caption
+      properties:
+        kind:
+          type: string
+          enum:
+            - IMAGE
+        imageId:
+          $ref: '#/components/schemas/uuid'
+        altText:
+          type: string
+          minLength: 1
+          maxLength: 500
+        caption:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 1000
+    AcademicAdmin.LearningObjective:
+      type: object
+      required:
+        - id
+        - title
+        - mappings
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.TopicMapping'
+    AcademicAdmin.LocalizedContent:
+      type: object
+      required:
+        - language
+        - blocks
+      properties:
+        language:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+    AcademicAdmin.LocalizedText:
+      type: object
+      properties:
+        indonesian:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        english:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        simplifiedChinese:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    AcademicAdmin.MathContentBlock:
+      type: object
+      required:
+        - kind
+        - latex
+        - displayMode
+      properties:
+        kind:
+          type: string
+          enum:
+            - MATH
+        latex:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported.
+        displayMode:
+          type: boolean
+    AcademicAdmin.MockPaper:
+      type: object
+      required:
+        - id
+        - questions
+        - provenance
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        durationMinutes:
+          type: number
+          enum:
+            - 60
+        totalPoints:
+          type: number
+          enum:
+            - 100
+        questionCount:
+          type: number
+          enum:
+            - 48
+        questionType:
+          type: string
+          enum:
+            - SINGLE_ANSWER
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.MockQuestion'
+          maxItems: 48
+        provenance:
+          $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+    AcademicAdmin.MockPaperRecord:
+      type: object
+      required:
+        - provenance
+      properties:
+        provenance:
+          $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceRecord'
+      allOf:
+        - $ref: '#/components/schemas/AcademicAdmin.MockPaper'
+    AcademicAdmin.MockQuestion:
+      type: object
+      required:
+        - questionId
+        - points
+      properties:
+        questionId:
+          $ref: '#/components/schemas/uuid'
+        points:
+          type: integer
+          format: int32
+          minimum: 1
+    AcademicAdmin.OfficialDate:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDateStatus'
+        date:
+          anyOf:
+            - type: string
+              format: date
+            - type: 'null'
+    AcademicAdmin.OfficialDateStatus:
+      type: string
+      enum:
+        - DECLARED
+        - NOT_STATED
+    AcademicAdmin.OfficialSyllabus:
+      type: object
+      required:
+        - subject
+      properties:
+        subject:
+          type: string
+          enum:
+            - MATHEMATICS
+        authority:
+          type: string
+          minLength: 1
+          maxLength: 160
+        editionLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        sourceUrl:
+          type: string
+          maxLength: 2000
+        sourceLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+          maxItems: 2
+        retrievedAt:
+          type: string
+          format: date-time
+        lastCheckedAt:
+          type: string
+          format: date-time
+        publishedOn:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDate'
+        effectiveOn:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDate'
+        updatedOn:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDate'
+        examStructure:
+          $ref: '#/components/schemas/AcademicAdmin.ExamStructure'
+        permittedUse:
+          $ref: '#/components/schemas/AcademicAdmin.PermittedUse'
+    AcademicAdmin.PermittedUse:
+      type: string
+      enum:
+        - REFERENCE_ONLY
+    AcademicAdmin.ProvenanceInput:
+      type: object
+      required:
+        - origin
+      properties:
+        origin:
+          $ref: '#/components/schemas/AcademicAdmin.ContentOrigin'
+      allOf:
+        - $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+    AcademicAdmin.ProvenanceRecord:
+      type: object
+      required:
+        - authorUserId
+        - reviewedByUserId
+        - reviewedAt
+      properties:
+        authorUserId:
+          $ref: '#/components/schemas/uuid'
+        reviewedByUserId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        reviewedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+      allOf:
+        - $ref: '#/components/schemas/AcademicAdmin.ProvenanceInput'
+    AcademicAdmin.PublishAcademicPackageRequest:
+      type: object
+      required:
+        - expectedDraftRevision
+      properties:
+        expectedDraftRevision:
+          type: integer
+          format: int64
+          minimum: 0
+    AcademicAdmin.PublishedRevisionSummary:
+      type: object
+      required:
+        - id
+        - revisionNumber
+        - publishedAt
+        - publishedByUserId
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        revisionNumber:
+          type: integer
+          format: int64
+        publishedAt:
+          type: string
+          format: date-time
+        publishedByUserId:
+          $ref: '#/components/schemas/uuid'
+    AcademicAdmin.QuestionDifficulty:
+      type: string
+      enum:
+        - FOUNDATION
+        - STANDARD
+        - ADVANCED
+    AcademicAdmin.QuestionOption:
+      type: object
+      required:
+        - key
+        - blocks
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 40
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+          minItems: 1
+    AcademicAdmin.SaveAcademicPackageDraftRequest:
+      type: object
+      required:
+        - expectedDraftRevision
+        - draft
+      properties:
+        expectedDraftRevision:
+          type: integer
+          format: int64
+          minimum: 0
+        draft:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicPackageDraftInput'
+    AcademicAdmin.SourcePosition:
+      type: object
+      properties:
+        page:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+        section:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 160
+    AcademicAdmin.StudyResourceKind:
+      type: string
+      enum:
+        - LESSON
+        - TERMINOLOGY
+        - REMEDIATION
+    AcademicAdmin.SyllabusOutlineItem:
+      type: object
+      required:
+        - id
+        - parentId
+        - order
+        - summary
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        parentId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        order:
+          type: integer
+          format: int32
+          minimum: 0
+        sourcePosition:
+          $ref: '#/components/schemas/AcademicAdmin.SourcePosition'
+        summary:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+    AcademicAdmin.TextContentBlock:
+      type: object
+      required:
+        - kind
+        - text
+      properties:
+        kind:
+          type: string
+          enum:
+            - TEXT
+        text:
+          type: string
+          minLength: 1
+          maxLength: 12000
+    AcademicAdmin.TopicMapping:
+      type: object
+      required:
+        - outlineItemId
+      properties:
+        outlineItemId:
+          $ref: '#/components/schemas/uuid'
+        rationale:
+          type: string
+          minLength: 1
+          maxLength: 500
+    AcademicAdmin.UploadAcademicImageRequest:
+      type: object
+      properties:
+        file: {}
+        provenance:
+          $ref: '#/components/schemas/AcademicAdmin.ProvenanceInput'
+      required:
+        - file
+        - provenance
     Auth.AuthResponse:
       type: object
       required:

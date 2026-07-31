@@ -6,8 +6,8 @@
 
 | Field | Value |
 | --- | --- |
-| Requirement baseline | English/Chinese V1.3, 2026-07-30 |
-| Story baseline | `USER_STORIES.md` version 0.3.1 |
+| Requirement baseline | English/Chinese V1.4, 2026-07-31 |
+| Story baseline | `USER_STORIES.md` version 0.3.2 |
 | Audit date | 2026-07-31 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
@@ -34,12 +34,12 @@ during shaping.
 | 3.3 | Manual Subject Adjustments | `US-GOAL-03` | Owner: proposed `VS-014`. |
 | 3.4 | Baseline Diagnostic Assessment | `US-DIAG-01`, `US-DIAG-02` | Owner: proposed `VS-015`; diagnostic uses the shared assessment-attempt boundary and does not auto-activate a plan. |
 | 3.5 | Study-Plan Feasibility Assessment | `US-PLAN-01`, `US-PLAN-02`, `US-PLAN-03` | Owner: proposed `VS-016`; may use existing practice/mistake/mock evidence. |
-| 4.1 | Course Catalog and Launch Scope | `US-COURSE-01` | Owners: proposed `VS-007`, `VS-008`. |
-| 4.2 | Official Syllabus Source and Platform Curriculum Alignment | `US-SYL-01`, `US-ADM-03` | Owners: proposed `VS-006`, `VS-007`, `VS-008`; official syllabus topics remain distinct from platform objectives. |
-| 4.3 | Focused Learning-Unit Content | `US-COURSE-02`, `US-COURSE-04` | Owners: proposed `VS-007`, `VS-008`; video is optional. |
+| 4.1 | Course Catalog and Launch Scope | `US-COURSE-01` | Owners: active `VS-005`, proposed `VS-008`. |
+| 4.2 | Official Syllabus Source and Platform Curriculum Alignment | `US-SYL-01`, `US-ADM-03` | Owners: active `VS-005`, proposed `VS-008`; YukCSCA-authored Bahasa Indonesia, English, and Simplified Chinese outline summaries remain distinct from platform objectives and link to the official source; undeclared official dates are recorded as not stated. |
+| 4.3 | Focused Learning-Unit Content | `US-COURSE-02`, `US-COURSE-04` | Owners: active `VS-005`, proposed `VS-008`; video is optional. |
 | 4.4 | Explanation-Language and Exam-Language Bridging | `US-LANG-03`, `US-COURSE-02` | Owners: delivered `VS-004`; proposed `VS-008`, `VS-014`. |
 | 4.5 | Chinese Mathematics Terminology Preview and In-Question Support | `US-TERM-01`, `US-TERM-02`, `US-TERM-03` | Owner: proposed `VS-010`. |
-| 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: proposed `VS-007`, `VS-009`. |
+| 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: active `VS-005`, proposed `VS-009`. |
 | 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: proposed `VS-009`; plan-independent. |
 | 5.2 | Plan-Assigned Practice | `US-PRACTICE-02` | Owner: proposed `VS-017`; explicitly requires an active plan. |
 | 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01` | Owners: proposed `VS-009`, `VS-010`. |
@@ -65,11 +65,11 @@ during shaping.
 | 11.5 | Orders, Receipts, and Refunds | `US-PAY-02`, `US-ORDER-01`, `US-REFUND-01` | Owners: proposed `VS-031`, `VS-033`. |
 | 13.1 | Learning Notifications | `US-NOTIFY-01`, `US-NOTIFY-02` | Owner: proposed `VS-034`. |
 | 13.2 | Customer Service and Issue Reporting | `US-SUPPORT-01`, `US-SUPPORT-02` | Owner: proposed `VS-021`. |
-| 14.1 | First Platform Admin | `US-ADMIN-01` | Owner: proposed `VS-005`; first platform admin setup precedes broad admin operations. |
+| 14.1 | First Platform Admin | `US-ADMIN-01` | Owner: active `VS-005`; first platform admin setup precedes broad admin operations. |
 | 14.2 | User and Relationship Management | `US-ADM-01` | Owner: proposed `VS-029`; admin actions do not edit learning outcomes. |
-| 14.4 | Syllabus and Learning-Content Management | `US-ADM-02`, `US-ADM-03` | Owners: proposed `VS-006`, `VS-007`; syllabus topics and platform objectives are mapped cleanly. |
-| 14.5 | Question and Mock-Paper Management | `US-ADM-04` | Owner: proposed `VS-007`; published questions are selected for mock paper. |
-| 14.6 | Content Source and Rights Records | `US-ADM-05` | Owners: proposed `VS-006`, `VS-007`; content retains provenance and permission evidence. |
+| 14.4 | Syllabus and Learning-Content Management | `US-ADM-02`, `US-ADM-03` | Owner: active `VS-005`; localized syllabus outline items and platform objectives are mapped cleanly, and the admin maintains the official source link. |
+| 14.5 | Question and Mock-Paper Management | `US-ADM-04` | Owner: active `VS-005`; published questions support text, LaTeX, and approved diagrams and are selected for the first timed mock definition. |
+| 14.6 | Content Source and Rights Records | `US-ADM-05` | Owner: active `VS-005`; provenance is derived automatically for YukCSCA-original content, external content retains source and permission evidence, and the official syllabus remains reference-only behind a compact source action. |
 | 14.7 | Order, Payment, and Refund Management | `US-FINOPS-01` | Owner: proposed `VS-033`. |
 | 14.9 | AI and Content Quality Management | `US-SUPPORT-02`, `US-ADM-06` | Owners: proposed `VS-020`, `VS-021`. |
 | 14.10 | Operating Analytics | `US-ADM-07` | Owner: proposed `VS-022`. |
