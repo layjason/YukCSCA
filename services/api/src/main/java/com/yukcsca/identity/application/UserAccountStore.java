@@ -1,6 +1,7 @@
 package com.yukcsca.identity.application;
 
 import com.yukcsca.identity.domain.UserAccount;
+import com.yukcsca.identity.domain.UserRole;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,8 @@ public interface UserAccountStore {
   Optional<UserAccount> findByEmailIgnoreCase(String email);
 
   Optional<UserAccount> findByCanonicalEmailForUpdate(String canonicalEmail);
+
+  Optional<UserAccount> findFirstByRole(UserRole role);
 
   UserAccount save(UserAccount user);
 }

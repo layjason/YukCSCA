@@ -4,10 +4,10 @@
 
 | Field                        | Value                                                                                                          |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Status                       | `CONTRACT_READY`                                                                                               |
+| Status                       | `IN_PROGRESS`                                                                                                  |
 | Human gate                   | `APPROVED`                                                                                                     |
-| Plan revision                | 5                                                                                                              |
-| Updated                      | 2026-07-31                                                                                                     |
+| Plan revision                | 6                                                                                                              |
+| Updated                      | 2026-08-01                                                                                                     |
 | Primary actor                | Configured first platform admin                                                                                |
 | Story IDs                    | `US-ADMIN-01`, `US-ADM-02`, `US-ADM-03`, `US-ADM-04`, `US-ADM-05`                                              |
 | Requirement sections         | English: 1.1, 1.3, 4.1–4.6, 14.1, 14.4–14.6; Chinese: corresponding 1.1、1.3、4.1–4.6、14.1、14.4–14.6 clauses |
@@ -16,7 +16,7 @@
 | TypeSpec source              | `contracts/academic-admin.tsp`                                                                                 |
 | API operations               | Eight admin package, image, publication, and archive operations under `/api/v1/admin`                          |
 | Backend/slice owner          | Backend vertical-slice worker; existing `identity` module plus first `academic` use case                       |
-| Frontend owner               | Frontend consumer reviewer; review complete                                                                    |
+| Frontend owner               | Separate frontend worker; consumer review complete and implementation pending integration                      |
 | Initial contract checkpoint  | `VS-005-R4-initial` — TypeSpec `dbf6c7ad9a56352bf819cb2bceed2deddd37a673`                                      |
 | Accepted contract checkpoint | `VS-005-R5-accepted` — TypeSpec `fb09340d2afac7e6e812dc33c895c3048d976a8c`                                     |
 
@@ -419,11 +419,11 @@ validation without discarding the draft.
 
 - [ ] The approved `D-01`/`D-02` rules and every resolved contract request are
       reflected in implementation; the gate remains approved.
-- [ ] TypeSpec compiles and generated artifacts match the accepted checkpoint.
-- [ ] Only the exact eligible configured identity becomes the unique admin.
+- [x] TypeSpec compiles and generated artifacts match the accepted checkpoint.
+- [x] Only the exact eligible configured identity becomes the unique admin.
 - [ ] The source/date policy, three-language YukCSCA summaries, editable
       official link, and compact source-action presentation are preserved.
-- [ ] Text, LaTeX, approved images, questions, resources, and one mock publish as
+- [x] Text, LaTeX, approved images, questions, resources, and one mock publish as
       one immutable revision without prototype or unlicensed copied content.
 - [ ] Failure, stale update, correction, archive, authorization, no-store,
       logging, and audit behavior have named evidence.
@@ -433,21 +433,24 @@ validation without discarding the draft.
 
 ## Verification evidence
 
-| Evidence                       | Result                                                                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Supplied reference inspection  | Complete — all eight Markdown files classified                                                               |
-| PDF visual inspection          | Complete — official Mathematics hierarchy, guidebook links, SJTU formula and Physics diagram pages reviewed  |
-| Technology review              | Complete — KaTeX justified; bounded PostgreSQL images chosen; object storage deferred                        |
-| Contract build/checkpoint      | Complete — initial and accepted hashes recorded; regeneration and generated TypeScript consumption succeeded |
-| Frontend consumer review       | Complete — `CR-01` accepted and confirmed; zero open requests; `VS-005-R5-accepted` established              |
-| Backend/frontend/journey tests | Not run — implementation has not started                                                                     |
+| Evidence                      | Result                                                                                                                                                                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Supplied reference inspection | Complete — all eight Markdown files classified                                                                                                                                                                              |
+| PDF visual inspection         | Complete — official Mathematics hierarchy, guidebook links, SJTU formula and Physics diagram pages reviewed                                                                                                                 |
+| Technology review             | Complete — KaTeX justified; bounded PostgreSQL images chosen; object storage deferred                                                                                                                                       |
+| Contract build/checkpoint     | Complete — initial and accepted hashes recorded; regeneration and generated TypeScript consumption succeeded                                                                                                                |
+| Frontend consumer review      | Complete — `CR-01` accepted and confirmed; zero open requests; `VS-005-R5-accepted` established                                                                                                                             |
+| Backend implementation        | Complete in the backend worktree — first-admin recognition, V6, eight admin operations, publication/image validation, immutable revisions, archive, authorization, and value-free audit                                     |
+| Backend verification          | Complete — focused identity/academic sets passed; full `./mvnw --batch-mode verify` passed 32 unit and 51 PostgreSQL/Testcontainers integration tests; contract build/generated check, web check, and Compose config passed |
+| Frontend and real journey     | Pending — separate frontend worktree must be integrated before configured-admin browser review and product-owner acceptance                                                                                                 |
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                 |
-| -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 5        | 2026-07-31 | Completed frontend consumer review of `VS-005-R4-initial`; accepted and implemented `CR-01` by exposing server-derived unpublished-correction state on package list/detail responses; regenerated and rechecked the contract; recorded `VS-005-R5-accepted`; and moved the slice to `CONTRACT_READY` with zero open requests.                          |
-| 4        | 2026-07-31 | Initialized and compiled the eight-operation admin academic-package contract; made incomplete whole-draft saves distinct from publication validation; bounded image upload/read behavior; regenerated and reviewed OpenAPI/web declarations; recorded `VS-005-R4-initial`; and opened frontend consumer review without starting implementation.        |
-| 3        | 2026-07-31 | Approved `D-02` reference-only presentation; replaced copied official wording with YukCSCA-authored Bahasa Indonesia, English, and Simplified Chinese outline summaries; added an admin-maintained official link and compact source-action UI; synchronized requirements V1.4, stories, glossary, PLAN, and coverage; returned the slice to `SHAPING`. |
-| 2        | 2026-07-31 | Recorded approved `D-01` Option A; rebuilt the slice from supplied official-syllabus and rendered sample-paper evidence; simplified the schema and provenance workflow; added explicit date, LaTeX, and bounded image decisions; opened `D-02` for the official source's publication restriction.                                                      |
-| 1        | 2026-07-31 | Created the consolidated first-admin and governed academic-package shaping draft and opened `D-01`.                                                                                                                                                                                                                                                    |
+| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6        | 2026-08-01 | Implemented and verified the assigned backend boundary: configured-admin recognition for Google and credential sign-in, V6 persistence, all eight accepted HTTP operations, draft/publication validation, bounded re-encoded images, immutable correction revisions, archive, authorization, and minimized audit. Moved to `IN_PROGRESS`; frontend integration and product-owner journey acceptance remain pending. |
+| 5        | 2026-07-31 | Completed frontend consumer review of `VS-005-R4-initial`; accepted and implemented `CR-01` by exposing server-derived unpublished-correction state on package list/detail responses; regenerated and rechecked the contract; recorded `VS-005-R5-accepted`; and moved the slice to `CONTRACT_READY` with zero open requests.                                                                                       |
+| 4        | 2026-07-31 | Initialized and compiled the eight-operation admin academic-package contract; made incomplete whole-draft saves distinct from publication validation; bounded image upload/read behavior; regenerated and reviewed OpenAPI/web declarations; recorded `VS-005-R4-initial`; and opened frontend consumer review without starting implementation.                                                                     |
+| 3        | 2026-07-31 | Approved `D-02` reference-only presentation; replaced copied official wording with YukCSCA-authored Bahasa Indonesia, English, and Simplified Chinese outline summaries; added an admin-maintained official link and compact source-action UI; synchronized requirements V1.4, stories, glossary, PLAN, and coverage; returned the slice to `SHAPING`.                                                              |
+| 2        | 2026-07-31 | Recorded approved `D-01` Option A; rebuilt the slice from supplied official-syllabus and rendered sample-paper evidence; simplified the schema and provenance workflow; added explicit date, LaTeX, and bounded image decisions; opened `D-02` for the official source's publication restriction.                                                                                                                   |
+| 1        | 2026-07-31 | Created the consolidated first-admin and governed academic-package shaping draft and opened `D-01`.                                                                                                                                                                                                                                                                                                                 |

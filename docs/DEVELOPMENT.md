@@ -30,6 +30,7 @@ Do not substitute npm, system Maven, H2, or an unpinned global formatter/linter.
 ```bash
 cp .env.example .env
 # Replace the Google client-ID placeholders and local JWT secret.
+# Set YUKCSCA_FIRST_ADMIN_EMAIL to the non-personal verified pilot account.
 
 make dev
 ```
@@ -46,6 +47,12 @@ origin are development placeholders; deployment must provide a separate
 secret, approved immutable policy artifacts, a verified sender/domain, bounded
 SMTP credentials, and an HTTPS origin before enabling credential enrollment or
 recovery.
+
+`YUKCSCA_FIRST_ADMIN_EMAIL` is an exact, case-insensitive sign-in identity. It
+does not create an account: the address must complete Google or credential
+verification and remain `UNASSIGNED` until successful sign-in. Leave it empty
+when admin provisioning is not intended. Once assigned, restart and refresh do
+not create or reassign another admin.
 
 ### Host hot-reload and debugging
 

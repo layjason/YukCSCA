@@ -25,10 +25,12 @@ class DatabaseMigrationIT {
                     + "where table_name in ('auth_session', 'security_event', 'student_profile', "
                     + "'email_verification_claim', 'credential_authenticator', "
                     + "'account_policy_acceptance', 'credential_email_outbox', "
-                    + "'password_recovery_claim', 'password_recovery_email_outbox')");
+                    + "'password_recovery_claim', 'password_recovery_email_outbox', "
+                    + "'academic_package', 'academic_revision', 'academic_image', "
+                    + "'academic_audit')");
         var result = statement.executeQuery()) {
       assertThat(result.next()).isTrue();
-      assertThat(result.getInt(1)).isEqualTo(9);
+      assertThat(result.getInt(1)).isEqualTo(13);
     }
   }
 }
