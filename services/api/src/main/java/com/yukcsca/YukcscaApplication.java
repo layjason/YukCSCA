@@ -3,6 +3,7 @@ package com.yukcsca;
 import com.yukcsca.identity.infrastructure.security.AuthProperties;
 import com.yukcsca.identity.infrastructure.security.AuthRateLimitProperties;
 import com.yukcsca.identity.infrastructure.security.CredentialAuthProperties;
+import com.yukcsca.identity.infrastructure.security.FirstAdminProperties;
 import com.yukcsca.identity.infrastructure.security.SessionMaintenanceProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,6 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   AuthProperties.class,
   AuthRateLimitProperties.class,
   CredentialAuthProperties.class,
+  FirstAdminProperties.class,
   SessionMaintenanceProperties.class
 })
 public class YukcscaApplication {

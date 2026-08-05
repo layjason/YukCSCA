@@ -67,6 +67,29 @@ Minor-user identity and relationships, learning conversations, assessment answer
 - Empty and identical updates are successful no-ops. An effective update and its durable event commit together; the event stores only its category, pseudonymous account ID, and time, never old/new profile values.
 - Student-profile request, response, activation, and shared current-user string representations redact personal fields. Validation failures, including explicit null update fields, are converted to stable field/code pairs before framework exception logging can render rejected values.
 
+### Pilot academic administration
+
+- Only the exact configured verified `UNASSIGNED` account is promoted during a
+  successful sign-in. A PostgreSQL partial unique index enforces one pilot
+  `ADMIN`; existing roles are never overwritten and repeated sign-in/refresh
+  does not repeat assignment.
+- Every `/api/v1/admin/**` request requires an admin JWT and the academic
+  application rechecks the current database role. Package responses are
+  `no-store`; image reads are admin-only, immutable, and `nosniff`.
+- Academic publication is deterministic and transactional. Official syllabus
+  material remains reference-only, localized outline summaries are
+  YukCSCA-authored, and licensed/open material cannot publish without provider,
+  source, and permission evidence.
+- Uploaded images are limited to PNG/JPEG and 5 MiB/4096 pixels, checked from
+  decoded format and dimensions, re-encoded to strip submitted metadata, and
+  stored separately from package JSON with required `REENCODED` sanitization
+  status. Retrieval refuses unsanitized rows; SVG/HTML and MIME mismatches are
+  denied.
+- Draft bodies, answers, LaTeX, source details, image bytes, and the configured
+  admin email are excluded from logs and audit values. Audit records retain
+  only actor, target where one exists, outcome, time, stable action/code, and a
+  bounded archive reason.
+
 ### Repository and delivery
 
 - Secrets and real user/student data are prohibited from the repository and logs.

@@ -22,6 +22,10 @@ spring:
       '[mail.smtp.connectiontimeout]': 5000
       '[mail.smtp.timeout]': 3000
       '[mail.smtp.writetimeout]': 5000
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   shutdown: graceful
@@ -49,6 +53,8 @@ logging:
 spring.lifecycle.timeout-per-shutdown-phase: 20s
 
 yukcsca:
+  admin:
+    first-email: ${YUKCSCA_FIRST_ADMIN_EMAIL:}
   auth:
     google-client-id: ${GOOGLE_CLIENT_ID}
     jwt-secret: ${YUKCSCA_JWT_SECRET}
