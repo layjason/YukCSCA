@@ -1445,5 +1445,110 @@
         }
       }
     }
+  },
+  "admin": {
+    "academic": {
+      "title": "Academic Packages",
+      "subtitle": "Configure 2025 CSCA Mathematics syllabus, learning resources, questions, and timed mock.",
+      "createPackage": "Create Mathematics Package",
+      "editPackage": "Edit Package",
+      "statusDraft": "Draft",
+      "statusPublished": "Published",
+      "statusArchived": "Archived",
+      "hasUnpublishedChanges": "Pending Changes",
+      "activeRevision": "Revision {{revision}} published on {{date}}",
+      "noActiveRevision": "No published revision yet",
+      "saveDraft": "Save Draft",
+      "saving": "Saving...",
+      "publish": "Review & Publish",
+      "publishing": "Publishing...",
+      "archive": "Archive Package",
+      "archiving": "Archiving...",
+      "sourcePanel": {
+        "title": "Official Source",
+        "authority": "CSCA",
+        "edition": "2025 Edition",
+        "checked": "Checked {{date}}",
+        "openSyllabus": "Open official syllabus",
+        "sourceUrlLabel": "Official Syllabus PDF Link",
+        "sourceUrlPlaceholder": "https://csca.org.cn/syllabus-2025.pdf",
+        "dateStatus": "Date Status",
+        "declared": "Declared",
+        "notStated": "Not Stated",
+        "publishedOn": "Official Published Date",
+        "effectiveOn": "Official Effective Date",
+        "updatedOn": "Official Updated Date"
+      },
+      "outline": {
+        "title": "Syllabus Outline",
+        "subtitle": "YukCSCA-authored summaries linking to 2025 CSCA Mathematics official sections.",
+        "yukcscaAuthoredTag": "YukCSCA-authored",
+        "addItem": "Add Outline Item",
+        "page": "Page",
+        "section": "Section",
+        "summaryId": "Indonesian Summary (id)",
+        "summaryEn": "English Summary (en)",
+        "summaryZh": "Simplified Chinese Summary (zh-CN)"
+      },
+      "objectives": {
+        "title": "Learning Objectives",
+        "addObjective": "Add Objective"
+      },
+      "resources": {
+        "title": "Study Resources",
+        "kindLesson": "Lesson",
+        "kindTerminology": "Terminology",
+        "kindRemediation": "Remediation",
+        "addResource": "Add Study Resource"
+      },
+      "questions": {
+        "title": "Questions & Scored Items",
+        "difficultyFoundation": "Foundation",
+        "difficultyStandard": "Standard",
+        "difficultyAdvanced": "Advanced",
+        "examLangEn": "English (en)",
+        "examLangZh": "Simplified Chinese (zh-CN)",
+        "addQuestion": "Add Question",
+        "stem": "Question Stem",
+        "options": "Options",
+        "correctOption": "Correct Option",
+        "explanations": "Explanations"
+      },
+      "blocks": {
+        "addText": "Add Text",
+        "addMath": "Add Formula (LaTeX)",
+        "addImage": "Add Diagram (Image)",
+        "latexPlaceholder": "\\int_{0}^{1} x^2 dx = \\frac{1}{3}",
+        "altText": "Image Alt Text",
+        "caption": "Image Caption (optional)",
+        "uploadImage": "Upload Diagram (PNG/JPEG max 5MB)"
+      },
+      "mock": {
+        "title": "Timed Mock Paper",
+        "duration": "Duration: 60 minutes",
+        "points": "Total Points: 100",
+        "questionCount": "Required Single-Answer Questions: 48",
+        "selectQuestions": "Selected Questions ({{count}}/48)"
+      },
+      "validation": {
+        "title": "Publication Validation Failed",
+        "subtitle": "Please resolve the following issues before publishing:",
+        "close": "Close & Fix"
+      },
+      "archiveModal": {
+        "title": "Archive Academic Package",
+        "warning": "Archiving will disable new student attempts while preserving past revisions and audit history.",
+        "reasonLabel": "Reason for Archival",
+        "reasonPlaceholder": "e.g., Superseded by 2026 CSCA Mathematics syllabus",
+        "cancel": "Cancel",
+        "confirm": "Confirm Archival"
+      },
+      "toasts": {
+        "draftSaved": "Draft saved successfully.",
+        "published": "Academic package published successfully as active revision {{revision}}.",
+        "archived": "Academic package archived successfully.",
+        "imageUploaded": "Diagram uploaded successfully."
+      }
+    }
   }
 }

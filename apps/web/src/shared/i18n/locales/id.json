@@ -1445,5 +1445,110 @@
         }
       }
     }
+  },
+  "admin": {
+    "academic": {
+      "title": "Paket Akademik",
+      "subtitle": "Konfigurasi silabus CSCA Matematika 2025, sumber belajar, soal, dan ujian simulasi.",
+      "createPackage": "Buat Paket Matematika",
+      "editPackage": "Edit Paket",
+      "statusDraft": "Draf",
+      "statusPublished": "Diterbitkan",
+      "statusArchived": "Diarsipkan",
+      "hasUnpublishedChanges": "Perubahan Tertunda",
+      "activeRevision": "Revisi {{revision}} diterbitkan pada {{date}}",
+      "noActiveRevision": "Belum ada revisi yang diterbitkan",
+      "saveDraft": "Simpan Draf",
+      "saving": "Menyimpan...",
+      "publish": "Tinjau & Terbitkan",
+      "publishing": "Menerbitkan...",
+      "archive": "Arsipkan Paket",
+      "archiving": "Mengarsipkan...",
+      "sourcePanel": {
+        "title": "Sumber Resmi",
+        "authority": "CSCA",
+        "edition": "Edisi 2025",
+        "checked": "Diperiksa {{date}}",
+        "openSyllabus": "Buka silabus resmi",
+        "sourceUrlLabel": "Tautan PDF Silabus Resmi",
+        "sourceUrlPlaceholder": "https://csca.org.cn/syllabus-2025.pdf",
+        "dateStatus": "Status Tanggal",
+        "declared": "Dinyatakan",
+        "notStated": "Tidak Dinyatakan",
+        "publishedOn": "Tanggal Penerbitan Resmi",
+        "effectiveOn": "Tanggal Berlaku Resmi",
+        "updatedOn": "Tanggal Pembaruan Resmi"
+      },
+      "outline": {
+        "title": "Garis Besar Silabus",
+        "subtitle": "Ringkasan buatan YukCSCA yang terhubung ke bagian resmi CSCA Matematika 2025.",
+        "yukcscaAuthoredTag": "Ringkasan YukCSCA",
+        "addItem": "Tambah Item Silabus",
+        "page": "Halaman",
+        "section": "Bagian",
+        "summaryId": "Ringkasan Bahasa Indonesia (id)",
+        "summaryEn": "Ringkasan Bahasa Inggris (en)",
+        "summaryZh": "Ringkasan Bahasa Mandarin (zh-CN)"
+      },
+      "objectives": {
+        "title": "Tujuan Pembelajaran",
+        "addObjective": "Tambah Tujuan Pembelajaran"
+      },
+      "resources": {
+        "title": "Sumber Belajar",
+        "kindLesson": "Pelajaran",
+        "kindTerminology": "Terminologi",
+        "kindRemediation": "Remediasi",
+        "addResource": "Tambah Sumber Belajar"
+      },
+      "questions": {
+        "title": "Soal & Penilaian",
+        "difficultyFoundation": "Dasar",
+        "difficultyStandard": "Standar",
+        "difficultyAdvanced": "Lanjutan",
+        "examLangEn": "Bahasa Inggris (en)",
+        "examLangZh": "Bahasa Mandarin (zh-CN)",
+        "addQuestion": "Tambah Soal",
+        "stem": "Teks Soal",
+        "options": "Pilihan",
+        "correctOption": "Pilihan Benar",
+        "explanations": "Penjelasan"
+      },
+      "blocks": {
+        "addText": "Tambah Teks",
+        "addMath": "Tambah Rumus (LaTeX)",
+        "addImage": "Tambah Diagram (Gambar)",
+        "latexPlaceholder": "\\int_{0}^{1} x^2 dx = \\frac{1}{3}",
+        "altText": "Teks Alternatif Gambar",
+        "caption": "Keterangan Gambar (opsional)",
+        "uploadImage": "Unggah Diagram (PNG/JPEG maks 5MB)"
+      },
+      "mock": {
+        "title": "Ujian Simulasi Terjadwal",
+        "duration": "Durasi: 60 menit",
+        "points": "Total Poin: 100",
+        "questionCount": "Jumlah Soal Pilihan Tunggal: 48",
+        "selectQuestions": "Soal Terpilih ({{count}}/48)"
+      },
+      "validation": {
+        "title": "Validasi Penerbitan Gagal",
+        "subtitle": "Harap perbaiki masalah berikut sebelum menerbitkan:",
+        "close": "Tutup & Perbaiki"
+      },
+      "archiveModal": {
+        "title": "Arsipkan Paket Akademik",
+        "warning": "Pengarsipan akan menonaktifkan percobaan siswa baru sambil mempertahankan revisi lalu dan riwayat audit.",
+        "reasonLabel": "Alasan Pengarsipan",
+        "reasonPlaceholder": "misal, Digantikan oleh silabus CSCA Matematika 2026",
+        "cancel": "Batal",
+        "confirm": "Konfirmasi Pengarsipan"
+      },
+      "toasts": {
+        "draftSaved": "Draf berhasil disimpan.",
+        "published": "Paket akademik berhasil diterbitkan sebagai revisi aktif {{revision}}.",
+        "archived": "Paket akademik berhasil diarsipkan.",
+        "imageUploaded": "Diagram berhasil diunggah."
+      }
+    }
   }
 }

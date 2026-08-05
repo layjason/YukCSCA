@@ -1445,5 +1445,110 @@
         }
       }
     }
+  },
+  "admin": {
+    "academic": {
+      "title": "学术包",
+      "subtitle": "配置 2025 CSCA 数学考试大纲、学习资源、试题及定时模拟考。",
+      "createPackage": "创建数学学术包",
+      "editPackage": "编辑学术包",
+      "statusDraft": "草稿",
+      "statusPublished": "已发布",
+      "statusArchived": "已归档",
+      "hasUnpublishedChanges": "有未发布更改",
+      "activeRevision": "版本 {{revision}} 已于 {{date}} 发布",
+      "noActiveRevision": "暂无已发布版本",
+      "saveDraft": "保存草稿",
+      "saving": "保存中...",
+      "publish": "审核并发布",
+      "publishing": "发布中...",
+      "archive": "归档学术包",
+      "archiving": "归档中...",
+      "sourcePanel": {
+        "title": "官方来源",
+        "authority": "CSCA",
+        "edition": "2025 版",
+        "checked": "检查于 {{date}}",
+        "openSyllabus": "查看官方考试大纲",
+        "sourceUrlLabel": "官方大纲 PDF 链接",
+        "sourceUrlPlaceholder": "https://csca.org.cn/syllabus-2025.pdf",
+        "dateStatus": "日期状态",
+        "declared": "已声明",
+        "notStated": "未声明",
+        "publishedOn": "官方发布日期",
+        "effectiveOn": "官方生效日期",
+        "updatedOn": "官方更新日期"
+      },
+      "outline": {
+        "title": "大纲结构",
+        "subtitle": "YukCSCA 编写的大纲摘要，关联至 2025 CSCA 数学官方章节。",
+        "yukcscaAuthoredTag": "YukCSCA 编写摘要",
+        "addItem": "添加大纲条目",
+        "page": "页码",
+        "section": "章节",
+        "summaryId": "印尼语摘要 (id)",
+        "summaryEn": "英语摘要 (en)",
+        "summaryZh": "简体中文摘要 (zh-CN)"
+      },
+      "objectives": {
+        "title": "学习目标",
+        "addObjective": "添加学习目标"
+      },
+      "resources": {
+        "title": "学习资源",
+        "kindLesson": "课程",
+        "kindTerminology": "术语",
+        "kindRemediation": "错题修复",
+        "addResource": "添加学习资源"
+      },
+      "questions": {
+        "title": "试题与评分项",
+        "difficultyFoundation": "基础",
+        "difficultyStandard": "标准",
+        "difficultyAdvanced": "进阶",
+        "examLangEn": "英语 (en)",
+        "examLangZh": "简体中文 (zh-CN)",
+        "addQuestion": "添加试题",
+        "stem": "题干",
+        "options": "选项",
+        "correctOption": "正确选项",
+        "explanations": "解析"
+      },
+      "blocks": {
+        "addText": "添加文本",
+        "addMath": "添加公式 (LaTeX)",
+        "addImage": "添加图表 (图片)",
+        "latexPlaceholder": "\\int_{0}^{1} x^2 dx = \\frac{1}{3}",
+        "altText": "图片替代文本",
+        "caption": "图片说明（可选）",
+        "uploadImage": "上传图表（PNG/JPEG 不超过 5MB）"
+      },
+      "mock": {
+        "title": "定时模拟卷",
+        "duration": "时长：60 分钟",
+        "points": "总分：100 分",
+        "questionCount": "单选题要求数量：48 题",
+        "selectQuestions": "已选试题 ({{count}}/48)"
+      },
+      "validation": {
+        "title": "发布校验失败",
+        "subtitle": "请在发布前修复以下问题：",
+        "close": "关闭并修复"
+      },
+      "archiveModal": {
+        "title": "归档学术包",
+        "warning": "归档将禁用新学生的测试，但保留历史版本和审计记录。",
+        "reasonLabel": "归档原因",
+        "reasonPlaceholder": "例如：已被 2026 CSCA 数学大纲替代",
+        "cancel": "取消",
+        "confirm": "确认归档"
+      },
+      "toasts": {
+        "draftSaved": "草稿保存成功。",
+        "published": "学术包已成功发布为当前版本 {{revision}}。",
+        "archived": "学术包已成功归档。",
+        "imageUploaded": "图表上传成功。"
+      }
+    }
   }
 }
