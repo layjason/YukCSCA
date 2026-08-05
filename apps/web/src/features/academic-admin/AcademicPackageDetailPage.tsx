@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AcademicPackageEditor } from './components/AcademicPackageEditor';
 import { getAcademicPackage } from './api/academicAdminApi';
 import type { AcademicPackage } from './types';
+import './academic-admin.css';
 
 export function AcademicPackageDetailPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -24,38 +27,36 @@ export function AcademicPackageDetailPage(): React.JSX.Element {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : 'Failed to load package detail');
+        setError(err instanceof Error ? err.message : t('admin.academic.loadDetailFailed'));
         setIsLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, t]);
 
   if (isLoading) {
     return (
-      <div className="center-card" aria-live="polite">
+      <div className="admin-loading" aria-live="polite">
         <span className="loading-indicator" aria-hidden="true" />
+        <p className="admin-muted">{t('admin.academic.loadingPackage')}</p>
       </div>
     );
   }
 
   if (error || !pkg) {
     return (
-      <main className="app-content">
-        <div className="feedback-danger" role="alert">
-          <p style={{ margin: 0, fontWeight: 650 }}>{error || 'Package not found'}</p>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ marginTop: 'var(--space-sm)' }}
-            onClick={() => navigate('/admin/academic-packages')}
-          >
-            Return to Academic Packages List
-          </button>
-        </div>
-      </main>
+      <div className="feedback-danger admin-feedback" role="alert">
+        <p className="admin-feedback-message">{error || t('admin.academic.packageNotFound')}</p>
+        <button
+          type="button"
+          className="btn-secondary admin-feedback-retry"
+          onClick={() => navigate('/admin/academic-packages')}
+        >
+          {t('admin.academic.returnToList')}
+        </button>
+      </div>
     );
   }
 

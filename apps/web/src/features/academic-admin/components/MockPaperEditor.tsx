@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MockPaper, Question, TextContentBlock, MathContentBlock } from '../types';
 
@@ -32,6 +33,8 @@ export function MockPaperEditor({
   };
 
   const selectedQuestionIds = mock.questions.map((q) => q.questionId);
+  const selectedPoints = mock.questions.reduce((sum, item) => sum + item.points, 0);
+  const progressPct = Math.min(100, (selectedQuestionIds.length / 48) * 100);
 
   const toggleQuestionSelection = (questionId: string) => {
     const nextQuestions = [...mock.questions];
@@ -44,96 +47,64 @@ export function MockPaperEditor({
       nextQuestions.push({ questionId, points: 2 });
     }
 
+    const rebalanced =
+      nextQuestions.length === 48
+        ? nextQuestions.map((item, index) => ({
+            questionId: item.questionId,
+            points: index < 4 ? 3 : 2,
+          }))
+        : nextQuestions.map((item) => ({ questionId: item.questionId, points: 2 }));
+
     const updatedMock: MockPaper = {
       ...mock,
-      questions: nextQuestions,
+      questions: rebalanced,
     };
     onChange([updatedMock]);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-      <div
-        style={{
-          padding: 'var(--space-lg)',
-          borderRadius: 'var(--radius-lg)',
-          background: 'var(--color-block-sky)',
-          border: '1px solid var(--color-border)',
-        }}
-      >
-        <h3 style={{ margin: '0 0 var(--space-xs)', fontSize: '1.2rem', fontWeight: 700 }}>
-          {mock.title || t('admin.academic.mock.title')}
-        </h3>
+    <div className="admin-stack-lg">
+      <div className="admin-mock-summary">
+        <h3 className="admin-mock-title">{mock.title || t('admin.academic.mock.title')}</h3>
 
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'var(--space-md)',
-            fontSize: '0.9rem',
-            color: 'var(--color-ink-muted)',
-          }}
-        >
-          <span style={{ fontWeight: 650 }}>{t('admin.academic.mock.duration')}</span>
+        <div className="admin-mock-meta">
+          <span className="admin-mock-meta-item">{t('admin.academic.mock.duration')}</span>
           <span>·</span>
-          <span style={{ fontWeight: 650 }}>{t('admin.academic.mock.points')}</span>
+          <span className="admin-mock-meta-item">{t('admin.academic.mock.points')}</span>
           <span>·</span>
-          <span style={{ fontWeight: 650 }}>{t('admin.academic.mock.questionCount')}</span>
+          <span className="admin-mock-meta-item">{t('admin.academic.mock.questionCount')}</span>
         </div>
 
-        <div style={{ marginTop: 'var(--space-md)' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '0.85rem',
-              fontWeight: 650,
-              marginBottom: 'var(--space-xxs)',
-            }}
-          >
+        <div className="admin-mock-progress">
+          <div className="admin-mock-progress-header">
             <span>
               {t('admin.academic.mock.selectQuestions', { count: selectedQuestionIds.length })}
             </span>
-            <span>{selectedQuestionIds.length} / 48</span>
+            <span>
+              {selectedQuestionIds.length} / 48 · {selectedPoints} / 100 pts
+            </span>
           </div>
-          <div
-            className="progress-track"
-            style={{
-              width: '100%',
-              height: '8px',
-              background: 'var(--color-canvas)',
-              borderRadius: 'var(--radius-pill)',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="admin-mock-progress-track">
             <div
-              className="progress-value"
-              style={{
-                width: `${Math.min(100, (selectedQuestionIds.length / 48) * 100)}%`,
-                height: '100%',
-                background:
-                  selectedQuestionIds.length === 48
-                    ? 'var(--color-success)'
-                    : 'var(--color-primary)',
-                transition: 'width var(--motion-standard) var(--ease-standard)',
-              }}
+              className={`admin-mock-progress-fill${selectedQuestionIds.length === 48 ? ' admin-mock-progress-fill-complete' : ''}`}
+              style={{ '--admin-progress': `${progressPct}%` } as CSSProperties}
             />
           </div>
         </div>
       </div>
 
       <div>
-        <h4 style={{ margin: '0 0 var(--space-sm)', fontSize: '1rem', fontWeight: 700 }}>
+        <h4 className="admin-section-title-lg">
           Available Package Questions ({availableQuestions.length})
         </h4>
 
         {availableQuestions.length === 0 ? (
-          <p style={{ color: 'var(--color-ink-muted)', fontSize: '0.9rem' }}>
+          <p className="admin-muted">
             No questions created yet. Please create single-answer questions in the Questions tab
             first.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+          <div className="admin-stack-xs">
             {availableQuestions.map((q, idx) => {
               const isSelected = selectedQuestionIds.includes(q.id);
               const textBlock = q.stem.find((b): b is TextContentBlock => b.kind === 'TEXT');
@@ -143,42 +114,17 @@ export function MockPaperEditor({
               return (
                 <div
                   key={q.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 'var(--space-sm) var(--space-md)',
-                    borderRadius: 'var(--radius-md)',
-                    border: isSelected
-                      ? '2px solid var(--color-focus)'
-                      : '1px solid var(--color-border)',
-                    background: isSelected ? 'var(--color-surface-soft)' : 'var(--color-canvas)',
-                    transition: 'all var(--motion-instant) var(--ease-standard)',
-                  }}
+                  className={`admin-mock-question-row${isSelected ? ' admin-mock-question-row-selected' : ''}`}
                 >
                   <div>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        marginRight: 'var(--space-xs)',
-                      }}
-                    >
-                      Q{idx + 1}
-                    </span>
-                    <span style={{ fontSize: '0.9rem' }}>{preview}</span>
-                    <span
-                      className="yukcsca-tag"
-                      style={{ marginLeft: 'var(--space-xs)', fontSize: '0.65rem' }}
-                    >
-                      {q.difficulty}
-                    </span>
+                    <span className="admin-mock-question-index">Q{idx + 1}</span>
+                    <span className="admin-mock-question-preview">{preview}</span>
+                    <span className="yukcsca-tag admin-tag-inline">{q.difficulty}</span>
                   </div>
 
                   <button
                     type="button"
-                    className={isSelected ? 'btn-secondary' : 'btn-primary'}
-                    style={{ minHeight: '34px', padding: '4px 12px', fontSize: '0.8rem' }}
+                    className={`${isSelected ? 'btn-secondary' : 'btn-primary'} admin-btn-compact-md`}
                     onClick={() => toggleQuestionSelection(q.id)}
                   >
                     {isSelected ? 'Deselect' : 'Select for Mock'}

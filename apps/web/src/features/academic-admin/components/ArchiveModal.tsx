@@ -31,34 +31,23 @@ export function ArchiveModal({
       <div className="modal-content">
         <div className="modal-header">
           <h2 id="archive-modal-title">{t('admin.academic.archiveModal.title')}</h2>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ minHeight: '32px', padding: '2px 8px' }}
-            onClick={onClose}
-          >
+          <button type="button" className="btn-secondary admin-btn-icon" onClick={onClose}>
             ✕
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}
-        >
-          <p style={{ color: 'var(--color-ink-muted)', fontSize: '0.9rem', margin: 0 }}>
-            {t('admin.academic.archiveModal.warning')}
-          </p>
+        <form onSubmit={handleSubmit} className="modal-form">
+          <p className="modal-body-text">{t('admin.academic.archiveModal.warning')}</p>
 
           <div>
-            <label htmlFor="archive-reason" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+            <label htmlFor="archive-reason" className="admin-field-label">
               {t('admin.academic.archiveModal.reasonLabel')}{' '}
-              <span style={{ color: 'var(--color-danger)' }}>*</span>
+              <span className="admin-required">*</span>
             </label>
             <textarea
               id="archive-reason"
-              className="text-input"
+              className="text-input admin-field-control-resize"
               rows={3}
-              style={{ width: '100%', marginTop: 'var(--space-xxs)', resize: 'vertical' }}
               value={reason}
               placeholder={t('admin.academic.archiveModal.reasonPlaceholder')}
               onChange={(e) => setReason(e.target.value)}
@@ -66,7 +55,7 @@ export function ArchiveModal({
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-sm)' }}>
+          <div className="admin-actions-end">
             <button
               type="button"
               className="btn-secondary"

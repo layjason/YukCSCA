@@ -474,6 +474,22 @@ Rules:
 - Destructive actions must use explicit language and `{components.button-danger}` only after the user understands the consequence.
 - Loading buttons keep their width and label context; use “Saving…” rather than replacing the whole control with an unlabeled spinner.
 
+### Icons
+
+YukCSCA uses **[Lucide](https://lucide.dev/)** via the `lucide-react` package as the repository icon library.
+
+Rules:
+
+- Prefer Lucide components over hand-authored SVG paths, emoji, or unicode glyphs for UI chrome (navigation, remove, status, disclosure).
+- Import named icons only so bundlers can tree-shake: `import { Trash2 } from 'lucide-react'`.
+- Color icons with `currentColor` (default) so CSS and design tokens control appearance.
+- Default sizes: **16px** compact inline, **20px** toolbar/icon-button, **24px** navigation or empty-state. Match `{components.icon-button}` at **44×44px** hit target.
+- Prefer stroke weight about **1.75–2** for clarity on white and pastel surfaces.
+- Icon-only controls require a localized `aria-label` and usually a `title` tooltip. Visible text remains required for high-stakes or primary actions.
+- Use an icon-only `{components.icon-button}` for repeated secondary actions (for example remove row / delete block). Do not use a long text danger pill for those dense list patterns.
+- Keep text labels on primary, secondary, and high-stakes destructive actions (publish, archive, confirm dialogs).
+- Do not mix Lucide with another general icon set (Heroicons, Material, Font Awesome, emoji) in the same product surface.
+
 ### Inputs
 
 `{components.text-input}` uses a visible border on white. Focus changes the border and adds a focus ring. Error changes the border and adds adjacent text; color is not the only indicator.
@@ -509,7 +525,7 @@ The following patterns make YukCSCA look generic, synthetic, or promotional and 
 - decorative charts without a learner decision attached;
 - random pastel assignment per card;
 - excessive pills for static labels;
-- large emoji or sparkle icons as generic decoration;
+- large emoji or sparkle icons as generic decoration (use Lucide for product chrome instead);
 - copy such as “Unlock your potential”, “AI-powered journey”, or “Supercharge learning” without concrete meaning;
 - fake testimonials, fabricated activity, or artificial urgency;
 - excessive shadows, oversized border radii, and nested rounded rectangles;

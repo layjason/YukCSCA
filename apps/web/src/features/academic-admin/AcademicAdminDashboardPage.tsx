@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { AcademicPackageList } from './components/AcademicPackageList';
 import { createAcademicPackage, listAcademicPackages } from './api/academicAdminApi';
 import type { AcademicPackageSummary } from './types';
+import './academic-admin.css';
 
 export function AcademicAdminDashboardPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [packages, setPackages] = useState<AcademicPackageSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,14 +23,14 @@ export function AcademicAdminDashboardPage(): React.JSX.Element {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : 'Failed to load packages');
+        setError(err instanceof Error ? err.message : t('admin.academic.loadFailed'));
         setIsLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const handleCreatePackage = async () => {
     setIsLoading(true);
@@ -35,7 +38,7 @@ export function AcademicAdminDashboardPage(): React.JSX.Element {
       const created = await createAcademicPackage();
       navigate(`/admin/academic-packages/${created.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create package');
+      setError(err instanceof Error ? err.message : t('admin.academic.createFailed'));
       setIsLoading(false);
     }
   };
@@ -46,31 +49,26 @@ export function AcademicAdminDashboardPage(): React.JSX.Element {
 
   if (error) {
     return (
-      <main className="app-content">
-        <div className="feedback-danger" role="alert">
-          <p style={{ margin: 0, fontWeight: 650 }}>{error}</p>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ marginTop: 'var(--space-sm)' }}
-            onClick={() => window.location.reload()}
-          >
-            Retry Loading
-          </button>
-        </div>
-      </main>
+      <div className="feedback-danger admin-feedback" role="alert">
+        <p className="admin-feedback-message">{error}</p>
+        <button
+          type="button"
+          className="btn-secondary admin-feedback-retry"
+          onClick={() => window.location.reload()}
+        >
+          {t('admin.academic.retryLoading')}
+        </button>
+      </div>
     );
   }
 
   return (
-    <main className="app-content" style={{ maxWidth: '1080px' }}>
-      <AcademicPackageList
-        packages={packages}
-        isLoading={isLoading}
-        onCreatePackage={handleCreatePackage}
-        onSelectPackage={handleSelectPackage}
-      />
-    </main>
+    <AcademicPackageList
+      packages={packages}
+      isLoading={isLoading}
+      onCreatePackage={handleCreatePackage}
+      onSelectPackage={handleSelectPackage}
+    />
   );
 }
 

@@ -12,6 +12,7 @@ import AcademicAdminDashboardPage from '@/features/academic-admin/AcademicAdminD
 import AcademicPackageDetailPage from '@/features/academic-admin/AcademicPackageDetailPage';
 import { OnboardingLayout } from '@/app/layouts/OnboardingLayout';
 import { AppShellLayout } from '@/app/layouts/AppShellLayout';
+import { AdminShellLayout } from '@/app/layouts/AdminShellLayout';
 import { ParentShellLayout } from '@/app/layouts/ParentShellLayout';
 import { UnsupportedRolePage } from '@/app/layouts/UnsupportedRolePage';
 import { StudentMorePage } from '@/app/layouts/StudentMorePage';
@@ -115,7 +116,9 @@ export default function App(): React.JSX.Element {
         </Route>
       </Route>
 
-      <Route element={<AdminGuard />}>{renderRoutes('admin-workspace')}</Route>
+      <Route element={<AdminGuard />}>
+        <Route element={<AdminShellLayout />}>{renderRoutes('admin-workspace')}</Route>
+      </Route>
 
       <Route path="*" element={<Navigate to={getRouteById('home').path} replace />} />
     </Routes>

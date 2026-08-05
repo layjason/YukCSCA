@@ -831,13 +831,15 @@ export const routeManifest = defineRoutes([
   route(
     'admin-packages',
     '/admin/academic-packages',
-    'admin.academic.title',
+    'admin.nav.packages',
     'implemented',
     'admin-workspace',
     'admin',
     'primary',
     ['14.1', '14.4', '14.5', '14.6'],
     false,
+    'primary',
+    [{ path: '/admin/academic-packages' }],
   ),
   route(
     'admin-package-detail',
@@ -868,6 +870,12 @@ export const parentNavRoutes = routeManifest.filter(
 );
 export const parentMobileNavRoutes = routeManifest.filter(
   (route) => route.mobileNavigation === 'primary' && route.audience === 'parent-preview',
+);
+export const adminNavRoutes = routeManifest.filter(
+  (route) => route.navigation === 'primary' && route.audience === 'admin',
+);
+export const adminMobileNavRoutes = routeManifest.filter(
+  (route) => route.mobileNavigation === 'primary' && route.audience === 'admin',
 );
 export const publicNavRoutes = routeManifest.filter(
   (route) => route.navigation === 'primary' && route.audience === 'public',

@@ -1,3 +1,4 @@
+import { getAccessToken } from '@/features/auth/authStore';
 import type {
   AcademicImage,
   AcademicPackage,
@@ -207,6 +208,26 @@ const INITIAL_DEV_PACKAGE: AcademicPackage = {
 
 const memoryDevPackages: AcademicPackage[] = [INITIAL_DEV_PACKAGE];
 
+const isDevFallback = (): boolean => import.meta.env.DEV && import.meta.env.MODE !== 'test';
+
+function authorizationHeaders(includeContentType = true): Record<string, string> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new ApiError(401, { title: 'Authentication required' });
+  }
+  return {
+    ...(includeContentType ? { 'Content-Type': 'application/json' } : {}),
+    Accept: 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function shouldUseDevFallback(err: unknown): boolean {
+  if (!isDevFallback()) return false;
+  if (!(err instanceof ApiError)) return true;
+  return err.statusCode === 404 || err.statusCode === 401;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let problem: AcademicValidationProblem | { title?: string; detail?: string } | undefined;
@@ -223,15 +244,11 @@ async function handleResponse<T>(res: Response): Promise<T> {
 export async function listAcademicPackages(): Promise<AcademicPackageSummary[]> {
   try {
     const res = await fetch('/api/v1/admin/academic-packages', {
-      headers: { Accept: 'application/json' },
+      headers: authorizationHeaders(false),
     });
     return await handleResponse<AcademicPackageSummary[]>(res);
   } catch (err) {
-    if (
-      import.meta.env.DEV &&
-      ((err instanceof ApiError && (err.statusCode === 404 || err.statusCode === 401)) ||
-        !(err instanceof ApiError))
-    ) {
+    if (shouldUseDevFallback(err)) {
       return memoryDevPackages.map((pkg) => ({
         id: pkg.id,
         subject: pkg.subject,
@@ -250,12 +267,12 @@ export async function createAcademicPackage(): Promise<AcademicPackage> {
   try {
     const res = await fetch('/api/v1/admin/academic-packages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: authorizationHeaders(true),
       body: JSON.stringify({ subject: 'MATHEMATICS' }),
     });
     return await handleResponse<AcademicPackage>(res);
   } catch (err) {
-    if (import.meta.env.DEV && !(err instanceof ApiError && err.statusCode >= 500)) {
+    if (shouldUseDevFallback(err)) {
       const newPkg: AcademicPackage = {
         ...INITIAL_DEV_PACKAGE,
         id: crypto.randomUUID(),
@@ -272,11 +289,11 @@ export async function createAcademicPackage(): Promise<AcademicPackage> {
 export async function getAcademicPackage(id: string): Promise<AcademicPackage> {
   try {
     const res = await fetch(`/api/v1/admin/academic-packages/${id}`, {
-      headers: { Accept: 'application/json' },
+      headers: authorizationHeaders(false),
     });
     return await handleResponse<AcademicPackage>(res);
   } catch (err) {
-    if (import.meta.env.DEV && !(err instanceof ApiError && err.statusCode >= 500)) {
+    if (shouldUseDevFallback(err)) {
       const found = memoryDevPackages.find((p) => p.id === id) || INITIAL_DEV_PACKAGE;
       return found;
     }
@@ -292,12 +309,12 @@ export async function saveAcademicPackageDraft(
   try {
     const res = await fetch(`/api/v1/admin/academic-packages/${id}/draft`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: authorizationHeaders(true),
       body: JSON.stringify({ expectedDraftRevision, draft }),
     });
     return await handleResponse<AcademicPackage>(res);
   } catch (err) {
-    if (import.meta.env.DEV && !(err instanceof ApiError && err.statusCode >= 500)) {
+    if (shouldUseDevFallback(err)) {
       const index = memoryDevPackages.findIndex((p) => p.id === id);
       const basePkg =
         index >= 0 && memoryDevPackages[index] ? memoryDevPackages[index]! : INITIAL_DEV_PACKAGE;
@@ -315,8 +332,8 @@ export async function saveAcademicPackageDraft(
             provenance: {
               ...r.provenance,
               authorUserId: '00000000-0000-0000-0000-000000000001',
-              reviewedByUserId: '00000000-0000-0000-0000-000000000001',
-              reviewedAt: new Date().toISOString(),
+              reviewedByUserId: null,
+              reviewedAt: null,
             },
           })),
           questions: draft.questions.map((q) => ({
@@ -324,8 +341,8 @@ export async function saveAcademicPackageDraft(
             provenance: {
               ...q.provenance,
               authorUserId: '00000000-0000-0000-0000-000000000001',
-              reviewedByUserId: '00000000-0000-0000-0000-000000000001',
-              reviewedAt: new Date().toISOString(),
+              reviewedByUserId: null,
+              reviewedAt: null,
             },
           })),
           mocks: draft.mocks.map((m) => ({
@@ -333,8 +350,8 @@ export async function saveAcademicPackageDraft(
             provenance: {
               ...m.provenance,
               authorUserId: '00000000-0000-0000-0000-000000000001',
-              reviewedByUserId: '00000000-0000-0000-0000-000000000001',
-              reviewedAt: new Date().toISOString(),
+              reviewedByUserId: null,
+              reviewedAt: null,
             },
           })),
         },
@@ -360,11 +377,12 @@ export async function uploadAcademicImage(
 
     const res = await fetch('/api/v1/admin/academic-images', {
       method: 'POST',
+      headers: authorizationHeaders(false),
       body: formData,
     });
     return await handleResponse<AcademicImage>(res);
   } catch (err) {
-    if (import.meta.env.DEV && !(err instanceof ApiError && err.statusCode >= 500)) {
+    if (shouldUseDevFallback(err)) {
       return {
         id: crypto.randomUUID(),
         mediaType: file.type === 'image/png' ? 'image/png' : 'image/jpeg',
@@ -395,12 +413,12 @@ export async function publishAcademicPackage(
   try {
     const res = await fetch(`/api/v1/admin/academic-packages/${id}:publish`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: authorizationHeaders(true),
       body: JSON.stringify({ expectedDraftRevision }),
     });
     return await handleResponse<AcademicPackage>(res);
   } catch (err) {
-    if (import.meta.env.DEV && !(err instanceof ApiError && err.statusCode >= 500)) {
+    if (shouldUseDevFallback(err)) {
       const index = memoryDevPackages.findIndex((p) => p.id === id);
       const basePkg =
         index >= 0 && memoryDevPackages[index] ? memoryDevPackages[index]! : INITIAL_DEV_PACKAGE;
@@ -433,12 +451,12 @@ export async function archiveAcademicPackage(
   try {
     const res = await fetch(`/api/v1/admin/academic-packages/${id}:archive`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: authorizationHeaders(true),
       body: JSON.stringify({ expectedDraftRevision, reason }),
     });
     return await handleResponse<AcademicPackage>(res);
   } catch (err) {
-    if (import.meta.env.DEV && !(err instanceof ApiError && err.statusCode >= 500)) {
+    if (shouldUseDevFallback(err)) {
       const index = memoryDevPackages.findIndex((p) => p.id === id);
       const basePkg =
         index >= 0 && memoryDevPackages[index] ? memoryDevPackages[index]! : INITIAL_DEV_PACKAGE;

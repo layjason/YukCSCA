@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AdminRemoveButton } from './AdminRemoveButton';
 import type { SyllabusOutlineItem } from '../types';
 
 interface SyllabusOutlineEditorProps {
@@ -46,39 +47,20 @@ export function SyllabusOutlineEditor({
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(240px, 300px) 1fr',
-        gap: 'var(--space-lg)',
-      }}
-    >
-      {/* Sidebar List */}
-      <div
-        style={{ borderRight: '1px solid var(--color-border)', paddingRight: 'var(--space-md)' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 'var(--space-md)',
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-            {t('admin.academic.outline.title')}
-          </h3>
+    <div className="admin-split-editor admin-split-editor-wide">
+      <div className="admin-split-sidebar">
+        <div className="admin-split-sidebar-header">
+          <h3 className="admin-sidebar-title">{t('admin.academic.outline.title')}</h3>
           <button
             type="button"
-            className="btn-secondary"
-            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '0.8rem' }}
+            className="btn-secondary admin-btn-compact-md"
             onClick={handleAddItem}
           >
             + {t('admin.academic.outline.addItem')}
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div className="admin-stack-micro">
           {items.map((item, index) => {
             const isSelected = item.id === selectedItem?.id;
             const label =
@@ -90,18 +72,11 @@ export function SyllabusOutlineEditor({
               <button
                 key={item.id}
                 type="button"
-                className={`outline-tree-item ${isSelected ? 'outline-tree-item-selected' : ''}`}
+                className={`outline-tree-item admin-list-button-bare ${isSelected ? 'outline-tree-item-selected' : ''}`}
                 onClick={() => setSelectedId(item.id)}
-                style={{ textAlign: 'left', border: 0, width: '100%' }}
               >
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--color-ink-muted)',
-                      marginRight: '6px',
-                    }}
-                  >
+                <div className="admin-ellipsis">
+                  <span className="admin-list-index-muted">
                     {item.sourcePosition?.section || `${index + 1}`}
                   </span>
                   <span>{label}</span>
@@ -112,40 +87,34 @@ export function SyllabusOutlineEditor({
         </div>
       </div>
 
-      {/* Editor Main */}
       {selectedItem ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+        <div className="admin-stack-md">
+          <div className="admin-row-between">
+            <div className="admin-row">
               <span className="yukcsca-tag">{t('admin.academic.outline.yukcscaAuthoredTag')}</span>
-              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+              <h4 className="admin-detail-title">
                 {selectedItem.sourcePosition?.section
                   ? `Section ${selectedItem.sourcePosition.section}`
                   : 'Outline Detail'}
               </h4>
             </div>
             {items.length > 1 && (
-              <button
-                type="button"
-                className="btn-danger"
-                style={{ minHeight: '34px', padding: '4px 12px', fontSize: '0.8rem' }}
+              <AdminRemoveButton
+                label={t('admin.academic.outline.remove')}
                 onClick={() => handleDeleteItem(selectedItem.id)}
-              >
-                Remove
-              </button>
+              />
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+          <div className="admin-grid-2">
             <div>
-              <label htmlFor="source-page" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+              <label htmlFor="source-page" className="admin-field-label">
                 {t('admin.academic.outline.page')}
               </label>
               <input
                 id="source-page"
                 type="number"
-                className="text-input"
-                style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                className="text-input admin-field-control"
                 value={selectedItem.sourcePosition?.page ?? ''}
                 onChange={(e) =>
                   handleUpdateItem({
@@ -159,14 +128,13 @@ export function SyllabusOutlineEditor({
               />
             </div>
             <div>
-              <label htmlFor="source-section" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+              <label htmlFor="source-section" className="admin-field-label">
                 {t('admin.academic.outline.section')}
               </label>
               <input
                 id="source-section"
                 type="text"
-                className="text-input"
-                style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                className="text-input admin-field-control"
                 value={selectedItem.sourcePosition?.section ?? ''}
                 onChange={(e) =>
                   handleUpdateItem({
@@ -181,24 +149,15 @@ export function SyllabusOutlineEditor({
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--space-sm)',
-              marginTop: 'var(--space-xs)',
-            }}
-          >
+          <div className="admin-stack-sm">
             <div>
-              <label htmlFor="summary-id" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-                {t('admin.academic.outline.summaryId')}{' '}
-                <span style={{ color: 'var(--color-danger)' }}>*</span>
+              <label htmlFor="summary-id" className="admin-field-label">
+                {t('admin.academic.outline.summaryId')} <span className="admin-required">*</span>
               </label>
               <textarea
                 id="summary-id"
-                className="text-input"
+                className="text-input admin-field-control-resize"
                 rows={2}
-                style={{ width: '100%', marginTop: 'var(--space-xxs)', resize: 'vertical' }}
                 value={selectedItem.summary.indonesian || ''}
                 onChange={(e) =>
                   handleUpdateItem({
@@ -210,15 +169,13 @@ export function SyllabusOutlineEditor({
             </div>
 
             <div>
-              <label htmlFor="summary-en" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-                {t('admin.academic.outline.summaryEn')}{' '}
-                <span style={{ color: 'var(--color-danger)' }}>*</span>
+              <label htmlFor="summary-en" className="admin-field-label">
+                {t('admin.academic.outline.summaryEn')} <span className="admin-required">*</span>
               </label>
               <textarea
                 id="summary-en"
-                className="text-input"
+                className="text-input admin-field-control-resize"
                 rows={2}
-                style={{ width: '100%', marginTop: 'var(--space-xxs)', resize: 'vertical' }}
                 value={selectedItem.summary.english || ''}
                 onChange={(e) =>
                   handleUpdateItem({
@@ -230,15 +187,13 @@ export function SyllabusOutlineEditor({
             </div>
 
             <div>
-              <label htmlFor="summary-zh" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-                {t('admin.academic.outline.summaryZh')}{' '}
-                <span style={{ color: 'var(--color-danger)' }}>*</span>
+              <label htmlFor="summary-zh" className="admin-field-label">
+                {t('admin.academic.outline.summaryZh')} <span className="admin-required">*</span>
               </label>
               <textarea
                 id="summary-zh"
-                className="text-input"
+                className="text-input admin-field-control-resize"
                 rows={2}
-                style={{ width: '100%', marginTop: 'var(--space-xxs)', resize: 'vertical' }}
                 value={selectedItem.summary.simplifiedChinese || ''}
                 onChange={(e) =>
                   handleUpdateItem({

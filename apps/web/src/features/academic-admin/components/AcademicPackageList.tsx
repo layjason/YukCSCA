@@ -18,115 +18,112 @@ export function AcademicPackageList({
 
   if (isLoading) {
     return (
-      <div className="center-card" aria-live="polite">
+      <div className="admin-loading" aria-live="polite">
         <span className="loading-indicator" aria-hidden="true" />
+        <p className="admin-muted">{t('admin.academic.loadingPackages')}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.03em' }}>
+    <div className="admin-page-stack">
+      <section className="admin-intro" aria-labelledby="admin-packages-heading">
+        <div className="admin-intro-copy">
+          <p className="admin-eyebrow">{t('admin.shell.workspace')}</p>
+          <h1 id="admin-packages-heading" className="admin-page-title">
             {t('admin.academic.title')}
           </h1>
-          <p
-            style={{
-              margin: 'var(--space-xxs) 0 0',
-              color: 'var(--color-ink-muted)',
-              fontSize: '0.95rem',
-            }}
-          >
-            {t('admin.academic.subtitle')}
-          </p>
+          <p className="admin-page-subtitle">{t('admin.academic.subtitle')}</p>
         </div>
-
-        <button type="button" className="btn-primary" onClick={onCreatePackage}>
-          + {t('admin.academic.createPackage')}
+        <button type="button" className="btn-primary admin-intro-action" onClick={onCreatePackage}>
+          {t('admin.academic.createPackage')}
         </button>
-      </div>
+      </section>
 
       {packages.length === 0 ? (
-        <div className="content-card" style={{ textAlign: 'center', padding: 'var(--space-xxl)' }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
-            No Academic Packages Created
-          </h3>
-          <p
-            style={{ color: 'var(--color-ink-muted)', margin: 'var(--space-xs) 0 var(--space-lg)' }}
-          >
-            Initialize the first CSCA 2025 Mathematics preparation package to begin.
-          </p>
+        <div className="content-card admin-empty-card">
+          <div className="admin-empty-icon" aria-hidden="true">
+            ▤
+          </div>
+          <h2 className="admin-empty-title">{t('admin.academic.emptyTitle')}</h2>
+          <p className="admin-empty-body">{t('admin.academic.emptyBody')}</p>
           <button type="button" className="btn-primary" onClick={onCreatePackage}>
-            + {t('admin.academic.createPackage')}
+            {t('admin.academic.createPackage')}
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          {packages.map((pkg) => {
-            const statusClass =
-              pkg.status === 'PUBLISHED'
-                ? 'badge-status-published'
-                : pkg.status === 'ARCHIVED'
-                  ? 'badge-status-archived'
-                  : 'badge-status-draft';
+        <section
+          className="admin-package-section"
+          aria-label={t('admin.academic.packageListLabel')}
+        >
+          <div className="admin-section-heading">
+            <h2 className="admin-section-title-lg">{t('admin.academic.packageListHeading')}</h2>
+            <span className="admin-package-count">
+              {t('admin.academic.packageCount', { count: packages.length })}
+            </span>
+          </div>
 
-            return (
-              <div
-                key={pkg.id}
-                className="content-card"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 'var(--space-md)',
-                  transition:
-                    'transform var(--motion-instant) var(--ease-standard), border-color var(--motion-quick) var(--ease-standard)',
-                  cursor: 'pointer',
-                }}
-                onClick={() => onSelectPackage(pkg.id)}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
-                    <span className={statusClass}>
-                      {pkg.status === 'PUBLISHED'
-                        ? t('admin.academic.statusPublished')
-                        : pkg.status === 'ARCHIVED'
-                          ? t('admin.academic.statusArchived')
-                          : t('admin.academic.statusDraft')}
+          <ul className="admin-package-list">
+            {packages.map((pkg) => {
+              const statusClass =
+                pkg.status === 'PUBLISHED'
+                  ? 'badge-status-published'
+                  : pkg.status === 'ARCHIVED'
+                    ? 'badge-status-archived'
+                    : 'badge-status-draft';
+
+              return (
+                <li key={pkg.id}>
+                  <button
+                    type="button"
+                    className="content-card admin-package-card"
+                    onClick={() => onSelectPackage(pkg.id)}
+                  >
+                    <div className="admin-package-card-body">
+                      <div className="admin-package-card-meta">
+                        <span className={statusClass}>
+                          {pkg.status === 'PUBLISHED'
+                            ? t('admin.academic.statusPublished')
+                            : pkg.status === 'ARCHIVED'
+                              ? t('admin.academic.statusArchived')
+                              : t('admin.academic.statusDraft')}
+                        </span>
+
+                        {pkg.hasUnpublishedChanges && (
+                          <span className="badge-unpublished-changes">
+                            {t('admin.academic.hasUnpublishedChanges')}
+                          </span>
+                        )}
+
+                        <span className="yukcsca-tag">{t('admin.academic.subjectTag')}</span>
+                      </div>
+
+                      <h3 className="admin-package-card-title">
+                        {t('admin.academic.packageHeading')}
+                      </h3>
+
+                      <p className="admin-package-card-detail">
+                        {pkg.activeRevision
+                          ? t('admin.academic.activeRevision', {
+                              revision: pkg.activeRevision.revisionNumber,
+                              date: new Date(pkg.activeRevision.publishedAt).toLocaleDateString(),
+                            })
+                          : t('admin.academic.noActiveRevision')}
+                        {' · '}
+                        {t('admin.academic.draftRevision', { revision: pkg.draftRevision })}
+                      </p>
+                    </div>
+
+                    <span className="admin-package-card-cta" aria-hidden="true">
+                      {t('admin.academic.editPackage')}
+                      <span className="admin-package-card-arrow">→</span>
                     </span>
-
-                    {pkg.hasUnpublishedChanges && (
-                      <span className="badge-unpublished-changes">
-                        ✎ {t('admin.academic.hasUnpublishedChanges')}
-                      </span>
-                    )}
-
-                    <span className="yukcsca-tag">MATHEMATICS 2025</span>
-                  </div>
-
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
-                    CSCA 2025 Mathematics Package
-                  </h3>
-
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-ink-muted)' }}>
-                    {pkg.activeRevision
-                      ? t('admin.academic.activeRevision', {
-                          revision: pkg.activeRevision.revisionNumber,
-                          date: new Date(pkg.activeRevision.publishedAt).toLocaleDateString(),
-                        })
-                      : t('admin.academic.noActiveRevision')}
-                    {' · '}Draft Rev {pkg.draftRevision}
-                  </p>
-                </div>
-
-                <button type="button" className="btn-secondary">
-                  {t('admin.academic.editPackage')} →
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );

@@ -18,6 +18,7 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
     'YUKCSCA_ORIGINAL',
   );
   const [provider, setProvider] = useState('');
+  const [sourceLocator, setSourceLocator] = useState('');
   const [permissionReference, setPermissionReference] = useState('');
 
   const [isUploading, setIsUploading] = useState(false);
@@ -41,14 +42,24 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
 
   const handleUpload = async () => {
     if (!file || !altText.trim()) return;
+    if (
+      origin !== 'YUKCSCA_ORIGINAL' &&
+      (!provider.trim() || !sourceLocator.trim() || !permissionReference.trim())
+    ) {
+      setError(
+        'Licensed or open content requires provider, source locator, and permission reference.',
+      );
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
 
     const provenance: ProvenanceInput = {
       origin,
-      provider: provider || null,
-      permissionReference: permissionReference || null,
+      provider: provider.trim() || null,
+      sourceLocator: sourceLocator.trim() || null,
+      permissionReference: permissionReference.trim() || null,
     };
 
     try {
@@ -57,6 +68,9 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
       setFile(null);
       setAltText('');
       setCaption('');
+      setProvider('');
+      setSourceLocator('');
+      setPermissionReference('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Image upload failed');
     } finally {
@@ -65,23 +79,11 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-md)',
-        padding: 'var(--space-md)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        background: 'var(--color-canvas)',
-      }}
-    >
-      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-        {t('admin.academic.blocks.uploadImage')}
-      </h4>
+    <div className="admin-image-uploader">
+      <h4 className="admin-image-uploader-title">{t('admin.academic.blocks.uploadImage')}</h4>
 
       {error ? (
-        <div className="error-message" role="alert" style={{ fontSize: '0.85rem' }}>
+        <div className="error-message admin-image-error" role="alert">
           {error}
         </div>
       ) : null}
@@ -104,43 +106,31 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg"
-            style={{ display: 'none' }}
+            className="admin-file-input-hidden"
             onChange={(e) => {
               if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
             }}
           />
-          <p style={{ margin: 0, fontWeight: 650, fontSize: '0.9rem' }}>
+          <p className="image-dropzone-label">
             Click or drag PNG / JPEG diagram (max 5MB, up to 4096px)
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+        <div className="admin-stack-sm">
+          <div className="admin-image-preview-row">
             <img
               src={URL.createObjectURL(file)}
               alt="Diagram preview"
-              style={{
-                width: '80px',
-                height: '80px',
-                objectFit: 'cover',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)',
-              }}
+              className="admin-image-preview-thumb"
             />
             <div>
-              <p style={{ margin: 0, fontWeight: 650, fontSize: '0.9rem' }}>{file.name}</p>
-              <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--color-ink-muted)' }}>
+              <p className="admin-image-preview-name">{file.name}</p>
+              <p className="admin-image-preview-meta">
                 {(file.size / 1024).toFixed(1)} KB · {file.type}
               </p>
               <button
                 type="button"
-                className="btn-secondary"
-                style={{
-                  minHeight: '28px',
-                  padding: '2px 8px',
-                  fontSize: '0.75rem',
-                  marginTop: 'var(--space-xs)',
-                }}
+                className="btn-secondary admin-btn-micro"
                 onClick={() => setFile(null)}
               >
                 Change File
@@ -149,15 +139,13 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
           </div>
 
           <div>
-            <label htmlFor="img-alt" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-              {t('admin.academic.blocks.altText')}{' '}
-              <span style={{ color: 'var(--color-danger)' }}>*</span>
+            <label htmlFor="img-alt" className="admin-field-label">
+              {t('admin.academic.blocks.altText')} <span className="admin-required">*</span>
             </label>
             <input
               id="img-alt"
               type="text"
-              className="text-input"
-              style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+              className="text-input admin-field-control"
               value={altText}
               onChange={(e) => setAltText(e.target.value)}
               placeholder="e.g. Diagram of triangle ABC with right angle at C"
@@ -165,29 +153,27 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
           </div>
 
           <div>
-            <label htmlFor="img-caption" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+            <label htmlFor="img-caption" className="admin-field-label">
               {t('admin.academic.blocks.caption')}
             </label>
             <input
               id="img-caption"
               type="text"
-              className="text-input"
-              style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+              className="text-input admin-field-control"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Figure 1.1"
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+          <div className="admin-grid-2">
             <div>
-              <label htmlFor="img-origin" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+              <label htmlFor="img-origin" className="admin-field-label">
                 Content Origin
               </label>
               <select
                 id="img-origin"
-                className="text-input"
-                style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                className="text-input admin-field-control"
                 value={origin}
                 onChange={(e) => setOrigin(e.target.value as typeof origin)}
               >
@@ -200,32 +186,47 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
             {origin !== 'YUKCSCA_ORIGINAL' && (
               <>
                 <div>
-                  <label htmlFor="img-provider" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+                  <label htmlFor="img-provider" className="admin-field-label">
                     Provider Name
                   </label>
                   <input
                     id="img-provider"
                     type="text"
-                    className="text-input"
-                    style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                    className="text-input admin-field-control"
                     value={provider}
                     onChange={(e) => setProvider(e.target.value)}
                     placeholder="e.g. OpenStax / CC BY-SA"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="img-perm-ref" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+                  <label htmlFor="img-source-locator" className="admin-field-label">
+                    Source Locator
+                  </label>
+                  <input
+                    id="img-source-locator"
+                    type="text"
+                    className="text-input admin-field-control"
+                    value={sourceLocator}
+                    onChange={(e) => setSourceLocator(e.target.value)}
+                    placeholder="URL, catalogue ID, or file reference"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="img-perm-ref" className="admin-field-label">
                     Permission Reference
                   </label>
                   <input
                     id="img-perm-ref"
                     type="text"
-                    className="text-input"
-                    style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                    className="text-input admin-field-control"
                     value={permissionReference}
                     onChange={(e) => setPermissionReference(e.target.value)}
                     placeholder="License ID or ticket ref"
+                    required
                   />
                 </div>
               </>
@@ -234,8 +235,7 @@ export function ImageUploader({ onUploaded }: ImageUploaderProps): React.JSX.Ele
 
           <button
             type="button"
-            className="btn-primary"
-            style={{ minHeight: '40px', marginTop: 'var(--space-xs)' }}
+            className="btn-primary admin-btn-upload"
             onClick={handleUpload}
             disabled={isUploading || !altText.trim()}
           >

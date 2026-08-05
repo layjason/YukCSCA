@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContentBlockEditor } from './ContentBlockEditor';
+import { AdminRemoveButton } from './AdminRemoveButton';
 import type {
+  LearningObjective,
   Question,
   SyllabusOutlineItem,
   ContentBlock,
@@ -12,12 +14,14 @@ import type {
 interface QuestionEditorProps {
   questions: Question[];
   outlineItems: SyllabusOutlineItem[];
+  objectives: LearningObjective[];
   onChange: (updated: Question[]) => void;
 }
 
 export function QuestionEditor({
   questions,
   outlineItems,
+  objectives,
   onChange,
 }: QuestionEditorProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -45,12 +49,12 @@ export function QuestionEditor({
         },
       ],
       outlineItemIds: outlineItems[0] ? [outlineItems[0].id] : [],
-      objectiveIds: [],
+      objectiveIds: objectives[0] ? [objectives[0].id] : [],
       provenance: {
         origin: 'YUKCSCA_ORIGINAL',
         authorUserId: '00000000-0000-0000-0000-000000000001',
-        reviewedByUserId: '00000000-0000-0000-0000-000000000001',
-        reviewedAt: new Date().toISOString(),
+        reviewedByUserId: null,
+        reviewedAt: null,
       },
     };
     onChange([...questions, newQuestion]);
@@ -68,64 +72,47 @@ export function QuestionEditor({
     if (selectedId === id) setSelectedId(filtered[0]?.id || null);
   };
 
+  const toggleId = (ids: string[], id: string, checked: boolean): string[] => {
+    if (checked) return ids.includes(id) ? ids : [...ids, id];
+    return ids.filter((value) => value !== id);
+  };
+
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(220px, 280px) 1fr',
-        gap: 'var(--space-lg)',
-      }}
-    >
-      {/* Sidebar List */}
-      <div
-        style={{ borderRight: '1px solid var(--color-border)', paddingRight: 'var(--space-md)' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 'var(--space-md)',
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+    <div className="admin-split-editor">
+      <div className="admin-split-sidebar">
+        <div className="admin-split-sidebar-header">
+          <h3 className="admin-sidebar-title">
             {t('admin.academic.questions.title')} ({questions.length})
           </h3>
           <button
             type="button"
-            className="btn-secondary"
-            style={{ minHeight: '34px', padding: '4px 10px', fontSize: '0.8rem' }}
+            className="btn-secondary admin-btn-compact"
             onClick={handleAddQuestion}
           >
             + {t('admin.academic.questions.addQuestion')}
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div className="admin-stack-tight">
           {questions.map((q, idx) => {
             const isSelected = q.id === selectedQuestion?.id;
             const textBlock = q.stem.find((b): b is TextContentBlock => b.kind === 'TEXT');
             const mathBlock = q.stem.find((b): b is MathContentBlock => b.kind === 'MATH');
-            const textPreview = textBlock?.text || mathBlock?.latex || `Question ${idx + 1}`;
+            const textPreview =
+              textBlock?.text ||
+              mathBlock?.latex ||
+              t('admin.academic.questions.untitled', { index: idx + 1 });
 
             return (
               <button
                 key={q.id}
                 type="button"
-                className={`outline-tree-item ${isSelected ? 'outline-tree-item-selected' : ''}`}
+                className={`outline-tree-item admin-list-button ${isSelected ? 'outline-tree-item-selected' : ''}`}
                 onClick={() => setSelectedId(q.id)}
-                style={{
-                  textAlign: 'left',
-                  border: 0,
-                  width: '100%',
-                  padding: 'var(--space-xs) var(--space-sm)',
-                }}
               >
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, marginRight: '6px' }}>
-                    Q{idx + 1}
-                  </span>
-                  <span style={{ fontSize: '0.85rem' }}>{textPreview}</span>
+                <div className="admin-ellipsis">
+                  <span className="admin-list-index">Q{idx + 1}</span>
+                  <span className="admin-list-preview">{textPreview}</span>
                 </div>
               </button>
             );
@@ -133,36 +120,30 @@ export function QuestionEditor({
         </div>
       </div>
 
-      {/* Editor Detail */}
       {selectedQuestion ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
-              Edit Question ({selectedQuestion.examLanguage || 'en'})
+        <div className="admin-stack-lg">
+          <div className="admin-row-between">
+            <h3 className="admin-detail-title">
+              {t('admin.academic.questions.editTitle', {
+                language: selectedQuestion.examLanguage || 'en',
+              })}
             </h3>
             {questions.length > 1 && (
-              <button
-                type="button"
-                className="btn-danger"
-                style={{ minHeight: '32px', padding: '4px 12px', fontSize: '0.8rem' }}
+              <AdminRemoveButton
+                label={t('admin.academic.questions.delete')}
                 onClick={() => handleDeleteQuestion(selectedQuestion.id)}
-              >
-                Delete Question
-              </button>
+              />
             )}
           </div>
 
-          <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-sm)' }}
-          >
+          <div className="admin-grid-3">
             <div>
-              <label htmlFor="q-lang" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-                Exam Language
+              <label htmlFor="q-lang" className="admin-field-label">
+                {t('admin.academic.questions.examLanguage')}
               </label>
               <select
                 id="q-lang"
-                className="text-input"
-                style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                className="text-input admin-field-control"
                 value={selectedQuestion.examLanguage || 'en'}
                 onChange={(e) =>
                   handleUpdateQuestion({
@@ -177,13 +158,12 @@ export function QuestionEditor({
             </div>
 
             <div>
-              <label htmlFor="q-diff" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
-                Difficulty
+              <label htmlFor="q-diff" className="admin-field-label">
+                {t('admin.academic.questions.difficulty')}
               </label>
               <select
                 id="q-diff"
-                className="text-input"
-                style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                className="text-input admin-field-control"
                 value={selectedQuestion.difficulty || 'STANDARD'}
                 onChange={(e) =>
                   handleUpdateQuestion({
@@ -201,13 +181,12 @@ export function QuestionEditor({
             </div>
 
             <div>
-              <label htmlFor="q-correct" style={{ fontSize: '0.85rem', fontWeight: 650 }}>
+              <label htmlFor="q-correct" className="admin-field-label">
                 {t('admin.academic.questions.correctOption')}
               </label>
               <select
                 id="q-correct"
-                className="text-input"
-                style={{ width: '100%', marginTop: 'var(--space-xxs)' }}
+                className="text-input admin-field-control"
                 value={selectedQuestion.correctOptionKey || 'A'}
                 onChange={(e) =>
                   handleUpdateQuestion({
@@ -218,14 +197,89 @@ export function QuestionEditor({
               >
                 {selectedQuestion.options.map((opt: { key: string }) => (
                   <option key={opt.key} value={opt.key}>
-                    Option {opt.key}
+                    {t('admin.academic.questions.optionLabel', { key: opt.key })}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Stem */}
+          <fieldset className="admin-fieldset">
+            <legend className="admin-fieldset-legend">
+              {t('admin.academic.questions.outlineRefs')}
+            </legend>
+            {outlineItems.length === 0 ? (
+              <p className="admin-muted">{t('admin.academic.objectives.needOutline')}</p>
+            ) : (
+              <div className="admin-check-list">
+                {outlineItems.map((item) => {
+                  const label =
+                    item.summary.english ||
+                    item.summary.indonesian ||
+                    item.summary.simplifiedChinese ||
+                    item.id;
+                  return (
+                    <label key={item.id} className="admin-check-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedQuestion.outlineItemIds.includes(item.id)}
+                        onChange={(e) =>
+                          handleUpdateQuestion({
+                            ...selectedQuestion,
+                            outlineItemIds: toggleId(
+                              selectedQuestion.outlineItemIds,
+                              item.id,
+                              e.target.checked,
+                            ),
+                          })
+                        }
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="admin-fieldset">
+            <legend className="admin-fieldset-legend">
+              {t('admin.academic.questions.objectiveRefs')}
+            </legend>
+            {objectives.length === 0 ? (
+              <p className="admin-muted">{t('admin.academic.resources.needObjectives')}</p>
+            ) : (
+              <div className="admin-check-list">
+                {objectives.map((item) => {
+                  const label =
+                    item.title.english ||
+                    item.title.indonesian ||
+                    item.title.simplifiedChinese ||
+                    item.id;
+                  return (
+                    <label key={item.id} className="admin-check-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedQuestion.objectiveIds.includes(item.id)}
+                        onChange={(e) =>
+                          handleUpdateQuestion({
+                            ...selectedQuestion,
+                            objectiveIds: toggleId(
+                              selectedQuestion.objectiveIds,
+                              item.id,
+                              e.target.checked,
+                            ),
+                          })
+                        }
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
           <ContentBlockEditor
             label={t('admin.academic.questions.stem')}
             blocks={selectedQuestion.stem}
@@ -237,40 +291,25 @@ export function QuestionEditor({
             }
           />
 
-          {/* Options */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-              {t('admin.academic.questions.options')}
-            </h4>
+          <div className="admin-stack-md">
+            <h4 className="admin-section-title-lg">{t('admin.academic.questions.options')}</h4>
 
             {selectedQuestion.options.map(
               (opt: { key: string; blocks: ContentBlock[] }, optIndex: number) => (
                 <div
                   key={opt.key}
-                  style={{
-                    padding: 'var(--space-md)',
-                    borderRadius: 'var(--radius-md)',
-                    border:
-                      selectedQuestion.correctOptionKey === opt.key
-                        ? '2px solid var(--color-success)'
-                        : '1px solid var(--color-border)',
-                    background:
-                      selectedQuestion.correctOptionKey === opt.key
-                        ? 'var(--color-block-mint)'
-                        : 'var(--color-canvas)',
-                  }}
+                  className={
+                    selectedQuestion.correctOptionKey === opt.key
+                      ? 'admin-option-card admin-option-card-correct'
+                      : 'admin-option-card'
+                  }
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 'var(--space-xs)',
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                      Option {opt.key}{' '}
-                      {selectedQuestion.correctOptionKey === opt.key ? '✓ (Correct)' : ''}
+                  <div className="admin-option-header">
+                    <span className="admin-option-title">
+                      {t('admin.academic.questions.optionLabel', { key: opt.key })}
+                      {selectedQuestion.correctOptionKey === opt.key
+                        ? ` ${t('admin.academic.questions.correctMarker')}`
+                        : ''}
                     </span>
                   </div>
 
@@ -287,17 +326,19 @@ export function QuestionEditor({
             )}
           </div>
 
-          {/* Explanations */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-              {t('admin.academic.questions.explanations')}
-            </h4>
+          <div className="admin-stack-sm">
+            <h4 className="admin-section-title-lg">{t('admin.academic.questions.explanations')}</h4>
             <ContentBlockEditor
               blocks={selectedQuestion.explanations[0]?.blocks || []}
               onChange={(updatedBlocks) =>
                 handleUpdateQuestion({
                   ...selectedQuestion,
-                  explanations: [{ language: 'en', blocks: updatedBlocks }],
+                  explanations: [
+                    {
+                      language: selectedQuestion.explanations[0]?.language || 'en',
+                      blocks: updatedBlocks,
+                    },
+                  ],
                 })
               }
             />

@@ -6,18 +6,27 @@ import type { AcademicPackage } from '../types';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
-      if (key === 'admin.academic.statusDraft') return 'Draft';
-      if (key === 'admin.academic.saveDraft') return 'Save Draft';
-      if (key === 'admin.academic.saving') return 'Saving...';
-      if (key === 'admin.academic.publish') return 'Review & Publish';
-      if (key === 'admin.academic.archive') return 'Archive Package';
-      if (key === 'admin.academic.sourcePanel.title') return 'Official Source';
-      if (key === 'admin.academic.sourcePanel.openSyllabus') return 'Open official syllabus';
-      if (key === 'admin.academic.outline.title') return 'Syllabus Outline';
-      if (key === 'admin.academic.questions.title') return 'Questions & Scored Items';
-      if (key === 'admin.academic.mock.title') return 'Timed Mock Paper';
-      if (key === 'admin.academic.toasts.draftSaved') return 'Draft saved successfully.';
-      return key;
+      const map: Record<string, string> = {
+        'admin.academic.statusDraft': 'Draft',
+        'admin.academic.saveDraft': 'Save draft',
+        'admin.academic.saving': 'Saving…',
+        'admin.academic.publish': 'Publish',
+        'admin.academic.archive': 'Archive',
+        'admin.academic.backToList': '← All packages',
+        'admin.academic.packageHeading': 'CSCA 2025 Mathematics Package',
+        'admin.academic.subjectTag': 'Mathematics 2025',
+        'admin.academic.tabsLabel': 'Academic package configuration sections',
+        'admin.academic.tabs.source': 'Source & outline',
+        'admin.academic.tabs.objectives': 'Objectives',
+        'admin.academic.tabs.resources': 'Resources',
+        'admin.academic.tabs.questions': 'Questions',
+        'admin.academic.tabs.mock': 'Timed mock',
+        'admin.academic.hasUnpublishedChanges': 'Pending changes',
+        'admin.academic.noActiveRevision': 'No published revision yet',
+        'admin.academic.draftRevision': 'Draft rev 1',
+        'admin.academic.toasts.draftSaved': 'Draft saved successfully.',
+      };
+      return map[key] ?? key;
     },
   }),
 }));
@@ -64,23 +73,38 @@ describe('AcademicPackageEditor', () => {
   test('renders header bar and official source panel', () => {
     render(<AcademicPackageEditor initialPackage={mockPackage} onBackToList={vi.fn()} />);
 
-    expect(screen.getByText('CSCA 2025 Mathematics')).toBeInTheDocument();
+    expect(screen.getByText('CSCA 2025 Mathematics Package')).toBeInTheDocument();
     expect(screen.getByText('Draft')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Save Draft/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Review & Publish/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save draft/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Publish$/i })).toBeInTheDocument();
   });
 
-  test('switches tabs between Source/Outline, Questions, and Timed Mock', () => {
+  test('switches through source, objectives, resources, questions, and mock tabs', () => {
     render(<AcademicPackageEditor initialPackage={mockPackage} onBackToList={vi.fn()} />);
 
-    // Switch to Questions tab
-    const questionsTab = screen.getByRole('button', { name: /Questions & Scored Items/i });
-    fireEvent.click(questionsTab);
+    const tablist = screen.getByRole('navigation', {
+      name: 'Academic package configuration sections',
+    });
 
-    // Switch to Mock tab
-    const mockTab = screen.getByRole('button', { name: /Timed Mock Paper/i });
-    fireEvent.click(mockTab);
+    const clickTab = (label: RegExp) => {
+      const tab = tablist.querySelectorAll('button');
+      const match = Array.from(tab).find((btn) => label.test(btn.textContent ?? ''));
+      expect(match).toBeTruthy();
+      fireEvent.click(match!);
+      expect(match).toHaveClass('admin-tab-btn-active');
+    };
 
-    expect(screen.getByText(/Timed Mock Paper/i)).toBeInTheDocument();
+    clickTab(/^Objectives/);
+    clickTab(/^Resources/);
+    clickTab(/^Questions/);
+    clickTab(/^Timed mock/);
+  });
+
+  test('calls onBackToList when back button is clicked', () => {
+    const handleBack = vi.fn();
+    render(<AcademicPackageEditor initialPackage={mockPackage} onBackToList={handleBack} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /All packages/i }));
+    expect(handleBack).toHaveBeenCalled();
   });
 });

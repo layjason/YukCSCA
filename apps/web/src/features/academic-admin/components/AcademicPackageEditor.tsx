@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OfficialSourcePanel } from './OfficialSourcePanel';
 import { SyllabusOutlineEditor } from './SyllabusOutlineEditor';
+import { LearningObjectivesEditor } from './LearningObjectivesEditor';
+import { StudyResourcesEditor } from './StudyResourcesEditor';
 import { QuestionEditor } from './QuestionEditor';
 import { MockPaperEditor } from './MockPaperEditor';
-import { PublishValidationModal } from './PublishValidationModal';
 import { ArchiveModal } from './ArchiveModal';
 import {
   saveAcademicPackageDraft,
@@ -12,6 +13,14 @@ import {
   archiveAcademicPackage,
   ApiError,
 } from '../api/academicAdminApi';
+import { normalizeOfficialSyllabus } from '../officialSyllabusNormalize';
+import {
+  fieldErrorsFromMapped,
+  firstTabFromMapped,
+  mapValidationViolations,
+  type OfficialFieldKey,
+  type ValidationFieldKey,
+} from '../validationMapping';
 import type {
   AcademicPackage,
   AcademicValidationProblem,
@@ -19,10 +28,21 @@ import type {
   AdminEditorTab,
   AcademicPackageDraftInput,
 } from '../types';
+import '../academic-admin.css';
 
 interface AcademicPackageEditorProps {
   initialPackage: AcademicPackage;
   onBackToList: () => void;
+}
+
+function withNormalizedSyllabus(pkg: AcademicPackage): AcademicPackage {
+  return {
+    ...pkg,
+    draft: {
+      ...pkg.draft,
+      officialSyllabus: normalizeOfficialSyllabus(pkg.draft.officialSyllabus),
+    },
+  };
 }
 
 export function AcademicPackageEditor({
@@ -31,7 +51,7 @@ export function AcademicPackageEditor({
 }: AcademicPackageEditorProps): React.JSX.Element {
   const { t } = useTranslation();
 
-  const [pkg, setPkg] = useState<AcademicPackage>(initialPackage);
+  const [pkg, setPkg] = useState<AcademicPackage>(() => withNormalizedSyllabus(initialPackage));
   const [activeTab, setActiveTab] = useState<AdminEditorTab>('source');
 
   const [isSaving, setIsSaving] = useState(false);
@@ -45,15 +65,53 @@ export function AcademicPackageEditor({
   const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const draft = pkg.draft;
+  const busy = isSaving || isPublishing || isArchiving;
+  const isArchived = pkg.status === 'ARCHIVED';
+
+  const fieldErrors = useMemo(() => {
+    if (!validationViolations?.length) return {} as Partial<Record<ValidationFieldKey, string>>;
+    return fieldErrorsFromMapped(mapValidationViolations(validationViolations), t);
+  }, [validationViolations, t]);
+
+  const officialFieldErrors = useMemo(() => {
+    const keys: OfficialFieldKey[] = [
+      'sourceUrl',
+      'authority',
+      'editionLabel',
+      'retrievedAt',
+      'lastCheckedAt',
+      'publishedOn',
+      'effectiveOn',
+      'updatedOn',
+      'sourceLanguages',
+      'examStructure',
+      'permittedUse',
+    ];
+    const out: Partial<Record<OfficialFieldKey, string>> = {};
+    for (const key of keys) {
+      if (fieldErrors[key]) out[key] = fieldErrors[key];
+    }
+    return out;
+  }, [fieldErrors]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const applyPackageUpdate = (next: AcademicPackage) => {
+    setValidationViolations(null);
+    setPkg(withNormalizedSyllabus(next));
+  };
+
+  const applyViolations = (violations: AcademicValidationViolation[]) => {
+    setValidationViolations(violations);
+    setActiveTab(firstTabFromMapped(mapValidationViolations(violations)));
+  };
+
   const constructDraftInput = (): AcademicPackageDraftInput => {
     return {
-      officialSyllabus: draft.officialSyllabus,
+      officialSyllabus: normalizeOfficialSyllabus(draft.officialSyllabus),
       outlineItems: draft.outlineItems,
       learningObjectives: draft.learningObjectives,
       resources: draft.resources.map((r) => ({
@@ -114,19 +172,26 @@ export function AcademicPackageEditor({
 
   const handleSaveDraft = async () => {
     setIsSaving(true);
+    setValidationViolations(null);
     try {
       const updated = await saveAcademicPackageDraft(
         pkg.id,
         pkg.draftRevision,
         constructDraftInput(),
       );
-      setPkg(updated);
+      setPkg(withNormalizedSyllabus(updated));
       showToast(t('admin.academic.toasts.draftSaved'));
     } catch (err) {
-      if (err instanceof ApiError && err.problem && 'violations' in err.problem) {
-        setValidationViolations((err.problem as AcademicValidationProblem).violations);
+      if (err instanceof ApiError && err.statusCode === 409) {
+        showToast(
+          err.problem && 'detail' in err.problem && err.problem.detail
+            ? err.problem.detail
+            : t('admin.academic.toasts.staleRevision'),
+        );
+      } else if (err instanceof ApiError && err.problem && 'violations' in err.problem) {
+        applyViolations((err.problem as AcademicValidationProblem).violations);
       } else {
-        showToast(err instanceof Error ? err.message : 'Save draft failed');
+        showToast(err instanceof Error ? err.message : t('admin.academic.toasts.saveFailed'));
       }
     } finally {
       setIsSaving(false);
@@ -135,19 +200,33 @@ export function AcademicPackageEditor({
 
   const handlePublish = async () => {
     setIsPublishing(true);
+    setValidationViolations(null);
     try {
-      const updated = await publishAcademicPackage(pkg.id, pkg.draftRevision);
-      setPkg(updated);
+      // Server publishes the saved draft only — persist local edits first.
+      const saved = await saveAcademicPackageDraft(
+        pkg.id,
+        pkg.draftRevision,
+        constructDraftInput(),
+      );
+      setPkg(withNormalizedSyllabus(saved));
+      const updated = await publishAcademicPackage(saved.id, saved.draftRevision);
+      setPkg(withNormalizedSyllabus(updated));
       showToast(
         t('admin.academic.toasts.published', {
           revision: updated.activeRevision?.revisionNumber || 1,
         }),
       );
     } catch (err) {
-      if (err instanceof ApiError && err.problem && 'violations' in err.problem) {
-        setValidationViolations((err.problem as AcademicValidationProblem).violations);
+      if (err instanceof ApiError && err.statusCode === 409) {
+        showToast(
+          err.problem && 'detail' in err.problem && err.problem.detail
+            ? err.problem.detail
+            : t('admin.academic.toasts.staleRevision'),
+        );
+      } else if (err instanceof ApiError && err.problem && 'violations' in err.problem) {
+        applyViolations((err.problem as AcademicValidationProblem).violations);
       } else {
-        showToast(err instanceof Error ? err.message : 'Publish failed');
+        showToast(err instanceof Error ? err.message : t('admin.academic.toasts.publishFailed'));
       }
     } finally {
       setIsPublishing(false);
@@ -158,11 +237,11 @@ export function AcademicPackageEditor({
     setIsArchiving(true);
     try {
       const updated = await archiveAcademicPackage(pkg.id, pkg.draftRevision, reason);
-      setPkg(updated);
+      setPkg(withNormalizedSyllabus(updated));
       setShowArchiveModal(false);
       showToast(t('admin.academic.toasts.archived'));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Archive failed');
+      showToast(err instanceof Error ? err.message : t('admin.academic.toasts.archiveFailed'));
     } finally {
       setIsArchiving(false);
     }
@@ -175,54 +254,85 @@ export function AcademicPackageEditor({
         ? 'badge-status-archived'
         : 'badge-status-draft';
 
+  const statusLabel =
+    pkg.status === 'PUBLISHED'
+      ? t('admin.academic.statusPublished')
+      : pkg.status === 'ARCHIVED'
+        ? t('admin.academic.statusArchived')
+        : t('admin.academic.statusDraft');
+
+  const tabs: Array<{ id: AdminEditorTab; label: string; count?: number }> = [
+    {
+      id: 'source',
+      label: t('admin.academic.tabs.source'),
+    },
+    {
+      id: 'objectives',
+      label: t('admin.academic.tabs.objectives'),
+      count: draft.learningObjectives.length,
+    },
+    {
+      id: 'resources',
+      label: t('admin.academic.tabs.resources'),
+      count: draft.resources.length,
+    },
+    {
+      id: 'questions',
+      label: t('admin.academic.tabs.questions'),
+      count: draft.questions.length,
+    },
+    {
+      id: 'mock',
+      label: t('admin.academic.tabs.mock'),
+    },
+  ];
+
   return (
-    <div className="admin-workspace">
-      {/* Toast Notification */}
+    <div className="admin-editor">
       {toastMessage && (
-        <div
-          className="toast-notification toast-success"
-          style={{ position: 'fixed', top: '1.5rem', right: '1.5rem', zIndex: 99999 }}
-          role="status"
-        >
+        <div className="toast toast-success admin-toast" role="status">
           <div className="toast-body">{toastMessage}</div>
         </div>
       )}
 
-      {/* Header Bar */}
-      <header className="admin-header">
-        <div className="admin-header-title">
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ minHeight: '36px', padding: '4px 12px', fontSize: '0.85rem' }}
-            onClick={onBackToList}
-          >
-            ← Back
+      <header className="admin-editor-header">
+        <div className="admin-editor-identity">
+          <button type="button" className="admin-back-link" onClick={onBackToList}>
+            {t('admin.academic.backToList')}
           </button>
 
-          <h1>CSCA 2025 Mathematics</h1>
-
-          <span className={statusClass}>
-            {pkg.status === 'PUBLISHED'
-              ? t('admin.academic.statusPublished')
-              : pkg.status === 'ARCHIVED'
-                ? t('admin.academic.statusArchived')
-                : t('admin.academic.statusDraft')}
-          </span>
-
-          {pkg.hasUnpublishedChanges && (
-            <span className="badge-unpublished-changes">
-              ✎ {t('admin.academic.hasUnpublishedChanges')}
-            </span>
-          )}
+          <div className="admin-editor-title-block">
+            <p className="admin-eyebrow">{t('admin.academic.subjectTag')}</p>
+            <div className="admin-editor-title-row">
+              <h1 className="admin-editor-title">{t('admin.academic.packageHeading')}</h1>
+              <div className="admin-editor-badges">
+                <span className={statusClass}>{statusLabel}</span>
+                {pkg.hasUnpublishedChanges && (
+                  <span className="badge-unpublished-changes">
+                    {t('admin.academic.hasUnpublishedChanges')}
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="admin-editor-meta">
+              {pkg.activeRevision
+                ? t('admin.academic.activeRevision', {
+                    revision: pkg.activeRevision.revisionNumber,
+                    date: new Date(pkg.activeRevision.publishedAt).toLocaleDateString(),
+                  })
+                : t('admin.academic.noActiveRevision')}
+              {' · '}
+              {t('admin.academic.draftRevision', { revision: pkg.draftRevision })}
+            </p>
+          </div>
         </div>
 
-        <div className="admin-header-actions">
+        <div className="admin-editor-actions">
           <button
             type="button"
             className="btn-secondary"
             onClick={handleSaveDraft}
-            disabled={isSaving || isPublishing || pkg.status === 'ARCHIVED'}
+            disabled={busy || isArchived}
           >
             {isSaving ? t('admin.academic.saving') : t('admin.academic.saveDraft')}
           </button>
@@ -231,18 +341,17 @@ export function AcademicPackageEditor({
             type="button"
             className="btn-primary"
             onClick={handlePublish}
-            disabled={isSaving || isPublishing || pkg.status === 'ARCHIVED'}
+            disabled={busy || isArchived}
           >
             {isPublishing ? t('admin.academic.publishing') : t('admin.academic.publish')}
           </button>
 
-          {pkg.status !== 'ARCHIVED' && (
+          {pkg.status === 'PUBLISHED' && (
             <button
               type="button"
               className="btn-danger"
-              style={{ minHeight: '44px', padding: '10px 16px' }}
               onClick={() => setShowArchiveModal(true)}
-              disabled={isSaving || isPublishing}
+              disabled={busy}
             >
               {t('admin.academic.archive')}
             </button>
@@ -250,54 +359,110 @@ export function AcademicPackageEditor({
         </div>
       </header>
 
-      {/* Sub Navigation Tabs */}
-      <nav className="admin-tabs" aria-label="Academic package configuration sections">
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === 'source' ? 'admin-tab-btn-active' : ''}`}
-          onClick={() => setActiveTab('source')}
-        >
-          📜 {t('admin.academic.sourcePanel.title')} & {t('admin.academic.outline.title')}
-        </button>
-
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === 'questions' ? 'admin-tab-btn-active' : ''}`}
-          onClick={() => setActiveTab('questions')}
-        >
-          ❓ {t('admin.academic.questions.title')} ({draft.questions.length})
-        </button>
-
-        <button
-          type="button"
-          className={`admin-tab-btn ${activeTab === 'mock' ? 'admin-tab-btn-active' : ''}`}
-          onClick={() => setActiveTab('mock')}
-        >
-          ⏱ {t('admin.academic.mock.title')}
-        </button>
+      <nav className="admin-tabs" aria-label={t('admin.academic.tabsLabel')}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`admin-tab-btn ${activeTab === tab.id ? 'admin-tab-btn-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
+          >
+            <span>{tab.label}</span>
+            {typeof tab.count === 'number' && (
+              <span className="admin-tab-count" aria-hidden="true">
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
       </nav>
 
-      {/* Main Workspace */}
-      <main className="admin-main-pane">
+      {validationViolations && validationViolations.length > 0 ? (
+        <div className="admin-validation-banner feedback-danger" role="alert">
+          <p className="admin-validation-banner-title">
+            {t('admin.academic.validation.bannerTitle', { count: validationViolations.length })}
+          </p>
+          <p className="admin-validation-banner-body">{t('admin.academic.validation.bannerBody')}</p>
+          <button
+            type="button"
+            className="btn-secondary admin-btn-compact-md"
+            onClick={() => setValidationViolations(null)}
+          >
+            {t('admin.academic.validation.dismiss')}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="admin-editor-pane">
         {activeTab === 'source' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
+          <div className="admin-stack-xl">
             <OfficialSourcePanel
               syllabus={draft.officialSyllabus}
               isPublished={pkg.status === 'PUBLISHED'}
+              fieldErrors={officialFieldErrors}
               onChange={(updatedSyllabus) =>
-                setPkg({
+                applyPackageUpdate({
                   ...pkg,
                   draft: { ...draft, officialSyllabus: updatedSyllabus },
                 })
               }
             />
 
-            <SyllabusOutlineEditor
-              items={draft.outlineItems}
-              onChange={(updatedItems) =>
-                setPkg({
+            <div className="admin-section-with-errors">
+              {fieldErrors.outline ? (
+                <p className="admin-field-error" role="alert">
+                  {fieldErrors.outline}
+                </p>
+              ) : null}
+              <SyllabusOutlineEditor
+                items={draft.outlineItems}
+                onChange={(updatedItems) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, outlineItems: updatedItems },
+                  })
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'objectives' && (
+          <div className="admin-section-with-errors">
+            {fieldErrors.objectives ? (
+              <p className="admin-field-error" role="alert">
+                {fieldErrors.objectives}
+              </p>
+            ) : null}
+            <LearningObjectivesEditor
+              objectives={draft.learningObjectives}
+              outlineItems={draft.outlineItems}
+              onChange={(updated) =>
+                applyPackageUpdate({
                   ...pkg,
-                  draft: { ...draft, outlineItems: updatedItems },
+                  draft: { ...draft, learningObjectives: updated },
+                })
+              }
+            />
+          </div>
+        )}
+
+        {activeTab === 'resources' && (
+          <div className="admin-section-with-errors">
+            {fieldErrors.resources ? (
+              <p className="admin-field-error" role="alert">
+                {fieldErrors.resources}
+              </p>
+            ) : null}
+            <StudyResourcesEditor
+              resources={draft.resources}
+              outlineItems={draft.outlineItems}
+              objectives={draft.learningObjectives}
+              onChange={(updated) =>
+                applyPackageUpdate({
+                  ...pkg,
+                  draft: { ...draft, resources: updated },
                 })
               }
             />
@@ -305,41 +470,47 @@ export function AcademicPackageEditor({
         )}
 
         {activeTab === 'questions' && (
-          <QuestionEditor
-            questions={draft.questions}
-            outlineItems={draft.outlineItems}
-            onChange={(updatedQuestions) =>
-              setPkg({
-                ...pkg,
-                draft: { ...draft, questions: updatedQuestions },
-              })
-            }
-          />
+          <div className="admin-section-with-errors">
+            {fieldErrors.questions ? (
+              <p className="admin-field-error" role="alert">
+                {fieldErrors.questions}
+              </p>
+            ) : null}
+            <QuestionEditor
+              questions={draft.questions}
+              outlineItems={draft.outlineItems}
+              objectives={draft.learningObjectives}
+              onChange={(updatedQuestions) =>
+                applyPackageUpdate({
+                  ...pkg,
+                  draft: { ...draft, questions: updatedQuestions },
+                })
+              }
+            />
+          </div>
         )}
 
         {activeTab === 'mock' && (
-          <MockPaperEditor
-            mocks={draft.mocks}
-            availableQuestions={draft.questions}
-            onChange={(updatedMocks) =>
-              setPkg({
-                ...pkg,
-                draft: { ...draft, mocks: updatedMocks },
-              })
-            }
-          />
+          <div className="admin-section-with-errors">
+            {fieldErrors.mock ? (
+              <p className="admin-field-error" role="alert">
+                {fieldErrors.mock}
+              </p>
+            ) : null}
+            <MockPaperEditor
+              mocks={draft.mocks}
+              availableQuestions={draft.questions}
+              onChange={(updatedMocks) =>
+                applyPackageUpdate({
+                  ...pkg,
+                  draft: { ...draft, mocks: updatedMocks },
+                })
+              }
+            />
+          </div>
         )}
-      </main>
+      </div>
 
-      {/* Validation Modal */}
-      {validationViolations && (
-        <PublishValidationModal
-          violations={validationViolations}
-          onClose={() => setValidationViolations(null)}
-        />
-      )}
-
-      {/* Archive Modal */}
       {showArchiveModal && (
         <ArchiveModal
           isArchiving={isArchiving}
