@@ -6,7 +6,7 @@ describe('route manifest', () => {
     const ids = routeManifest.map((route) => route.id);
     const paths = routeManifest.map((route) => route.path);
 
-    expect(routeManifest).toHaveLength(70);
+    expect(routeManifest).toHaveLength(72);
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(paths).size).toBe(paths.length);
   });
