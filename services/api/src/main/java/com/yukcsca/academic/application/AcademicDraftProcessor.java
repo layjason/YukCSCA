@@ -190,12 +190,7 @@ public class AcademicDraftProcessor {
     }
     requireText(syllabus, "authority", base + ".authority", 160, violations);
     requireText(syllabus, "editionLabel", base + ".editionLabel", 80, violations);
-    String sourceUrl = requireText(syllabus, "sourceUrl", base + ".sourceUrl", 2000, violations);
-    if (sourceUrl != null && !isHttpUrl(sourceUrl)) {
-      violations.add(new AcademicViolation(base + ".sourceUrl", AcademicViolationCode.INVALID));
-    }
-    validateLanguageArray(
-        syllabus.path("sourceLanguages"), EXAM_LANGUAGES, base + ".sourceLanguages", violations);
+    validateSourceLinks(syllabus.path("sourceLinks"), base + ".sourceLinks", violations);
     requireInstant(syllabus, "retrievedAt", base + ".retrievedAt", violations);
     requireInstant(syllabus, "lastCheckedAt", base + ".lastCheckedAt", violations);
     validateOfficialDate(syllabus.path("publishedOn"), base + ".publishedOn", violations);
@@ -642,6 +637,46 @@ public class AcademicDraftProcessor {
       } else if (!unique.add(language)) {
         violations.add(
             new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.DUPLICATE));
+      }
+    }
+  }
+
+  /**
+   * Official CSCA PDFs may exist in one or two language editions (en / zh-CN). Each language may
+   * appear at most once; each URL must be absolute http(s).
+   */
+  private void validateSourceLinks(
+      JsonNode links, String path, List<AcademicViolation> violations) {
+    if (!links.isArray() || links.isEmpty()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.REQUIRED));
+      return;
+    }
+    if (links.size() > 2) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    Set<String> uniqueLanguages = new HashSet<>();
+    for (int index = 0; index < links.size(); index++) {
+      JsonNode link = links.get(index);
+      String itemPath = path + "[" + index + "]";
+      if (!link.isObject()) {
+        violations.add(new AcademicViolation(itemPath, AcademicViolationCode.INVALID));
+        continue;
+      }
+      String language = text(link, "language");
+      if (blank(language)) {
+        violations.add(
+            new AcademicViolation(itemPath + ".language", AcademicViolationCode.REQUIRED));
+      } else if (!EXAM_LANGUAGES.contains(language)) {
+        violations.add(
+            new AcademicViolation(itemPath + ".language", AcademicViolationCode.UNSUPPORTED));
+      } else if (!uniqueLanguages.add(language)) {
+        violations.add(
+            new AcademicViolation(itemPath + ".language", AcademicViolationCode.DUPLICATE));
+      }
+      String url = requireText(link, "url", itemPath + ".url", 2000, violations);
+      if (url != null && !isHttpUrl(url)) {
+        violations.add(new AcademicViolation(itemPath + ".url", AcademicViolationCode.INVALID));
       }
     }
   }

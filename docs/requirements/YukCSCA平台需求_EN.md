@@ -1,7 +1,7 @@
 # YukCSCA Platform Requirements Summary
 
-**Version:** V1.4
-**Date:** 2026-07-31
+**Version:** V1.5
+**Date:** 2026-08-07
 **Target Market:** Indonesian high school students planning to pursue undergraduate study in China, and their families
 
 > **NORMATIVE PRODUCT AUTHORITY:** This document and its paired Chinese version are the sole authoritative product requirements for YukCSCA. Architecture descriptions, implementation plans, contracts, issues, and code may implement or propose a subset, but they do not amend or override these requirements. Both language versions must change together.
@@ -10,6 +10,7 @@
 
 | Version | Date       | Change                                                                                  |
 | ------- | ---------- | --------------------------------------------------------------------------------------- |
+| V1.5    | 2026-08-07 | Official syllabus records may store one or two language-edition PDF locators (en and/or zh-CN) under one compact source panel; outline summaries remain YukCSCA-authored in id/en/zh-CN. |
 | V1.4    | 2026-07-31 | Replaced publication of copied official-syllabus wording with localized YukCSCA summaries linked to the official source, including Bahasa Indonesia. |
 | V1.3    | 2026-07-30 | Separated direct preparation from plan orchestration, split plan-independent mock remediation from plan integration, and introduced a portable academic-content direction. |
 | V1.2    | 2026-07-24 | Qualified fixture-backed email/password previews while preserving Google-only production authentication. |
@@ -482,12 +483,12 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 4.2 Official Syllabus Source and YukCSCA Topic Mapping (P0)
 
-- For every sold subject, the platform stores the official CSCA syllabus authority and version, an admin-maintained official source link or locator, the declared publication or effective date when the source provides one or an explicit Not Stated status, and the last checked date.
+- For every sold subject, the platform stores the official CSCA syllabus authority and version, admin-maintained official source link(s) or locator(s) for each published official language edition (typically English and/or Simplified Chinese PDFs; Chinese-only subjects may store one), the declared publication or effective date when the source provides one or an explicit Not Stated status, and the last checked date.
 - The platform publishes YukCSCA-authored syllabus outline summaries in Bahasa Indonesia, English, and Simplified Chinese. They follow the official document's module/topic order and retain a source location, but do not reproduce or claim to be the official wording.
-- The official source is presented as one compact, visually distinct source action with its authority, edition, and last checked date. The interface does not repeat long “see the official wording” notices for every topic.
+- The official source is presented as one compact, visually distinct source panel with its authority, edition, and last checked date, and one open action per configured official language edition. The interface does not repeat long “see the official wording” notices for every topic.
 - Syllabus outline summaries remain separate from YukCSCA-authored learning objectives, prerequisites, common-error categories, lessons, questions, and remediation content.
 - A YukCSCA learning objective may map to one or more syllabus outline items. Each mapping keeps a short reason and the person who last reviewed it.
-- The coverage page shows the selected official syllabus version, its localized outline summaries, mapped YukCSCA learning objectives, official-source action, and whether related lessons, practice, checkpoints, and mocks are available.
+- The coverage page shows the selected official syllabus version, its localized outline summaries, mapped YukCSCA learning objectives, official-source panel (with language-edition open actions when applicable), and whether related lessons, practice, checkpoints, and mocks are available.
 - Product coverage uses at least **Fully Covered, Partially Covered, In Development, and Not Covered**. A “full coverage” claim is calculated against one named official syllabus version, not against the number of topics YukCSCA has created.
 - Personal learning status uses at least **Not Started, Learning, Review Due, Learned, and Stable Mastery** and is displayed separately from product coverage.
 - Students can open the related lesson, practice, mistake review, terminology, or remediation content from a syllabus outline item or learning objective.
@@ -879,7 +880,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Self-study products are primarily sold by **subject and exam language**, such as a Mathematics (English) Plan and a Mathematics (Chinese) Plan, with monthly or fixed-duration purchase options.
 - Support single-session one-on-one tutoring and packages of tutoring hours. Tutoring products are sold by service and hours; students and parents do not select a tutor from a public list.
 - Product details clearly display the exam subject, exam language, included course modules, official syllabus coverage, practice questions, terminology training, AI usage allowance, number of mock exams, tutoring entitlements, and validity period.
-- Each product page provides access to the corresponding official syllabus comparison and displays the official source link, current coverage status, and modules not yet covered.
+- Each product page provides access to the corresponding official syllabus comparison and displays the official source link(s), current coverage status, and modules not yet covered.
 - Products that do not fully cover the official syllabus must clearly state their actual scope and cannot use names or claims that could make users assume full coverage.
 - When students purchase multiple subjects, entitlements, validity periods, and learning records are displayed and managed separately for each subject.
 - Self-study entitlements are automatically assigned to the selected student after successful payment. A tutoring payment creates a request awaiting manual contact and matching rather than a booking with a specific tutor.

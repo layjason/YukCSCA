@@ -365,8 +365,17 @@ class AcademicAdminHttpIT {
     ObjectNode syllabus = (ObjectNode) draft.path("officialSyllabus");
     syllabus.put("authority", "China Scholastic Competency Assessment");
     syllabus.put("editionLabel", "2025");
-    syllabus.put("sourceUrl", "https://example.edu/csca-mathematics-2025.pdf");
-    syllabus.putArray("sourceLanguages").add("en").add("zh-CN");
+    var sourceLinks = syllabus.putArray("sourceLinks");
+    sourceLinks
+        .addObject()
+        .put("language", "en")
+        .put("url", "https://csca.cn/files/CSCA%20Mathematics%20Examination%20Syllabus-2025.pdf");
+    sourceLinks
+        .addObject()
+        .put("language", "zh-CN")
+        .put(
+            "url",
+            "https://csca.cn/files/CSCA%E8%80%83%E8%AF%95%E5%A4%A7%E7%BA%B2-%E6%95%B0%E5%AD%A6-2025%E7%89%88.pdf");
     syllabus.put("retrievedAt", "2026-07-31T00:00:00Z");
     syllabus.put("lastCheckedAt", "2026-07-31T00:00:00Z");
     syllabus.set("publishedOn", notStatedDate());

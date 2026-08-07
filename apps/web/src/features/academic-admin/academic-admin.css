@@ -1008,6 +1008,14 @@ select.admin-field-control,
   font-weight: 700;
 }
 
+.official-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+}
+
 .official-source-body {
   display: grid;
   gap: var(--space-md);

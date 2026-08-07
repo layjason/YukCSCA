@@ -85,6 +85,21 @@ describe('mapValidationViolations', () => {
     expect(firstTabFromMapped(mapped)).toBe('questions');
   });
 
+  test('maps official source link violations to source tab', () => {
+    const mapped = mapValidationViolations([
+      { path: 'draft.officialSyllabus.sourceLinks', code: 'REQUIRED' },
+      { path: 'draft.officialSyllabus.sourceLinks[0].url', code: 'INVALID' },
+      { path: 'draft.officialSyllabus.sourceLinks[1].language', code: 'DUPLICATE' },
+    ]);
+    expect(mapped.map((item) => item.field)).toEqual(['sourceLinks', 'sourceLinks', 'sourceLinks']);
+    expect(mapped.map((item) => item.tab)).toEqual(['source', 'source', 'source']);
+    expect(mapped.map((item) => item.messageKey)).toEqual([
+      'sourceLinks',
+      'sourceLinkUrlInvalid',
+      'sourceLinkLanguageDuplicate',
+    ]);
+  });
+
   test('maps product-review multi-violation payload without misleading resource kinds copy', () => {
     const mapped = mapValidationViolations([
       { path: 'draft.officialSyllabus.permittedUse', code: 'INCOMPATIBLE' },

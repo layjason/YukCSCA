@@ -101,6 +101,15 @@ model ExamStructure {
   examLanguages?: ExamLanguage[];
 }
 
+@doc("One admin-maintained official CSCA syllabus PDF locator for a language edition (for example Mathematics EN and zh-CN).")
+model OfficialSourceLink {
+  language: ExamLanguage;
+
+  @minLength(1)
+  @maxLength(2000)
+  url: string;
+}
+
 model OfficialSyllabus {
   subject: AcademicSubject;
 
@@ -112,11 +121,9 @@ model OfficialSyllabus {
   @maxLength(80)
   editionLabel?: string;
 
-  @maxLength(2000)
-  sourceUrl?: string;
-
+  @doc("Official PDF locators by language edition. CSCA subjects with dual exam languages typically store both en and zh-CN; Chinese-only subjects store one. Not YukCSCA outline summary languages.")
   @maxItems(2)
-  sourceLanguages?: ExamLanguage[];
+  sourceLinks?: OfficialSourceLink[];
 
   retrievedAt?: utcDateTime;
   lastCheckedAt?: utcDateTime;

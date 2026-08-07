@@ -6,7 +6,7 @@
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Status                       | `DONE`                                                                                                         |
 | Human gate                   | `APPROVED`                                                                                                     |
-| Plan revision                | 8                                                                                                              |
+| Plan revision                | 9                                                                                                              |
 | Updated                      | 2026-08-07                                                                                                     |
 | Primary actor                | Configured first platform admin                                                                                |
 | Story IDs                    | `US-ADMIN-01`, `US-ADM-02`, `US-ADM-03`, `US-ADM-04`, `US-ADM-05`                                              |
@@ -82,7 +82,8 @@ out of scope. Adding Physics later is profile + enum + content, not a redesign.
 
 ### Date policy
 
-- `editionLabel`, `sourceUrl`, `retrievedAt`, and `lastCheckedAt` are required.
+- `editionLabel`, `sourceLinks` (1–2 language-edition PDF locators: `en` and/or
+  `zh-CN`), `retrievedAt`, and `lastCheckedAt` are required.
 - Official `publishedOn`, `effectiveOn`, and `updatedOn` are nullable and each
   carries `DECLARED` or `NOT_STATED`; `NOT_STATED` is not a validation failure.
 - HTTP headers, file timestamps, search-result dates, and inferred year
@@ -107,9 +108,11 @@ but the pilot does not expose a complex workflow:
 - Missing required provenance still blocks publication because requirements
   14.6 and the source's own usage notice do not permit treating availability as
   permission to copy.
-- Approved `D-02` uses the official document as `REFERENCE_ONLY`. The product
+- Approved `D-02` uses official documents as `REFERENCE_ONLY`. The product
   publishes concise YukCSCA-authored outline summaries in `id`, `en`, and
-  `zh-CN`, retains each item's source position, and links to the official PDF.
+  `zh-CN`, retains each item's source position, and links to the official PDF
+  language edition(s) the admin maintains (typically both Mathematics EN and
+  zh-CN on csca.cn).
 
 ## Capability and adjacent contract horizon
 
@@ -134,8 +137,8 @@ but the pilot does not expose a complex workflow:
   pilot admin using approved `D-01` Option A.
 - Add a production admin route; no admin registration, invitation, or role UI.
 - Create one Mathematics preparation package with:
-  - an admin-maintained official-source link, source metadata, and exam
-    structure;
+  - admin-maintained official-source link(s) per language edition, source
+    metadata, and exam structure;
   - ordered syllabus outline items with required Bahasa Indonesia, English,
     and Simplified Chinese YukCSCA summaries plus source page/section positions;
   - separate YukCSCA learning objectives and mappings;
@@ -202,11 +205,12 @@ storage is an intentionally reversible first-use choice behind a port.`
 ## User flow
 
 1. The configured verified `UNASSIGNED` account signs in and becomes `ADMIN`.
-2. The admin creates the Mathematics 2025 package, adds or updates the official
-   PDF link, and records its authority, edition, check time, exam structure, and
-   source positions.
+2. The admin creates the Mathematics 2025 package, adds or updates official PDF
+   links for each language edition (EN and/or zh-CN), and records authority,
+   edition, check time, exam structure, and source positions.
 3. The admin writes concise outline summaries in Bahasa Indonesia, English, and
-   Simplified Chinese and previews the compact official-source action.
+   Simplified Chinese and previews the compact official-source panel (one open
+   action per configured language edition).
 4. The admin adds separate YukCSCA objectives/resources/questions using text,
    LaTeX, and approved diagrams, then previews rendered content.
 5. The admin selects compatible questions for one timed mock.
@@ -217,20 +221,20 @@ storage is an intentionally reversible first-use choice behind a port.`
 
 ## Acceptance and implementation matrix
 
-| AC  | Given / When / Then                                                                                                                                                                                                              | Required evidence                                                        |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| 01  | The configured verified `UNASSIGNED` identity signs in; it becomes the unique `ADMIN` and repeat sign-in/refresh is idempotent.                                                                                                  | Google, credential, refresh, restart, and uniqueness integration tests.  |
-| 02  | Any other identity or existing non-admin role calls an admin operation; access is denied without role/data change.                                                                                                               | Exact-identity, role-conflict, `401`, and `403` tests.                   |
-| 03  | The admin records Mathematics 2025; the validated official link, edition, source/check metadata, exam format, source positions, localized outline summaries, and distinct mappings survive save/read.                            | Contract, serialization, PostgreSQL, and UI resume tests.                |
-| 04  | Official dates are not stated; the admin records `NOT_STATED` without inventing dates or blocking publication. Bahasa Indonesia, English, and Simplified Chinese summaries are required and remain labelled as YukCSCA-authored. | Date/language-policy domain and component tests.                         |
-| 05  | Text/LaTeX content is saved; KaTeX preview renders representative formulas accessibly and malformed input produces recoverable validation.                                                                                       | Component tests plus mobile/desktop visual evidence.                     |
-| 06  | A valid PNG/JPEG diagram is uploaded; it is re-encoded, bounded, owned, and referenceable. Invalid type, signature, size, or dimensions are rejected without persistence.                                                        | Upload security and PostgreSQL integration tests.                        |
-| 07  | A question lacks answer, explanation, compatible language/topic, or required source/permission evidence; publication fails and any active revision remains unchanged.                                                            | Parameterized validation and atomic rollback tests.                      |
-| 08  | A valid package is published; resources/questions and a 60-minute, 100-point, 48-question single-language mock become one immutable active revision and answer keys remain admin-only.                                           | HTTP/domain/Flyway tests and real admin journey.                         |
-| 09  | A correction fails or succeeds; the old revision is unchanged and remains active until replacement succeeds.                                                                                                                     | Optimistic-stale and replacement tests.                                  |
-| 10  | Archive is requested with a reason; new use is disabled without deleting revision, image, or audit history.                                                                                                                      | Archive/retry tests and audit inspection.                                |
-| 11  | Prototype fixtures or unlicensed official/SJTU wording/files are offered for publication; they are rejected or remain reference-only behind a validated official-source action.                                                  | Boundary and provenance tests plus seed/build inspection.                |
-| 12  | The syllabus presentation is rendered; it shows one compact official-source panel/action with authority, edition, and last checked date and does not repeat a long source disclaimer per outline item.                           | Localized component, accessibility, mobile, and desktop visual evidence. |
+| AC  | Given / When / Then                                                                                                                                                                                                                                            | Required evidence                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 01  | The configured verified `UNASSIGNED` identity signs in; it becomes the unique `ADMIN` and repeat sign-in/refresh is idempotent.                                                                                                                                | Google, credential, refresh, restart, and uniqueness integration tests.  |
+| 02  | Any other identity or existing non-admin role calls an admin operation; access is denied without role/data change.                                                                                                                                             | Exact-identity, role-conflict, `401`, and `403` tests.                   |
+| 03  | The admin records Mathematics 2025; the validated official link(s) per language edition, edition, source/check metadata, exam format, source positions, localized outline summaries, and distinct mappings survive save/read.                                  | Contract, serialization, PostgreSQL, and UI resume tests.                |
+| 04  | Official dates are not stated; the admin records `NOT_STATED` without inventing dates or blocking publication. Bahasa Indonesia, English, and Simplified Chinese summaries are required and remain labelled as YukCSCA-authored.                               | Date/language-policy domain and component tests.                         |
+| 05  | Text/LaTeX content is saved; KaTeX preview renders representative formulas accessibly and malformed input produces recoverable validation.                                                                                                                     | Component tests plus mobile/desktop visual evidence.                     |
+| 06  | A valid PNG/JPEG diagram is uploaded; it is re-encoded, bounded, owned, and referenceable. Invalid type, signature, size, or dimensions are rejected without persistence.                                                                                      | Upload security and PostgreSQL integration tests.                        |
+| 07  | A question lacks answer, explanation, compatible language/topic, or required source/permission evidence; publication fails and any active revision remains unchanged.                                                                                          | Parameterized validation and atomic rollback tests.                      |
+| 08  | A valid package is published; resources/questions and a 60-minute, 100-point, 48-question single-language mock become one immutable active revision and answer keys remain admin-only.                                                                         | HTTP/domain/Flyway tests and real admin journey.                         |
+| 09  | A correction fails or succeeds; the old revision is unchanged and remains active until replacement succeeds.                                                                                                                                                   | Optimistic-stale and replacement tests.                                  |
+| 10  | Archive is requested with a reason; new use is disabled without deleting revision, image, or audit history.                                                                                                                                                    | Archive/retry tests and audit inspection.                                |
+| 11  | Prototype fixtures or unlicensed official/SJTU wording/files are offered for publication; they are rejected or remain reference-only behind a validated official-source action.                                                                                | Boundary and provenance tests plus seed/build inspection.                |
+| 12  | The syllabus presentation is rendered; it shows one compact official-source panel with authority, edition, last checked date, and open action(s) for each configured official language edition, and does not repeat a long source disclaimer per outline item. | Localized component, accessibility, mobile, and desktop visual evidence. |
 
 ## Documentation sufficiency review
 
@@ -254,10 +258,10 @@ storage is an intentionally reversible first-use choice behind a port.`
 | Approval scope    | `D-01` configured-admin eligibility; `D-02` localized summaries and official-source presentation                            |
 | Approval evidence | Both options approved in user chat on 2026-07-31; paired requirements, stories, glossary, slice, PLAN, and coverage updated |
 
-| ID     | Blocking question and scenario                                                                                                             | Recommendation                                                                                                                             | Status     | Resolution                                                                 |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------------- |
-| `D-01` | A configured account already has a non-admin role when it signs in.                                                                        | Only exact configured verified `UNASSIGNED` may become `ADMIN`; existing non-admin roles are rejected, existing `ADMIN` is idempotent.     | `APPROVED` | Option A approved 2026-07-31; scope, state model, tests, and PLAN updated. |
-| `D-02` | The official syllabus source restricts reproduction. Should YukCSCA link to it and publish localized summaries rather than copied wording? | Use `REFERENCE_ONLY`; require `id`, `en`, and `zh-CN` summaries; present one compact official-source action whose URL the admin maintains. | `APPROVED` | Approved 2026-07-31; requirements V1.4 and supporting artifacts updated.   |
+| ID     | Blocking question and scenario                                                                                                             | Recommendation                                                                                                                                                | Status     | Resolution                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `D-01` | A configured account already has a non-admin role when it signs in.                                                                        | Only exact configured verified `UNASSIGNED` may become `ADMIN`; existing non-admin roles are rejected, existing `ADMIN` is idempotent.                        | `APPROVED` | Option A approved 2026-07-31; scope, state model, tests, and PLAN updated.                  |
+| `D-02` | The official syllabus source restricts reproduction. Should YukCSCA link to it and publish localized summaries rather than copied wording? | Use `REFERENCE_ONLY`; require `id`, `en`, and `zh-CN` summaries; present one compact official-source panel whose language-edition URL(s) the admin maintains. | `APPROVED` | Approved 2026-07-31; refined 2026-08-07 for dual en/zh-CN PDF locators (requirements V1.5). |
 
 ## State model and invariants
 
@@ -273,7 +277,8 @@ DRAFT -> PUBLISHED -> ARCHIVED
 
 - At most one `ADMIN` and one active package revision exist in the pilot.
 - Official source records never become permission grants by inference;
-  published outline text is YukCSCA-authored and links to the official source.
+  published outline text is YukCSCA-authored and links to the official
+  language-edition PDF locator(s).
 - Published revisions and referenced images are immutable; no hard delete.
 - Mock questions share subject/exam language and belong to the same revision.
 - The first mock snapshots and matches the recorded official duration, score,
@@ -459,6 +464,7 @@ validation without discarding the draft.
 
 | Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                              |
 | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9        | 2026-08-07 | Corrected official-source model: `OfficialSyllabus.sourceLinks[]` (language + URL, max 2) replaces singular `sourceUrl`/`sourceLanguages`; publish validation and admin UI support dual CSCA Math EN/zh-CN PDFs; fixture outline modules aligned to official 2025 structure; requirements V1.5 and supporting docs synchronized. Does not reopen product-owner journey acceptance.                                  |
 | 8        | 2026-08-07 | Recorded product-owner acceptance of the configured-admin academic-package journey as enough for the pilot, closed remaining frontend/journey definition-of-done items, synchronized PLAN/ARCHITECTURE/COVERAGE, and moved VS-005 from `IN_PROGRESS` to `DONE` without selecting or starting the next production slice.                                                                                             |
 | 7        | 2026-08-07 | Made the academic package model subject-extensible without expanding acceptance: additive `AcademicSubject` enum, open exam-structure integers, subject profile defaults, mock validation against package exam structure, V7 drop of Math-only DB check, frontend profile module. Pilot creatable subject remains Mathematics; multi-subject seeding stays out of scope.                                            |
 | 6        | 2026-08-01 | Implemented and verified the assigned backend boundary: configured-admin recognition for Google and credential sign-in, V6 persistence, all eight accepted HTTP operations, draft/publication validation, bounded re-encoded images, immutable correction revisions, archive, authorization, and minimized audit. Moved to `IN_PROGRESS`; frontend integration and product-owner journey acceptance remain pending. |

@@ -122,7 +122,7 @@ export function AcademicPackageEditor({
 
   const officialFieldErrors = useMemo(() => {
     const keys: OfficialFieldKey[] = [
-      'sourceUrl',
+      'sourceLinks',
       'authority',
       'editionLabel',
       'retrievedAt',
@@ -130,7 +130,6 @@ export function AcademicPackageEditor({
       'publishedOn',
       'effectiveOn',
       'updatedOn',
-      'sourceLanguages',
       'examStructure',
       'permittedUse',
     ];

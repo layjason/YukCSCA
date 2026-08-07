@@ -1,7 +1,7 @@
 import type { AcademicValidationViolation, AdminEditorTab } from './types';
 
 export type OfficialFieldKey =
-  | 'sourceUrl'
+  | 'sourceLinks'
   | 'authority'
   | 'editionLabel'
   | 'retrievedAt'
@@ -9,7 +9,6 @@ export type OfficialFieldKey =
   | 'publishedOn'
   | 'effectiveOn'
   | 'updatedOn'
-  | 'sourceLanguages'
   | 'examStructure'
   | 'permittedUse';
 
@@ -60,17 +59,23 @@ export function messageKeyFor(path: string, code: string): string {
   }
 
   // --- Official syllabus fields ---
-  if (leaf === 'sourceurl' || pathIncludes(lower, 'sourceurl')) {
-    if (normalizedCode === 'INVALID') return 'sourceUrlInvalid';
-    return 'sourceUrl';
+  if (
+    leaf === 'sourcelinks' ||
+    pathIncludes(lower, 'sourcelinks') ||
+    (pathIncludes(lower, 'officialsyllabus') && leaf === 'url')
+  ) {
+    if (normalizedCode === 'INVALID') return 'sourceLinkUrlInvalid';
+    if (normalizedCode === 'DUPLICATE') return 'sourceLinkLanguageDuplicate';
+    if (normalizedCode === 'UNSUPPORTED') return 'sourceLinkLanguage';
+    if (normalizedCode === 'OUT_OF_RANGE') return 'sourceLinksRange';
+    if (leaf === 'url' || pathIncludes(lower, '.url')) return 'sourceLinkUrl';
+    if (leaf === 'language') return 'sourceLinkLanguage';
+    return 'sourceLinks';
   }
   if (leaf === 'authority') return 'authority';
   if (leaf === 'editionlabel') return 'editionLabel';
   if (leaf === 'retrievedat') return 'retrievedAt';
   if (leaf === 'lastcheckedat') return 'lastCheckedAt';
-  if (leaf === 'sourcelanguages' || pathIncludes(lower, 'sourcelanguages')) {
-    return 'sourceLanguages';
-  }
   if (
     leaf === 'examstructure' ||
     pathIncludes(lower, 'examstructure') ||
@@ -298,12 +303,16 @@ export function fieldFor(path: string): ValidationFieldKey {
   for (const f of OFFICIAL_DATE_FIELDS) {
     if (lower.includes(f.toLowerCase())) return f;
   }
-  if (lower.includes('sourceurl')) return 'sourceUrl';
+  if (
+    lower.includes('sourcelinks') ||
+    (lower.includes('officialsyllabus') && lower.includes('.url'))
+  ) {
+    return 'sourceLinks';
+  }
   if (lower.includes('authority')) return 'authority';
   if (lower.includes('editionlabel')) return 'editionLabel';
   if (lower.includes('retrievedat')) return 'retrievedAt';
   if (lower.includes('lastcheckedat')) return 'lastCheckedAt';
-  if (lower.includes('sourcelanguages')) return 'sourceLanguages';
   if (lower.includes('examstructure') || lower.includes('examlanguages')) {
     return 'examStructure';
   }
@@ -323,7 +332,7 @@ export function fieldFor(path: string): ValidationFieldKey {
 export function tabFor(field: ValidationFieldKey): AdminEditorTab {
   switch (field) {
     case 'outline':
-    case 'sourceUrl':
+    case 'sourceLinks':
     case 'authority':
     case 'editionLabel':
     case 'retrievedAt':
@@ -331,7 +340,6 @@ export function tabFor(field: ValidationFieldKey): AdminEditorTab {
     case 'publishedOn':
     case 'effectiveOn':
     case 'updatedOn':
-    case 'sourceLanguages':
     case 'examStructure':
     case 'permittedUse':
       return 'source';
