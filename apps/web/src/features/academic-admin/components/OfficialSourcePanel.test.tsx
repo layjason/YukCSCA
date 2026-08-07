@@ -5,15 +5,21 @@ import type { OfficialSyllabus } from '../types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: { date?: string; subject?: string }) => {
+    t: (key: string, opts?: { date?: string; subject?: string; language?: string }) => {
       if (key === 'admin.academic.sourcePanel.title') return 'Official Source';
       if (key === 'admin.academic.sourcePanel.checked') return `Checked ${opts?.date ?? ''}`;
       if (key === 'admin.academic.sourcePanel.notCheckedYet') return 'Not checked yet';
       if (key === 'admin.academic.sourcePanel.openSyllabus') return 'Open official syllabus';
+      if (key === 'admin.academic.sourcePanel.openSyllabusLanguage')
+        return `Open official syllabus (${opts?.language ?? ''})`;
       if (key === 'admin.academic.sourcePanel.opensInNewTab') return 'opens in new tab';
       if (key === 'admin.academic.sourcePanel.subjectHeading')
         return `${opts?.subject ?? ''} 2025 Syllabus`;
-      if (key === 'admin.academic.sourcePanel.sourceUrlLabel') return 'Official Syllabus PDF Link';
+      if (key === 'admin.academic.sourcePanel.sourceLinks') return 'Official PDF';
+      if (key === 'admin.academic.sourcePanel.sourceUrlPlaceholderEn')
+        return 'https://csca.cn/files/CSCA%20Mathematics%20Examination%20Syllabus-2025.pdf';
+      if (key === 'admin.academic.sourcePanel.sourceUrlPlaceholderZh')
+        return 'https://csca.cn/files/…数学-2025版.pdf';
       if (key === 'admin.academic.sourcePanel.authorityLabel') return 'Authority';
       if (key === 'admin.academic.sourcePanel.editionLabel') return 'Edition label';
       if (key === 'admin.academic.sourcePanel.permittedUse') return 'Permitted use';
@@ -26,7 +32,6 @@ vi.mock('react-i18next', () => ({
       if (key === 'admin.academic.sourcePanel.declaredDate') return 'Declared date';
       if (key === 'admin.academic.sourcePanel.notStated') return 'Not Stated';
       if (key === 'admin.academic.sourcePanel.declared') return 'Declared';
-      if (key === 'admin.academic.sourcePanel.sourceLanguages') return 'Official source languages';
       if (key === 'admin.academic.sourcePanel.examStructure') return 'Exam structure snapshot';
       if (key === 'admin.academic.sourcePanel.examStructureFixed')
         return 'Fixed for Mathematics 2025';
@@ -38,13 +43,13 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OfficialSourcePanel', () => {
-  test('updates retrieved and checked timestamps and source languages', () => {
+  test('updates retrieved timestamp and language-keyed source links', () => {
     const onChange = vi.fn();
     const syllabus: OfficialSyllabus = {
       subject: 'MATHEMATICS',
       authority: 'CSCA',
       editionLabel: '2025',
-      sourceUrl: 'https://example.edu/syllabus.pdf',
+      sourceLinks: [{ language: 'en', url: 'https://example.edu/syllabus-en.pdf' }],
       permittedUse: 'REFERENCE_ONLY',
       publishedOn: { status: 'NOT_STATED', date: null },
       effectiveOn: { status: 'NOT_STATED', date: null },
@@ -60,10 +65,16 @@ describe('OfficialSourcePanel', () => {
     const first = onChange.mock.calls.at(-1)?.[0] as OfficialSyllabus;
     expect(first.retrievedAt).toBeTruthy();
 
-    const englishBoxes = screen.getAllByLabelText('English (en)');
-    fireEvent.click(englishBoxes[0]!);
+    fireEvent.change(screen.getByLabelText('zh-CN'), {
+      target: { value: 'https://csca.cn/files/math-zh.pdf' },
+    });
     const second = onChange.mock.calls.at(-1)?.[0] as OfficialSyllabus;
-    expect(second.sourceLanguages).toContain('en');
+    expect(second.sourceLinks).toEqual(
+      expect.arrayContaining([
+        { language: 'en', url: 'https://example.edu/syllabus-en.pdf' },
+        { language: 'zh-CN', url: 'https://csca.cn/files/math-zh.pdf' },
+      ]),
+    );
   });
 
   test('emits explicit NOT_STATED official dates when fields were missing on load', () => {
@@ -73,7 +84,7 @@ describe('OfficialSourcePanel', () => {
       subject: 'MATHEMATICS',
       authority: 'CSCA',
       editionLabel: '2025',
-      sourceUrl: 'https://example.edu/syllabus.pdf',
+      sourceLinks: [{ language: 'en', url: 'https://example.edu/syllabus.pdf' }],
       permittedUse: 'REFERENCE_ONLY',
     };
 
@@ -87,6 +98,30 @@ describe('OfficialSourcePanel', () => {
     expect(next.publishedOn).toEqual({ status: 'NOT_STATED', date: null });
     expect(next.effectiveOn).toEqual({ status: 'NOT_STATED', date: null });
     expect(next.updatedOn).toEqual({ status: 'NOT_STATED', date: null });
+  });
+
+  test('shows open actions for each configured language edition', () => {
+    render(
+      <OfficialSourcePanel
+        syllabus={{
+          subject: 'MATHEMATICS',
+          sourceLinks: [
+            { language: 'en', url: 'https://example.edu/en.pdf' },
+            { language: 'zh-CN', url: 'https://example.edu/zh.pdf' },
+          ],
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: /Open official syllabus \(en\)/i })).toHaveAttribute(
+      'href',
+      'https://example.edu/en.pdf',
+    );
+    expect(screen.getByRole('link', { name: /Open official syllabus \(zh-CN\)/i })).toHaveAttribute(
+      'href',
+      'https://example.edu/zh.pdf',
+    );
   });
 
   test('shows short field error under official published date', () => {

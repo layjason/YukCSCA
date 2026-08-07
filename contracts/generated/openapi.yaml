@@ -1767,6 +1767,19 @@ components:
       enum:
         - DECLARED
         - NOT_STATED
+    AcademicAdmin.OfficialSourceLink:
+      type: object
+      required:
+        - language
+        - url
+      properties:
+        language:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        url:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      description: One admin-maintained official CSCA syllabus PDF locator for a language edition (for example Mathematics EN and zh-CN).
     AcademicAdmin.OfficialSyllabus:
       type: object
       required:
@@ -1782,14 +1795,12 @@ components:
           type: string
           minLength: 1
           maxLength: 80
-        sourceUrl:
-          type: string
-          maxLength: 2000
-        sourceLanguages:
+        sourceLinks:
           type: array
           items:
-            $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+            $ref: '#/components/schemas/AcademicAdmin.OfficialSourceLink'
           maxItems: 2
+          description: Official PDF locators by language edition. CSCA subjects with dual exam languages typically store both en and zh-CN; Chinese-only subjects store one. Not YukCSCA outline summary languages.
         retrievedAt:
           type: string
           format: date-time

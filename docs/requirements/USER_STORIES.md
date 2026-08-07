@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.3.2
-**Updated:** 2026-07-31
+**Backlog version:** 0.3.3
+**Updated:** 2026-08-07
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.
@@ -989,15 +989,15 @@ A localized coverage map tied to a named official syllabus source version separa
 **Main flow**
 
 1. Open the syllabus coverage map.
-2. Review the localized syllabus outline and compact official-source action.
+2. Review the localized syllabus outline and compact official-source panel.
 3. Expand an outline item or knowledge point.
 4. See platform coverage and personal learning status separately.
 
 **Acceptance Criteria**
 
-- Given a sold subject, then the map shows the official authority, version, declared date or Not Stated status, last verification date, and one visually distinct source action.
+- Given a sold subject, then the map shows the official authority, version, declared date or Not Stated status, last verification date, and a visually distinct source panel with one open action per configured official language edition.
 - Given a syllabus outline, then YukCSCA-authored summaries are available in Bahasa Indonesia, English, and Simplified Chinese and are not labelled as official wording.
-- Given the official source action, then it opens the admin-maintained official link without repeating a long source disclaimer on every outline item.
+- Given an official source action, then it opens the matching admin-maintained official PDF locator without repeating a long source disclaimer on every outline item.
 - Given a knowledge point, then platform coverage uses only Fully Covered, Partially Covered, In Development, or Not Yet Covered.
 - Given a linked student, then personal status is displayed separately from platform coverage.
 - Given incomplete content, then no product or map label implies full coverage.
@@ -2380,20 +2380,20 @@ YukCSCA learning objectives and topic mappings are defined, and valid content mo
 
 **Closed-loop outcome**
 
-One official syllabus source version, its available date metadata, compact source action, and YukCSCA-authored outline summaries in Bahasa Indonesia, English, and Simplified Chinese are published.
+One official syllabus source version, its available date metadata, compact source panel (with language-edition open actions when both official PDFs exist), and YukCSCA-authored outline summaries in Bahasa Indonesia, English, and Simplified Chinese are published.
 
 **Main flow**
 
-1. Record the official syllabus authority, admin-maintained source link, edition, available declared dates, last checked date, and source locations.
+1. Record the official syllabus authority, admin-maintained source link(s) per official language edition (en and/or zh-CN), edition, available declared dates, last checked date, and source locations.
 2. Write or edit concise Bahasa Indonesia, English, and Simplified Chinese outline summaries that follow the source structure without copying its wording.
 3. Compare the source record and outline with the previously stored version when one exists.
-4. Preview the source action and publish the syllabus version.
+4. Preview the source panel and publish the syllabus version.
 
 **Acceptance Criteria**
 
-- Given an official source, then the authority, validated source link or locator, edition, declared publication/effective date or Not Stated status, and last checked date are stored.
+- Given an official source, then the authority, validated source link(s) or locator(s) for each configured language edition, edition, declared publication/effective date or Not Stated status, and last checked date are stored.
 - Given a syllabus outline item, then its Bahasa Indonesia, English, and Simplified Chinese summaries retain source position/order and are identified as YukCSCA-authored rather than official wording.
-- Given a student-facing source reference, then it is presented as one compact, accessible source action with authority, edition, and last checked date rather than repetitive explanatory text.
+- Given a student-facing source reference, then it is presented as one compact, accessible source panel with authority, edition, last checked date, and one open action per configured official language edition rather than repetitive explanatory text.
 - Given a newer syllabus version, then added, removed, or changed outline items and mappings are shown before it is published.
 - Given a coverage claim, then it names the syllabus version used for the calculation.
 

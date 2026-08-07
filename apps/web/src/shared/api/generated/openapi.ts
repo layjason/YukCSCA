@@ -549,12 +549,17 @@ export interface components {
     };
     /** @enum {string} */
     'AcademicAdmin.OfficialDateStatus': 'DECLARED' | 'NOT_STATED';
+    /** @description One admin-maintained official CSCA syllabus PDF locator for a language edition (for example Mathematics EN and zh-CN). */
+    'AcademicAdmin.OfficialSourceLink': {
+      language: components['schemas']['AcademicAdmin.ExamLanguage'];
+      url: string;
+    };
     'AcademicAdmin.OfficialSyllabus': {
       subject: components['schemas']['AcademicAdmin.AcademicSubject'];
       authority?: string;
       editionLabel?: string;
-      sourceUrl?: string;
-      sourceLanguages?: components['schemas']['AcademicAdmin.ExamLanguage'][];
+      /** @description Official PDF locators by language edition. CSCA subjects with dual exam languages typically store both en and zh-CN; Chinese-only subjects store one. Not YukCSCA outline summary languages. */
+      sourceLinks?: components['schemas']['AcademicAdmin.OfficialSourceLink'][];
       /** Format: date-time */
       retrievedAt?: string;
       /** Format: date-time */

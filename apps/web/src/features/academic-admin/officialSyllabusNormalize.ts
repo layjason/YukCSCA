@@ -25,8 +25,16 @@ export function normalizeOfficialDate(value: OfficialDate | null | undefined): O
 }
 
 export function normalizeOfficialSyllabus(syllabus: OfficialSyllabus): OfficialSyllabus {
+  const sourceLinks = (syllabus.sourceLinks ?? [])
+    .filter((link) => link?.language && typeof link.url === 'string' && link.url.trim().length > 0)
+    .map((link) => ({
+      language: link.language,
+      url: link.url.trim(),
+    }));
+
   return {
     ...syllabus,
+    sourceLinks,
     // Backend requireExact(REFERENCE_ONLY); empty/missing → INCOMPATIBLE on publish.
     permittedUse: 'REFERENCE_ONLY',
     publishedOn: normalizeOfficialDate(syllabus.publishedOn),

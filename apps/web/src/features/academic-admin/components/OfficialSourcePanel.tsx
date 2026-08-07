@@ -7,6 +7,9 @@ import {
 import { ensureExamStructure } from '../subjectProfile';
 import type { OfficialFieldKey } from '../validationMapping';
 import type { ExamLanguage, OfficialSyllabus } from '../types';
+import type { components } from '@/shared/api/generated/openapi';
+
+type OfficialSourceLink = components['schemas']['AcademicAdmin.OfficialSourceLink'];
 
 interface OfficialSourcePanelProps {
   syllabus: OfficialSyllabus;
@@ -14,6 +17,8 @@ interface OfficialSourcePanelProps {
   isPublished?: boolean;
   fieldErrors?: Partial<Record<OfficialFieldKey, string | string[]>>;
 }
+
+const SOURCE_LANGUAGES: ExamLanguage[] = ['en', 'zh-CN'];
 
 function joinFieldError(value: string | string[] | undefined): string | undefined {
   if (!value) return undefined;
@@ -37,6 +42,23 @@ function fromDatetimeLocalValue(value: string): string | undefined {
   return date.toISOString();
 }
 
+function urlForLanguage(links: OfficialSourceLink[] | undefined, language: ExamLanguage): string {
+  return links?.find((link) => link.language === language)?.url ?? '';
+}
+
+function withSourceLinkUrl(
+  links: OfficialSourceLink[] | undefined,
+  language: ExamLanguage,
+  url: string,
+): OfficialSourceLink[] {
+  const trimmed = url.trim();
+  const others = (links ?? []).filter((link) => link.language !== language);
+  if (!trimmed) return others;
+  return [...others, { language, url: trimmed }].sort((a, b) =>
+    a.language.localeCompare(b.language),
+  );
+}
+
 export function OfficialSourcePanel({
   syllabus,
   onChange,
@@ -53,7 +75,7 @@ export function OfficialSourcePanel({
   const checkedDate = normalized.lastCheckedAt
     ? new Date(normalized.lastCheckedAt).toLocaleDateString()
     : t('admin.academic.sourcePanel.notCheckedYet');
-  const sourceLanguages = normalized.sourceLanguages ?? [];
+  const sourceLinks = normalized.sourceLinks ?? [];
   const examLanguages = normalized.examStructure?.examLanguages ?? [];
 
   const patch = (partial: OfficialSyllabus) => onChange(normalizeOfficialSyllabus(partial));
@@ -78,18 +100,14 @@ export function OfficialSourcePanel({
 
   const fieldError = (key: OfficialFieldKey) => joinFieldError(fieldErrors[key]);
 
-  const toggleLanguage = (
-    field: 'sourceLanguages' | 'examLanguages',
-    language: ExamLanguage,
-    checked: boolean,
-  ) => {
-    if (field === 'sourceLanguages') {
-      const current = new Set(sourceLanguages);
-      if (checked) current.add(language);
-      else current.delete(language);
-      patch({ ...normalized, sourceLanguages: Array.from(current) as ExamLanguage[] });
-      return;
-    }
+  const setSourceLinkUrl = (language: ExamLanguage, url: string) => {
+    patch({
+      ...normalized,
+      sourceLinks: withSourceLinkUrl(normalized.sourceLinks, language, url),
+    });
+  };
+
+  const toggleExamLanguage = (language: ExamLanguage, checked: boolean) => {
     const current = new Set(examLanguages);
     if (checked) current.add(language);
     else current.delete(language);
@@ -102,6 +120,11 @@ export function OfficialSourcePanel({
       },
     });
   };
+
+  const examLanguageLabel = (language: ExamLanguage) =>
+    language === 'en'
+      ? t('admin.academic.questions.examLangEn')
+      : t('admin.academic.questions.examLangZh');
 
   return (
     <div className={`official-source-card ${isPublished ? 'official-source-card-mint' : ''}`}>
@@ -120,40 +143,66 @@ export function OfficialSourcePanel({
           </h2>
         </div>
 
-        {normalized.sourceUrl ? (
-          <a
-            href={normalized.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-official-source-action"
-            aria-label={`${t('admin.academic.sourcePanel.openSyllabus')} (${t('admin.academic.sourcePanel.opensInNewTab')})`}
-          >
-            <span>{t('admin.academic.sourcePanel.openSyllabus')}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        ) : null}
+        <div className="official-source-actions">
+          {SOURCE_LANGUAGES.map((language) => {
+            const href = urlForLanguage(sourceLinks, language);
+            if (!href) return null;
+            const openLabel = t('admin.academic.sourcePanel.openSyllabusLanguage', {
+              language,
+            });
+            return (
+              <a
+                key={language}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-official-source-action"
+                aria-label={`${openLabel} (${t('admin.academic.sourcePanel.opensInNewTab')})`}
+              >
+                <span>{openLabel}</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            );
+          })}
+        </div>
       </div>
 
       <div className="official-source-body">
-        <div>
-          <label htmlFor="official-source-url" className="admin-field-label">
-            {t('admin.academic.sourcePanel.sourceUrlLabel')}
-          </label>
-          <input
-            id="official-source-url"
-            type="url"
-            className="text-input admin-field-control"
-            placeholder={t('admin.academic.sourcePanel.sourceUrlPlaceholder')}
-            value={normalized.sourceUrl || ''}
-            onChange={(e) => patch({ ...normalized, sourceUrl: e.target.value })}
-            aria-invalid={fieldError('sourceUrl') ? true : undefined}
-          />
-          {fieldError('sourceUrl') ? (
+        <fieldset className="admin-fieldset">
+          <legend className="admin-fieldset-legend">
+            {t('admin.academic.sourcePanel.sourceLinks')}
+          </legend>
+          <div className="admin-grid-auto">
+            {SOURCE_LANGUAGES.map((language) => {
+              const fieldId = `official-source-url-${language}`;
+              return (
+                <div key={language}>
+                  <label htmlFor={fieldId} className="admin-field-label">
+                    {language}
+                  </label>
+                  <input
+                    id={fieldId}
+                    type="url"
+                    className="text-input admin-field-control"
+                    placeholder={
+                      language === 'en'
+                        ? t('admin.academic.sourcePanel.sourceUrlPlaceholderEn')
+                        : t('admin.academic.sourcePanel.sourceUrlPlaceholderZh')
+                    }
+                    value={urlForLanguage(sourceLinks, language)}
+                    onChange={(e) => setSourceLinkUrl(language, e.target.value)}
+                    aria-invalid={fieldError('sourceLinks') ? true : undefined}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          {fieldError('sourceLinks') ? (
             <p className="admin-field-error" role="alert">
-              {fieldError('sourceUrl')}
+              {fieldError('sourceLinks')}
             </p>
           ) : null}
-        </div>
+        </fieldset>
 
         <div className="admin-grid-auto">
           <div>
@@ -335,49 +384,18 @@ export function OfficialSourcePanel({
 
         <fieldset className="admin-fieldset">
           <legend className="admin-fieldset-legend">
-            {t('admin.academic.sourcePanel.sourceLanguages')}
-          </legend>
-          <div className="admin-check-row-inline">
-            {(['en', 'zh-CN'] as ExamLanguage[]).map((language) => (
-              <label key={language} className="admin-check-row">
-                <input
-                  type="checkbox"
-                  checked={sourceLanguages.includes(language)}
-                  onChange={(e) => toggleLanguage('sourceLanguages', language, e.target.checked)}
-                />
-                <span>
-                  {language === 'en'
-                    ? t('admin.academic.questions.examLangEn')
-                    : t('admin.academic.questions.examLangZh')}
-                </span>
-              </label>
-            ))}
-          </div>
-          {fieldError('sourceLanguages') ? (
-            <p className="admin-field-error" role="alert">
-              {fieldError('sourceLanguages')}
-            </p>
-          ) : null}
-        </fieldset>
-
-        <fieldset className="admin-fieldset">
-          <legend className="admin-fieldset-legend">
             {t('admin.academic.sourcePanel.examStructure')}
           </legend>
           <p className="admin-muted-sm">{t('admin.academic.sourcePanel.examStructureFixed')}</p>
           <div className="admin-check-row-inline">
-            {(['en', 'zh-CN'] as ExamLanguage[]).map((language) => (
+            {SOURCE_LANGUAGES.map((language) => (
               <label key={language} className="admin-check-row">
                 <input
                   type="checkbox"
                   checked={examLanguages.includes(language)}
-                  onChange={(e) => toggleLanguage('examLanguages', language, e.target.checked)}
+                  onChange={(e) => toggleExamLanguage(language, e.target.checked)}
                 />
-                <span>
-                  {language === 'en'
-                    ? t('admin.academic.questions.examLangEn')
-                    : t('admin.academic.questions.examLangZh')}
-                </span>
+                <span>{examLanguageLabel(language)}</span>
               </label>
             ))}
           </div>

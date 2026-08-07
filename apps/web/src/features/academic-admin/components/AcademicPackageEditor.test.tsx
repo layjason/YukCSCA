@@ -45,7 +45,16 @@ const mockPackage: AcademicPackage = {
       subject: 'MATHEMATICS',
       authority: 'CSCA',
       editionLabel: '2025 Edition',
-      sourceUrl: 'https://csca.org.cn/syllabus-2025.pdf',
+      sourceLinks: [
+        {
+          language: 'en',
+          url: 'https://csca.cn/files/CSCA%20Mathematics%20Examination%20Syllabus-2025.pdf',
+        },
+        {
+          language: 'zh-CN',
+          url: 'https://csca.cn/files/CSCA%E8%80%83%E8%AF%95%E5%A4%A7%E7%BA%B2-%E6%95%B0%E5%AD%A6-2025%E7%89%88.pdf',
+        },
+      ],
       retrievedAt: '2026-07-31T00:00:00Z',
       lastCheckedAt: '2026-07-31T00:00:00Z',
     },

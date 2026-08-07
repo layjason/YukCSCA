@@ -152,9 +152,10 @@ boundary for subject preparation packages. Package lifecycle is subject-agnostic
 (one package per subject; draft/publish/archive; JSONB revisions). Creatable
 subjects and default exam structure live in an allow-listed subject profile
 (pilot: Mathematics with its CSCA 2025 defaults). Publication validates the
-official-source reference, three-language authored outline, mappings,
-resources, questions, LaTeX/image blocks, provenance, and a mock that matches
-the package's own exam structure in one transaction. Incomplete whole drafts
+official-source reference (one or two language-edition PDF locators, typically
+en and/or zh-CN), three-language authored outline, mappings, resources,
+questions, LaTeX/image blocks, provenance, and a mock that matches the
+package's own exam structure in one transaction. Incomplete whole drafts
 can be saved with expected-revision checks. Published JSONB revisions are
 immutable. PNG/JPEG assets are bounded, decoded, re-encoded without submitted
 metadata, hashed, and stored in PostgreSQL separately from revision documents.
