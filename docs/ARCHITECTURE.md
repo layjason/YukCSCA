@@ -161,6 +161,12 @@ metadata, hashed, and stored in PostgreSQL separately from revision documents.
 Archive retains revisions, images, and value-free audit evidence. Student
 consumption remains outside this slice.
 
+VS-005 is `DONE` after contract, PostgreSQL/Flyway (V6–V7), backend, production
+admin frontend (`/admin/academic-packages` under `features/academic-admin`),
+security/privacy, subject-profile extensibility, and product-owner journey
+evidence. KaTeX is used for admin formula preview only. Multi-subject content
+seeding and all student syllabus/practice/mock consumption remain later slices.
+
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
 for the authenticated owning `STUDENT`. The application validates the complete
 patch before mutation, locks the existing profile row, treats empty or
@@ -183,7 +189,8 @@ limited to `/app/profile` and `/app/profile/languages`; `/app/more` remains
 inside the preview-workspace gate, and learning, family, access, commerce, and
 other workspace destinations remain prototype-only or unimplemented until their
 owning slices are accepted. VS-002 is also `DONE` after full implementation,
-verification, and product owner signoff.
+verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
+and first Mathematics package path.
 
 ## Prototype boundaries
 
