@@ -235,21 +235,90 @@
   },
   "learn": {
     "title": "学习",
-    "placeholder": "课程结构和课时将显示在此处。",
-    "continue": "继续学习",
-    "topics": "主题",
-    "prerequisite": "前置知识",
-    "viewSyllabus": "查看大纲覆盖",
-    "trackTitle": "当前科目轨道",
-    "examLanguageEnglish": "英文考试语言",
-    "trackDescription": "英文数学和中文数学共享概念结构，但题目、术语和语言证据按轨道分开。",
-    "emptyTitle": "尚未分配课程",
-    "emptyDescription": "完成预览计划后即可获得相互衔接的课程和练习。",
-    "hierarchyTitle": "课程路径",
-    "moduleAlgebra": "模块：代数",
-    "moduleDescription": "平台内容覆盖与个人学习状态是两个独立维度。",
-    "prerequisiteValue": "先修：含变量的算术运算",
-    "masteryCaveat": "打开或阅读内容不能证明掌握。检查点、后续练习和独立复测才提供证据。"
+    "loading": "正在加载学习内容…",
+    "retry": "重试",
+    "backToLearn": "返回学习",
+    "backToBrowse": "返回大纲",
+    "openSubject": "打开科目",
+    "packagesLede": "选择已发布的科目包，浏览大纲并学习课时。",
+    "emptyPackagesTitle": "尚无已发布的科目包",
+    "emptyPackagesDescription": "学校或平台发布备考包后会显示在这里。这不是示例大纲数据。",
+    "continue": "继续",
+    "contentProgressNote": "“内容完成”表示你已读完本课，不代表掌握、检查点或练习证据。",
+    "subjects": {
+      "MATHEMATICS": "数学"
+    },
+    "progress": {
+      "notStarted": "未开始",
+      "inProgress": "进行中",
+      "contentComplete": "内容完成"
+    },
+    "coverage": {
+      "fullyCovered": "已覆盖",
+      "partiallyCovered": "部分覆盖",
+      "notCovered": "开发中"
+    },
+    "browse": {
+      "officialSource": "CSCA 官方来源",
+      "authority": "权威机构",
+      "edition": "版本",
+      "lastChecked": "最近核对",
+      "permittedUse": "允许用途",
+      "permittedUseValues": {
+        "REFERENCE_ONLY": "仅供参考"
+      },
+      "openOfficial": "打开官方大纲（{{language}}）",
+      "examLanguage": {
+        "en": "英文",
+        "zh-CN": "中文"
+      },
+      "examLanguagesLabel": "考试语言",
+      "officialSourceNote": "官方文件为外部参考材料。YukCSCA 大纲摘要与课时由平台编写。",
+      "outlineTitle": "大纲结构",
+      "coverageLegend": "覆盖表示是否已有已发布课时",
+      "progressLegend": "标签仅表示你的内容进度",
+      "emptyOutlineTitle": "大纲尚不可用",
+      "emptyOutlineDescription": "该科目包尚未列出含课时的大纲主题。",
+      "untitledTopic": "未命名主题",
+      "untitledLesson": "未命名课时",
+      "notFoundTitle": "未找到科目包",
+      "notFoundDescription": "该科目尚无已发布包，或已不可用。",
+      "revision": "已发布修订 {{number}}"
+    },
+    "lesson": {
+      "title": "课时",
+      "tempLanguageNote": "此语言切换仅用于本课，不会更改个人资料中的默认讲解语言。",
+      "explanationLanguage": "讲解语言",
+      "languageUnavailableTitle": "此讲解语言不可用",
+      "languageUnavailableDescription": "没有 {{language}} 的已编写版本。请选择其他可用语言——应用不会静默替换内容。",
+      "languageUnavailableHint": "使用上方语言切换到可用版本。",
+      "languageUnavailableOption": "本课不可用",
+      "noLanguagesAvailable": "本课尚无已发布的讲解语言版本。",
+      "markContentComplete": "标记内容完成",
+      "savingProgress": "保存中…",
+      "contentCompleteAck": "内容完成——你可以随时重读。这不代表掌握。",
+      "progressAria": "课时内容块阅读进度",
+      "mathAria": "数学表达式：{{latex}}",
+      "mathError": "无法显示该公式。",
+      "imageUnavailable": "图片不可用",
+      "imageLoading": "正在加载图片…",
+      "notFoundTitle": "未找到课时",
+      "notFoundDescription": "该课时不在当前已发布包中，或链接已过期。"
+    },
+    "errors": {
+      "title": "出了点问题",
+      "loadPackages": "无法加载已发布科目包。请检查网络后重试。",
+      "loadBrowse": "无法加载该科目包。请检查网络后重试。",
+      "loadLesson": "无法加载该课时。请检查网络后重试。",
+      "saveProgress": "无法保存内容进度。请重试。",
+      "progressValidation": "因请求无效，无法保存进度。",
+      "forbidden": "你无权访问此学习内容。",
+      "unauthorized": "请重新登录以继续学习。",
+      "invalidSubjectTitle": "未知科目",
+      "invalidSubjectDescription": "学习中不支持该科目。",
+      "invalidLessonTitle": "无效的课时链接",
+      "invalidLessonDescription": "课时地址不完整或格式错误。"
+    }
   },
   "syllabus": {
     "title": "大纲覆盖",
