@@ -7,6 +7,8 @@ spring:
     port: 1025
 
 yukcsca:
+  admin:
+    first-email: admin@example.com
   auth:
     google-client-id: test-google-client
     jwt-secret: 01234567890123456789012345678901

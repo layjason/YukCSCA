@@ -16,6 +16,8 @@ import com.yukcsca.identity.application.VerificationEmail;
 import com.yukcsca.identity.application.VerificationEmailDispatcher;
 import com.yukcsca.identity.application.VerificationEmailSender;
 import com.yukcsca.identity.domain.CredentialEmailOutboxStatus;
+import com.yukcsca.identity.domain.SecurityEventType;
+import com.yukcsca.identity.domain.UserRole;
 import com.yukcsca.identity.infrastructure.AuthIdentityRepository;
 import com.yukcsca.identity.infrastructure.AuthSessionRepository;
 import com.yukcsca.identity.infrastructure.CredentialAuthenticatorRepository;
@@ -132,6 +134,33 @@ class CredentialAuthHttpIT {
         .andExpect(cookie().httpOnly("yukcsca_refresh", true))
         .andExpect(jsonPath("$.user.displayName").doesNotExist())
         .andExpect(jsonPath("$.user.role").value("UNASSIGNED"));
+  }
+
+  @Test
+  void configuredCredentialAccountBecomesAdminOnlyOnSuccessfulLogin() throws Exception {
+    String token = registerAndDeliver("admin@example.com");
+    mvc.perform(
+            post("/api/v1/auth/credential-verifications/complete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(completeRequest(token, "violet mountain library compass")))
+        .andExpect(status().isOk());
+    assertThat(users.findByEmailIgnoreCase("admin@example.com").orElseThrow().getRole())
+        .isEqualTo(UserRole.UNASSIGNED);
+
+    mvc.perform(
+            post("/api/v1/auth/credentials/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"email":"ADMIN@example.com","password":"violet mountain library compass"}
+                    """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.user.role").value("ADMIN"));
+
+    assertThat(users.findByEmailIgnoreCase("admin@example.com").orElseThrow().getRole())
+        .isEqualTo(UserRole.ADMIN);
+    assertThat(securityEvents.countByEventType(SecurityEventType.FIRST_ADMIN_PROVISIONED))
+        .isEqualTo(1);
   }
 
   @Test

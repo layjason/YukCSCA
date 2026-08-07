@@ -11,16 +11,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.yukcsca.identity.application.AuthIdentityStore;
 import com.yukcsca.identity.application.GoogleIdentity;
 import com.yukcsca.identity.application.GoogleTokenVerifier;
 import com.yukcsca.identity.application.InvalidCredentialException;
+import com.yukcsca.identity.application.UserAccountStore;
+import com.yukcsca.identity.domain.AuthIdentity;
+import com.yukcsca.identity.domain.AuthProvider;
 import com.yukcsca.identity.domain.SecurityEventType;
+import com.yukcsca.identity.domain.UserAccount;
+import com.yukcsca.identity.domain.UserRole;
 import com.yukcsca.identity.infrastructure.AuthIdentityRepository;
 import com.yukcsca.identity.infrastructure.AuthSessionRepository;
 import com.yukcsca.identity.infrastructure.SecurityEventRepository;
 import com.yukcsca.identity.infrastructure.UserAccountRepository;
 import com.yukcsca.support.PostgresTestConfiguration;
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +87,7 @@ class AuthHttpIT {
             .andExpect(cookie().path("yukcsca_refresh", "/api/v1/auth"))
             .andExpect(jsonPath("$.tokenType").value("Bearer"))
             .andExpect(jsonPath("$.user.email").value("student@example.com"))
+            .andExpect(jsonPath("$.user.role").value("UNASSIGNED"))
             .andReturn();
 
     assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("SameSite=Lax");
@@ -104,6 +112,71 @@ class AuthHttpIT {
     assertThat(secondBody.get("user").get("id").asText())
         .isEqualTo(firstBody.get("user").get("id").asText());
     assertThat(users.count()).isEqualTo(1);
+  }
+
+  @Test
+  void configuredVerifiedAccountBecomesAdminAndRepeatLoginAndRefreshAreIdempotent()
+      throws Exception {
+    stubValidGoogleIdentity("pilot-admin", "ADMIN@example.com");
+
+    MvcResult first =
+        login("10.0.0.13")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.user.role").value("ADMIN"))
+            .andReturn();
+    Cookie refresh = first.getResponse().getCookie("yukcsca_refresh");
+    assertThat(refresh).isNotNull();
+
+    login("10.0.0.14").andExpect(status().isOk()).andExpect(jsonPath("$.user.role").value("ADMIN"));
+    mvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.user.role").value("ADMIN"));
+
+    assertThat(users.findByEmailIgnoreCase("admin@example.com").orElseThrow().getRole())
+        .isEqualTo(UserRole.ADMIN);
+    assertThat(securityEvents.countByEventType(SecurityEventType.FIRST_ADMIN_PROVISIONED))
+        .isEqualTo(1);
+  }
+
+  @Test
+  void configuredAccountWithExistingStudentRoleIsRejectedWithoutRoleChange() throws Exception {
+    Instant now = Instant.parse("2026-08-01T00:00:00Z");
+    UserAccount student =
+        ((UserAccountStore) users)
+            .save(UserAccount.createGoogleUser("admin@example.com", "Student", null, now));
+    student.activateStudent(now);
+    ((UserAccountStore) users).save(student);
+    ((AuthIdentityStore) identities)
+        .save(new AuthIdentity(student, AuthProvider.GOOGLE, "configured-student", now));
+    stubValidGoogleIdentity("configured-student", "admin@example.com");
+
+    login("10.0.0.15").andExpect(status().isConflict());
+
+    assertThat(((UserAccountStore) users).findById(student.getId()).orElseThrow().getRole())
+        .isEqualTo(UserRole.STUDENT);
+    assertThat(securityEvents.countByEventType(SecurityEventType.FIRST_ADMIN_PROVISIONED)).isZero();
+  }
+
+  @Test
+  void configuredAccountIsRejectedWhenAnotherPilotAdminAlreadyExists() throws Exception {
+    Instant now = Instant.parse("2026-08-01T00:00:00Z");
+    UserAccount existingAdmin =
+        ((UserAccountStore) users)
+            .save(UserAccount.createGoogleUser("existing-admin@example.com", "Admin", null, now));
+    existingAdmin.activateAdmin(now);
+    ((UserAccountStore) users).save(existingAdmin);
+    UserAccount configured =
+        ((UserAccountStore) users)
+            .save(UserAccount.createGoogleUser("admin@example.com", "Configured", null, now));
+    ((AuthIdentityStore) identities)
+        .save(new AuthIdentity(configured, AuthProvider.GOOGLE, "second-admin", now));
+    stubValidGoogleIdentity("second-admin", "admin@example.com");
+
+    login("10.0.0.16").andExpect(status().isConflict());
+
+    assertThat(((UserAccountStore) users).findById(configured.getId()).orElseThrow().getRole())
+        .isEqualTo(UserRole.UNASSIGNED);
+    assertThat(users.count()).isEqualTo(2);
   }
 
   @Test

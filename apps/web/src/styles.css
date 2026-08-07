@@ -168,6 +168,98 @@ button {
   text-transform: uppercase;
 }
 
+/* Generic access boundary (role cannot use destination) */
+.unsupported-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(var(--space-md), 4vw, var(--space-xxl));
+  background: var(--color-app-background);
+}
+
+.unsupported-card {
+  width: min(100%, 520px);
+  padding: clamp(var(--space-lg), 4vw, var(--space-xxl));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  animation: surface-enter var(--motion-deliberate) var(--ease-standard) both;
+}
+
+.unsupported-title {
+  margin: var(--space-xs) 0 var(--space-md);
+  font-size: clamp(1.5rem, 5.5vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  max-width: none;
+}
+
+.unsupported-body {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: clamp(0.95rem, 2.8vw, 1.05rem);
+  line-height: 1.55;
+  max-width: 40ch;
+}
+
+.unsupported-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+}
+
+.unsupported-action {
+  flex: 1 1 auto;
+  min-width: min(100%, 10rem);
+}
+
+@media (max-width: 600px) {
+  .unsupported-shell {
+    place-items: stretch;
+    padding: 0;
+  }
+
+  .unsupported-card {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: max(var(--space-xl), env(safe-area-inset-top))
+      max(var(--space-md), env(safe-area-inset-left))
+      max(var(--space-xl), env(safe-area-inset-bottom))
+      max(var(--space-md), env(safe-area-inset-right));
+  }
+
+  .unsupported-body {
+    max-width: none;
+  }
+
+  .unsupported-actions {
+    flex-direction: column;
+    width: 100%;
+    margin-top: var(--space-lg);
+  }
+
+  .unsupported-action {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unsupported-card {
+    animation: none;
+  }
+}
+
 .error-message,
 .field-error {
   color: var(--color-danger) !important;
@@ -4808,18 +4900,257 @@ a.credential-full-link.btn-primary {
   }
 }
 
-/* ─── Toast Notifications (DESIGN.md Aligned) ────────────────────────────── */
+/* ===== VS-005: Admin shell ===== */
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background: var(--color-app-background);
+}
+
+.admin-shell-nav {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg) var(--space-md);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-canvas);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.admin-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+  padding: 0 var(--space-xs);
+}
+
+.admin-shell-logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.admin-shell-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-shell-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+
+.admin-shell-role {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.admin-shell-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  flex: 1;
+}
+
+.admin-shell-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 550;
+  min-height: 44px;
+  transition:
+    background-color var(--motion-instant) var(--ease-standard),
+    color var(--motion-instant) var(--ease-standard);
+}
+
+.admin-shell-nav-item:hover {
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+}
+
+.admin-shell-nav-item-active {
+  background: var(--color-block-lilac);
+  color: var(--color-ink);
+  font-weight: 650;
+}
+
+.admin-shell-nav-item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.admin-shell-nav-icon {
+  font-size: 0.95rem;
+  width: 1.25em;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.admin-shell-nav-label {
+  min-width: 0;
+}
+
+.admin-shell-footer {
+  margin-top: auto;
+  padding: var(--space-md) var(--space-sm);
+  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.admin-shell-user-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-xs);
+}
+
+.admin-shell-user-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.admin-shell-user {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-shell-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.admin-shell-content {
+  flex: 1;
+  padding: var(--space-xl) clamp(var(--space-lg), 3vw, var(--space-xxl));
+  width: 100%;
+  max-width: none;
+}
+
+.admin-shell-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 959px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-shell-nav {
+    display: none;
+  }
+
+  .admin-shell-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-canvas);
+    padding: var(--space-xxs) var(--space-xs) max(var(--space-xxs), env(safe-area-inset-bottom));
+    justify-content: space-around;
+  }
+
+  .admin-shell-bottom-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-xs) var(--space-xxs);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    font-size: 0.65rem;
+    font-weight: 550;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .admin-shell-bottom-item-active {
+    color: var(--color-ink);
+    font-weight: 650;
+  }
+
+  .admin-shell-bottom-item:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+  }
+
+  .admin-shell-bottom-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+
+  .admin-shell-content-wrapper {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .admin-shell-content {
+    padding: var(--space-md);
+  }
+}
+
+/* ─── Toast Notifications (single design system) ───────────────────────────
+ * Upper-right corner; message + dismiss (X). Tone via soft surface color only.
+ * Prefer shared <Toast /> — do not invent feature-local toast chrome.
+ */
 
 .toast-container {
   position: fixed;
   top: 1.5rem;
   right: 1.5rem;
+  left: auto;
+  bottom: auto;
   z-index: 99999;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-width: 420px;
-  width: calc(100vw - 3rem);
+  width: min(22rem, calc(100vw - 2rem));
+  max-width: 22rem;
   pointer-events: none;
 }
 
@@ -4827,31 +5158,28 @@ a.credential-full-link.btn-primary {
   .toast-container {
     top: 1rem;
     right: 1rem;
-    left: 1rem;
-    width: auto;
-    max-width: none;
   }
 }
 
 .toast {
-  position: relative;
-  overflow: hidden;
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.875rem 1.25rem;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  line-height: 1.45;
+  border: 1px solid var(--color-border-strong);
   box-shadow: var(--shadow-floating);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
   animation: toast-slide-down var(--motion-standard) var(--ease-standard) forwards;
 }
 
 @keyframes toast-slide-down {
   from {
     opacity: 0;
-    transform: translateY(-12px) scale(0.98);
+    transform: translateY(-10px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -4868,64 +5196,39 @@ a.credential-full-link.btn-primary {
 .toast-success {
   background: var(--color-success-soft);
   color: var(--color-success);
-  border: 1px solid var(--color-border-strong);
 }
 
 .toast-info {
   background: var(--color-info-soft);
   color: var(--color-info);
-  border: 1px solid var(--color-border-strong);
 }
 
-.toast-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-pill);
-  flex-shrink: 0;
-}
-
-.toast-success .toast-icon-wrapper {
-  background: color-mix(in srgb, var(--color-success) 15%, transparent);
-  color: var(--color-success);
-}
-
-.toast-info .toast-icon-wrapper {
-  background: color-mix(in srgb, var(--color-info) 15%, transparent);
-  color: var(--color-info);
-}
-
-.toast-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.toast-body {
-  flex: 1;
-  font-weight: 600;
+.toast-error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .toast-message {
-  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
 }
 
 .toast-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
-  border: none;
   color: currentColor;
-  opacity: 0.7;
+  opacity: 0.72;
   cursor: pointer;
-  padding: 0;
-  margin-left: 0.25rem;
-  flex-shrink: 0;
   transition:
     opacity var(--motion-quick) var(--ease-standard),
     background-color var(--motion-quick) var(--ease-standard);
@@ -4937,7 +5240,12 @@ a.credential-full-link.btn-primary {
   background: color-mix(in srgb, var(--color-ink) 8%, transparent);
 }
 
+.toast-close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
 .toast-close-icon {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
 }

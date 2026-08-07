@@ -111,6 +111,16 @@ The current repository intentionally uses a lightweight CSS foundation rather th
 - Do not add a component library, animation library, CSS-in-JS runtime, or utility framework merely to reproduce the design language.
 - Prefer CSS transitions and keyframes for small interactions. Introduce a motion library only for an accepted flow whose state continuity cannot be expressed clearly with the current stack.
 
+## Icons (Lucide)
+
+Product UI icons come from **`lucide-react`** (see root `DESIGN.md` Icons section).
+
+- Use Lucide for navigation, toolbars, empty states, and repeated secondary actions such as remove/delete-in-list.
+- Prefer icon-only controls with localized `aria-label` for dense secondary destructive actions; keep text on primary and high-stakes buttons.
+- Do not hand-draw ad-hoc SVG icons when Lucide already provides the metaphor.
+- Do not use emoji or unicode symbols as the long-term product icon system.
+- Import only the icons you need: `import { Trash2, ChevronRight } from 'lucide-react'`.
+
 ## Anti-generic review
 
 Reject a proposed screen when it relies on any of these as its main visual idea:

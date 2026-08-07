@@ -1,5 +1,5 @@
 export type RouteAvailability = 'implemented' | 'prototype' | 'unavailable';
-export type RouteAudience = 'public' | 'student' | 'parent-preview' | 'account';
+export type RouteAudience = 'public' | 'student' | 'parent-preview' | 'account' | 'admin';
 export type RouteAccess =
   | 'public'
   | 'unsupported'
@@ -11,7 +11,8 @@ export type RouteAccess =
   | 'production-auth'
   | 'student-settings'
   | 'student-onboarding-preview'
-  | 'student-workspace-preview';
+  | 'student-workspace-preview'
+  | 'admin-workspace';
 
 export type NavigationPlacement = 'primary' | 'secondary' | 'hidden';
 export type MobileNavigationPlacement = 'primary' | 'more' | 'hidden';
@@ -826,6 +827,31 @@ export const routeManifest = defineRoutes([
     false,
     'primary',
   ),
+  // Admin academic foundation
+  route(
+    'admin-packages',
+    '/admin/academic-packages',
+    'admin.nav.packages',
+    'implemented',
+    'admin-workspace',
+    'admin',
+    'primary',
+    ['14.1', '14.4', '14.5', '14.6'],
+    false,
+    'primary',
+    [{ path: '/admin/academic-packages' }],
+  ),
+  route(
+    'admin-package-detail',
+    '/admin/academic-packages/:id',
+    'admin.academic.editPackage',
+    'implemented',
+    'admin-workspace',
+    'admin',
+    'hidden',
+    ['14.4', '14.5', '14.6'],
+    false,
+  ),
 ] as const);
 
 export type RouteId = (typeof routeManifest)[number]['id'];
@@ -844,6 +870,12 @@ export const parentNavRoutes = routeManifest.filter(
 );
 export const parentMobileNavRoutes = routeManifest.filter(
   (route) => route.mobileNavigation === 'primary' && route.audience === 'parent-preview',
+);
+export const adminNavRoutes = routeManifest.filter(
+  (route) => route.navigation === 'primary' && route.audience === 'admin',
+);
+export const adminMobileNavRoutes = routeManifest.filter(
+  (route) => route.mobileNavigation === 'primary' && route.audience === 'admin',
 );
 export const publicNavRoutes = routeManifest.filter(
   (route) => route.navigation === 'primary' && route.audience === 'public',

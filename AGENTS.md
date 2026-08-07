@@ -184,6 +184,7 @@ Use an application-facing port or explicit public use case instead.
 - Build mobile-first and bandwidth-conscious behavior with keyboard access, semantic HTML, visible focus, and basic screen-reader support.
 - Treat root `DESIGN.md` as the visual/interaction contract. Use the shared CSS variables, one dominant action per task region, restrained pastel context surfaces, and purposeful motion with reduced-motion support.
 - Do not default to gradients, glassmorphism, glow, abstract blobs, random pastel cards, equal-weight dashboard card grids, decorative AI/robot imagery, or perpetual animation.
+- Use `lucide-react` for product icons. Prefer Lucide icon-only controls with localized `aria-label` for repeated secondary actions (for example remove/delete-in-list); keep text labels on primary and high-stakes actions. Do not hand-author one-off SVGs or use emoji for UI chrome when Lucide has a match.
 - Design the complete task sequence and its initial, loading, empty, validation, failure, stale, success, and recovery states before polishing an isolated component.
 - Add or change a semantic design token in `DESIGN.md` first, then mirror it in the shared CSS foundation; do not scatter raw color values through feature styles.
 - Comment decisions, invariants, and non-obvious edge cases—not every function. Code comments and API documentation use clear English; user-facing content is localized.

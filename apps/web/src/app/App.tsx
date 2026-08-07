@@ -6,9 +6,13 @@ import { PreviewContextGuard } from '@/app/guards/PreviewContextGuard';
 import { RoleSelectionGuard } from '@/app/guards/RoleSelectionGuard';
 import { ParentOnboardingGuard } from '@/app/guards/ParentOnboardingGuard';
 import { StudentExperienceGuard } from '@/app/guards/StudentExperienceGuard';
+import { AdminGuard } from '@/app/guards/AdminGuard';
 import { PublicSiteLayout } from '@/app/layouts/PublicSiteLayout';
+import AcademicAdminDashboardPage from '@/features/academic-admin/AcademicAdminDashboardPage';
+import AcademicPackageDetailPage from '@/features/academic-admin/AcademicPackageDetailPage';
 import { OnboardingLayout } from '@/app/layouts/OnboardingLayout';
 import { AppShellLayout } from '@/app/layouts/AppShellLayout';
+import { AdminShellLayout } from '@/app/layouts/AdminShellLayout';
 import { ParentShellLayout } from '@/app/layouts/ParentShellLayout';
 import { UnsupportedRolePage } from '@/app/layouts/UnsupportedRolePage';
 import { StudentMorePage } from '@/app/layouts/StudentMorePage';
@@ -112,6 +116,10 @@ export default function App(): React.JSX.Element {
         </Route>
       </Route>
 
+      <Route element={<AdminGuard />}>
+        <Route element={<AdminShellLayout />}>{renderRoutes('admin-workspace')}</Route>
+      </Route>
+
       <Route path="*" element={<Navigate to={getRouteById('home').path} replace />} />
     </Routes>
   );
@@ -188,6 +196,8 @@ const routeElements = {
   'profile-family': <FamilyPage />,
   'profile-access': <AccessPage />,
   more: <StudentMorePage />,
+  'admin-packages': <AcademicAdminDashboardPage />,
+  'admin-package-detail': <AcademicPackageDetailPage />,
 } satisfies Record<RouteId, React.JSX.Element>;
 
 function renderRoutes(access: RouteAccess): React.JSX.Element[] {

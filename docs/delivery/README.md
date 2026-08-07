@@ -116,7 +116,7 @@ Keep coordination inside the active slice; do not create a second contract-reque
 
 A checkpoint records the slice revision, TypeSpec files/operations, generation result, and a commit or handoff reference when available. A slice without a public-HTTP change records that disposition and skips this contract loop.
 
-Use the compact role prompt: [`backend-worker.md`](../prompts/backend-worker.md) or [`frontend-worker.md`](../prompts/frontend-worker.md).
+Use the compact role prompts: [`backend-worker.md`](../prompts/backend-worker.md), [`frontend-worker.md`](../prompts/frontend-worker.md), or [`reviewer-worker.md`](../prompts/reviewer-worker.md). In Grok, reuse the project agents of the same names under [`.grok/agents/`](../../.grok/agents/) (`backend-worker`, `frontend-worker`, `reviewer-worker`) via `/config-agents` or `subagent_type`.
 
 ## Slice sizing rules
 

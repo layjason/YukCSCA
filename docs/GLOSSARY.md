@@ -10,16 +10,17 @@ When two words could describe the same concept, choose one canonical term and ad
 - **Exam language:** Original language of a CSCA subject/question, initially English or Chinese for Mathematics.
 - **Official-source claim:** Factual statement whose authority, source locator, effective/verification date, applicability, and status are retained. It does not grant permission to copy protected source content.
 - **Platform-derived claim:** YukCSCA-authored interpretation, recommendation, learning objective, coverage judgement, explanation, or remediation relationship. It must not be labelled official.
-- **Official syllabus version:** One stored version of an official CSCA syllabus, including its source, date, and exact topic wording.
-- **Syllabus topic:** A module, topic, or statement taken directly from an official syllabus. **Avoid:** using this term for a YukCSCA-authored learning objective.
-- **Topic mapping:** Relationship between an official syllabus topic and one or more YukCSCA learning objectives.
+- **Official syllabus version:** One stored official-source record containing authority, edition, source link, available declared-date status, last checked date, and source locations. It does not copy protected syllabus wording into platform content.
+- **Syllabus outline item:** A YukCSCA-authored summary aligned to one position in an official syllabus structure. It has Bahasa Indonesia, English, and Simplified Chinese versions and must not be labelled as official wording. **Avoid:** “official syllabus topic” when referring to the platform summary.
+- **Official-source action:** Compact, visually distinct link to an admin-maintained official source, presented with authority, edition, and last checked date instead of repeated disclaimer text.
+- **Topic mapping:** Relationship between a syllabus outline item and one or more YukCSCA learning objectives.
 - **Academic content:** Reusable data such as a learning objective, lesson, terminology entry, remediation unit, question, or mock paper. It must not contain frontend routes or page-layout state.
 - **Content language version:** English, Chinese, Indonesian, accessibility, or media form of the same academic content.
 - **Attempt question copy:** Server-side snapshot of the exact question text, choices, answer, and scoring data saved when a student starts an assessment attempt. Correct answers and scoring keys remain server-side until the allowed feedback point. Later edits do not change that attempt.
 - **Practice or diagnostic set:** A named group of published questions with its purpose, subject, exam language, and optional timing or scoring settings.
 - **Mock paper:** A timed assessment created by selecting published questions and setting its duration and scoring.
 - **Follow-up recommendation:** A suggested lesson, review, practice task, terminology activity, or strategy change based on learning evidence. It is not added to a study plan until the student confirms it.
-- **Learning objective:** A YukCSCA-authored assessable skill or concept tracked for learning progress and optionally mapped to official syllabus topics. It is not official syllabus wording unless copied and cited as such.
+- **Learning objective:** A YukCSCA-authored assessable skill or concept tracked for learning progress and optionally mapped to syllabus outline items. It is separate from both official source material and the localized outline summary.
 - **Mastery state:** Evidence-backed estimate for a learner and objective; never a raw LLM opinion.
 - **Error cause:** Classified reason for an incorrect attempt, such as a conceptual gap, prerequisite gap, terminology misunderstanding, carelessness, or time management.
 - **Remediation:** Reteaching, prerequisite work, retrieval practice, and revalidation scheduled from an error cause.

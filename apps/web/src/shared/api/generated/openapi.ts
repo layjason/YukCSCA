@@ -4,6 +4,126 @@
  */
 
 export interface paths {
+  '/api/v1/admin/academic-images': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Uploads one bounded PNG or JPEG diagram with its minimal source basis. */
+    post: operations['AcademicAdminApi_uploadAcademicImage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-images/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one immutable, administrator-only academic image. */
+    get: operations['AcademicAdminApi_getAcademicImage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-packages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists the pilot academic packages visible to the authenticated administrator. */
+    get: operations['AcademicAdminApi_listAcademicPackages'];
+    put?: never;
+    /** @description Creates one academic package for a supported subject as an empty draft. One package per subject. */
+    post: operations['AcademicAdminApi_createAcademicPackage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-packages/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the administrator's current draft and active published-revision summary. */
+    get: operations['AcademicAdminApi_getAcademicPackage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-packages/{id}/draft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Replaces the package draft when its expected revision is current. Stale writes fail without merging. */
+    put: operations['AcademicAdminApi_saveAcademicPackageDraft'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-packages/{id}:archive': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Archives the package without deleting its revisions, images, or audit history. */
+    post: operations['AcademicAdminApi_archiveAcademicPackage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-packages/{id}:publish': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Validates and atomically publishes the current package draft as a new immutable active revision. */
+    post: operations['AcademicAdminApi_publishAcademicPackage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/auth/credential-registrations': {
     parameters: {
       query?: never;
@@ -209,6 +329,302 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    'AcademicAdmin.AcademicImage': {
+      id: components['schemas']['uuid'];
+      /** @enum {string} */
+      mediaType: 'image/png' | 'image/jpeg';
+      /** Format: int64 */
+      byteSize: number;
+      /** Format: int32 */
+      width: number;
+      /** Format: int32 */
+      height: number;
+      sha256: string;
+      provenance: components['schemas']['AcademicAdmin.ProvenanceRecord'];
+      /** Format: date-time */
+      createdAt: string;
+    };
+    'AcademicAdmin.AcademicPackage': {
+      id: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      status: components['schemas']['AcademicAdmin.AcademicPackageStatus'];
+      /** Format: int64 */
+      draftRevision: number;
+      activeRevision: components['schemas']['AcademicAdmin.PublishedRevisionSummary'] | null;
+      /** @description True when the saved draft differs from the active published revision; false after a successful publication. */
+      hasUnpublishedChanges: boolean;
+      draft: components['schemas']['AcademicAdmin.AcademicPackageDraft'];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    'AcademicAdmin.AcademicPackageDraft': {
+      officialSyllabus: components['schemas']['AcademicAdmin.OfficialSyllabus'];
+      outlineItems: components['schemas']['AcademicAdmin.SyllabusOutlineItem'][];
+      learningObjectives: components['schemas']['AcademicAdmin.LearningObjective'][];
+      resources: {
+        id: components['schemas']['uuid'];
+        kind?: components['schemas']['AcademicAdmin.StudyResourceKind'];
+        title: components['schemas']['AcademicAdmin.LocalizedText'];
+        outlineItemIds: components['schemas']['uuid'][];
+        objectiveIds: components['schemas']['uuid'][];
+        versions: components['schemas']['AcademicAdmin.LocalizedContent'][];
+        provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
+      }[];
+      questions: {
+        id: components['schemas']['uuid'];
+        examLanguage?: components['schemas']['AcademicAdmin.ExamLanguage'];
+        difficulty?: components['schemas']['AcademicAdmin.QuestionDifficulty'];
+        stem: components['schemas']['AcademicAdmin.ContentBlock'][];
+        options: components['schemas']['AcademicAdmin.QuestionOption'][];
+        correctOptionKey?: string;
+        explanations: components['schemas']['AcademicAdmin.LocalizedContent'][];
+        outlineItemIds: components['schemas']['uuid'][];
+        objectiveIds: components['schemas']['uuid'][];
+        provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
+      }[];
+      mocks: components['schemas']['AcademicAdmin.MockPaperRecord'][];
+    };
+    'AcademicAdmin.AcademicPackageDraftInput': {
+      officialSyllabus: components['schemas']['AcademicAdmin.OfficialSyllabus'];
+      outlineItems: components['schemas']['AcademicAdmin.SyllabusOutlineItem'][];
+      learningObjectives: components['schemas']['AcademicAdmin.LearningObjective'][];
+      resources: {
+        id: components['schemas']['uuid'];
+        kind?: components['schemas']['AcademicAdmin.StudyResourceKind'];
+        title: components['schemas']['AcademicAdmin.LocalizedText'];
+        outlineItemIds: components['schemas']['uuid'][];
+        objectiveIds: components['schemas']['uuid'][];
+        versions: components['schemas']['AcademicAdmin.LocalizedContent'][];
+        provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
+      }[];
+      questions: {
+        id: components['schemas']['uuid'];
+        examLanguage?: components['schemas']['AcademicAdmin.ExamLanguage'];
+        difficulty?: components['schemas']['AcademicAdmin.QuestionDifficulty'];
+        stem: components['schemas']['AcademicAdmin.ContentBlock'][];
+        options: components['schemas']['AcademicAdmin.QuestionOption'][];
+        correctOptionKey?: string;
+        explanations: components['schemas']['AcademicAdmin.LocalizedContent'][];
+        outlineItemIds: components['schemas']['uuid'][];
+        objectiveIds: components['schemas']['uuid'][];
+        provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
+      }[];
+      mocks: components['schemas']['AcademicAdmin.MockPaper'][];
+    };
+    /** @enum {string} */
+    'AcademicAdmin.AcademicPackageStatus': 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+    'AcademicAdmin.AcademicPackageSummary': {
+      id: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      status: components['schemas']['AcademicAdmin.AcademicPackageStatus'];
+      /** Format: int64 */
+      draftRevision: number;
+      activeRevision: components['schemas']['AcademicAdmin.PublishedRevisionSummary'] | null;
+      /** @description True when the package has saved draft changes that are not in the active published revision. */
+      hasUnpublishedChanges: boolean;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /**
+     * @description CSCA preparation subject. Additive: new subjects extend this enum without changing package lifecycle.
+     * @enum {string}
+     */
+    'AcademicAdmin.AcademicSubject': 'MATHEMATICS';
+    /** @enum {string} */
+    'AcademicAdmin.AcademicValidationCode':
+      | 'REQUIRED'
+      | 'INVALID'
+      | 'UNSUPPORTED'
+      | 'OUT_OF_RANGE'
+      | 'DUPLICATE'
+      | 'INCOMPATIBLE'
+      | 'MISSING_PERMISSION'
+      | 'STALE_REVISION';
+    'AcademicAdmin.AcademicValidationProblem': {
+      /** @enum {string} */
+      code: 'ACADEMIC_VALIDATION_FAILED';
+      violations: components['schemas']['AcademicAdmin.AcademicValidationViolation'][];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    'AcademicAdmin.AcademicValidationViolation': {
+      path: string;
+      code: components['schemas']['AcademicAdmin.AcademicValidationCode'];
+    };
+    'AcademicAdmin.ArchiveAcademicPackageRequest': {
+      /** Format: int64 */
+      expectedDraftRevision: number;
+      reason: string;
+    };
+    'AcademicAdmin.ContentBlock':
+      | components['schemas']['AcademicAdmin.TextContentBlock']
+      | components['schemas']['AcademicAdmin.MathContentBlock']
+      | components['schemas']['AcademicAdmin.ImageContentBlock'];
+    /** @enum {string} */
+    'AcademicAdmin.ContentOrigin': 'YUKCSCA_ORIGINAL' | 'LICENSED' | 'OPEN_LICENSE';
+    'AcademicAdmin.CreateAcademicPackageRequest': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+    };
+    'AcademicAdmin.DraftProvenanceInput': {
+      origin?: components['schemas']['AcademicAdmin.ContentOrigin'];
+      provider?: string | null;
+      sourceLocator?: string | null;
+      permissionReference?: string | null;
+    };
+    'AcademicAdmin.DraftProvenanceRecord': {
+      authorUserId: components['schemas']['uuid'];
+      reviewedByUserId: components['schemas']['uuid'] | null;
+      reviewedAt: string | null;
+    } & components['schemas']['AcademicAdmin.DraftProvenanceInput'];
+    /** @enum {string} */
+    'AcademicAdmin.ExamLanguage': 'en' | 'zh-CN';
+    /** @description Timed exam shape for a subject package. Values are package-owned; publication requires mock and structure to match. */
+    'AcademicAdmin.ExamStructure': {
+      /** Format: int32 */
+      durationMinutes?: number;
+      /** Format: int32 */
+      totalPoints?: number;
+      /** Format: int32 */
+      questionCount?: number;
+      /** @enum {string} */
+      questionType?: 'SINGLE_ANSWER';
+      examLanguages?: components['schemas']['AcademicAdmin.ExamLanguage'][];
+    };
+    /** @enum {string} */
+    'AcademicAdmin.ExplanationLanguage': 'id' | 'en' | 'zh-CN';
+    'AcademicAdmin.ImageContentBlock': {
+      /** @enum {string} */
+      kind: 'IMAGE';
+      imageId: components['schemas']['uuid'];
+      altText: string;
+      caption: string | null;
+    };
+    'AcademicAdmin.LearningObjective': {
+      id: components['schemas']['uuid'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      mappings: components['schemas']['AcademicAdmin.TopicMapping'][];
+    };
+    'AcademicAdmin.LocalizedContent': {
+      language: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
+    };
+    'AcademicAdmin.LocalizedText': {
+      indonesian?: string;
+      english?: string;
+      simplifiedChinese?: string;
+    };
+    'AcademicAdmin.MathContentBlock': {
+      /** @enum {string} */
+      kind: 'MATH';
+      /** @description A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported. */
+      latex: string;
+      displayMode: boolean;
+    };
+    'AcademicAdmin.MockPaper': {
+      id: components['schemas']['uuid'];
+      title?: string;
+      examLanguage?: components['schemas']['AcademicAdmin.ExamLanguage'];
+      /** Format: int32 */
+      durationMinutes?: number;
+      /** Format: int32 */
+      totalPoints?: number;
+      /** Format: int32 */
+      questionCount?: number;
+      /** @enum {string} */
+      questionType?: 'SINGLE_ANSWER';
+      questions: components['schemas']['AcademicAdmin.MockQuestion'][];
+      provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
+    };
+    'AcademicAdmin.MockPaperRecord': {
+      provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
+    } & WithRequired<components['schemas']['AcademicAdmin.MockPaper'], 'provenance'>;
+    'AcademicAdmin.MockQuestion': {
+      questionId: components['schemas']['uuid'];
+      /** Format: int32 */
+      points: number;
+    };
+    'AcademicAdmin.OfficialDate': {
+      status?: components['schemas']['AcademicAdmin.OfficialDateStatus'];
+      date?: string | null;
+    };
+    /** @enum {string} */
+    'AcademicAdmin.OfficialDateStatus': 'DECLARED' | 'NOT_STATED';
+    'AcademicAdmin.OfficialSyllabus': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      authority?: string;
+      editionLabel?: string;
+      sourceUrl?: string;
+      sourceLanguages?: components['schemas']['AcademicAdmin.ExamLanguage'][];
+      /** Format: date-time */
+      retrievedAt?: string;
+      /** Format: date-time */
+      lastCheckedAt?: string;
+      publishedOn?: components['schemas']['AcademicAdmin.OfficialDate'];
+      effectiveOn?: components['schemas']['AcademicAdmin.OfficialDate'];
+      updatedOn?: components['schemas']['AcademicAdmin.OfficialDate'];
+      examStructure?: components['schemas']['AcademicAdmin.ExamStructure'];
+      permittedUse?: components['schemas']['AcademicAdmin.PermittedUse'];
+    };
+    /** @enum {string} */
+    'AcademicAdmin.PermittedUse': 'REFERENCE_ONLY';
+    'AcademicAdmin.ProvenanceInput': {
+      origin: components['schemas']['AcademicAdmin.ContentOrigin'];
+    } & WithRequired<components['schemas']['AcademicAdmin.DraftProvenanceInput'], 'origin'>;
+    'AcademicAdmin.ProvenanceRecord': {
+      authorUserId: components['schemas']['uuid'];
+      reviewedByUserId: components['schemas']['uuid'] | null;
+      reviewedAt: string | null;
+    } & components['schemas']['AcademicAdmin.ProvenanceInput'];
+    'AcademicAdmin.PublishAcademicPackageRequest': {
+      /** Format: int64 */
+      expectedDraftRevision: number;
+    };
+    'AcademicAdmin.PublishedRevisionSummary': {
+      id: components['schemas']['uuid'];
+      /** Format: int64 */
+      revisionNumber: number;
+      /** Format: date-time */
+      publishedAt: string;
+      publishedByUserId: components['schemas']['uuid'];
+    };
+    /** @enum {string} */
+    'AcademicAdmin.QuestionDifficulty': 'FOUNDATION' | 'STANDARD' | 'ADVANCED';
+    'AcademicAdmin.QuestionOption': {
+      key: string;
+      blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
+    };
+    'AcademicAdmin.SaveAcademicPackageDraftRequest': {
+      /** Format: int64 */
+      expectedDraftRevision: number;
+      draft: components['schemas']['AcademicAdmin.AcademicPackageDraftInput'];
+    };
+    'AcademicAdmin.SourcePosition': {
+      page?: number | null;
+      section?: string | null;
+    };
+    /** @enum {string} */
+    'AcademicAdmin.StudyResourceKind': 'LESSON' | 'TERMINOLOGY' | 'REMEDIATION';
+    'AcademicAdmin.SyllabusOutlineItem': {
+      id: components['schemas']['uuid'];
+      parentId: components['schemas']['uuid'] | null;
+      /** Format: int32 */
+      order: number;
+      sourcePosition?: components['schemas']['AcademicAdmin.SourcePosition'];
+      summary: components['schemas']['AcademicAdmin.LocalizedText'];
+    };
+    'AcademicAdmin.TextContentBlock': {
+      /** @enum {string} */
+      kind: 'TEXT';
+      text: string;
+    };
+    'AcademicAdmin.TopicMapping': {
+      outlineItemId: components['schemas']['uuid'];
+      rationale?: string;
+    };
+    'AcademicAdmin.UploadAcademicImageRequest': {
+      file: unknown;
+      provenance: components['schemas']['AcademicAdmin.ProvenanceInput'];
+    };
     'Auth.AuthResponse': {
       accessToken: string;
       /** @enum {string} */
@@ -347,6 +763,563 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  AcademicAdminApi_uploadAcademicImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['AcademicAdmin.UploadAcademicImageRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicImage'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getAcademicImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'private, max-age=31536000, immutable';
+          'X-Content-Type-Options': 'nosniff';
+          [name: string]: unknown;
+        };
+        content: {
+          'image/png': unknown;
+          'image/jpeg': unknown;
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_listAcademicPackages: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicPackageSummary'][];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_createAcademicPackage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.CreateAcademicPackageRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicPackage'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getAcademicPackage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicPackage'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_saveAcademicPackageDraft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.SaveAcademicPackageDraftRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicPackage'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_archiveAcademicPackage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.ArchiveAcademicPackageRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicPackage'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_publishAcademicPackage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.PublishAcademicPackageRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicPackage'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
   AuthApi_startCredentialRegistration: {
     parameters: {
       query?: never;

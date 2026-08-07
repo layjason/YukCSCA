@@ -17,6 +17,7 @@ public class AuthService {
   private final UserAccountStore userRepository;
   private final CanonicalEmailLock emailLock;
   private final SecurityEventService securityEvents;
+  private final FirstAdminProvisioner firstAdmin;
   private final Clock clock;
 
   public AuthService(
@@ -25,12 +26,14 @@ public class AuthService {
       UserAccountStore userRepository,
       CanonicalEmailLock emailLock,
       SecurityEventService securityEvents,
+      FirstAdminProvisioner firstAdmin,
       Clock clock) {
     this.googleTokenVerifier = googleTokenVerifier;
     this.identityRepository = identityRepository;
     this.userRepository = userRepository;
     this.emailLock = emailLock;
     this.securityEvents = securityEvents;
+    this.firstAdmin = firstAdmin;
     this.clock = clock;
   }
 
@@ -38,10 +41,12 @@ public class AuthService {
   public UserAccount loginWithGoogle(String credential) {
     try {
       GoogleIdentity verified = googleTokenVerifier.verify(credential);
-      return identityRepository
-          .findByProviderAndProviderSubject(AuthProvider.GOOGLE, verified.subject())
-          .map(AuthIdentity::getUser)
-          .orElseGet(() -> createGoogleUser(verified));
+      UserAccount account =
+          identityRepository
+              .findByProviderAndProviderSubject(AuthProvider.GOOGLE, verified.subject())
+              .map(AuthIdentity::getUser)
+              .orElseGet(() -> createGoogleUser(verified));
+      return firstAdmin.recognize(account);
     } catch (InvalidCredentialException | AuthConflictException exception) {
       securityEvents.record(SecurityEventType.GOOGLE_LOGIN_REJECTED, null);
       throw exception;

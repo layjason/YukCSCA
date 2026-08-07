@@ -42,7 +42,7 @@ SDKs, or external UI/animation frameworks are active.
   codes. Bearer failures preserve `WWW-Authenticate`; rate limits preserve
   `Retry-After`.
 
-The API currently contains `identity` and `profile` modules:
+The API currently contains `identity`, `profile`, and `academic` modules:
 
 ```text
 <module>/
@@ -57,7 +57,10 @@ credential authenticators, pending email-verification claims, policy evidence,
 verification delivery outbox state, password-recovery claims and delivery
 state, and retention. Profile owns student activation and student-owned profile
 maintenance, reaching identity only through application-facing account,
-authentication, and security-event APIs. Modules
+authentication, and security-event APIs. Academic owns the pilot Mathematics
+package draft, immutable published revisions, bounded academic images, and
+minimized administrative audit. It reaches identity only through the
+application-facing current-account API. Modules
 never import another module's repository, JPA entity, controller, or
 infrastructure. New modules appear only with their first accepted use case.
 
@@ -138,6 +141,32 @@ one student profile and changes the account to `STUDENT`; it returns canonical
 current-user state and a replacement access token. The profile is private to
 its authenticated student.
 
+The deployment may configure one exact verified account through
+`YUKCSCA_FIRST_ADMIN_EMAIL`. Its first successful Google or credential sign-in
+promotes only an `UNASSIGNED` account to the unique `ADMIN`; repeat sign-in and
+refresh are idempotent and other roles are never overwritten. V6 enforces the
+single-admin pilot constraint.
+
+The `academic` module implements the accepted eight-operation administrator
+boundary for subject preparation packages. Package lifecycle is subject-agnostic
+(one package per subject; draft/publish/archive; JSONB revisions). Creatable
+subjects and default exam structure live in an allow-listed subject profile
+(pilot: Mathematics with its CSCA 2025 defaults). Publication validates the
+official-source reference, three-language authored outline, mappings,
+resources, questions, LaTeX/image blocks, provenance, and a mock that matches
+the package's own exam structure in one transaction. Incomplete whole drafts
+can be saved with expected-revision checks. Published JSONB revisions are
+immutable. PNG/JPEG assets are bounded, decoded, re-encoded without submitted
+metadata, hashed, and stored in PostgreSQL separately from revision documents.
+Archive retains revisions, images, and value-free audit evidence. Student
+consumption remains outside this slice.
+
+VS-005 is `DONE` after contract, PostgreSQL/Flyway (V6–V7), backend, production
+admin frontend (`/admin/academic-packages` under `features/academic-admin`),
+security/privacy, subject-profile extensibility, and product-owner journey
+evidence. KaTeX is used for admin formula preview only. Multi-subject content
+seeding and all student syllabus/practice/mock consumption remain later slices.
+
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
 for the authenticated owning `STUDENT`. The application validates the complete
 patch before mutation, locks the existing profile row, treats empty or
@@ -160,7 +189,8 @@ limited to `/app/profile` and `/app/profile/languages`; `/app/more` remains
 inside the preview-workspace gate, and learning, family, access, commerce, and
 other workspace destinations remain prototype-only or unimplemented until their
 owning slices are accepted. VS-002 is also `DONE` after full implementation,
-verification, and product owner signoff.
+verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
+and first Mathematics package path.
 
 ## Prototype boundaries
 

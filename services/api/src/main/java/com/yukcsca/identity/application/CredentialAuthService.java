@@ -31,6 +31,7 @@ public class CredentialAuthService {
   private final PolicyAcceptanceStore policyAcceptances;
   private final SessionService sessions;
   private final SecurityEventService securityEvents;
+  private final FirstAdminProvisioner firstAdmin;
   private final Clock clock;
 
   public CredentialAuthService(
@@ -47,6 +48,7 @@ public class CredentialAuthService {
       PolicyAcceptanceStore policyAcceptances,
       SessionService sessions,
       SecurityEventService securityEvents,
+      FirstAdminProvisioner firstAdmin,
       Clock clock) {
     this.settings = settings;
     this.tokenCodec = tokenCodec;
@@ -61,6 +63,7 @@ public class CredentialAuthService {
     this.policyAcceptances = policyAcceptances;
     this.sessions = sessions;
     this.securityEvents = securityEvents;
+    this.firstAdmin = firstAdmin;
     this.clock = clock;
   }
 
@@ -170,6 +173,7 @@ public class CredentialAuthService {
     if (passwordHasher.needsUpgrade(authenticator.getPasswordHash())) {
       authenticator.replacePasswordHash(passwordHasher.hash(normalizedPassword), clock.instant());
     }
+    account = firstAdmin.recognize(account);
     SessionService.SessionToken session = sessions.create(account);
     securityEvents.recordWithinTransaction(
         SecurityEventType.CREDENTIAL_LOGIN_SUCCEEDED, account.getId());

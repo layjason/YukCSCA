@@ -42,6 +42,9 @@ export function RootDecisionPage(): React.JSX.Element {
         />
       );
     }
+    if (user?.role === 'ADMIN') {
+      return <Navigate to="/admin/academic-packages" replace />;
+    }
     return <Navigate to="/unsupported" replace />;
   }
 

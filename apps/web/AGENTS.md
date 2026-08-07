@@ -12,6 +12,7 @@
 - Design the complete user flow and the relevant initial, loading, empty, validation, failure, stale, success, and recovery states before polishing an isolated component.
 - Consume semantic CSS variables from `src/styles.css`. Raw color values belong only in the shared token declarations, and shared token changes begin in root `DESIGN.md`.
 - Keep the visual core white/neutral with restrained contextual pastel blocks. Do not default to gradients, glow, glass panels, abstract blobs, random pastel cards, equal-weight dashboard card grids, decorative AI imagery, or perpetual motion.
+- Use **`lucide-react`** for product icons. Prefer Lucide icon-only controls (with localized `aria-label`) for repeated secondary actions such as remove/delete-in-list; keep text labels on primary and high-stakes actions. Do not hand-author one-off SVG icons or use emoji for UI chrome when Lucide has a match.
 - Use micro-interactions only to explain cause and effect: press acknowledgement, focus, validation, progress, disclosure, step continuity, or a restrained milestone. The same flow must remain understandable with reduced motion.
 - Preserve interface language, explanation language, and exam language as separate concepts.
 - All user-visible text belongs in localization resources.

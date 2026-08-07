@@ -98,4 +98,13 @@ public class UserAccount {
     onboardingCompleted = true;
     updatedAt = now;
   }
+
+  /** Assigns the deployment-configured pilot administrator without changing profile state. */
+  public void activateAdmin(Instant now) {
+    if (role != UserRole.UNASSIGNED) {
+      throw new IllegalStateException("Only an unassigned account can activate as an admin.");
+    }
+    role = UserRole.ADMIN;
+    updatedAt = now;
+  }
 }

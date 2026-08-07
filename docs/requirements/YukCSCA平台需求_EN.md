@@ -1,7 +1,7 @@
 # YukCSCA Platform Requirements Summary
 
-**Version:** V1.3
-**Date:** 2026-07-30
+**Version:** V1.4
+**Date:** 2026-07-31
 **Target Market:** Indonesian high school students planning to pursue undergraduate study in China, and their families
 
 > **NORMATIVE PRODUCT AUTHORITY:** This document and its paired Chinese version are the sole authoritative product requirements for YukCSCA. Architecture descriptions, implementation plans, contracts, issues, and code may implement or propose a subset, but they do not amend or override these requirements. Both language versions must change together.
@@ -10,6 +10,7 @@
 
 | Version | Date       | Change                                                                                  |
 | ------- | ---------- | --------------------------------------------------------------------------------------- |
+| V1.4    | 2026-07-31 | Replaced publication of copied official-syllabus wording with localized YukCSCA summaries linked to the official source, including Bahasa Indonesia. |
 | V1.3    | 2026-07-30 | Separated direct preparation from plan orchestration, split plan-independent mock remediation from plan integration, and introduced a portable academic-content direction. |
 | V1.2    | 2026-07-24 | Qualified fixture-backed email/password previews while preserving Google-only production authentication. |
 | V1.1    | 2026-07-20 | Added stable navigation and revision history. |
@@ -481,15 +482,17 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 4.2 Official Syllabus Source and YukCSCA Topic Mapping (P0)
 
-- For every sold subject, the platform stores the official CSCA syllabus version, source link or locator, publication or effective date, last checked date, and the syllabus's original module and topic labels.
-- Official syllabus topics remain separate from YukCSCA-authored learning objectives, prerequisites, common-error categories, lessons, questions, and remediation content. YukCSCA-authored content must never be presented as official syllabus wording.
-- A YukCSCA learning objective may map to one or more official syllabus topics. Each mapping keeps a short reason and the person who last reviewed it.
-- The coverage page shows the selected official syllabus version, its mapped YukCSCA learning objectives, and whether related lessons, practice, checkpoints, and mocks are available.
+- For every sold subject, the platform stores the official CSCA syllabus authority and version, an admin-maintained official source link or locator, the declared publication or effective date when the source provides one or an explicit Not Stated status, and the last checked date.
+- The platform publishes YukCSCA-authored syllabus outline summaries in Bahasa Indonesia, English, and Simplified Chinese. They follow the official document's module/topic order and retain a source location, but do not reproduce or claim to be the official wording.
+- The official source is presented as one compact, visually distinct source action with its authority, edition, and last checked date. The interface does not repeat long “see the official wording” notices for every topic.
+- Syllabus outline summaries remain separate from YukCSCA-authored learning objectives, prerequisites, common-error categories, lessons, questions, and remediation content.
+- A YukCSCA learning objective may map to one or more syllabus outline items. Each mapping keeps a short reason and the person who last reviewed it.
+- The coverage page shows the selected official syllabus version, its localized outline summaries, mapped YukCSCA learning objectives, official-source action, and whether related lessons, practice, checkpoints, and mocks are available.
 - Product coverage uses at least **Fully Covered, Partially Covered, In Development, and Not Covered**. A “full coverage” claim is calculated against one named official syllabus version, not against the number of topics YukCSCA has created.
 - Personal learning status uses at least **Not Started, Learning, Review Due, Learned, and Stable Mastery** and is displayed separately from product coverage.
-- Students can open the related lesson, practice, mistake review, terminology, or remediation content from a syllabus topic or learning objective.
+- Students can open the related lesson, practice, mistake review, terminology, or remediation content from a syllabus outline item or learning objective.
 - Personal progress is updated from checkpoints, practice, rechecks, and mocks; opening a page or watching a video alone does not prove mastery.
-- When the official syllabus changes, the platform keeps the old and new versions, shows changed topics and affected mappings, and leaves historical attempts and reports unchanged.
+- When the official syllabus changes, the platform keeps the old and new source records, shows changed outline summaries and affected mappings, and leaves historical attempts and reports unchanged.
 
 ### 4.3 Focused Learning-Unit Content (P0)
 
@@ -536,7 +539,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 5.1 Topic Practice (P0)
 
-- Students can start practice without a study plan by subject, official syllabus topic, YukCSCA learning objective, difficulty, and exam language.
+- Students can start practice without a study plan by subject, syllabus outline item, YukCSCA learning objective, difficulty, and exam language.
 - Each practice set shows item count, expected time, assessment purpose, and the published question set used.
 - Feedback may be immediate or after set submission according to the disclosed mode.
 - Topic-practice evidence can later inform a diagnostic report or plan, but an active plan is not required to begin or complete the set.
@@ -558,7 +561,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 5.4 Mistake Notebook and Immediate Remediation (P0)
 
-- Incorrect responses enter the mistake record with the attempt question copy, latest response, error count, related learning objective and syllabus topics, assistance used, and an error cause such as a conceptual gap, prerequisite gap, terminology misunderstanding, carelessness, or time management.
+- Incorrect responses enter the mistake record with the attempt question copy, latest response, error count, related learning objective and syllabus outline items, assistance used, and an error cause such as a conceptual gap, prerequisite gap, terminology misunderstanding, carelessness, or time management.
 - Students can add a private error explanation or note.
 - The platform can offer and complete an immediate deterministic remediation action without an active study plan.
 - Scheduling remediation into future dates or changing plan priorities requires the plan-orchestration capability and the applicable confirmation rules.
@@ -988,7 +991,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 ### 14.4 Syllabus and Learning-Content Management (P0)
 
 - The first platform admin manages the pilot's academic content.
-- Official CSCA syllabus versions and syllabus topics are stored separately from YukCSCA's own learning objectives, prerequisites, common mistakes, terminology, lessons, questions, explanations, and remediation content.
+- Official CSCA syllabus source records and localized YukCSCA outline summaries are stored separately from YukCSCA's learning objectives, prerequisites, common mistakes, terminology, lessons, questions, explanations, and remediation content.
 - Content uses stable IDs and reusable fields so the same data can later be used by the web app, a mobile app, or another YukCSCA client. Frontend routes, page layout, and temporary interface state are not stored as academic content.
 - Content has three simple states: Draft, Published, and Archived. The admin can create and edit content directly. A basic CSV or JSON import may be added when it clearly saves time, but it is not required for the first release.
 - Before publication, the platform checks required links, supported languages, formulas or files, question answers and scoring, and source or permission information. Invalid content remains in Draft, while existing Published content stays available.
@@ -996,7 +999,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 14.5 Question and Mock-Paper Management (P0)
 
-- A question records its subject, exam language, question text, answer choices when needed, correct answer or scoring rule, explanation, difficulty, related syllabus topics or learning objectives, and publication status.
+- A question records its subject, exam language, question text, answer choices when needed, correct answer or scoring rule, explanation, difficulty, related syllabus outline items or learning objectives, and publication status.
 - The admin can create, edit, publish, and archive questions. Draft questions can be changed freely.
 - The admin creates a diagnostic, practice set, checkpoint, or mock paper by setting its purpose, subject, exam language, duration, scoring, visibility, and the published questions it contains.
 - When a student starts an attempt, the platform saves the exact question text, choices, answer, and scoring information used for that attempt. Correct answers, scoring keys, and solutions remain server-side and are not exposed to the client before the allowed submission or feedback point. Later question edits do not change completed attempts or their scores.

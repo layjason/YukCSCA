@@ -37,6 +37,13 @@ model ForbiddenResponse {
 }
 
 @error
+model NotFoundResponse {
+  @statusCode statusCode: 404;
+  @header contentType: "application/problem+json";
+  @body body: Problem;
+}
+
+@error
 model ConflictResponse {
   @statusCode statusCode: 409;
   @header contentType: "application/problem+json";
