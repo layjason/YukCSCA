@@ -5,6 +5,339 @@ info:
   summary: Contract-first API for YukCSCA
 tags: []
 paths:
+  /api/v1/academic/images/{imageId}:
+    get:
+      operationId: AcademicStudentApi_getPublishedAcademicImage
+      description: Returns image bytes only when the image is referenced by the active published revision of a package the activated student may access.
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - private, max-age=31536000, immutable
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            image/png:
+              schema:
+                contentMediaType: image/png
+            image/jpeg:
+              schema:
+                contentMediaType: image/jpeg
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages:
+    get:
+      operationId: AcademicStudentApi_listPublishedPackages
+      description: Lists published academic packages with an active revision that the activated student may browse under pilot open-access. Subject is never hard-coded to Mathematics.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicStudent.PublishedPackageSummary'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}:
+    get:
+      operationId: AcademicStudentApi_getPublishedPackageBrowse
+      description: 'Returns the student browse projection for the published package of the given subject: official-source panel, outline with product coverage, LESSON summaries with content progress, and optional continue target.'
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.PublishedPackageBrowse'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/lessons/{resourceId}:
+    get:
+      operationId: AcademicStudentApi_getPublishedLesson
+      description: Returns one LESSON from the active published revision with ordered TEXT/MATH/IMAGE blocks for the requested explanation language, or an explicit language-unavailable body. Missing language is never silently substituted.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: explanationLanguage
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.PublishedLessonDetail'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/lessons/{resourceId}/progress:
+    put:
+      operationId: AcademicStudentApi_upsertContentProgress
+      description: Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery, checkpoint unlock, or practice evidence.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.ContentProgressValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.UpsertContentProgressRequest'
+      security:
+        - BearerAuth: []
   /api/v1/admin/academic-images:
     post:
       operationId: AcademicAdminApi_uploadAcademicImage
@@ -1985,6 +2318,315 @@ components:
       required:
         - file
         - provenance
+    AcademicStudent.ContentProgress:
+      type: object
+      required:
+        - status
+        - resumeBlockIndex
+        - updatedAt
+      properties:
+        status:
+          $ref: '#/components/schemas/AcademicStudent.ContentProgressStatus'
+        resumeBlockIndex:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 0
+          description: Zero-based resume index into the blocks of the explanation-language version the student was reading. Null when not started or when no block position is recorded.
+        updatedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: Last progress write time. Null when status is NOT_STARTED.
+      description: Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED.
+    AcademicStudent.ContentProgressStatus:
+      type: string
+      enum:
+        - NOT_STARTED
+        - IN_PROGRESS
+        - CONTENT_COMPLETE
+      description: Persisted or projected content-progress status. Content complete is never mastery.
+    AcademicStudent.ContentProgressValidationProblem:
+      type: object
+      required:
+        - code
+        - violations
+      properties:
+        code:
+          type: string
+          enum:
+            - CONTENT_PROGRESS_VALIDATION_FAILED
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.ContentProgressValidationViolation'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AcademicStudent.ContentProgressValidationViolation:
+      type: object
+      required:
+        - path
+        - code
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 200
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+    AcademicStudent.LessonBody:
+      anyOf:
+        - $ref: '#/components/schemas/AcademicStudent.LessonContentAvailable'
+        - $ref: '#/components/schemas/AcademicStudent.LessonLanguageUnavailable'
+    AcademicStudent.LessonContentAvailable:
+      type: object
+      required:
+        - availability
+        - blocks
+      properties:
+        availability:
+          type: string
+          enum:
+            - AVAILABLE
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+      description: Ordered LESSON body for one explanation language.
+    AcademicStudent.LessonLanguageUnavailable:
+      type: object
+      required:
+        - availability
+        - requestedLanguage
+      properties:
+        availability:
+          type: string
+          enum:
+            - LANGUAGE_UNAVAILABLE
+        requestedLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+      description: Requested explanation language has no authored version. Clients must not silently substitute another language.
+    AcademicStudent.LessonSummary:
+      type: object
+      required:
+        - resourceId
+        - title
+        - outlineItemIds
+        - contentProgress
+      properties:
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          minItems: 0
+        contentProgress:
+          $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+      description: LESSON summary for outline browse and continue chips. Kind is always LESSON; other resource kinds are omitted.
+    AcademicStudent.OfficialSourcePanel:
+      type: object
+      required:
+        - subject
+        - authority
+        - editionLabel
+        - sourceLinks
+        - lastCheckedAt
+        - permittedUse
+      properties:
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        authority:
+          type: string
+          minLength: 1
+          maxLength: 160
+        editionLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        sourceLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.OfficialSourceLink'
+          minItems: 1
+          maxItems: 2
+          description: One open action per configured official language edition (en and/or zh-CN).
+        lastCheckedAt:
+          type: string
+          format: date-time
+        publishedOn:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDate'
+        effectiveOn:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDate'
+        updatedOn:
+          $ref: '#/components/schemas/AcademicAdmin.OfficialDate'
+        permittedUse:
+          $ref: '#/components/schemas/AcademicAdmin.PermittedUse'
+      description: 'Student-safe official CSCA source panel: open actions per configured language edition only.'
+    AcademicStudent.ProductCoverage:
+      type: string
+      enum:
+        - FULLY_COVERED
+        - PARTIALLY_COVERED
+        - NOT_COVERED
+      description: Product coverage of an outline item from LESSON presence only. Practice/mock/checkpoint availability is out of VS-008.
+    AcademicStudent.PublishedLessonDetail:
+      type: object
+      required:
+        - packageId
+        - packageRevisionId
+        - subject
+        - resourceId
+        - title
+        - availableExplanationLanguages
+        - requestedExplanationLanguage
+        - body
+        - contentProgress
+      properties:
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        availableExplanationLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          minItems: 0
+          maxItems: 3
+        requestedExplanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          description: Language requested by the client (or the language the server evaluated).
+        body:
+          $ref: '#/components/schemas/AcademicStudent.LessonBody'
+        contentProgress:
+          $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+      description: Student LESSON read projection for the active published revision.
+    AcademicStudent.PublishedPackageBrowse:
+      type: object
+      required:
+        - package
+        - officialSource
+        - outline
+        - continueLesson
+      properties:
+        package:
+          $ref: '#/components/schemas/AcademicStudent.PublishedPackageSummary'
+        officialSource:
+          $ref: '#/components/schemas/AcademicStudent.OfficialSourcePanel'
+        outline:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.SyllabusOutlineNode'
+        continueLesson:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.LessonSummary'
+            - type: 'null'
+          description: 'Optional continue target: last in-progress LESSON when present, otherwise null. Never implies mastery.'
+      description: Browse projection for one published package by subject.
+    AcademicStudent.PublishedPackageSummary:
+      type: object
+      required:
+        - id
+        - subject
+        - activeRevision
+        - examLanguages
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        activeRevision:
+          $ref: '#/components/schemas/AcademicStudent.StudentPublishedRevisionSummary'
+        examLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+          maxItems: 2
+          description: Exam languages declared on the published syllabus structure. Not used to split LESSON catalogs in VS-008.
+      description: One published package the activated student may browse under pilot open-access.
+    AcademicStudent.StudentPublishedRevisionSummary:
+      type: object
+      required:
+        - id
+        - revisionNumber
+        - publishedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        revisionNumber:
+          type: integer
+          format: int64
+          minimum: 1
+        publishedAt:
+          type: string
+          format: date-time
+      description: Active published revision identity visible to students (no publisher user id).
+    AcademicStudent.SyllabusOutlineNode:
+      type: object
+      required:
+        - id
+        - parentId
+        - order
+        - summary
+        - productCoverage
+        - lessons
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        parentId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        order:
+          type: integer
+          format: int32
+          minimum: 0
+        summary:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        productCoverage:
+          $ref: '#/components/schemas/AcademicStudent.ProductCoverage'
+        lessons:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.LessonSummary'
+          description: LESSON resources that reference this outline item in the active published revision.
+      description: Outline node with product coverage and linked LESSON summaries for the active published revision.
+    AcademicStudent.UpsertContentProgressRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/AcademicStudent.WritableContentProgressStatus'
+        resumeBlockIndex:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 0
+          description: Zero-based resume block index within the language version the student is reading. Required when status is IN_PROGRESS; optional when CONTENT_COMPLETE.
+        expectedPackageRevisionId:
+          $ref: '#/components/schemas/uuid'
+          description: Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field.
+      description: Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource).
+    AcademicStudent.WritableContentProgressStatus:
+      type: string
+      enum:
+        - IN_PROGRESS
+        - CONTENT_COMPLETE
+      description: Writable content-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
     Auth.AuthResponse:
       type: object
       required:
