@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Toast, type ToastTone } from '@/shared/components/Toast';
 import { OfficialSourcePanel } from './OfficialSourcePanel';
 import { SyllabusOutlineEditor } from './SyllabusOutlineEditor';
 import { LearningObjectivesEditor } from './LearningObjectivesEditor';
@@ -11,13 +12,19 @@ import {
   saveAcademicPackageDraft,
   publishAcademicPackage,
   archiveAcademicPackage,
+  getAcademicPackage,
   ApiError,
 } from '../api/academicAdminApi';
+import { pruneEmptyLocalizedVersions } from '../localizedContentDraft';
+import { ensureSingleMockShell } from '../mockDraft';
 import { normalizeOfficialSyllabus } from '../officialSyllabusNormalize';
+import { toDraftProvenanceInput, toEditableProvenance } from '../provenanceDraft';
 import {
   fieldErrorsFromMapped,
   firstTabFromMapped,
+  localizeMappedMessage,
   mapValidationViolations,
+  shortValidationPath,
   type OfficialFieldKey,
   type ValidationFieldKey,
 } from '../validationMapping';
@@ -30,17 +37,43 @@ import type {
 } from '../types';
 import '../academic-admin.css';
 
+function FieldErrorList({
+  messages,
+}: {
+  messages: string[] | undefined;
+}): React.JSX.Element | null {
+  if (!messages?.length) return null;
+  if (messages.length === 1) {
+    return (
+      <p className="admin-field-error" role="alert">
+        {messages[0]}
+      </p>
+    );
+  }
+  return (
+    <ul className="admin-field-error-list" role="alert">
+      {messages.map((msg) => (
+        <li key={msg} className="admin-field-error">
+          {msg}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 interface AcademicPackageEditorProps {
   initialPackage: AcademicPackage;
   onBackToList: () => void;
 }
 
-function withNormalizedSyllabus(pkg: AcademicPackage): AcademicPackage {
+function withNormalizedDraft(pkg: AcademicPackage): AcademicPackage {
   return {
     ...pkg,
     draft: {
       ...pkg.draft,
       officialSyllabus: normalizeOfficialSyllabus(pkg.draft.officialSyllabus),
+      // Persist-ready single mock shell so publish path is reachable without a silent empty mocks[].
+      mocks: ensureSingleMockShell(pkg.draft.mocks ?? []),
     },
   };
 }
@@ -51,27 +84,34 @@ export function AcademicPackageEditor({
 }: AcademicPackageEditorProps): React.JSX.Element {
   const { t } = useTranslation();
 
-  const [pkg, setPkg] = useState<AcademicPackage>(() => withNormalizedSyllabus(initialPackage));
+  const [pkg, setPkg] = useState<AcademicPackage>(() => withNormalizedDraft(initialPackage));
   const [activeTab, setActiveTab] = useState<AdminEditorTab>('source');
 
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [validationViolations, setValidationViolations] = useState<
     AcademicValidationViolation[] | null
   >(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const draft = pkg.draft;
-  const busy = isSaving || isPublishing || isArchiving;
+  const busy = isSaving || isPublishing || isArchiving || isReloading;
   const isArchived = pkg.status === 'ARCHIVED';
+  const isCorrectionDraft = pkg.status === 'PUBLISHED' && pkg.hasUnpublishedChanges;
+
+  const mappedViolations = useMemo(() => {
+    if (!validationViolations?.length) return [];
+    return mapValidationViolations(validationViolations);
+  }, [validationViolations]);
 
   const fieldErrors = useMemo(() => {
-    if (!validationViolations?.length) return {} as Partial<Record<ValidationFieldKey, string>>;
-    return fieldErrorsFromMapped(mapValidationViolations(validationViolations), t);
-  }, [validationViolations, t]);
+    if (!mappedViolations.length) return {} as Partial<Record<ValidationFieldKey, string[]>>;
+    return fieldErrorsFromMapped(mappedViolations, t);
+  }, [mappedViolations, t]);
 
   const officialFieldErrors = useMemo(() => {
     const keys: OfficialFieldKey[] = [
@@ -87,21 +127,24 @@ export function AcademicPackageEditor({
       'examStructure',
       'permittedUse',
     ];
-    const out: Partial<Record<OfficialFieldKey, string>> = {};
+    const out: Partial<Record<OfficialFieldKey, string[]>> = {};
     for (const key of keys) {
       if (fieldErrors[key]) out[key] = fieldErrors[key];
     }
     return out;
   }, [fieldErrors]);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+  const showToast = (message: string, tone: ToastTone = 'success') => {
+    setToast({ message, tone });
   };
+
+  const dismissToast = useCallback(() => {
+    setToast(null);
+  }, []);
 
   const applyPackageUpdate = (next: AcademicPackage) => {
     setValidationViolations(null);
-    setPkg(withNormalizedSyllabus(next));
+    setPkg(withNormalizedDraft(next));
   };
 
   const applyViolations = (violations: AcademicValidationViolation[]) => {
@@ -109,7 +152,30 @@ export function AcademicPackageEditor({
     setActiveTab(firstTabFromMapped(mapValidationViolations(violations)));
   };
 
+  const tabLabel = (tab: AdminEditorTab): string => t(`admin.academic.validation.tabs.${tab}`);
+
+  /** On optimistic concurrency conflict, reload server package so expectedDraftRevision is coherent. */
+  const reloadPackageAfterStale = async (fallbackDetail?: string) => {
+    setIsReloading(true);
+    try {
+      const fresh = await getAcademicPackage(pkg.id);
+      setPkg(withNormalizedDraft(fresh));
+      setValidationViolations(null);
+      showToast(fallbackDetail || t('admin.academic.toasts.staleRevisionReloaded'), 'info');
+    } catch (reloadErr) {
+      showToast(
+        reloadErr instanceof Error
+          ? reloadErr.message
+          : fallbackDetail || t('admin.academic.toasts.staleRevision'),
+        'error',
+      );
+    } finally {
+      setIsReloading(false);
+    }
+  };
+
   const constructDraftInput = (): AcademicPackageDraftInput => {
+    const mocks = ensureSingleMockShell(draft.mocks ?? []);
     return {
       officialSyllabus: normalizeOfficialSyllabus(draft.officialSyllabus),
       outlineItems: draft.outlineItems,
@@ -120,52 +186,32 @@ export function AcademicPackageEditor({
         title: r.title,
         outlineItemIds: r.outlineItemIds,
         objectiveIds: r.objectiveIds,
-        versions: r.versions,
-        provenance: {
-          origin: r.provenance.origin || 'YUKCSCA_ORIGINAL',
-          ...(r.provenance.provider ? { provider: r.provenance.provider } : {}),
-          ...(r.provenance.sourceLocator ? { sourceLocator: r.provenance.sourceLocator } : {}),
-          ...(r.provenance.permissionReference
-            ? { permissionReference: r.provenance.permissionReference }
-            : {}),
-        },
+        // Only send filled language versions (backend requires ≥1; empty optional langs omitted).
+        versions: pruneEmptyLocalizedVersions(r.versions ?? []),
+        provenance: toDraftProvenanceInput(toEditableProvenance(r.provenance)),
       })),
       questions: draft.questions.map((q) => ({
         id: q.id,
-        ...(q.examLanguage ? { examLanguage: q.examLanguage } : {}),
+        examLanguage: q.examLanguage || 'en',
         ...(q.difficulty ? { difficulty: q.difficulty } : {}),
         stem: q.stem,
         options: q.options,
         ...(q.correctOptionKey ? { correctOptionKey: q.correctOptionKey } : {}),
-        explanations: q.explanations,
+        explanations: pruneEmptyLocalizedVersions(q.explanations ?? []),
         outlineItemIds: q.outlineItemIds,
         objectiveIds: q.objectiveIds,
-        provenance: {
-          origin: q.provenance.origin || 'YUKCSCA_ORIGINAL',
-          ...(q.provenance.provider ? { provider: q.provenance.provider } : {}),
-          ...(q.provenance.sourceLocator ? { sourceLocator: q.provenance.sourceLocator } : {}),
-          ...(q.provenance.permissionReference
-            ? { permissionReference: q.provenance.permissionReference }
-            : {}),
-        },
+        provenance: toDraftProvenanceInput(toEditableProvenance(q.provenance)),
       })),
-      mocks: draft.mocks.map((m) => ({
+      mocks: mocks.map((m) => ({
         id: m.id,
-        ...(m.title ? { title: m.title } : {}),
-        ...(m.examLanguage ? { examLanguage: m.examLanguage } : {}),
+        title: m.title ?? '',
+        examLanguage: m.examLanguage || 'en',
         durationMinutes: 60,
         totalPoints: 100,
         questionCount: 48,
-        questionType: 'SINGLE_ANSWER',
+        questionType: 'SINGLE_ANSWER' as const,
         questions: m.questions,
-        provenance: {
-          origin: m.provenance.origin || 'YUKCSCA_ORIGINAL',
-          ...(m.provenance.provider ? { provider: m.provenance.provider } : {}),
-          ...(m.provenance.sourceLocator ? { sourceLocator: m.provenance.sourceLocator } : {}),
-          ...(m.provenance.permissionReference
-            ? { permissionReference: m.provenance.permissionReference }
-            : {}),
-        },
+        provenance: toDraftProvenanceInput(toEditableProvenance(m.provenance)),
       })),
     };
   };
@@ -179,19 +225,22 @@ export function AcademicPackageEditor({
         pkg.draftRevision,
         constructDraftInput(),
       );
-      setPkg(withNormalizedSyllabus(updated));
+      setPkg(withNormalizedDraft(updated));
       showToast(t('admin.academic.toasts.draftSaved'));
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 409) {
-        showToast(
+        await reloadPackageAfterStale(
           err.problem && 'detail' in err.problem && err.problem.detail
             ? err.problem.detail
-            : t('admin.academic.toasts.staleRevision'),
+            : undefined,
         );
       } else if (err instanceof ApiError && err.problem && 'violations' in err.problem) {
         applyViolations((err.problem as AcademicValidationProblem).violations);
       } else {
-        showToast(err instanceof Error ? err.message : t('admin.academic.toasts.saveFailed'));
+        showToast(
+          err instanceof Error ? err.message : t('admin.academic.toasts.saveFailed'),
+          'error',
+        );
       }
     } finally {
       setIsSaving(false);
@@ -208,9 +257,9 @@ export function AcademicPackageEditor({
         pkg.draftRevision,
         constructDraftInput(),
       );
-      setPkg(withNormalizedSyllabus(saved));
+      setPkg(withNormalizedDraft(saved));
       const updated = await publishAcademicPackage(saved.id, saved.draftRevision);
-      setPkg(withNormalizedSyllabus(updated));
+      setPkg(withNormalizedDraft(updated));
       showToast(
         t('admin.academic.toasts.published', {
           revision: updated.activeRevision?.revisionNumber || 1,
@@ -218,15 +267,18 @@ export function AcademicPackageEditor({
       );
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 409) {
-        showToast(
+        await reloadPackageAfterStale(
           err.problem && 'detail' in err.problem && err.problem.detail
             ? err.problem.detail
-            : t('admin.academic.toasts.staleRevision'),
+            : undefined,
         );
       } else if (err instanceof ApiError && err.problem && 'violations' in err.problem) {
         applyViolations((err.problem as AcademicValidationProblem).violations);
       } else {
-        showToast(err instanceof Error ? err.message : t('admin.academic.toasts.publishFailed'));
+        showToast(
+          err instanceof Error ? err.message : t('admin.academic.toasts.publishFailed'),
+          'error',
+        );
       }
     } finally {
       setIsPublishing(false);
@@ -237,11 +289,22 @@ export function AcademicPackageEditor({
     setIsArchiving(true);
     try {
       const updated = await archiveAcademicPackage(pkg.id, pkg.draftRevision, reason);
-      setPkg(withNormalizedSyllabus(updated));
+      setPkg(withNormalizedDraft(updated));
       setShowArchiveModal(false);
       showToast(t('admin.academic.toasts.archived'));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : t('admin.academic.toasts.archiveFailed'));
+      if (err instanceof ApiError && err.statusCode === 409) {
+        await reloadPackageAfterStale(
+          err.problem && 'detail' in err.problem && err.problem.detail
+            ? err.problem.detail
+            : undefined,
+        );
+      } else {
+        showToast(
+          err instanceof Error ? err.message : t('admin.academic.toasts.archiveFailed'),
+          'error',
+        );
+      }
     } finally {
       setIsArchiving(false);
     }
@@ -289,11 +352,7 @@ export function AcademicPackageEditor({
 
   return (
     <div className="admin-editor">
-      {toastMessage && (
-        <div className="toast toast-success admin-toast" role="status">
-          <div className="toast-body">{toastMessage}</div>
-        </div>
-      )}
+      {toast ? <Toast message={toast.message} tone={toast.tone} onDismiss={dismissToast} /> : null}
 
       <header className="admin-editor-header">
         <div className="admin-editor-identity">
@@ -309,7 +368,9 @@ export function AcademicPackageEditor({
                 <span className={statusClass}>{statusLabel}</span>
                 {pkg.hasUnpublishedChanges && (
                   <span className="badge-unpublished-changes">
-                    {t('admin.academic.hasUnpublishedChanges')}
+                    {isCorrectionDraft
+                      ? t('admin.academic.resumeCorrection')
+                      : t('admin.academic.hasUnpublishedChanges')}
                   </span>
                 )}
               </div>
@@ -324,6 +385,9 @@ export function AcademicPackageEditor({
               {' · '}
               {t('admin.academic.draftRevision', { revision: pkg.draftRevision })}
             </p>
+            {isCorrectionDraft ? (
+              <p className="admin-hint">{t('admin.academic.correctionDraftHint')}</p>
+            ) : null}
           </div>
         </div>
 
@@ -378,19 +442,46 @@ export function AcademicPackageEditor({
         ))}
       </nav>
 
-      {validationViolations && validationViolations.length > 0 ? (
+      {mappedViolations.length > 0 ? (
         <div className="admin-validation-banner feedback-danger" role="alert">
-          <p className="admin-validation-banner-title">
-            {t('admin.academic.validation.bannerTitle', { count: validationViolations.length })}
+          <div className="admin-validation-banner-header">
+            <p className="admin-validation-banner-title">
+              {t('admin.academic.validation.bannerTitle', { count: mappedViolations.length })}
+            </p>
+            <button
+              type="button"
+              className="btn-secondary admin-btn-compact-md"
+              onClick={() => setValidationViolations(null)}
+            >
+              {t('admin.academic.validation.dismiss')}
+            </button>
+          </div>
+          <p className="admin-validation-banner-body">
+            {t('admin.academic.validation.bannerBody')}
           </p>
-          <p className="admin-validation-banner-body">{t('admin.academic.validation.bannerBody')}</p>
-          <button
-            type="button"
-            className="btn-secondary admin-btn-compact-md"
-            onClick={() => setValidationViolations(null)}
-          >
-            {t('admin.academic.validation.dismiss')}
-          </button>
+          <ul className="admin-validation-issue-list">
+            {mappedViolations.map((item, index) => (
+              <li key={`${item.path}:${item.code}:${index}`} className="admin-validation-issue">
+                <div className="admin-validation-issue-main">
+                  <p className="admin-validation-issue-message">{localizeMappedMessage(item, t)}</p>
+                  <p className="admin-validation-issue-meta">
+                    {t('admin.academic.validation.pathLabel', {
+                      path: shortValidationPath(item.path),
+                    })}
+                    {' · '}
+                    {item.code}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary admin-btn-compact"
+                  onClick={() => setActiveTab(item.tab)}
+                >
+                  {t('admin.academic.validation.goToTab', { tab: tabLabel(item.tab) })}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
@@ -410,11 +501,7 @@ export function AcademicPackageEditor({
             />
 
             <div className="admin-section-with-errors">
-              {fieldErrors.outline ? (
-                <p className="admin-field-error" role="alert">
-                  {fieldErrors.outline}
-                </p>
-              ) : null}
+              <FieldErrorList messages={fieldErrors.outline} />
               <SyllabusOutlineEditor
                 items={draft.outlineItems}
                 onChange={(updatedItems) =>
@@ -430,11 +517,7 @@ export function AcademicPackageEditor({
 
         {activeTab === 'objectives' && (
           <div className="admin-section-with-errors">
-            {fieldErrors.objectives ? (
-              <p className="admin-field-error" role="alert">
-                {fieldErrors.objectives}
-              </p>
-            ) : null}
+            <FieldErrorList messages={fieldErrors.objectives} />
             <LearningObjectivesEditor
               objectives={draft.learningObjectives}
               outlineItems={draft.outlineItems}
@@ -450,15 +533,12 @@ export function AcademicPackageEditor({
 
         {activeTab === 'resources' && (
           <div className="admin-section-with-errors">
-            {fieldErrors.resources ? (
-              <p className="admin-field-error" role="alert">
-                {fieldErrors.resources}
-              </p>
-            ) : null}
+            <FieldErrorList messages={fieldErrors.resources} />
             <StudyResourcesEditor
               resources={draft.resources}
               outlineItems={draft.outlineItems}
               objectives={draft.learningObjectives}
+              disabled={isArchived}
               onChange={(updated) =>
                 applyPackageUpdate({
                   ...pkg,
@@ -471,15 +551,12 @@ export function AcademicPackageEditor({
 
         {activeTab === 'questions' && (
           <div className="admin-section-with-errors">
-            {fieldErrors.questions ? (
-              <p className="admin-field-error" role="alert">
-                {fieldErrors.questions}
-              </p>
-            ) : null}
+            <FieldErrorList messages={fieldErrors.questions} />
             <QuestionEditor
               questions={draft.questions}
               outlineItems={draft.outlineItems}
               objectives={draft.learningObjectives}
+              disabled={isArchived}
               onChange={(updatedQuestions) =>
                 applyPackageUpdate({
                   ...pkg,
@@ -492,14 +569,11 @@ export function AcademicPackageEditor({
 
         {activeTab === 'mock' && (
           <div className="admin-section-with-errors">
-            {fieldErrors.mock ? (
-              <p className="admin-field-error" role="alert">
-                {fieldErrors.mock}
-              </p>
-            ) : null}
+            <FieldErrorList messages={fieldErrors.mock} />
             <MockPaperEditor
               mocks={draft.mocks}
               availableQuestions={draft.questions}
+              disabled={isArchived}
               onChange={(updatedMocks) =>
                 applyPackageUpdate({
                   ...pkg,

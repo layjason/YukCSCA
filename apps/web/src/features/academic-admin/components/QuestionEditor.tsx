@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { selectionAfterDeleteId } from '../listSelection';
+import {
+  toDraftProvenanceInput,
+  toEditableProvenance,
+  type EditableProvenance,
+} from '../provenanceDraft';
 import { ContentBlockEditor } from './ContentBlockEditor';
+import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
+import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import type {
   LearningObjective,
@@ -16,6 +24,47 @@ interface QuestionEditorProps {
   outlineItems: SyllabusOutlineItem[];
   objectives: LearningObjective[];
   onChange: (updated: Question[]) => void;
+  disabled?: boolean;
+}
+
+function createEmptyQuestion(
+  outlineItems: SyllabusOutlineItem[],
+  objectives: LearningObjective[],
+): Question {
+  return {
+    id: crypto.randomUUID(),
+    examLanguage: 'en',
+    difficulty: 'STANDARD',
+    stem: [{ kind: 'TEXT', text: '' }],
+    options: [
+      { key: 'A', blocks: [{ kind: 'TEXT', text: '' }] },
+      { key: 'B', blocks: [{ kind: 'TEXT', text: '' }] },
+      { key: 'C', blocks: [{ kind: 'TEXT', text: '' }] },
+      { key: 'D', blocks: [{ kind: 'TEXT', text: '' }] },
+    ],
+    correctOptionKey: 'A',
+    explanations: [
+      {
+        language: 'en',
+        blocks: [{ kind: 'TEXT', text: '' }],
+      },
+    ],
+    outlineItemIds: outlineItems[0] ? [outlineItems[0].id] : [],
+    objectiveIds: objectives[0] ? [objectives[0].id] : [],
+    provenance: {
+      origin: 'YUKCSCA_ORIGINAL',
+      authorUserId: '00000000-0000-0000-0000-000000000001',
+      reviewedByUserId: null,
+      reviewedAt: null,
+    },
+  };
+}
+
+/** Deep-clone a question with a fresh id. Content and mappings stay intentional for volume authoring. */
+function duplicateQuestion(source: Question): Question {
+  const copy = structuredClone(source);
+  copy.id = crypto.randomUUID();
+  return copy;
 }
 
 export function QuestionEditor({
@@ -23,6 +72,7 @@ export function QuestionEditor({
   outlineItems,
   objectives,
   onChange,
+  disabled = false,
 }: QuestionEditorProps): React.JSX.Element {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(questions[0]?.id || null);
@@ -30,35 +80,20 @@ export function QuestionEditor({
   const selectedQuestion = questions.find((q) => q.id === selectedId) || questions[0];
 
   const handleAddQuestion = () => {
-    const newQuestion: Question = {
-      id: crypto.randomUUID(),
-      examLanguage: 'en',
-      difficulty: 'STANDARD',
-      stem: [{ kind: 'TEXT', text: '' }],
-      options: [
-        { key: 'A', blocks: [{ kind: 'TEXT', text: '' }] },
-        { key: 'B', blocks: [{ kind: 'TEXT', text: '' }] },
-        { key: 'C', blocks: [{ kind: 'TEXT', text: '' }] },
-        { key: 'D', blocks: [{ kind: 'TEXT', text: '' }] },
-      ],
-      correctOptionKey: 'A',
-      explanations: [
-        {
-          language: 'en',
-          blocks: [{ kind: 'TEXT', text: '' }],
-        },
-      ],
-      outlineItemIds: outlineItems[0] ? [outlineItems[0].id] : [],
-      objectiveIds: objectives[0] ? [objectives[0].id] : [],
-      provenance: {
-        origin: 'YUKCSCA_ORIGINAL',
-        authorUserId: '00000000-0000-0000-0000-000000000001',
-        reviewedByUserId: null,
-        reviewedAt: null,
-      },
-    };
+    if (disabled) return;
+    const newQuestion = createEmptyQuestion(outlineItems, objectives);
     onChange([...questions, newQuestion]);
     setSelectedId(newQuestion.id);
+  };
+
+  const handleDuplicateQuestion = () => {
+    if (!selectedQuestion || disabled) return;
+    const clone = duplicateQuestion(selectedQuestion);
+    const sourceIndex = questions.findIndex((q) => q.id === selectedQuestion.id);
+    const next = [...questions];
+    next.splice(sourceIndex >= 0 ? sourceIndex + 1 : next.length, 0, clone);
+    onChange(next);
+    setSelectedId(clone.id);
   };
 
   const handleUpdateQuestion = (updated: Question) => {
@@ -66,15 +101,34 @@ export function QuestionEditor({
   };
 
   const handleDeleteQuestion = (id: string) => {
-    if (questions.length <= 1) return;
+    if (disabled) return;
+    // Allow emptying the list so drafts can be cleaned; publish still requires ≥48.
+    const orderedIds = questions.map((q) => q.id);
+    const nextSelectedId = selectionAfterDeleteId(orderedIds, id);
     const filtered = questions.filter((q) => q.id !== id);
     onChange(filtered);
-    if (selectedId === id) setSelectedId(filtered[0]?.id || null);
+    if (selectedId === id || selectedQuestion?.id === id) {
+      setSelectedId(nextSelectedId);
+    }
   };
 
   const toggleId = (ids: string[], id: string, checked: boolean): string[] => {
     if (checked) return ids.includes(id) ? ids : [...ids, id];
     return ids.filter((value) => value !== id);
+  };
+
+  const setProvenance = (next: EditableProvenance) => {
+    if (!selectedQuestion) return;
+    handleUpdateQuestion({
+      ...selectedQuestion,
+      provenance: {
+        ...selectedQuestion.provenance,
+        ...toDraftProvenanceInput(next),
+        authorUserId: selectedQuestion.provenance.authorUserId,
+        reviewedByUserId: selectedQuestion.provenance.reviewedByUserId ?? null,
+        reviewedAt: selectedQuestion.provenance.reviewedAt ?? null,
+      },
+    });
   };
 
   return (
@@ -88,6 +142,7 @@ export function QuestionEditor({
             type="button"
             className="btn-secondary admin-btn-compact"
             onClick={handleAddQuestion}
+            disabled={disabled}
           >
             + {t('admin.academic.questions.addQuestion')}
           </button>
@@ -128,12 +183,21 @@ export function QuestionEditor({
                 language: selectedQuestion.examLanguage || 'en',
               })}
             </h3>
-            {questions.length > 1 && (
+            <div className="admin-row-wrap">
+              <button
+                type="button"
+                className="btn-secondary admin-btn-compact"
+                onClick={handleDuplicateQuestion}
+                disabled={disabled}
+              >
+                {t('admin.academic.questions.duplicate')}
+              </button>
               <AdminRemoveButton
                 label={t('admin.academic.questions.delete')}
                 onClick={() => handleDeleteQuestion(selectedQuestion.id)}
+                disabled={disabled}
               />
-            )}
+            </div>
           </div>
 
           <div className="admin-grid-3">
@@ -145,6 +209,7 @@ export function QuestionEditor({
                 id="q-lang"
                 className="text-input admin-field-control"
                 value={selectedQuestion.examLanguage || 'en'}
+                disabled={disabled}
                 onChange={(e) =>
                   handleUpdateQuestion({
                     ...selectedQuestion,
@@ -165,6 +230,7 @@ export function QuestionEditor({
                 id="q-diff"
                 className="text-input admin-field-control"
                 value={selectedQuestion.difficulty || 'STANDARD'}
+                disabled={disabled}
                 onChange={(e) =>
                   handleUpdateQuestion({
                     ...selectedQuestion,
@@ -188,6 +254,7 @@ export function QuestionEditor({
                 id="q-correct"
                 className="text-input admin-field-control"
                 value={selectedQuestion.correctOptionKey || 'A'}
+                disabled={disabled}
                 onChange={(e) =>
                   handleUpdateQuestion({
                     ...selectedQuestion,
@@ -204,7 +271,7 @@ export function QuestionEditor({
             </div>
           </div>
 
-          <fieldset className="admin-fieldset">
+          <fieldset className="admin-fieldset" disabled={disabled}>
             <legend className="admin-fieldset-legend">
               {t('admin.academic.questions.outlineRefs')}
             </legend>
@@ -242,7 +309,7 @@ export function QuestionEditor({
             )}
           </fieldset>
 
-          <fieldset className="admin-fieldset">
+          <fieldset className="admin-fieldset" disabled={disabled}>
             <legend className="admin-fieldset-legend">
               {t('admin.academic.questions.objectiveRefs')}
             </legend>
@@ -279,6 +346,13 @@ export function QuestionEditor({
               </div>
             )}
           </fieldset>
+
+          <ProvenanceEditor
+            idPrefix={`q-prov-${selectedQuestion.id}`}
+            value={toEditableProvenance(selectedQuestion.provenance)}
+            onChange={setProvenance}
+            disabled={disabled}
+          />
 
           <ContentBlockEditor
             label={t('admin.academic.questions.stem')}
@@ -328,23 +402,22 @@ export function QuestionEditor({
 
           <div className="admin-stack-sm">
             <h4 className="admin-section-title-lg">{t('admin.academic.questions.explanations')}</h4>
-            <ContentBlockEditor
-              blocks={selectedQuestion.explanations[0]?.blocks || []}
-              onChange={(updatedBlocks) =>
+            <LocalizedVersionsEditor
+              versions={selectedQuestion.explanations ?? []}
+              contentLabel={t('admin.academic.questions.explanationContent')}
+              disabled={disabled}
+              onChange={(explanations) =>
                 handleUpdateQuestion({
                   ...selectedQuestion,
-                  explanations: [
-                    {
-                      language: selectedQuestion.explanations[0]?.language || 'en',
-                      blocks: updatedBlocks,
-                    },
-                  ],
+                  explanations,
                 })
               }
             />
           </div>
         </div>
-      ) : null}
+      ) : (
+        <p className="admin-muted">{t('admin.academic.questions.empty')}</p>
+      )}
     </div>
   );
 }

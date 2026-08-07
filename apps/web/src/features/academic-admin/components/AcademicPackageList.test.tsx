@@ -89,4 +89,15 @@ describe('AcademicPackageList', () => {
     }
     expect(handleCreate).toHaveBeenCalled();
   });
+
+  test('hides create package when a Mathematics package already exists', () => {
+    render(
+      <AcademicPackageList
+        packages={mockPackages}
+        onCreatePackage={vi.fn()}
+        onSelectPackage={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Create package/i })).not.toBeInTheDocument();
+  });
 });

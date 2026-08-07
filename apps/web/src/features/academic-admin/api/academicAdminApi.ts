@@ -363,6 +363,14 @@ export async function saveAcademicPackageDraft(
   }
 }
 
+/** Dev-only bytes for uploaded diagrams when the API is offline. */
+const memoryDevImageBlobs = new Map<string, Blob>();
+
+/**
+ * Uploads one PNG/JPEG diagram.
+ * Contract: single-file multipart `POST /api/v1/admin/academic-images`
+ * (not multi-file). Multiple diagrams = multiple upload calls + IMAGE blocks.
+ */
 export async function uploadAcademicImage(
   file: File,
   provenance: ProvenanceInput,
@@ -383,8 +391,10 @@ export async function uploadAcademicImage(
     return await handleResponse<AcademicImage>(res);
   } catch (err) {
     if (shouldUseDevFallback(err)) {
+      const id = crypto.randomUUID();
+      memoryDevImageBlobs.set(id, file);
       return {
-        id: crypto.randomUUID(),
+        id,
         mediaType: file.type === 'image/png' ? 'image/png' : 'image/jpeg',
         byteSize: file.size,
         width: 800,
@@ -404,6 +414,51 @@ export async function uploadAcademicImage(
     }
     throw err;
   }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read image'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Loads image bytes with admin auth and returns a data: URL.
+ * Prefer data: over blob: so previews work under CSP `img-src` that allows data:
+ * (blob: is also allowed in nginx after the CSP update).
+ */
+export async function fetchAcademicImageObjectUrl(id: string): Promise<string> {
+  try {
+    const token = getAccessToken();
+    if (!token) {
+      throw new ApiError(401, { title: 'Authentication required' });
+    }
+    const res = await fetch(`/api/v1/admin/academic-images/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'image/png,image/jpeg,image/*',
+      },
+    });
+    if (!res.ok) {
+      throw new ApiError(res.status, { title: `Image load failed (${res.status})` });
+    }
+    const blob = await res.blob();
+    return blobToDataUrl(blob);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const stored = memoryDevImageBlobs.get(id);
+      if (stored) return blobToDataUrl(stored);
+    }
+    throw err;
+  }
+}
+
+/** Local file preview as data: URL (CSP-safe under img-src data:). */
+export function readFileAsDataUrl(file: File): Promise<string> {
+  return blobToDataUrl(file);
 }
 
 export async function publishAcademicPackage(

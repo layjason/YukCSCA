@@ -1,6 +1,18 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import {
+  canDeleteOutlineItem,
+  createModule,
+  createTopic,
+  deleteOutlineItem,
+  flattenOutlineForDisplay,
+  isRootModule,
+  modulesOf,
+  outlineItemLabel,
+  selectionAfterDelete,
+  setOutlineParent,
+} from '../outlineTree';
 import type { SyllabusOutlineItem } from '../types';
 
 interface SyllabusOutlineEditorProps {
@@ -13,97 +25,228 @@ export function SyllabusOutlineEditor({
   onChange,
 }: SyllabusOutlineEditorProps): React.JSX.Element {
   const { t } = useTranslation();
-  const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id || null);
+  const displayRows = useMemo(() => flattenOutlineForDisplay(items), [items]);
+  const modules = useMemo(() => modulesOf(items), [items]);
 
-  const selectedItem = items.find((i) => i.id === selectedId) || items[0];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleAddItem = () => {
-    const newItem: SyllabusOutlineItem = {
-      id: crypto.randomUUID(),
-      parentId: null,
-      order: items.length + 1,
-      sourcePosition: { page: 1, section: `1.${items.length + 1}` },
-      summary: {
-        indonesian: '',
-        english: '',
-        simplifiedChinese: '',
-      },
-    };
-    onChange([...items, newItem]);
-    setSelectedId(newItem.id);
+  // Prefer explicit selection when it still exists; otherwise first tree row.
+  const selectedItem =
+    (selectedId ? items.find((item) => item.id === selectedId) : undefined) ?? displayRows[0]?.item;
+  const selectedRow = displayRows.find((row) => row.item.id === selectedItem?.id);
+
+  const handleAddModule = () => {
+    setActionError(null);
+    const created = createModule(items);
+    onChange([...items, created]);
+    setSelectedId(created.id);
+  };
+
+  const handleAddTopic = () => {
+    const parentId = resolveTopicParentId(items, selectedItem);
+    if (!parentId) {
+      setActionError(t('admin.academic.outline.needModuleForTopic'));
+      return;
+    }
+    const created = createTopic(items, parentId);
+    if (!created) {
+      setActionError(t('admin.academic.outline.needModuleForTopic'));
+      return;
+    }
+    setActionError(null);
+    onChange([...items, created]);
+    setSelectedId(created.id);
   };
 
   const handleUpdateItem = (updated: SyllabusOutlineItem) => {
-    onChange(items.map((i) => (i.id === updated.id ? updated : i)));
+    setActionError(null);
+    onChange(items.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const handleParentChange = (nextParentId: string) => {
+    if (!selectedItem) {
+      setActionError(t('admin.academic.outline.parentChangeBlocked'));
+      return;
+    }
+    const parentId = nextParentId === '' ? null : nextParentId;
+    const next = setOutlineParent(items, selectedItem.id, parentId);
+    if (!next) {
+      setActionError(t('admin.academic.outline.parentChangeBlocked'));
+      return;
+    }
+    setActionError(null);
+    onChange(next);
   };
 
   const handleDeleteItem = (id: string) => {
-    if (items.length <= 1) return;
-    const filtered = items.filter((i) => i.id !== id);
-    onChange(filtered);
-    if (selectedId === id) {
-      setSelectedId(filtered[0]?.id || null);
+    const allowed = canDeleteOutlineItem(items, id);
+    if (!allowed.ok) {
+      setActionError(t('admin.academic.outline.removeBlockedHasChildren'));
+      return;
+    }
+    const next = deleteOutlineItem(items, id);
+    if (!next) {
+      setActionError(t('admin.academic.outline.removeBlockedHasChildren'));
+      return;
+    }
+    setActionError(null);
+    // Compute neighbor before state updates so selection follows the deleted row naturally.
+    const nextSelectedId = selectionAfterDelete(items, id);
+    onChange(next);
+    if (selectedId === id || selectedItem?.id === id) {
+      setSelectedId(nextSelectedId);
     }
   };
 
   return (
     <div className="admin-split-editor admin-split-editor-wide">
       <div className="admin-split-sidebar">
-        <div className="admin-split-sidebar-header">
-          <h3 className="admin-sidebar-title">{t('admin.academic.outline.title')}</h3>
+        <div className="admin-split-sidebar-header admin-outline-sidebar-header">
+          <div>
+            <h3 className="admin-sidebar-title">{t('admin.academic.outline.title')}</h3>
+            <p className="admin-muted-sm admin-outline-subtitle">
+              {t('admin.academic.outline.subtitle')}
+            </p>
+          </div>
+        </div>
+
+        <div className="admin-outline-add-actions">
           <button
             type="button"
             className="btn-secondary admin-btn-compact-md"
-            onClick={handleAddItem}
+            onClick={handleAddModule}
           >
-            + {t('admin.academic.outline.addItem')}
+            + {t('admin.academic.outline.addModule')}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary admin-btn-compact-md"
+            onClick={handleAddTopic}
+            aria-describedby={actionError ? 'outline-action-error' : undefined}
+          >
+            + {t('admin.academic.outline.addTopic')}
           </button>
         </div>
 
-        <div className="admin-stack-micro">
-          {items.map((item, index) => {
-            const isSelected = item.id === selectedItem?.id;
-            const label =
-              item.summary.english ||
-              item.summary.indonesian ||
-              item.summary.simplifiedChinese ||
-              `Item ${index + 1}`;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`outline-tree-item admin-list-button-bare ${isSelected ? 'outline-tree-item-selected' : ''}`}
-                onClick={() => setSelectedId(item.id)}
-              >
-                <div className="admin-ellipsis">
-                  <span className="admin-list-index-muted">
-                    {item.sourcePosition?.section || `${index + 1}`}
-                  </span>
-                  <span>{label}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {actionError ? (
+          <p id="outline-action-error" className="admin-field-error" role="alert">
+            {actionError}
+          </p>
+        ) : null}
+
+        {displayRows.length === 0 ? (
+          <p className="admin-muted">{t('admin.academic.outline.empty')}</p>
+        ) : (
+          <div className="admin-outline-tree" role="list">
+            {displayRows.map((row, index) => {
+              const isSelected = row.item.id === selectedItem?.id;
+              const label = outlineItemLabel(
+                row.item,
+                t('admin.academic.outline.untitled', { index: index + 1 }),
+              );
+              const kindLabel =
+                row.kind === 'module'
+                  ? t('admin.academic.outline.kindModule')
+                  : row.kind === 'topic'
+                    ? t('admin.academic.outline.kindTopic')
+                    : t('admin.academic.outline.kindOrphan');
+
+              return (
+                <button
+                  key={row.item.id}
+                  type="button"
+                  role="listitem"
+                  className={[
+                    'outline-tree-item',
+                    'admin-list-button-bare',
+                    `outline-tree-depth-${row.depth}`,
+                    isSelected ? 'outline-tree-item-selected' : '',
+                    row.kind === 'orphan' ? 'outline-tree-item-orphan' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => {
+                    setActionError(null);
+                    setSelectedId(row.item.id);
+                  }}
+                >
+                  <div className="admin-outline-row-main">
+                    <span className="admin-outline-kind" aria-hidden="true">
+                      {kindLabel}
+                    </span>
+                    <span className="admin-list-index-muted">
+                      {row.item.sourcePosition?.section || `${index + 1}`}
+                    </span>
+                    <span className="admin-outline-row-label">{label}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {selectedItem ? (
         <div className="admin-stack-md">
           <div className="admin-row-between">
-            <div className="admin-row">
-              <span className="yukcsca-tag">{t('admin.academic.outline.yukcscaAuthoredTag')}</span>
+            <div className="admin-stack-xs">
+              <div className="admin-row-wrap">
+                <span className="yukcsca-tag">
+                  {t('admin.academic.outline.yukcscaAuthoredTag')}
+                </span>
+                <span className="yukcsca-tag">
+                  {selectedRow?.kind === 'topic'
+                    ? t('admin.academic.outline.kindTopic')
+                    : selectedRow?.kind === 'orphan'
+                      ? t('admin.academic.outline.kindOrphan')
+                      : t('admin.academic.outline.kindModule')}
+                </span>
+              </div>
               <h4 className="admin-detail-title">
                 {selectedItem.sourcePosition?.section
-                  ? `Section ${selectedItem.sourcePosition.section}`
-                  : 'Outline Detail'}
+                  ? t('admin.academic.outline.detailHeading', {
+                      section: selectedItem.sourcePosition.section,
+                    })
+                  : t('admin.academic.outline.detailFallback')}
               </h4>
             </div>
-            {items.length > 1 && (
-              <AdminRemoveButton
-                label={t('admin.academic.outline.remove')}
-                onClick={() => handleDeleteItem(selectedItem.id)}
-              />
-            )}
+            <AdminRemoveButton
+              label={t('admin.academic.outline.remove')}
+              onClick={() => handleDeleteItem(selectedItem.id)}
+            />
+          </div>
+
+          {selectedRow?.kind === 'orphan' ? (
+            <p className="admin-field-error" role="status">
+              {t('admin.academic.outline.orphanHint')}
+            </p>
+          ) : null}
+
+          <div>
+            <label htmlFor="outline-parent" className="admin-field-label">
+              {t('admin.academic.outline.parentLabel')}
+            </label>
+            <select
+              id="outline-parent"
+              className="text-input admin-field-control"
+              value={selectedItem.parentId ?? ''}
+              onChange={(e) => handleParentChange(e.target.value)}
+              disabled={isRootModule(selectedItem) && childCountSafe(items, selectedItem.id) > 0}
+            >
+              <option value="">{t('admin.academic.outline.parentNone')}</option>
+              {modules
+                .filter((module) => module.id !== selectedItem.id)
+                .map((module) => (
+                  <option key={module.id} value={module.id}>
+                    {outlineItemLabel(
+                      module,
+                      t('admin.academic.outline.untitledModule', { order: module.order + 1 }),
+                    )}
+                  </option>
+                ))}
+            </select>
+            <p className="admin-muted-sm">{t('admin.academic.outline.parentHelp')}</p>
           </div>
 
           <div className="admin-grid-2">
@@ -114,6 +257,7 @@ export function SyllabusOutlineEditor({
               <input
                 id="source-page"
                 type="number"
+                min={1}
                 className="text-input admin-field-control"
                 value={selectedItem.sourcePosition?.page ?? ''}
                 onChange={(e) =>
@@ -205,7 +349,30 @@ export function SyllabusOutlineEditor({
             </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <p className="admin-muted">{t('admin.academic.outline.emptyDetail')}</p>
+      )}
     </div>
   );
+}
+
+function resolveTopicParentId(
+  items: SyllabusOutlineItem[],
+  selected: SyllabusOutlineItem | undefined,
+): string | null {
+  if (!selected) {
+    return modulesOf(items)[0]?.id ?? null;
+  }
+  if (isRootModule(selected)) return selected.id;
+  if (
+    selected.parentId &&
+    items.some((item) => item.id === selected.parentId && isRootModule(item))
+  ) {
+    return selected.parentId;
+  }
+  return modulesOf(items)[0]?.id ?? null;
+}
+
+function childCountSafe(items: SyllabusOutlineItem[], parentId: string): number {
+  return items.filter((item) => item.parentId === parentId).length;
 }

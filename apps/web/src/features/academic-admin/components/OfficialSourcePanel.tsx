@@ -11,7 +11,12 @@ interface OfficialSourcePanelProps {
   syllabus: OfficialSyllabus;
   onChange: (updated: OfficialSyllabus) => void;
   isPublished?: boolean;
-  fieldErrors?: Partial<Record<OfficialFieldKey, string>>;
+  fieldErrors?: Partial<Record<OfficialFieldKey, string | string[]>>;
+}
+
+function joinFieldError(value: string | string[] | undefined): string | undefined {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value.join(' ') : value;
 }
 
 type OfficialDateStatus = 'DECLARED' | 'NOT_STATED';
@@ -70,7 +75,7 @@ export function OfficialSourcePanel({
     });
   };
 
-  const fieldError = (key: OfficialFieldKey) => fieldErrors[key];
+  const fieldError = (key: OfficialFieldKey) => joinFieldError(fieldErrors[key]);
 
   const toggleLanguage = (
     field: 'sourceLanguages' | 'examLanguages',
@@ -204,11 +209,17 @@ export function OfficialSourcePanel({
                   permittedUse: e.target.value as 'REFERENCE_ONLY',
                 })
               }
+              aria-invalid={fieldError('permittedUse') ? true : undefined}
             >
               <option value="REFERENCE_ONLY">
                 {t('admin.academic.sourcePanel.referenceOnly')}
               </option>
             </select>
+            {fieldError('permittedUse') ? (
+              <p className="admin-field-error" role="alert">
+                {fieldError('permittedUse')}
+              </p>
+            ) : null}
           </div>
         </div>
 

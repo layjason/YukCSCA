@@ -37,4 +37,12 @@ describe('normalizeOfficialSyllabus', () => {
     expect(result.effectiveOn).toEqual(notStatedOfficialDate());
     expect(result.updatedOn).toEqual(notStatedOfficialDate());
   });
+
+  test('always sets permittedUse to REFERENCE_ONLY for publish compatibility', () => {
+    const result = normalizeOfficialSyllabus({
+      subject: 'MATHEMATICS',
+      authority: 'CSCA',
+    });
+    expect(result.permittedUse).toBe('REFERENCE_ONLY');
+  });
 });

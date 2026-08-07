@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ContentBlockEditor } from './ContentBlockEditor';
+import { selectionAfterDeleteId } from '../listSelection';
+import {
+  toDraftProvenanceInput,
+  toEditableProvenance,
+  type EditableProvenance,
+} from '../provenanceDraft';
+import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
+import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import type { LearningObjective, StudyResource, SyllabusOutlineItem } from '../types';
 
@@ -9,6 +16,7 @@ interface StudyResourcesEditorProps {
   outlineItems: SyllabusOutlineItem[];
   objectives: LearningObjective[];
   onChange: (updated: StudyResource[]) => void;
+  disabled?: boolean;
 }
 
 const RESOURCE_KINDS = ['LESSON', 'TERMINOLOGY', 'REMEDIATION'] as const;
@@ -38,6 +46,7 @@ export function StudyResourcesEditor({
   outlineItems,
   objectives,
   onChange,
+  disabled = false,
 }: StudyResourcesEditorProps): React.JSX.Element {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(resources[0]?.id || null);
@@ -48,6 +57,7 @@ export function StudyResourcesEditor({
   };
 
   const handleAdd = (kind: (typeof RESOURCE_KINDS)[number]) => {
+    if (disabled) return;
     const created: StudyResource = {
       id: crypto.randomUUID(),
       kind,
@@ -72,15 +82,35 @@ export function StudyResourcesEditor({
   };
 
   const handleDelete = (id: string) => {
-    if (resources.length <= 1) return;
+    if (disabled) return;
+    const nextSelectedId = selectionAfterDeleteId(
+      resources.map((item) => item.id),
+      id,
+    );
     const next = resources.filter((item) => item.id !== id);
     onChange(next);
-    if (selectedId === id) setSelectedId(next[0]?.id || null);
+    if (selectedId === id || selected?.id === id) {
+      setSelectedId(nextSelectedId);
+    }
   };
 
   const toggleId = (ids: string[], id: string, checked: boolean): string[] => {
     if (checked) return ids.includes(id) ? ids : [...ids, id];
     return ids.filter((value) => value !== id);
+  };
+
+  const setProvenance = (next: EditableProvenance) => {
+    if (!selected) return;
+    update({
+      ...selected,
+      provenance: {
+        ...selected.provenance,
+        ...toDraftProvenanceInput(next),
+        authorUserId: selected.provenance.authorUserId,
+        reviewedByUserId: selected.provenance.reviewedByUserId ?? null,
+        reviewedAt: selected.provenance.reviewedAt ?? null,
+      },
+    });
   };
 
   const presentKinds = new Set(resources.map((item) => item.kind).filter(Boolean));
@@ -100,6 +130,7 @@ export function StudyResourcesEditor({
                 type="button"
                 className="btn-secondary admin-btn-compact"
                 onClick={() => handleAdd(kind)}
+                disabled={disabled}
               >
                 + {kindLabel(t, kind)}
                 {presentKinds.has(kind) ? '' : ` (${t('admin.academic.resources.missing')})`}
@@ -138,12 +169,11 @@ export function StudyResourcesEditor({
         <div className="admin-stack-md">
           <div className="admin-row-between">
             <h3 className="admin-detail-title">{t('admin.academic.resources.editTitle')}</h3>
-            {resources.length > 1 ? (
-              <AdminRemoveButton
-                label={t('admin.academic.resources.remove')}
-                onClick={() => handleDelete(selected.id)}
-              />
-            ) : null}
+            <AdminRemoveButton
+              label={t('admin.academic.resources.remove')}
+              onClick={() => handleDelete(selected.id)}
+              disabled={disabled}
+            />
           </div>
 
           <div>
@@ -154,6 +184,7 @@ export function StudyResourcesEditor({
               id="resource-kind"
               className="text-input admin-field-control"
               value={selected.kind || 'LESSON'}
+              disabled={disabled}
               onChange={(e) =>
                 update({
                   ...selected,
@@ -185,6 +216,8 @@ export function StudyResourcesEditor({
                 type="text"
                 className="text-input admin-field-control"
                 value={selected.title[field] || ''}
+                maxLength={4000}
+                disabled={disabled}
                 onChange={(e) =>
                   update({
                     ...selected,
@@ -195,7 +228,7 @@ export function StudyResourcesEditor({
             </div>
           ))}
 
-          <fieldset className="admin-fieldset">
+          <fieldset className="admin-fieldset" disabled={disabled}>
             <legend className="admin-fieldset-legend">
               {t('admin.academic.resources.outlineRefs')}
             </legend>
@@ -233,7 +266,7 @@ export function StudyResourcesEditor({
             )}
           </fieldset>
 
-          <fieldset className="admin-fieldset">
+          <fieldset className="admin-fieldset" disabled={disabled}>
             <legend className="admin-fieldset-legend">
               {t('admin.academic.resources.objectiveRefs')}
             </legend>
@@ -271,15 +304,18 @@ export function StudyResourcesEditor({
             )}
           </fieldset>
 
-          <ContentBlockEditor
-            label={t('admin.academic.resources.content')}
-            blocks={selected.versions[0]?.blocks || []}
-            onChange={(blocks) =>
-              update({
-                ...selected,
-                versions: [{ language: selected.versions[0]?.language || 'en', blocks }],
-              })
-            }
+          <ProvenanceEditor
+            idPrefix={`resource-prov-${selected.id}`}
+            value={toEditableProvenance(selected.provenance)}
+            onChange={setProvenance}
+            disabled={disabled}
+          />
+
+          <LocalizedVersionsEditor
+            versions={selected.versions ?? []}
+            contentLabel={t('admin.academic.resources.content')}
+            disabled={disabled}
+            onChange={(versions) => update({ ...selected, versions })}
           />
         </div>
       ) : null}

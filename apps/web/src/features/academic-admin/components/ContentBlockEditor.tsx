@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KaTeXPreview } from './KaTeXPreview';
 import { ImageUploader } from './ImageUploader';
+import { AcademicImageThumb } from './AcademicImageThumb';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import type { ContentBlock, AcademicImage } from '../types';
 
@@ -72,6 +73,7 @@ export function ContentBlockEditor({
               className="text-input admin-field-control-resize-only"
               rows={3}
               value={block.text}
+              maxLength={12000}
               placeholder={t('admin.academic.blocks.textPlaceholder')}
               onChange={(e) => handleUpdateBlock(index, { kind: 'TEXT', text: e.target.value })}
             />
@@ -84,8 +86,10 @@ export function ContentBlockEditor({
                   type="text"
                   className="text-input admin-block-math-input"
                   value={block.latex}
+                  maxLength={4000}
                   placeholder={t('admin.academic.blocks.latexPlaceholder')}
                   onChange={(e) => handleUpdateBlock(index, { ...block, latex: e.target.value })}
+                  aria-describedby={`math-latex-hint-${index}`}
                 />
                 <label className="admin-display-mode">
                   <input
@@ -98,6 +102,14 @@ export function ContentBlockEditor({
                   {t('admin.academic.blocks.displayMode')}
                 </label>
               </div>
+              <p id={`math-latex-hint-${index}`} className="admin-hint">
+                {t('admin.academic.blocks.latexSafetyHint')}
+              </p>
+              {block.latex && (block.latex.includes('<') || block.latex.includes('>')) ? (
+                <p className="admin-field-error" role="status">
+                  {t('admin.academic.blocks.latexAngleBracketWarning')}
+                </p>
+              ) : null}
 
               {block.latex ? (
                 <KaTeXPreview latex={block.latex} displayMode={block.displayMode} />
@@ -107,48 +119,94 @@ export function ContentBlockEditor({
 
           {block.kind === 'IMAGE' && (
             <div className="admin-image-ref">
-              <div className="admin-image-ref-thumb">IMG</div>
-              <div className="admin-image-ref-body">
-                <p className="admin-image-ref-title">Alt: {block.altText}</p>
-                {block.caption ? (
-                  <p className="admin-image-ref-meta">Caption: {block.caption}</p>
-                ) : null}
-                <p className="admin-image-ref-id">ID: {block.imageId}</p>
+              <AcademicImageThumb
+                imageId={block.imageId}
+                altText={block.altText}
+                caption={block.caption}
+              />
+              <div className="admin-image-ref-body admin-stack-xs">
+                <div>
+                  <label htmlFor={`img-alt-${index}`} className="admin-field-label">
+                    {t('admin.academic.blocks.altText')} <span className="admin-required">*</span>
+                  </label>
+                  <input
+                    id={`img-alt-${index}`}
+                    type="text"
+                    className="text-input admin-field-control"
+                    value={block.altText}
+                    maxLength={500}
+                    onChange={(e) =>
+                      handleUpdateBlock(index, {
+                        ...block,
+                        altText: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`img-caption-${index}`} className="admin-field-label">
+                    {t('admin.academic.blocks.caption')}
+                  </label>
+                  <input
+                    id={`img-caption-${index}`}
+                    type="text"
+                    className="text-input admin-field-control"
+                    value={block.caption ?? ''}
+                    maxLength={1000}
+                    onChange={(e) =>
+                      handleUpdateBlock(index, {
+                        ...block,
+                        caption: e.target.value.trim() ? e.target.value : null,
+                      })
+                    }
+                  />
+                </div>
+                <p className="admin-image-ref-hint">{t('admin.academic.blocks.clickToEnlarge')}</p>
               </div>
             </div>
           )}
         </div>
       ))}
 
+      {/*
+        One resource/question version can hold many IMAGE blocks.
+        Backend accepts one file per POST; each successful upload appends a block.
+        Keep add-actions visible while the uploader is open so more content can be added after.
+      */}
       {showImageUploader ? (
-        <ImageUploader onUploaded={handleImageUploaded} />
-      ) : (
-        <div className="admin-row-wrap">
-          <button
-            type="button"
-            className="btn-secondary admin-btn-compact-md"
-            onClick={handleAddText}
-          >
-            + {t('admin.academic.blocks.addText')}
-          </button>
+        <ImageUploader
+          onUploaded={handleImageUploaded}
+          onCancel={() => setShowImageUploader(false)}
+        />
+      ) : null}
 
-          <button
-            type="button"
-            className="btn-secondary admin-btn-compact-md"
-            onClick={handleAddMath}
-          >
-            + {t('admin.academic.blocks.addMath')}
-          </button>
+      <div className="admin-row-wrap admin-block-add-actions">
+        <button
+          type="button"
+          className="btn-secondary admin-btn-compact-md"
+          onClick={handleAddText}
+        >
+          + {t('admin.academic.blocks.addText')}
+        </button>
 
-          <button
-            type="button"
-            className="btn-secondary admin-btn-compact-md"
-            onClick={() => setShowImageUploader(true)}
-          >
-            + {t('admin.academic.blocks.addImage')}
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          className="btn-secondary admin-btn-compact-md"
+          onClick={handleAddMath}
+        >
+          + {t('admin.academic.blocks.addMath')}
+        </button>
+
+        <button
+          type="button"
+          className="btn-secondary admin-btn-compact-md"
+          onClick={() => setShowImageUploader(true)}
+          disabled={showImageUploader}
+          aria-pressed={showImageUploader}
+        >
+          + {t('admin.academic.blocks.addImage')}
+        </button>
+      </div>
     </div>
   );
 }

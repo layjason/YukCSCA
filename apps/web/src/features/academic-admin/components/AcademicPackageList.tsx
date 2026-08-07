@@ -15,6 +15,8 @@ export function AcademicPackageList({
   isLoading = false,
 }: AcademicPackageListProps): React.JSX.Element {
   const { t } = useTranslation();
+  // Pilot allows a single Mathematics package; hide create once one exists.
+  const canCreatePackage = packages.length === 0;
 
   if (isLoading) {
     return (
@@ -35,9 +37,15 @@ export function AcademicPackageList({
           </h1>
           <p className="admin-page-subtitle">{t('admin.academic.subtitle')}</p>
         </div>
-        <button type="button" className="btn-primary admin-intro-action" onClick={onCreatePackage}>
-          {t('admin.academic.createPackage')}
-        </button>
+        {canCreatePackage ? (
+          <button
+            type="button"
+            className="btn-primary admin-intro-action"
+            onClick={onCreatePackage}
+          >
+            {t('admin.academic.createPackage')}
+          </button>
+        ) : null}
       </section>
 
       {packages.length === 0 ? (
@@ -71,6 +79,7 @@ export function AcademicPackageList({
                   : pkg.status === 'ARCHIVED'
                     ? 'badge-status-archived'
                     : 'badge-status-draft';
+              const isCorrection = pkg.status === 'PUBLISHED' && pkg.hasUnpublishedChanges;
 
               return (
                 <li key={pkg.id}>
@@ -91,7 +100,9 @@ export function AcademicPackageList({
 
                         {pkg.hasUnpublishedChanges && (
                           <span className="badge-unpublished-changes">
-                            {t('admin.academic.hasUnpublishedChanges')}
+                            {isCorrection
+                              ? t('admin.academic.resumeCorrection')
+                              : t('admin.academic.hasUnpublishedChanges')}
                           </span>
                         )}
 
@@ -115,7 +126,9 @@ export function AcademicPackageList({
                     </div>
 
                     <span className="admin-package-card-cta" aria-hidden="true">
-                      {t('admin.academic.editPackage')}
+                      {isCorrection
+                        ? t('admin.academic.resumeCorrectionCta')
+                        : t('admin.academic.editPackage')}
                       <span className="admin-package-card-arrow">→</span>
                     </span>
                   </button>

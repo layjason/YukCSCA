@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { selectionAfterDeleteId } from '../listSelection';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import type { LearningObjective, SyllabusOutlineItem } from '../types';
 
@@ -38,10 +39,15 @@ export function LearningObjectivesEditor({
   };
 
   const handleDelete = (id: string) => {
-    if (objectives.length <= 1) return;
+    const nextSelectedId = selectionAfterDeleteId(
+      objectives.map((item) => item.id),
+      id,
+    );
     const next = objectives.filter((item) => item.id !== id);
     onChange(next);
-    if (selectedId === id) setSelectedId(next[0]?.id || null);
+    if (selectedId === id || selected?.id === id) {
+      setSelectedId(nextSelectedId);
+    }
   };
 
   const outlineLabel = (id: string) => {
@@ -97,12 +103,10 @@ export function LearningObjectivesEditor({
         <div className="admin-stack-md">
           <div className="admin-row-between">
             <h3 className="admin-detail-title">{t('admin.academic.objectives.editTitle')}</h3>
-            {objectives.length > 1 ? (
-              <AdminRemoveButton
-                label={t('admin.academic.objectives.remove')}
-                onClick={() => handleDelete(selected.id)}
-              />
-            ) : null}
+            <AdminRemoveButton
+              label={t('admin.academic.objectives.remove')}
+              onClick={() => handleDelete(selected.id)}
+            />
           </div>
 
           {(

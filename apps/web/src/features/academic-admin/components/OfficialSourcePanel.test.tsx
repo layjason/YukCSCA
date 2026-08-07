@@ -103,8 +103,6 @@ describe('OfficialSourcePanel', () => {
       />,
     );
 
-    expect(
-      screen.getByText('Choose Not stated, or Declared with a date.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Choose Not stated, or Declared with a date.')).toBeInTheDocument();
   });
 });

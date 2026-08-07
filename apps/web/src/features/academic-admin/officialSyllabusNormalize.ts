@@ -15,9 +15,7 @@ export function notStatedOfficialDate(): OfficialDate {
  * admin toggled Declared → Not stated. Normalize so load/save always send
  * an explicit status.
  */
-export function normalizeOfficialDate(
-  value: OfficialDate | null | undefined,
-): OfficialDate {
+export function normalizeOfficialDate(value: OfficialDate | null | undefined): OfficialDate {
   const status = value?.status as OfficialDateStatus | undefined;
   if (status === 'DECLARED') {
     return { status: 'DECLARED', date: value?.date ?? null };
@@ -29,6 +27,8 @@ export function normalizeOfficialDate(
 export function normalizeOfficialSyllabus(syllabus: OfficialSyllabus): OfficialSyllabus {
   return {
     ...syllabus,
+    // Backend requireExact(REFERENCE_ONLY); empty/missing → INCOMPATIBLE on publish.
+    permittedUse: 'REFERENCE_ONLY',
     publishedOn: normalizeOfficialDate(syllabus.publishedOn),
     effectiveOn: normalizeOfficialDate(syllabus.effectiveOn),
     updatedOn: normalizeOfficialDate(syllabus.updatedOn),
