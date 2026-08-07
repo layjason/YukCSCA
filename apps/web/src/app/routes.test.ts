@@ -23,4 +23,24 @@ describe('route manifest', () => {
     expect(isRouteActive(getRouteById('parent-purchases'), '/parent/orders/order-1')).toBe(true);
     expect(isRouteActive(getRouteById('home'), '/products')).toBe(false);
   });
+
+  it('promotes production Learn routes off preview workspace gate', () => {
+    const learn = getRouteById('learn');
+    const subject = getRouteById('learn-subject');
+    const lesson = getRouteById('learn-lesson');
+
+    expect(learn.availability).toBe('implemented');
+    expect(learn.access).toBe('student-settings');
+    expect(learn.prototypeOnly).toBeUndefined();
+    expect(isRouteActive(learn, '/app/learn/MATHEMATICS')).toBe(true);
+    expect(isRouteActive(learn, '/app/learn/MATHEMATICS/lessons/abc')).toBe(true);
+
+    expect(subject.path).toBe('/app/learn/:subject');
+    expect(subject.access).toBe('student-settings');
+    expect(subject.availability).toBe('implemented');
+
+    expect(lesson.path).toBe('/app/learn/:subject/lessons/:resourceId');
+    expect(lesson.access).toBe('student-settings');
+    expect(lesson.availability).toBe('implemented');
+  });
 });

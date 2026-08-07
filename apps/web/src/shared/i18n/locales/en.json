@@ -235,21 +235,90 @@
   },
   "learn": {
     "title": "Learn",
-    "placeholder": "Course structure and lessons will appear here.",
-    "continue": "Continue learning",
-    "topics": "Topics",
-    "prerequisite": "Prerequisite",
-    "viewSyllabus": "View syllabus coverage",
-    "trackTitle": "Current subject track",
-    "examLanguageEnglish": "English exam language",
-    "trackDescription": "Mathematics in English and Chinese share a concept structure, while questions, terminology, and language evidence remain track-specific.",
-    "emptyTitle": "No lesson is assigned yet",
-    "emptyDescription": "Complete the preview plan to receive a connected lesson and practice task.",
-    "hierarchyTitle": "Course path",
-    "moduleAlgebra": "Module: Algebra",
-    "moduleDescription": "Platform coverage is separate from your personal learning status.",
-    "prerequisiteValue": "Prerequisite: arithmetic with variables",
-    "masteryCaveat": "Opening or reading content does not establish mastery. Checkpoints, later practice, and independent revalidation provide evidence."
+    "loading": "Loading learning content…",
+    "retry": "Try again",
+    "backToLearn": "Back to Learn",
+    "backToBrowse": "Back to syllabus",
+    "openSubject": "Open subject",
+    "packagesLede": "Choose a published subject package to browse the syllabus and study lessons.",
+    "emptyPackagesTitle": "No published packages yet",
+    "emptyPackagesDescription": "When your school or the platform publishes a preparation package, it will appear here. This is not sample syllabus data.",
+    "continue": "Continue",
+    "contentProgressNote": "Content complete means you finished reading this lesson. It is not mastery, a checkpoint, or practice evidence.",
+    "subjects": {
+      "MATHEMATICS": "Mathematics"
+    },
+    "progress": {
+      "notStarted": "Not started",
+      "inProgress": "In progress",
+      "contentComplete": "Content complete"
+    },
+    "coverage": {
+      "fullyCovered": "Covered",
+      "partiallyCovered": "Partially covered",
+      "notCovered": "In development"
+    },
+    "browse": {
+      "officialSource": "Official CSCA source",
+      "authority": "Authority",
+      "edition": "Edition",
+      "lastChecked": "Last checked",
+      "permittedUse": "Permitted use",
+      "permittedUseValues": {
+        "REFERENCE_ONLY": "Reference only"
+      },
+      "openOfficial": "Open official syllabus ({{language}})",
+      "examLanguage": {
+        "en": "English",
+        "zh-CN": "Chinese"
+      },
+      "examLanguagesLabel": "Exam languages",
+      "officialSourceNote": "Official documents are external reference material. YukCSCA outline summaries and lessons are platform-authored.",
+      "outlineTitle": "Syllabus outline",
+      "coverageLegend": "Coverage shows whether a published lesson exists",
+      "progressLegend": "chips show your content progress only",
+      "emptyOutlineTitle": "Outline not available yet",
+      "emptyOutlineDescription": "This package does not list outline topics with lessons yet.",
+      "untitledTopic": "Untitled topic",
+      "untitledLesson": "Untitled lesson",
+      "notFoundTitle": "Package not found",
+      "notFoundDescription": "There is no published package for this subject yet, or it is no longer available.",
+      "revision": "Published revision {{number}}"
+    },
+    "lesson": {
+      "title": "Lesson",
+      "tempLanguageNote": "This language toggle is temporary for this lesson. It does not change your profile default.",
+      "explanationLanguage": "Explanation language",
+      "languageUnavailableTitle": "This explanation language is not available",
+      "languageUnavailableDescription": "No authored version exists for {{language}}. Choose another available language — the app will not substitute content silently.",
+      "languageUnavailableHint": "Use the language toggle above to switch to an available version.",
+      "languageUnavailableOption": "Not available for this lesson",
+      "noLanguagesAvailable": "No explanation-language versions are published for this lesson yet.",
+      "markContentComplete": "Mark content complete",
+      "savingProgress": "Saving…",
+      "contentCompleteAck": "Content complete — you can re-read anytime. This is not mastery.",
+      "progressAria": "Reading progress through lesson blocks",
+      "mathAria": "Mathematical expression: {{latex}}",
+      "mathError": "This formula could not be displayed.",
+      "imageUnavailable": "Image unavailable",
+      "imageLoading": "Loading image…",
+      "notFoundTitle": "Lesson not found",
+      "notFoundDescription": "This lesson is not in the active published package, or the link is out of date."
+    },
+    "errors": {
+      "title": "Something went wrong",
+      "loadPackages": "Published packages could not be loaded. Check your connection and try again.",
+      "loadBrowse": "This subject package could not be loaded. Check your connection and try again.",
+      "loadLesson": "This lesson could not be loaded. Check your connection and try again.",
+      "saveProgress": "Your content progress could not be saved. Try again.",
+      "progressValidation": "Progress could not be saved because the request was invalid.",
+      "forbidden": "You do not have access to this learning content.",
+      "unauthorized": "Sign in again to continue learning.",
+      "invalidSubjectTitle": "Unknown subject",
+      "invalidSubjectDescription": "That subject is not supported in Learn.",
+      "invalidLessonTitle": "Invalid lesson link",
+      "invalidLessonDescription": "The lesson address is incomplete or malformed."
+    }
   },
   "syllabus": {
     "title": "Syllabus coverage",
