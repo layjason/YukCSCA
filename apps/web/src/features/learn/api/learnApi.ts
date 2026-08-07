@@ -19,7 +19,28 @@ import {
 
 const BASE = '/api/v1/academic';
 
-const isDevFallback = (): boolean => import.meta.env.DEV && import.meta.env.MODE !== 'test';
+export type LearnEnv = { DEV: boolean; MODE: string };
+
+/** Test-only override so DEV fallback policy can be driven without rebuilding Vite env. */
+let learnEnvOverride: LearnEnv | null = null;
+
+/** @internal Test helper — not for production callers. */
+export function __setLearnEnvForTests(env: LearnEnv | null): void {
+  learnEnvOverride = env;
+}
+
+function readLearnEnv(): LearnEnv {
+  if (learnEnvOverride) return learnEnvOverride;
+  return {
+    DEV: Boolean(import.meta.env.DEV),
+    MODE: String(import.meta.env.MODE ?? 'production'),
+  };
+}
+
+function isDevFallback(): boolean {
+  const env = readLearnEnv();
+  return env.DEV && env.MODE !== 'test';
+}
 
 function authorizationHeaders(includeContentType = true): Record<string, string> {
   const token = getAccessToken();
@@ -31,15 +52,26 @@ function authorizationHeaders(includeContentType = true): Record<string, string>
   };
 }
 
-/** DEV-only offline/404/401 fallback. Never for 403/5xx/validation/malformed success. */
-function shouldUseDevFallback(err: unknown, status?: number): boolean {
-  if (!isDevFallback()) return false;
-  if (status === 403 || (status !== undefined && status >= 500)) return false;
+/**
+ * DEV-only offline / 401 fallback for Learn academic APIs.
+ * Application 404 (no package / unknown lesson) must surface so empty and not-found UI stay honest when the API is up.
+ * Never mock-success on 403 / 5xx / validation / malformed.
+ */
+export function shouldUseLearnDevFallback(
+  err: unknown,
+  status: number | undefined,
+  env: LearnEnv = readLearnEnv(),
+): boolean {
+  if (!env.DEV || env.MODE === 'test') return false;
+  if (status === 404) return false;
+  if (status === 403 || status === 400 || (status !== undefined && status >= 500)) return false;
   if (err instanceof ApiError) {
-    if (err.status === 403 || err.status >= 500 || err.status === 400) return false;
-    return err.status === 404 || err.status === 401;
+    if (err.status === 404 || err.status === 403 || err.status === 400 || err.status >= 500) {
+      return false;
+    }
+    return err.status === 401;
   }
-  // Network / offline
+  // Network / offline (TypeError, failed to fetch, aborted, etc.)
   return true;
 }
 
@@ -81,14 +113,14 @@ export async function listPublishedPackages(): Promise<PublishedPackageSummary[]
     const response = await fetch(`${BASE}/packages`, {
       headers: authorizationHeaders(false),
     });
-    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
+    if (isDevFallback() && response.status === 401) {
       return devListPublishedPackages();
     }
     const data = await parseJsonResponse<unknown>(response);
     assertPackageList(data);
     return data;
   } catch (err) {
-    if (shouldUseDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       return devListPublishedPackages();
     }
     throw err;
@@ -102,7 +134,7 @@ export async function getPublishedPackageBrowse(
     const response = await fetch(`${BASE}/packages/${encodeURIComponent(subject)}`, {
       headers: authorizationHeaders(false),
     });
-    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
+    if (isDevFallback() && response.status === 401) {
       const mock = devGetPublishedPackageBrowse(subject);
       if (mock) return mock;
     }
@@ -110,7 +142,7 @@ export async function getPublishedPackageBrowse(
     assertBrowse(data);
     return data;
   } catch (err) {
-    if (shouldUseDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       const mock = devGetPublishedPackageBrowse(subject);
       if (mock) return mock;
     }
@@ -129,7 +161,7 @@ export async function getPublishedLesson(
       `${BASE}/packages/${encodeURIComponent(subject)}/lessons/${encodeURIComponent(resourceId)}?${query}`,
       { headers: authorizationHeaders(false) },
     );
-    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
+    if (isDevFallback() && response.status === 401) {
       const mock = devGetPublishedLesson(subject, resourceId, explanationLanguage);
       if (mock) return mock;
     }
@@ -137,7 +169,7 @@ export async function getPublishedLesson(
     assertLesson(data);
     return data;
   } catch (err) {
-    if (shouldUseDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       const mock = devGetPublishedLesson(subject, resourceId, explanationLanguage);
       if (mock) return mock;
     }
@@ -159,7 +191,7 @@ export async function upsertContentProgress(
         body: JSON.stringify(request),
       },
     );
-    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
+    if (isDevFallback() && response.status === 401) {
       const mock = devUpsertContentProgress(
         subject,
         resourceId,
@@ -172,7 +204,7 @@ export async function upsertContentProgress(
     assertProgress(data);
     return data;
   } catch (err) {
-    if (shouldUseDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       const mock = devUpsertContentProgress(
         subject,
         resourceId,
@@ -199,7 +231,7 @@ export async function fetchPublishedAcademicImageObjectUrl(imageId: string): Pro
         Accept: 'image/png,image/jpeg,image/webp,image/*',
       },
     });
-    if (isDevFallback() && (response.status === 404 || response.status === 401)) {
+    if (isDevFallback() && response.status === 401) {
       return URL.createObjectURL(devImagePlaceholderBlob());
     }
     if (!response.ok) {
@@ -208,7 +240,7 @@ export async function fetchPublishedAcademicImageObjectUrl(imageId: string): Pro
     const blob = await response.blob();
     return URL.createObjectURL(blob);
   } catch (err) {
-    if (shouldUseDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       return URL.createObjectURL(devImagePlaceholderBlob());
     }
     throw err;

@@ -182,12 +182,27 @@ public class AcademicStudentService {
     }
 
     Instant now = now();
-    UUID lastRevisionId =
-        expectedPackageRevisionId != null ? expectedPackageRevisionId : revision.getId();
+    // Soft diagnostic only: never fail the student loop on expected revision mismatches (slice
+    // concurrency rules). Persist the active revision id so last_revision_id FK always resolves.
+    if (expectedPackageRevisionId != null && !expectedPackageRevisionId.equals(revision.getId())) {
+      LOGGER.info(
+          "academic.student.progress revision_mismatch subject={} resourceId={} expected={} active={}",
+          academicPackage.getSubject(),
+          resourceId,
+          expectedPackageRevisionId,
+          revision.getId());
+    }
+    UUID lastRevisionId = revision.getId();
     StudentContentProgress existing =
         progressStore
             .findByAccountIdAndPackageIdAndResourceId(actorId, academicPackage.getId(), resourceId)
             .orElse(null);
+    // VS-008 invariant: CONTENT_COMPLETE stays complete on re-read; no reset rules yet.
+    if (existing != null
+        && existing.getStatus() == StudentContentProgressStatus.CONTENT_COMPLETE
+        && progressStatus == StudentContentProgressStatus.IN_PROGRESS) {
+      progressStatus = StudentContentProgressStatus.CONTENT_COMPLETE;
+    }
     StudentContentProgress saved;
     if (existing == null) {
       saved =

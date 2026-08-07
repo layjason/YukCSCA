@@ -590,13 +590,13 @@ routes, and VS-004/VS-005 production API patterns.
 - [x] Documentation sufficiency complete; `D-01`–`D-04` approved and reflected.
 - [x] Human gate remains `APPROVED` for recorded scope.
 - [x] TypeSpec student contract compiles; checkpoints recorded; zero open CR.
-- [ ] Backend + frontend + migration implement the same states from checkpoint. Backend + V8 complete; frontend pending.
-- [ ] All AC rows have named evidence. Backend HTTP/unit evidence for AC 01–09 subset; frontend/journey pending.
+- [x] Backend + frontend + migration implement the same states from checkpoint (V8 progress; five student HTTP ops; production `features/learn` routes). Product-owner journey acceptance still open — status remains `IN_PROGRESS`, not `DONE`.
+- [ ] All AC rows have named evidence. Backend HTTP/unit + frontend component/API evidence recorded for AC 01–11 subset; AC 12 visual/a11y and end-to-end actor journey still require product-owner review.
 - [x] Authorization, privacy, and no-key-leakage reviewed. (backend: STUDENT-only, no key/draft/question leak in IT)
 - [ ] Mobile, a11y, localization, reduced motion verified for Learn browse + lesson.
-- [ ] Prototype isolation recorded; production routes live for the closed loop.
-- [ ] UI follows `DESIGN.md` and the Student content experience section.
-- [ ] `ARCHITECTURE.md`, `PLAN.md`, `COVERAGE.md` updated at completion.
+- [x] Prototype isolation recorded; production routes live for the closed loop (`student-settings` / `implemented`; no `features/learn` → prototype imports).
+- [ ] UI follows `DESIGN.md` and the Student content experience section (code surface implemented; visual PO review pending).
+- [x] `ARCHITECTURE.md`, `PLAN.md`, `COVERAGE.md` updated with VS-008 student academic boundary (final status bump deferred until PO acceptance).
 - [ ] Product owner accepts the real student journey before `DONE`.
 
 ## Verification evidence
@@ -613,7 +613,7 @@ routes, and VS-004/VS-005 production API patterns.
 | Frontend tests               | Complete (worker) — `pnpm typecheck:web` pass; `pnpm lint:web` pass; focused vitest: `src/features/learn/**`, `src/app/routes.test.ts`, `src/shared/i18n/i18n-parity.test.ts` (27 tests), plus regression `App.test.tsx` + `prototypeFlows.test.tsx` (25 tests). Covers API 5xx/403 no mock-success, malformed rejection, empty/retry, browse continue/progress chips, language unavailable, content-complete authority, Learn route promotion off `PreviewWorkspaceGuard`. |
 | Frontend visual review       | Not run in this handoff (no Playwright screenshots retained). Manual/PO review still required for mobile/desktop/locales/reduced-motion.                                                                                                                                                                                                                                                                                                                                    |
 | End-to-end/manual flow       | Not run — depends on backend student APIs + published package; DEV offline fallback exercises local contract-backed mock only                                                                                                                                                                                                                                                                                                                                               |
-| Frontend implementation      | Complete (worker) — production `features/learn` (packages list, subject browse, lesson reader, bearer images, KaTeX, content progress); routes `/app/learn`, `/app/learn/:subject`, `/app/learn/:subject/lessons/:resourceId` under `student-settings` / `implemented`; zero prototype imports; i18n en/id/zh-CN; status remains `CONTRACT_READY` pending backend + PO acceptance.                                                                                          |
+| Frontend implementation      | Complete (worker) — production `features/learn` (packages list, subject browse, lesson reader, bearer images, KaTeX, content progress); routes `/app/learn`, `/app/learn/:subject`, `/app/learn/:subject/lessons/:resourceId` under `student-settings` / `implemented`; zero prototype imports; i18n en/id/zh-CN; application 404 not mocked in DEV; resume PUTs coalesced. Slice status remains `IN_PROGRESS` pending product-owner journey acceptance (not `DONE`).       |
 
 ## Revision history
 

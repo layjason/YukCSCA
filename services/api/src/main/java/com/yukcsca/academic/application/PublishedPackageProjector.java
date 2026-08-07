@@ -273,11 +273,47 @@ public class PublishedPackageProjector {
     return value;
   }
 
+  /**
+   * Student-safe content blocks: only contracted TEXT / MATH / IMAGE fields. Extra keys on the
+   * published revision node (admin-only metadata, typos, future fields) are stripped.
+   */
   private JsonNode projectBlock(JsonNode block) {
     String kind = text(block, "kind");
     if (kind == null) return null;
     return switch (kind) {
-      case "TEXT", "MATH", "IMAGE" -> block;
+      case "TEXT" -> {
+        String body = text(block, "text");
+        if (body == null) yield null;
+        var projected = json.createObjectNode();
+        projected.put("kind", "TEXT");
+        projected.put("text", body);
+        yield projected;
+      }
+      case "MATH" -> {
+        String latex = text(block, "latex");
+        if (latex == null) yield null;
+        var projected = json.createObjectNode();
+        projected.put("kind", "MATH");
+        projected.put("latex", latex);
+        projected.put("displayMode", block.path("displayMode").asBoolean(false));
+        yield projected;
+      }
+      case "IMAGE" -> {
+        UUID imageId = uuid(block.path("imageId"));
+        String altText = text(block, "altText");
+        if (imageId == null || altText == null) yield null;
+        var projected = json.createObjectNode();
+        projected.put("kind", "IMAGE");
+        projected.put("imageId", imageId.toString());
+        projected.put("altText", altText);
+        JsonNode caption = block.path("caption");
+        if (caption != null && caption.isTextual() && !caption.asText().isBlank()) {
+          projected.put("caption", caption.asText());
+        } else {
+          projected.putNull("caption");
+        }
+        yield projected;
+      }
       default -> null;
     };
   }

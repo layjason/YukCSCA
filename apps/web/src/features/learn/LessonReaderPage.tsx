@@ -10,7 +10,11 @@ import { ContentBlockView } from './components/ContentBlockView';
 import { ContentProgressChip } from './components/ContentProgressChip';
 import { LanguageToggle } from './components/LanguageToggle';
 import { resolveLocalizedTextForExplanation } from './localizedText';
-import { clampResumeBlockIndex } from './progressHelpers';
+import {
+  clampResumeBlockIndex,
+  createResumeProgressCoalescer,
+  type ResumeProgressCoalescer,
+} from './progressHelpers';
 import {
   isAcademicSubject,
   isExplanationLanguage,
@@ -44,9 +48,11 @@ export function LessonReaderPage(): React.JSX.Element {
   const resumeAppliedRef = useRef(false);
   const progressSeededRef = useRef(false);
   const lastSavedIndexRef = useRef<number | null>(null);
+  const resumeCoalescerRef = useRef<ResumeProgressCoalescer | null>(null);
   const blockElsRef = useRef<Map<number, HTMLElement>>(new Map());
 
   const dismissToast = useCallback(() => setToast(null), []);
+  const contentComplete = progress?.status === 'CONTENT_COMPLETE';
 
   // Load profile default explanation language once (session-only override lives in state).
   useEffect(() => {
@@ -80,6 +86,12 @@ export function LessonReaderPage(): React.JSX.Element {
       const data = await getPublishedLesson(subject, resourceId, explanationLanguage);
       setLesson(data);
       setProgress(data.contentProgress);
+      const clamped =
+        data.body.availability === 'AVAILABLE'
+          ? clampResumeBlockIndex(data.contentProgress.resumeBlockIndex, data.body.blocks.length)
+          : null;
+      lastSavedIndexRef.current = clamped;
+      resumeCoalescerRef.current?.setLastSaved(clamped);
       // Prefer available language if profile default is missing for this resource.
       if (
         data.body.availability === 'LANGUAGE_UNAVAILABLE' &&
@@ -128,6 +140,7 @@ export function LessonReaderPage(): React.JSX.Element {
         .then((next) => {
           setProgress(next);
           lastSavedIndexRef.current = next.resumeBlockIndex;
+          resumeCoalescerRef.current?.setLastSaved(next.resumeBlockIndex);
         })
         .catch(() => {
           // Non-blocking: student can still read; complete may retry.
@@ -156,10 +169,48 @@ export function LessonReaderPage(): React.JSX.Element {
     }
   }, [lesson, progress?.resumeBlockIndex]);
 
+  // Coalesce IN_PROGRESS resume PUTs while reading (not when content is complete).
+  useEffect(() => {
+    if (!lesson || !subject || !resourceId) return;
+    if (lesson.body.availability !== 'AVAILABLE') return;
+    if (contentComplete) {
+      resumeCoalescerRef.current?.dispose();
+      resumeCoalescerRef.current = null;
+      return;
+    }
+
+    const packageRevisionId = lesson.packageRevisionId;
+    const coalescer = createResumeProgressCoalescer({
+      delayMs: 350,
+      initialLastSaved: lastSavedIndexRef.current,
+      save: async (resumeBlockIndex) => {
+        const next = await upsertContentProgress(subject, resourceId, {
+          status: 'IN_PROGRESS',
+          resumeBlockIndex,
+          expectedPackageRevisionId: packageRevisionId,
+        });
+        setProgress(next);
+        if (next.resumeBlockIndex != null) {
+          lastSavedIndexRef.current = next.resumeBlockIndex;
+        }
+      },
+    });
+    resumeCoalescerRef.current = coalescer;
+
+    return () => {
+      void coalescer.flushNow().finally(() => {
+        coalescer.dispose();
+        if (resumeCoalescerRef.current === coalescer) {
+          resumeCoalescerRef.current = null;
+        }
+      });
+    };
+  }, [lesson, subject, resourceId, contentComplete]);
+
   // Track farthest visible block for resume index (IN_PROGRESS only).
   useEffect(() => {
     if (!lesson || lesson.body.availability !== 'AVAILABLE' || !subject || !resourceId) return;
-    if (progress?.status === 'CONTENT_COMPLETE') return;
+    if (contentComplete) return;
 
     const blocks = lesson.body.blocks;
     if (blocks.length === 0) return;
@@ -178,15 +229,7 @@ export function LessonReaderPage(): React.JSX.Element {
         }
         if (maxVisible === lastSavedIndexRef.current) return;
         lastSavedIndexRef.current = maxVisible;
-        void upsertContentProgress(subject, resourceId, {
-          status: 'IN_PROGRESS',
-          resumeBlockIndex: maxVisible,
-          expectedPackageRevisionId: lesson.packageRevisionId,
-        })
-          .then((next) => setProgress(next))
-          .catch(() => {
-            /* keep local max; next intersection may retry */
-          });
+        resumeCoalescerRef.current?.note(maxVisible);
       },
       { root: null, threshold: 0.55 },
     );
@@ -195,7 +238,7 @@ export function LessonReaderPage(): React.JSX.Element {
       observer.observe(el);
     }
     return () => observer.disconnect();
-  }, [lesson, subject, resourceId, progress?.status]);
+  }, [lesson, subject, resourceId, contentComplete]);
 
   async function handleMarkComplete(): Promise<void> {
     if (!subject || !resourceId || !lesson || saving) return;

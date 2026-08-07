@@ -2,9 +2,11 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { clearAccessToken, setAccessToken } from '@/features/auth/authStore';
 import { ApiError } from '@/shared/api/httpClient';
 import {
+  __setLearnEnvForTests,
   getPublishedLesson,
   getPublishedPackageBrowse,
   listPublishedPackages,
+  shouldUseLearnDevFallback,
   upsertContentProgress,
 } from './learnApi';
 import type {
@@ -55,6 +57,7 @@ const lesson: PublishedLessonDetail = {
 
 afterEach(() => {
   clearAccessToken();
+  __setLearnEnvForTests(null);
   vi.unstubAllGlobals();
 });
 
@@ -185,4 +188,66 @@ test('malformed package list is rejected as contract failure', async () => {
     status: 500,
     code: 'CONTRACT_MISMATCH',
   });
+});
+
+const devEnv = { DEV: true, MODE: 'development' } as const;
+
+test('shouldUseLearnDevFallback rejects application 404 even in DEV', () => {
+  expect(shouldUseLearnDevFallback(new ApiError(404, { title: 'Not found' }), 404, devEnv)).toBe(
+    false,
+  );
+  expect(shouldUseLearnDevFallback(undefined, 404, devEnv)).toBe(false);
+  expect(shouldUseLearnDevFallback(new ApiError(401, { title: 'Auth' }), 401, devEnv)).toBe(true);
+  expect(shouldUseLearnDevFallback(new TypeError('Failed to fetch'), undefined, devEnv)).toBe(true);
+  expect(shouldUseLearnDevFallback(new ApiError(403, { title: 'Forbidden' }), 403, devEnv)).toBe(
+    false,
+  );
+});
+
+test('getPublishedPackageBrowse surfaces online 404 without DEV fixture body', async () => {
+  __setLearnEnvForTests({ DEV: true, MODE: 'development' });
+  setAccessToken('student-token');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ title: 'Not found', code: 'NOT_FOUND' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/problem+json' },
+      }),
+    ),
+  );
+
+  await expect(getPublishedPackageBrowse('MATHEMATICS')).rejects.toMatchObject({
+    status: 404,
+    code: 'NOT_FOUND',
+  });
+});
+
+test('getPublishedLesson surfaces online 404 without DEV fixture body', async () => {
+  __setLearnEnvForTests({ DEV: true, MODE: 'development' });
+  setAccessToken('student-token');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ title: 'Not found', code: 'NOT_FOUND' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/problem+json' },
+      }),
+    ),
+  );
+
+  await expect(getPublishedLesson('MATHEMATICS', lesson.resourceId, 'en')).rejects.toMatchObject({
+    status: 404,
+    code: 'NOT_FOUND',
+  });
+});
+
+test('getPublishedPackageBrowse still uses DEV fallback on network failure', async () => {
+  __setLearnEnvForTests({ DEV: true, MODE: 'development' });
+  setAccessToken('student-token');
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+  const result = await getPublishedPackageBrowse('MATHEMATICS');
+  expect(result.package.subject).toBe('MATHEMATICS');
+  expect(result.outline.length).toBeGreaterThan(0);
 });

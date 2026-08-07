@@ -222,6 +222,16 @@ class AcademicStudentHttpIT {
         .andExpect(jsonPath("$.contentProgress.resumeBlockIndex").value(2))
         .andExpect(jsonPath("$.mastery").doesNotExist());
 
+    // Re-read may update resume index but must not demote CONTENT_COMPLETE (no reset rules).
+    mvc.perform(
+            put("/api/v1/academic/packages/MATHEMATICS/lessons/{id}/progress", fixture.lessonId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"IN_PROGRESS\",\"resumeBlockIndex\":1}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CONTENT_COMPLETE"))
+        .andExpect(jsonPath("$.resumeBlockIndex").value(1));
+
     mvc.perform(
             get("/api/v1/academic/images/{id}", fixture.imageId())
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
@@ -269,6 +279,38 @@ class AcademicStudentHttpIT {
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.contentProgress.resumeBlockIndex").value(2));
+  }
+
+  @Test
+  void progressUpsertIgnoresUnknownExpectedPackageRevisionIdWithoutFailing() throws Exception {
+    PublishedFixture fixture = publishValidPackage();
+    UUID unknownRevision = UUID.fromString("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+
+    mvc.perform(
+            put("/api/v1/academic/packages/MATHEMATICS/lessons/{id}/progress", fixture.lessonId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"status\":\"IN_PROGRESS\",\"resumeBlockIndex\":1,"
+                        + "\"expectedPackageRevisionId\":\""
+                        + unknownRevision
+                        + "\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$.resumeBlockIndex").value(1));
+
+    assertThat(progress.count()).isEqualTo(1);
+    UUID storedRevision =
+        jdbc.queryForObject(
+            "select last_revision_id from student_content_progress where resource_id = ?",
+            UUID.class,
+            fixture.lessonId());
+    assertThat(storedRevision).isNotEqualTo(unknownRevision);
+    assertThat(
+            revisions.findById(storedRevision).isPresent()
+                || packages.findById(fixture.packageId()).isPresent())
+        .isTrue();
+    assertThat(revisions.findById(storedRevision)).isPresent();
   }
 
   private record PublishedFixture(UUID packageId, UUID lessonId, UUID imageId) {}
