@@ -235,21 +235,90 @@
   },
   "learn": {
     "title": "Belajar",
-    "placeholder": "Struktur kursus dan pelajaran akan muncul di sini.",
-    "continue": "Lanjutkan belajar",
-    "topics": "Topik",
-    "prerequisite": "Prasyarat",
-    "viewSyllabus": "Lihat cakupan silabus",
-    "trackTitle": "Jalur mata pelajaran saat ini",
-    "examLanguageEnglish": "Bahasa ujian Inggris",
-    "trackDescription": "Matematika Inggris dan Tionghoa berbagi struktur konsep, tetapi soal, terminologi, dan bukti bahasa tetap khusus per jalur.",
-    "emptyTitle": "Belum ada pelajaran yang ditugaskan",
-    "emptyDescription": "Selesaikan rencana pratinjau untuk menerima pelajaran dan latihan yang terhubung.",
-    "hierarchyTitle": "Jalur kursus",
-    "moduleAlgebra": "Modul: Aljabar",
-    "moduleDescription": "Cakupan platform berbeda dari status belajar pribadi Anda.",
-    "prerequisiteValue": "Prasyarat: operasi aritmetika dengan variabel",
-    "masteryCaveat": "Membuka atau membaca konten tidak membuktikan penguasaan. Pos pemeriksaan, latihan berikutnya, dan validasi mandiri memberikan bukti."
+    "loading": "Memuat konten belajar…",
+    "retry": "Coba lagi",
+    "backToLearn": "Kembali ke Belajar",
+    "backToBrowse": "Kembali ke silabus",
+    "openSubject": "Buka mata pelajaran",
+    "packagesLede": "Pilih paket persiapan terbit untuk menelusuri silabus dan mempelajari pelajaran.",
+    "emptyPackagesTitle": "Belum ada paket terbit",
+    "emptyPackagesDescription": "Saat sekolah atau platform menerbitkan paket persiapan, paket itu akan muncul di sini. Ini bukan data silabus contoh.",
+    "continue": "Lanjutkan",
+    "contentProgressNote": "Konten selesai berarti Anda selesai membaca pelajaran ini. Itu bukan penguasaan, pos pemeriksaan, atau bukti latihan.",
+    "subjects": {
+      "MATHEMATICS": "Matematika"
+    },
+    "progress": {
+      "notStarted": "Belum dimulai",
+      "inProgress": "Sedang berlangsung",
+      "contentComplete": "Konten selesai"
+    },
+    "coverage": {
+      "fullyCovered": "Tercakup",
+      "partiallyCovered": "Sebagian tercakup",
+      "notCovered": "Sedang dikembangkan"
+    },
+    "browse": {
+      "officialSource": "Sumber resmi CSCA",
+      "authority": "Otoritas",
+      "edition": "Edisi",
+      "lastChecked": "Terakhir diperiksa",
+      "permittedUse": "Penggunaan yang diizinkan",
+      "permittedUseValues": {
+        "REFERENCE_ONLY": "Hanya referensi"
+      },
+      "openOfficial": "Buka silabus resmi ({{language}})",
+      "examLanguage": {
+        "en": "Inggris",
+        "zh-CN": "Tionghoa"
+      },
+      "examLanguagesLabel": "Bahasa ujian",
+      "officialSourceNote": "Dokumen resmi adalah materi referensi eksternal. Ringkasan silabus dan pelajaran YukCSCA disusun platform.",
+      "outlineTitle": "Kerangka silabus",
+      "coverageLegend": "Cakupan menunjukkan apakah ada pelajaran terbit",
+      "progressLegend": "chip menunjukkan progres konten Anda saja",
+      "emptyOutlineTitle": "Kerangka belum tersedia",
+      "emptyOutlineDescription": "Paket ini belum mencantumkan topik silabus dengan pelajaran.",
+      "untitledTopic": "Topik tanpa judul",
+      "untitledLesson": "Pelajaran tanpa judul",
+      "notFoundTitle": "Paket tidak ditemukan",
+      "notFoundDescription": "Belum ada paket terbit untuk mata pelajaran ini, atau paket sudah tidak tersedia.",
+      "revision": "Revisi terbit {{number}}"
+    },
+    "lesson": {
+      "title": "Pelajaran",
+      "tempLanguageNote": "Pengalih bahasa ini bersifat sementara untuk pelajaran ini. Tidak mengubah pengaturan profil Anda.",
+      "explanationLanguage": "Bahasa penjelasan",
+      "languageUnavailableTitle": "Bahasa penjelasan ini tidak tersedia",
+      "languageUnavailableDescription": "Tidak ada versi yang disusun untuk {{language}}. Pilih bahasa lain yang tersedia — aplikasi tidak akan mengganti konten secara diam-diam.",
+      "languageUnavailableHint": "Gunakan pengalih bahasa di atas untuk beralih ke versi yang tersedia.",
+      "languageUnavailableOption": "Tidak tersedia untuk pelajaran ini",
+      "noLanguagesAvailable": "Belum ada versi bahasa penjelasan yang diterbitkan untuk pelajaran ini.",
+      "markContentComplete": "Tandai konten selesai",
+      "savingProgress": "Menyimpan…",
+      "contentCompleteAck": "Konten selesai — Anda bisa membaca ulang kapan saja. Ini bukan penguasaan.",
+      "progressAria": "Progres membaca blok pelajaran",
+      "mathAria": "Ekspresi matematika: {{latex}}",
+      "mathError": "Rumus ini tidak dapat ditampilkan.",
+      "imageUnavailable": "Gambar tidak tersedia",
+      "imageLoading": "Memuat gambar…",
+      "notFoundTitle": "Pelajaran tidak ditemukan",
+      "notFoundDescription": "Pelajaran ini tidak ada di paket terbit aktif, atau tautannya sudah kedaluwarsa."
+    },
+    "errors": {
+      "title": "Terjadi kesalahan",
+      "loadPackages": "Paket terbit tidak dapat dimuat. Periksa koneksi dan coba lagi.",
+      "loadBrowse": "Paket mata pelajaran ini tidak dapat dimuat. Periksa koneksi dan coba lagi.",
+      "loadLesson": "Pelajaran ini tidak dapat dimuat. Periksa koneksi dan coba lagi.",
+      "saveProgress": "Progres konten Anda tidak dapat disimpan. Coba lagi.",
+      "progressValidation": "Progres tidak dapat disimpan karena permintaan tidak valid.",
+      "forbidden": "Anda tidak memiliki akses ke konten belajar ini.",
+      "unauthorized": "Masuk lagi untuk melanjutkan belajar.",
+      "invalidSubjectTitle": "Mata pelajaran tidak dikenal",
+      "invalidSubjectDescription": "Mata pelajaran itu tidak didukung di Belajar.",
+      "invalidLessonTitle": "Tautan pelajaran tidak valid",
+      "invalidLessonDescription": "Alamat pelajaran tidak lengkap atau tidak valid."
+    }
   },
   "syllabus": {
     "title": "Cakupan silabus",
