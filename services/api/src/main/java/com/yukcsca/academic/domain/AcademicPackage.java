@@ -44,9 +44,9 @@ public class AcademicPackage {
 
   protected AcademicPackage() {}
 
-  public AcademicPackage(String emptyDraft, Instant now) {
+  public AcademicPackage(String subject, String emptyDraft, Instant now) {
     this.id = UUID.randomUUID();
-    this.subject = "MATHEMATICS";
+    this.subject = subject;
     this.status = AcademicPackageStatus.DRAFT;
     this.draftRevision = 0;
     this.draft = emptyDraft;

@@ -8,6 +8,11 @@ enum AcademicPackageStatus {
   ARCHIVED,
 }
 
+@doc("CSCA preparation subject. Additive: new subjects extend this enum without changing package lifecycle.")
+enum AcademicSubject {
+  MATHEMATICS,
+}
+
 enum ExamLanguage {
   ENGLISH: "en",
   SIMPLIFIED_CHINESE: "zh-CN",
@@ -76,10 +81,20 @@ model OfficialDate {
   date?: plainDate | null;
 }
 
+@doc("Timed exam shape for a subject package. Values are package-owned; publication requires mock and structure to match.")
 model ExamStructure {
-  durationMinutes?: 60;
-  totalPoints?: 100;
-  questionCount?: 48;
+  @minValue(1)
+  @maxValue(300)
+  durationMinutes?: int32;
+
+  @minValue(1)
+  @maxValue(1000)
+  totalPoints?: int32;
+
+  @minValue(1)
+  @maxValue(200)
+  questionCount?: int32;
+
   questionType?: "SINGLE_ANSWER";
 
   @maxItems(2)
@@ -87,7 +102,7 @@ model ExamStructure {
 }
 
 model OfficialSyllabus {
-  subject: "MATHEMATICS";
+  subject: AcademicSubject;
 
   @minLength(1)
   @maxLength(160)
@@ -266,12 +281,22 @@ model MockPaper {
   title?: string;
 
   examLanguage?: ExamLanguage;
-  durationMinutes?: 60;
-  totalPoints?: 100;
-  questionCount?: 48;
+
+  @minValue(1)
+  @maxValue(300)
+  durationMinutes?: int32;
+
+  @minValue(1)
+  @maxValue(1000)
+  totalPoints?: int32;
+
+  @minValue(1)
+  @maxValue(200)
+  questionCount?: int32;
+
   questionType?: "SINGLE_ANSWER";
 
-  @maxItems(48)
+  @maxItems(200)
   questions: MockQuestion[];
 
   provenance: DraftProvenanceInput;
@@ -312,7 +337,7 @@ model PublishedRevisionSummary {
 
 model AcademicPackage {
   id: YukCSCA.uuid;
-  subject: "MATHEMATICS";
+  subject: AcademicSubject;
   status: AcademicPackageStatus;
   draftRevision: int64;
   activeRevision: PublishedRevisionSummary | null;
@@ -327,7 +352,7 @@ model AcademicPackage {
 
 model AcademicPackageSummary {
   id: YukCSCA.uuid;
-  subject: "MATHEMATICS";
+  subject: AcademicSubject;
   status: AcademicPackageStatus;
   draftRevision: int64;
   activeRevision: PublishedRevisionSummary | null;
@@ -339,7 +364,7 @@ model AcademicPackageSummary {
 }
 
 model CreateAcademicPackageRequest {
-  subject: "MATHEMATICS";
+  subject: AcademicSubject;
 }
 
 model SaveAcademicPackageDraftRequest {
@@ -461,7 +486,7 @@ interface AcademicAdminApi {
     | YukCSCA.ForbiddenResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Creates the single pilot Mathematics package as an empty draft.")
+  @doc("Creates one academic package for a supported subject as an empty draft. One package per subject.")
   @post
   @route("/academic-packages")
   @useAuth(BearerAuth)

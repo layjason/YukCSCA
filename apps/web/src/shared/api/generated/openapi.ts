@@ -48,7 +48,7 @@ export interface paths {
     /** @description Lists the pilot academic packages visible to the authenticated administrator. */
     get: operations['AcademicAdminApi_listAcademicPackages'];
     put?: never;
-    /** @description Creates the single pilot Mathematics package as an empty draft. */
+    /** @description Creates one academic package for a supported subject as an empty draft. One package per subject. */
     post: operations['AcademicAdminApi_createAcademicPackage'];
     delete?: never;
     options?: never;
@@ -346,8 +346,7 @@ export interface components {
     };
     'AcademicAdmin.AcademicPackage': {
       id: components['schemas']['uuid'];
-      /** @enum {string} */
-      subject: 'MATHEMATICS';
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
       status: components['schemas']['AcademicAdmin.AcademicPackageStatus'];
       /** Format: int64 */
       draftRevision: number;
@@ -418,8 +417,7 @@ export interface components {
     'AcademicAdmin.AcademicPackageStatus': 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
     'AcademicAdmin.AcademicPackageSummary': {
       id: components['schemas']['uuid'];
-      /** @enum {string} */
-      subject: 'MATHEMATICS';
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
       status: components['schemas']['AcademicAdmin.AcademicPackageStatus'];
       /** Format: int64 */
       draftRevision: number;
@@ -429,6 +427,11 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    /**
+     * @description CSCA preparation subject. Additive: new subjects extend this enum without changing package lifecycle.
+     * @enum {string}
+     */
+    'AcademicAdmin.AcademicSubject': 'MATHEMATICS';
     /** @enum {string} */
     'AcademicAdmin.AcademicValidationCode':
       | 'REQUIRED'
@@ -460,8 +463,7 @@ export interface components {
     /** @enum {string} */
     'AcademicAdmin.ContentOrigin': 'YUKCSCA_ORIGINAL' | 'LICENSED' | 'OPEN_LICENSE';
     'AcademicAdmin.CreateAcademicPackageRequest': {
-      /** @enum {string} */
-      subject: 'MATHEMATICS';
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
     };
     'AcademicAdmin.DraftProvenanceInput': {
       origin?: components['schemas']['AcademicAdmin.ContentOrigin'];
@@ -476,13 +478,14 @@ export interface components {
     } & components['schemas']['AcademicAdmin.DraftProvenanceInput'];
     /** @enum {string} */
     'AcademicAdmin.ExamLanguage': 'en' | 'zh-CN';
+    /** @description Timed exam shape for a subject package. Values are package-owned; publication requires mock and structure to match. */
     'AcademicAdmin.ExamStructure': {
-      /** @enum {number} */
-      durationMinutes?: 60;
-      /** @enum {number} */
-      totalPoints?: 100;
-      /** @enum {number} */
-      questionCount?: 48;
+      /** Format: int32 */
+      durationMinutes?: number;
+      /** Format: int32 */
+      totalPoints?: number;
+      /** Format: int32 */
+      questionCount?: number;
       /** @enum {string} */
       questionType?: 'SINGLE_ANSWER';
       examLanguages?: components['schemas']['AcademicAdmin.ExamLanguage'][];
@@ -521,12 +524,12 @@ export interface components {
       id: components['schemas']['uuid'];
       title?: string;
       examLanguage?: components['schemas']['AcademicAdmin.ExamLanguage'];
-      /** @enum {number} */
-      durationMinutes?: 60;
-      /** @enum {number} */
-      totalPoints?: 100;
-      /** @enum {number} */
-      questionCount?: 48;
+      /** Format: int32 */
+      durationMinutes?: number;
+      /** Format: int32 */
+      totalPoints?: number;
+      /** Format: int32 */
+      questionCount?: number;
       /** @enum {string} */
       questionType?: 'SINGLE_ANSWER';
       questions: components['schemas']['AcademicAdmin.MockQuestion'][];
@@ -547,8 +550,7 @@ export interface components {
     /** @enum {string} */
     'AcademicAdmin.OfficialDateStatus': 'DECLARED' | 'NOT_STATED';
     'AcademicAdmin.OfficialSyllabus': {
-      /** @enum {string} */
-      subject: 'MATHEMATICS';
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
       authority?: string;
       editionLabel?: string;
       sourceUrl?: string;

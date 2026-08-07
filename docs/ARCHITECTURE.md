@@ -148,15 +148,18 @@ refresh are idempotent and other roles are never overwritten. V6 enforces the
 single-admin pilot constraint.
 
 The `academic` module implements the accepted eight-operation administrator
-boundary for the single Mathematics package. Incomplete whole drafts can be
-saved with expected-revision checks; publication validates the official-source
-reference, three-language authored outline, mappings, resources, questions,
-LaTeX/image blocks, provenance, and the 60-minute/100-point/48-question mock in
-one transaction. Published JSONB revisions are immutable. PNG/JPEG assets are
-bounded, decoded, re-encoded without submitted metadata, hashed, and stored in
-PostgreSQL separately from revision documents. Archive retains revisions,
-images, and value-free audit evidence. Student consumption remains outside
-this slice.
+boundary for subject preparation packages. Package lifecycle is subject-agnostic
+(one package per subject; draft/publish/archive; JSONB revisions). Creatable
+subjects and default exam structure live in an allow-listed subject profile
+(pilot: Mathematics with its CSCA 2025 defaults). Publication validates the
+official-source reference, three-language authored outline, mappings,
+resources, questions, LaTeX/image blocks, provenance, and a mock that matches
+the package's own exam structure in one transaction. Incomplete whole drafts
+can be saved with expected-revision checks. Published JSONB revisions are
+immutable. PNG/JPEG assets are bounded, decoded, re-encoded without submitted
+metadata, hashed, and stored in PostgreSQL separately from revision documents.
+Archive retains revisions, images, and value-free audit evidence. Student
+consumption remains outside this slice.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
 for the authenticated owning `STUDENT`. The application validates the complete

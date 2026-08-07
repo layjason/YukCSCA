@@ -6,8 +6,8 @@
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Status                       | `IN_PROGRESS`                                                                                                  |
 | Human gate                   | `APPROVED`                                                                                                     |
-| Plan revision                | 6                                                                                                              |
-| Updated                      | 2026-08-01                                                                                                     |
+| Plan revision                | 7                                                                                                              |
+| Updated                      | 2026-08-07                                                                                                     |
 | Primary actor                | Configured first platform admin                                                                                |
 | Story IDs                    | `US-ADMIN-01`, `US-ADM-02`, `US-ADM-03`, `US-ADM-04`, `US-ADM-05`                                              |
 | Requirement sections         | English: 1.1, 1.3, 4.1–4.6, 14.1, 14.4–14.6; Chinese: corresponding 1.1、1.3、4.1–4.6、14.1、14.4–14.6 clauses |
@@ -48,6 +48,13 @@ The first package remains one governed revision so downstream attempts can
 snapshot exact question and scoring data. Its internal schema is deliberately
 small and follows the official documents' actual hierarchy rather than a
 generic curriculum model.
+
+**Subject extensibility (architecture, not expanded acceptance):** Package
+lifecycle, content blocks, outline/objectives/resources/questions/mocks, images,
+and provenance are subject-agnostic. Subject identity is an additive
+`AcademicSubject` enum and allow-listed subject profile (default exam structure).
+Pilot creatable subject remains Mathematics only; full multi-subject seeding is
+out of scope. Adding Physics later is profile + enum + content, not a redesign.
 
 ## Evidence and interpretation
 
@@ -448,6 +455,7 @@ validation without discarding the draft.
 
 | Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                              |
 | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7        | 2026-08-07 | Made the academic package model subject-extensible without expanding acceptance: additive `AcademicSubject` enum, open exam-structure integers, subject profile defaults, mock validation against package exam structure, V7 drop of Math-only DB check, frontend profile module. Pilot creatable subject remains Mathematics; multi-subject seeding stays out of scope.                                            |
 | 6        | 2026-08-01 | Implemented and verified the assigned backend boundary: configured-admin recognition for Google and credential sign-in, V6 persistence, all eight accepted HTTP operations, draft/publication validation, bounded re-encoded images, immutable correction revisions, archive, authorization, and minimized audit. Moved to `IN_PROGRESS`; frontend integration and product-owner journey acceptance remain pending. |
 | 5        | 2026-07-31 | Completed frontend consumer review of `VS-005-R4-initial`; accepted and implemented `CR-01` by exposing server-derived unpublished-correction state on package list/detail responses; regenerated and rechecked the contract; recorded `VS-005-R5-accepted`; and moved the slice to `CONTRACT_READY` with zero open requests.                                                                                       |
 | 4        | 2026-07-31 | Initialized and compiled the eight-operation admin academic-package contract; made incomplete whole-draft saves distinct from publication validation; bounded image upload/read behavior; regenerated and reviewed OpenAPI/web declarations; recorded `VS-005-R4-initial`; and opened frontend consumer review without starting implementation.                                                                     |

@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import {
-  MOCK_QUESTION_CAPACITY,
   buildMockQuestionSlots,
   createEmptyMockShell,
   ensureSingleMockShell,
@@ -34,13 +33,21 @@ function q(id: string, examLanguage: 'en' | 'zh-CN'): Question {
 }
 
 describe('mockDraft', () => {
-  test('buildMockQuestionSlots rebalances to 100 points at capacity', () => {
-    const ids = Array.from({ length: MOCK_QUESTION_CAPACITY }, (_, i) => `q-${i}`);
-    const slots = buildMockQuestionSlots(ids);
+  test('buildMockQuestionSlots rebalances total points evenly at capacity', () => {
+    const ids = Array.from({ length: 48 }, (_, i) => `q-${i}`);
+    const slots = buildMockQuestionSlots(ids, 48, 100);
     expect(slots).toHaveLength(48);
     expect(sumMockPoints(slots)).toBe(100);
-    expect(slots.slice(0, 4).every((s) => s.points === 3)).toBe(true);
-    expect(slots.slice(4).every((s) => s.points === 2)).toBe(true);
+    // Even distribution for 100/48 → four slots get 3, rest get 2.
+    expect(slots.filter((s) => s.points === 3)).toHaveLength(4);
+    expect(slots.filter((s) => s.points === 2)).toHaveLength(44);
+  });
+
+  test('buildMockQuestionSlots uses arbitrary capacity and totals', () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `q-${i}`);
+    const slots = buildMockQuestionSlots(ids, 10, 50);
+    expect(slots).toHaveLength(10);
+    expect(sumMockPoints(slots)).toBe(50);
   });
 
   test('questionsMatchingExamLanguage filters by exam language', () => {
@@ -52,8 +59,11 @@ describe('mockDraft', () => {
 
   test('filterMockSelectionForLanguage drops incompatible ids and respects capacity', () => {
     const questions = [q('a', 'en'), q('b', 'zh-CN'), q('c', 'en')];
-    expect(filterMockSelectionForLanguage(['a', 'b', 'c'], questions, 'en')).toEqual(['a', 'c']);
-    expect(filterMockSelectionForLanguage(['b'], questions, 'en')).toEqual([]);
+    expect(filterMockSelectionForLanguage(['a', 'b', 'c'], questions, 'en', 48)).toEqual([
+      'a',
+      'c',
+    ]);
+    expect(filterMockSelectionForLanguage(['b'], questions, 'en', 48)).toEqual([]);
   });
 
   test('ensureSingleMockShell seeds empty and keeps first when present', () => {

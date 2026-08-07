@@ -263,12 +263,14 @@ export async function listAcademicPackages(): Promise<AcademicPackageSummary[]> 
   }
 }
 
-export async function createAcademicPackage(): Promise<AcademicPackage> {
+export async function createAcademicPackage(
+  subject: AcademicPackage['subject'] = 'MATHEMATICS',
+): Promise<AcademicPackage> {
   try {
     const res = await fetch('/api/v1/admin/academic-packages', {
       method: 'POST',
       headers: authorizationHeaders(true),
-      body: JSON.stringify({ subject: 'MATHEMATICS' }),
+      body: JSON.stringify({ subject }),
     });
     return await handleResponse<AcademicPackage>(res);
   } catch (err) {
@@ -276,6 +278,14 @@ export async function createAcademicPackage(): Promise<AcademicPackage> {
       const newPkg: AcademicPackage = {
         ...INITIAL_DEV_PACKAGE,
         id: crypto.randomUUID(),
+        subject,
+        draft: {
+          ...INITIAL_DEV_PACKAGE.draft,
+          officialSyllabus: {
+            ...INITIAL_DEV_PACKAGE.draft.officialSyllabus,
+            subject,
+          },
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

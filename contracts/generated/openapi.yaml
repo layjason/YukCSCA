@@ -190,7 +190,7 @@ paths:
         - BearerAuth: []
     post:
       operationId: AcademicAdminApi_createAcademicPackage
-      description: Creates the single pilot Mathematics package as an empty draft.
+      description: Creates one academic package for a supported subject as an empty draft. One package per subject.
       parameters: []
       responses:
         '201':
@@ -1191,9 +1191,7 @@ components:
         id:
           $ref: '#/components/schemas/uuid'
         subject:
-          type: string
-          enum:
-            - MATHEMATICS
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
         status:
           $ref: '#/components/schemas/AcademicAdmin.AcademicPackageStatus'
         draftRevision:
@@ -1438,9 +1436,7 @@ components:
         id:
           $ref: '#/components/schemas/uuid'
         subject:
-          type: string
-          enum:
-            - MATHEMATICS
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
         status:
           $ref: '#/components/schemas/AcademicAdmin.AcademicPackageStatus'
         draftRevision:
@@ -1456,6 +1452,11 @@ components:
         updatedAt:
           type: string
           format: date-time
+    AcademicAdmin.AcademicSubject:
+      type: string
+      enum:
+        - MATHEMATICS
+      description: 'CSCA preparation subject. Additive: new subjects extend this enum without changing package lifecycle.'
     AcademicAdmin.AcademicValidationCode:
       type: string
       enum:
@@ -1526,9 +1527,7 @@ components:
         - subject
       properties:
         subject:
-          type: string
-          enum:
-            - MATHEMATICS
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
     AcademicAdmin.DraftProvenanceInput:
       type: object
       properties:
@@ -1578,17 +1577,20 @@ components:
       type: object
       properties:
         durationMinutes:
-          type: number
-          enum:
-            - 60
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 300
         totalPoints:
-          type: number
-          enum:
-            - 100
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 1000
         questionCount:
-          type: number
-          enum:
-            - 48
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 200
         questionType:
           type: string
           enum:
@@ -1598,6 +1600,7 @@ components:
           items:
             $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
           maxItems: 2
+      description: Timed exam shape for a subject package. Values are package-owned; publication requires mock and structure to match.
     AcademicAdmin.ExplanationLanguage:
       type: string
       enum:
@@ -1703,17 +1706,20 @@ components:
         examLanguage:
           $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
         durationMinutes:
-          type: number
-          enum:
-            - 60
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 300
         totalPoints:
-          type: number
-          enum:
-            - 100
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 1000
         questionCount:
-          type: number
-          enum:
-            - 48
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 200
         questionType:
           type: string
           enum:
@@ -1722,7 +1728,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AcademicAdmin.MockQuestion'
-          maxItems: 48
+          maxItems: 200
         provenance:
           $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
     AcademicAdmin.MockPaperRecord:
@@ -1767,9 +1773,7 @@ components:
         - subject
       properties:
         subject:
-          type: string
-          enum:
-            - MATHEMATICS
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
         authority:
           type: string
           minLength: 1

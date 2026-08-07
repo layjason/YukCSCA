@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { AcademicPackageList } from './components/AcademicPackageList';
 import { createAcademicPackage, listAcademicPackages } from './api/academicAdminApi';
+import { creatableSubjects } from './subjectProfile';
 import type { AcademicPackageSummary } from './types';
 import './academic-admin.css';
 
@@ -33,9 +34,14 @@ export function AcademicAdminDashboardPage(): React.JSX.Element {
   }, [t]);
 
   const handleCreatePackage = async () => {
+    const nextSubject = creatableSubjects(packages)[0];
+    if (!nextSubject) {
+      setError(t('admin.academic.createFailed'));
+      return;
+    }
     setIsLoading(true);
     try {
-      const created = await createAcademicPackage();
+      const created = await createAcademicPackage(nextSubject);
       navigate(`/admin/academic-packages/${created.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('admin.academic.createFailed'));

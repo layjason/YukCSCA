@@ -1,5 +1,7 @@
 package com.yukcsca.academic.application;
 
+import com.yukcsca.academic.domain.AcademicSubjectProfile;
+import com.yukcsca.academic.domain.AcademicSubjectProfile.ExamStructureDefaults;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 @Service
@@ -27,6 +30,7 @@ public class AcademicDraftProcessor {
   private static final Set<String> RESOURCE_KINDS = Set.of("LESSON", "TERMINOLOGY", "REMEDIATION");
   private static final Set<String> DIFFICULTIES = Set.of("FOUNDATION", "STANDARD", "ADVANCED");
   private static final Set<String> ORIGINS = Set.of("YUKCSCA_ORIGINAL", "LICENSED", "OPEN_LICENSE");
+  private static final Set<String> QUESTION_TYPES = Set.of("SINGLE_ANSWER");
 
   private final JsonMapper json;
 
@@ -34,11 +38,28 @@ public class AcademicDraftProcessor {
     this.json = json;
   }
 
-  public String emptyDraft() {
-    return """
-        {"officialSyllabus":{"subject":"MATHEMATICS"},"outlineItems":[],"learningObjectives":[],"resources":[],"questions":[],"mocks":[]}
-        """
-        .trim();
+  /**
+   * Empty draft for a supported subject, seeded with that subject's default exam structure. Seed
+   * content (outline, questions, mock bank) remains an authoring concern.
+   */
+  public String emptyDraft(String subject) {
+    ExamStructureDefaults defaults = AcademicSubjectProfile.require(subject);
+    ObjectNode draft = json.createObjectNode();
+    ObjectNode syllabus = draft.putObject("officialSyllabus");
+    syllabus.put("subject", subject);
+    ObjectNode structure = syllabus.putObject("examStructure");
+    structure.put("durationMinutes", defaults.durationMinutes());
+    structure.put("totalPoints", defaults.totalPoints());
+    structure.put("questionCount", defaults.questionCount());
+    structure.put("questionType", defaults.questionType());
+    ArrayNode languages = structure.putArray("examLanguages");
+    defaults.examLanguages().forEach(languages::add);
+    draft.putArray("outlineItems");
+    draft.putArray("learningObjectives");
+    draft.putArray("resources");
+    draft.putArray("questions");
+    draft.putArray("mocks");
+    return serialize(draft);
   }
 
   public ObjectNode parseObject(String value) {
@@ -60,7 +81,10 @@ public class AcademicDraftProcessor {
   }
 
   public ObjectNode normalizeForSave(
-      JsonNode submitted, String previousDraftJson, UUID authenticatedAdmin) {
+      JsonNode submitted,
+      String previousDraftJson,
+      UUID authenticatedAdmin,
+      String packageSubject) {
     List<AcademicViolation> violations = new ArrayList<>();
     if (!(submitted instanceof ObjectNode submittedObject)) {
       throw new AcademicValidationException(
@@ -83,6 +107,12 @@ public class AcademicDraftProcessor {
     if (!violations.isEmpty()) throw new AcademicValidationException(violations);
 
     ObjectNode normalized = submittedObject.deepCopy();
+    // Package identity owns subject; drafts cannot reassign a package to another subject.
+    ObjectNode syllabus =
+        normalized.get("officialSyllabus") instanceof ObjectNode existing
+            ? existing
+            : normalized.putObject("officialSyllabus");
+    syllabus.put("subject", packageSubject);
     Map<String, UUID> priorAuthors = priorAuthors(parseObject(previousDraftJson));
     enrichProvenance(normalized, priorAuthors, authenticatedAdmin, false, null);
     return normalized;
@@ -110,7 +140,8 @@ public class AcademicDraftProcessor {
 
   public void validateForPublication(ObjectNode draft, Set<UUID> availableImageIds) {
     List<AcademicViolation> violations = new ArrayList<>();
-    validateOfficialSyllabus(draft.path("officialSyllabus"), violations);
+    ExamStructureSnapshot structure =
+        validateOfficialSyllabus(draft.path("officialSyllabus"), violations);
     Set<UUID> outlineIds = validateOutline(draft.path("outlineItems"), violations);
     Set<UUID> objectiveIds =
         validateObjectives(draft.path("learningObjectives"), outlineIds, violations);
@@ -118,8 +149,13 @@ public class AcademicDraftProcessor {
         draft.path("resources"), outlineIds, objectiveIds, availableImageIds, violations);
     Map<UUID, String> questionLanguages =
         validateQuestions(
-            draft.path("questions"), outlineIds, objectiveIds, availableImageIds, violations);
-    validateMock(draft.path("mocks"), questionLanguages, violations);
+            draft.path("questions"),
+            outlineIds,
+            objectiveIds,
+            availableImageIds,
+            structure,
+            violations);
+    validateMock(draft.path("mocks"), questionLanguages, structure, violations);
     if (!violations.isEmpty()) throw new AcademicValidationException(violations);
   }
 
@@ -145,9 +181,13 @@ public class AcademicDraftProcessor {
     }
   }
 
-  private void validateOfficialSyllabus(JsonNode syllabus, List<AcademicViolation> violations) {
+  private ExamStructureSnapshot validateOfficialSyllabus(
+      JsonNode syllabus, List<AcademicViolation> violations) {
     String base = "draft.officialSyllabus";
-    requireExact(syllabus, "subject", "MATHEMATICS", base + ".subject", violations);
+    String subject = text(syllabus, "subject");
+    if (!AcademicSubjectProfile.isSupported(subject)) {
+      violations.add(new AcademicViolation(base + ".subject", AcademicViolationCode.INCOMPATIBLE));
+    }
     requireText(syllabus, "authority", base + ".authority", 160, violations);
     requireText(syllabus, "editionLabel", base + ".editionLabel", 80, violations);
     String sourceUrl = requireText(syllabus, "sourceUrl", base + ".sourceUrl", 2000, violations);
@@ -162,23 +202,48 @@ public class AcademicDraftProcessor {
     validateOfficialDate(syllabus.path("effectiveOn"), base + ".effectiveOn", violations);
     validateOfficialDate(syllabus.path("updatedOn"), base + ".updatedOn", violations);
     requireExact(syllabus, "permittedUse", "REFERENCE_ONLY", base + ".permittedUse", violations);
-    JsonNode structure = syllabus.path("examStructure");
-    requireNumber(
-        structure, "durationMinutes", 60, base + ".examStructure.durationMinutes", violations);
-    requireNumber(structure, "totalPoints", 100, base + ".examStructure.totalPoints", violations);
-    requireNumber(
-        structure, "questionCount", 48, base + ".examStructure.questionCount", violations);
-    requireExact(
-        structure,
-        "questionType",
-        "SINGLE_ANSWER",
-        base + ".examStructure.questionType",
-        violations);
+    return validateExamStructure(
+        syllabus.path("examStructure"), base + ".examStructure", violations);
+  }
+
+  private ExamStructureSnapshot validateExamStructure(
+      JsonNode structure, String base, List<AcademicViolation> violations) {
+    Integer duration =
+        requireIntInRange(
+            structure,
+            "durationMinutes",
+            AcademicSubjectProfile.MIN_DURATION_MINUTES,
+            AcademicSubjectProfile.MAX_DURATION_MINUTES,
+            base + ".durationMinutes",
+            violations);
+    Integer totalPoints =
+        requireIntInRange(
+            structure,
+            "totalPoints",
+            AcademicSubjectProfile.MIN_TOTAL_POINTS,
+            AcademicSubjectProfile.MAX_TOTAL_POINTS,
+            base + ".totalPoints",
+            violations);
+    Integer questionCount =
+        requireIntInRange(
+            structure,
+            "questionCount",
+            AcademicSubjectProfile.MIN_QUESTION_COUNT,
+            AcademicSubjectProfile.MAX_QUESTION_COUNT,
+            base + ".questionCount",
+            violations);
+    String questionType = text(structure, "questionType");
+    // Set.of(...).contains(null) throws; treat missing type as unsupported.
+    if (questionType == null || !QUESTION_TYPES.contains(questionType)) {
+      violations.add(
+          new AcademicViolation(base + ".questionType", AcademicViolationCode.UNSUPPORTED));
+    }
     validateLanguageArray(
-        structure.path("examLanguages"),
-        EXAM_LANGUAGES,
-        base + ".examStructure.examLanguages",
-        violations);
+        structure.path("examLanguages"), EXAM_LANGUAGES, base + ".examLanguages", violations);
+    if (duration == null || totalPoints == null || questionCount == null || questionType == null) {
+      return null;
+    }
+    return new ExamStructureSnapshot(duration, totalPoints, questionCount, questionType);
   }
 
   private Set<UUID> validateOutline(JsonNode items, List<AcademicViolation> violations) {
@@ -288,10 +353,12 @@ public class AcademicDraftProcessor {
       Set<UUID> outlineIds,
       Set<UUID> objectiveIds,
       Set<UUID> imageIds,
+      ExamStructureSnapshot structure,
       List<AcademicViolation> violations) {
     uniqueIds(questions, "draft.questions", violations);
     Map<UUID, String> languages = new HashMap<>();
-    if (!questions.isArray() || questions.size() < 48) {
+    int requiredCount = structure == null ? 1 : structure.questionCount();
+    if (!questions.isArray() || questions.size() < requiredCount) {
       violations.add(new AcademicViolation("draft.questions", AcademicViolationCode.OUT_OF_RANGE));
       return languages;
     }
@@ -346,9 +413,15 @@ public class AcademicDraftProcessor {
   }
 
   private void validateMock(
-      JsonNode mocks, Map<UUID, String> questionLanguages, List<AcademicViolation> violations) {
+      JsonNode mocks,
+      Map<UUID, String> questionLanguages,
+      ExamStructureSnapshot structure,
+      List<AcademicViolation> violations) {
     if (!mocks.isArray() || mocks.size() != 1) {
       violations.add(new AcademicViolation("draft.mocks", AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    if (structure == null) {
       return;
     }
     JsonNode mock = mocks.get(0);
@@ -359,14 +432,22 @@ public class AcademicDraftProcessor {
       violations.add(
           new AcademicViolation(path + ".examLanguage", AcademicViolationCode.UNSUPPORTED));
     }
-    requireNumber(mock, "durationMinutes", 60, path + ".durationMinutes", violations);
-    requireNumber(mock, "totalPoints", 100, path + ".totalPoints", violations);
-    requireNumber(mock, "questionCount", 48, path + ".questionCount", violations);
-    requireExact(mock, "questionType", "SINGLE_ANSWER", path + ".questionType", violations);
+    // Mock must snapshot the package exam structure (subject-agnostic consistency rule).
+    requireNumber(
+        mock,
+        "durationMinutes",
+        structure.durationMinutes(),
+        path + ".durationMinutes",
+        violations);
+    requireNumber(mock, "totalPoints", structure.totalPoints(), path + ".totalPoints", violations);
+    requireNumber(
+        mock, "questionCount", structure.questionCount(), path + ".questionCount", violations);
+    requireExact(
+        mock, "questionType", structure.questionType(), path + ".questionType", violations);
     validateProvenance(mock.path("provenance"), path + ".provenance", violations);
 
     JsonNode selected = mock.path("questions");
-    if (!selected.isArray() || selected.size() != 48) {
+    if (!selected.isArray() || selected.size() != structure.questionCount()) {
       violations.add(
           new AcademicViolation(path + ".questions", AcademicViolationCode.OUT_OF_RANGE));
       return;
@@ -397,7 +478,7 @@ public class AcademicDraftProcessor {
         total += item.path("points").asInt();
       }
     }
-    if (total != 100) {
+    if (total != structure.totalPoints()) {
       violations.add(
           new AcademicViolation(path + ".totalPoints", AcademicViolationCode.INCOMPATIBLE));
     }
@@ -668,6 +749,28 @@ public class AcademicDraftProcessor {
       violations.add(new AcademicViolation(path, AcademicViolationCode.INCOMPATIBLE));
     }
   }
+
+  private static Integer requireIntInRange(
+      JsonNode parent,
+      String field,
+      int min,
+      int max,
+      String path,
+      List<AcademicViolation> violations) {
+    if (!parent.path(field).canConvertToInt()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.REQUIRED));
+      return null;
+    }
+    int value = parent.path(field).asInt();
+    if (value < min || value > max) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return null;
+    }
+    return value;
+  }
+
+  private record ExamStructureSnapshot(
+      int durationMinutes, int totalPoints, int questionCount, String questionType) {}
 
   private static void requireInstant(
       JsonNode parent, String field, String path, List<AcademicViolation> violations) {

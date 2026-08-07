@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { creatableSubjects } from '../subjectProfile';
 import type { AcademicPackageSummary } from '../types';
 
 interface AcademicPackageListProps {
@@ -15,8 +16,8 @@ export function AcademicPackageList({
   isLoading = false,
 }: AcademicPackageListProps): React.JSX.Element {
   const { t } = useTranslation();
-  // Pilot allows a single Mathematics package; hide create once one exists.
-  const canCreatePackage = packages.length === 0;
+  // One package per subject; create stays available for subjects without a package.
+  const canCreatePackage = creatableSubjects(packages).length > 0;
 
   if (isLoading) {
     return (

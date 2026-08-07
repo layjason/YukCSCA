@@ -2,13 +2,13 @@ import type { CSSProperties } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  MOCK_QUESTION_CAPACITY,
   buildMockQuestionSlots,
   ensureSingleMockShell,
   filterMockSelectionForLanguage,
   questionsMatchingExamLanguage,
   sumMockPoints,
 } from '../mockDraft';
+import { defaultExamStructure } from '../subjectProfile';
 import {
   toDraftProvenanceInput,
   toEditableProvenance,
@@ -53,17 +53,25 @@ export function MockPaperEditor({
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   // Always work against a single mock shell; parent should seed empty drafts too.
-  const mock = ensureSingleMockShell(mocks)[0]!;
+  const defaults = defaultExamStructure(undefined);
+  const mock = ensureSingleMockShell(mocks, {
+    durationMinutes: mocks[0]?.durationMinutes ?? defaults.durationMinutes,
+    totalPoints: mocks[0]?.totalPoints ?? defaults.totalPoints,
+    questionCount: mocks[0]?.questionCount ?? defaults.questionCount,
+    questionType: mocks[0]?.questionType ?? defaults.questionType,
+  })[0]!;
   const examLanguage = (mock.examLanguage || 'en') as ExamLanguage;
+  const capacity = mock.questionCount ?? defaults.questionCount;
+  const totalPoints = mock.totalPoints ?? defaults.totalPoints;
 
   const compatibleQuestions = questionsMatchingExamLanguage(availableQuestions, examLanguage);
   const selectedQuestionIds = mock.questions.map((q) => q.questionId);
   const selectedIdSet = new Set(selectedQuestionIds);
   const selectedPoints = sumMockPoints(mock.questions);
-  const progressPct = Math.min(100, (selectedQuestionIds.length / MOCK_QUESTION_CAPACITY) * 100);
-  const isFull = selectedQuestionIds.length >= MOCK_QUESTION_CAPACITY;
+  const progressPct = Math.min(100, (selectedQuestionIds.length / Math.max(capacity, 1)) * 100);
+  const isFull = selectedQuestionIds.length >= capacity;
 
-  const bulkTargetIds = compatibleQuestions.slice(0, MOCK_QUESTION_CAPACITY).map((q) => q.id);
+  const bulkTargetIds = compatibleQuestions.slice(0, capacity).map((q) => q.id);
   const selectableCount = bulkTargetIds.length;
   const masterChecked =
     selectableCount > 0 &&
@@ -87,7 +95,11 @@ export function MockPaperEditor({
   };
 
   const commitSelection = (questionIds: readonly string[]) => {
-    updateMock({ questions: buildMockQuestionSlots(questionIds) });
+    updateMock({
+      questions: buildMockQuestionSlots(questionIds, capacity, totalPoints),
+      questionCount: capacity,
+      totalPoints,
+    });
   };
 
   const handleExamLanguageChange = (nextLanguage: ExamLanguage) => {
@@ -95,10 +107,13 @@ export function MockPaperEditor({
       selectedQuestionIds,
       availableQuestions,
       nextLanguage,
+      capacity,
     );
     updateMock({
       examLanguage: nextLanguage,
-      questions: buildMockQuestionSlots(pruned),
+      questions: buildMockQuestionSlots(pruned, capacity, totalPoints),
+      questionCount: capacity,
+      totalPoints,
     });
   };
 
@@ -183,16 +198,16 @@ export function MockPaperEditor({
               {t('admin.academic.mock.selectQuestions', { count: selectedQuestionIds.length })}
             </span>
             <span>
-              {selectedQuestionIds.length} / {MOCK_QUESTION_CAPACITY} · {selectedPoints} / 100 pts
+              {selectedQuestionIds.length} / {capacity} · {selectedPoints} / {totalPoints} pts
             </span>
           </div>
           <div className="admin-mock-progress-track">
             <div
-              className={`admin-mock-progress-fill${selectedQuestionIds.length === MOCK_QUESTION_CAPACITY ? ' admin-mock-progress-fill-complete' : ''}`}
+              className={`admin-mock-progress-fill${selectedQuestionIds.length === capacity ? ' admin-mock-progress-fill-complete' : ''}`}
               style={{ '--admin-progress': `${progressPct}%` } as CSSProperties}
             />
           </div>
-          {selectedQuestionIds.length === MOCK_QUESTION_CAPACITY ? (
+          {selectedQuestionIds.length === capacity ? (
             <p className="admin-hint">{t('admin.academic.mock.pointsAutoHint')}</p>
           ) : (
             <p className="admin-hint">{t('admin.academic.mock.pointsPartialHint')}</p>
@@ -305,9 +320,9 @@ export function MockPaperEditor({
           </p>
         ) : null}
 
-        {isFull && compatibleQuestions.length > MOCK_QUESTION_CAPACITY ? (
+        {isFull && compatibleQuestions.length > capacity ? (
           <p className="admin-hint admin-mock-capacity-hint">
-            {t('admin.academic.mock.capacityHint', { capacity: MOCK_QUESTION_CAPACITY })}
+            {t('admin.academic.mock.capacityHint', { capacity })}
           </p>
         ) : null}
       </div>

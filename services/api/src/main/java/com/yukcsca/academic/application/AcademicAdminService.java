@@ -5,6 +5,7 @@ import com.yukcsca.academic.domain.AcademicImage;
 import com.yukcsca.academic.domain.AcademicPackage;
 import com.yukcsca.academic.domain.AcademicPackageStatus;
 import com.yukcsca.academic.domain.AcademicRevision;
+import com.yukcsca.academic.domain.AcademicSubjectProfile;
 import com.yukcsca.identity.application.CurrentAccount;
 import com.yukcsca.identity.application.CurrentAccountRole;
 import com.yukcsca.identity.application.CurrentAuthenticationService;
@@ -62,15 +63,16 @@ public class AcademicAdminService {
   @Transactional
   public AcademicPackageSnapshot create(UUID actorId, String subject) {
     requireAdmin(actorId);
-    if (!"MATHEMATICS".equals(subject)) {
+    if (!AcademicSubjectProfile.isSupported(subject)) {
       throw validation("subject", AcademicViolationCode.INCOMPATIBLE);
     }
     if (packages.existsBySubject(subject)) {
       throw new AcademicConflictException(
-          "ACADEMIC_PACKAGE_EXISTS", "The Mathematics academic package already exists.");
+          "ACADEMIC_PACKAGE_EXISTS", "An academic package for this subject already exists.");
     }
     Instant now = now();
-    AcademicPackage academicPackage = packages.save(new AcademicPackage(drafts.emptyDraft(), now));
+    AcademicPackage academicPackage =
+        packages.save(new AcademicPackage(subject, drafts.emptyDraft(subject), now));
     audit(
         actorId,
         "PACKAGE_CREATED",
@@ -99,7 +101,8 @@ public class AcademicAdminService {
           "ACADEMIC_PACKAGE_ARCHIVED", "An archived package cannot be edited.");
     }
     ObjectNode normalized =
-        drafts.normalizeForSave(submittedDraft, academicPackage.getDraft(), actorId);
+        drafts.normalizeForSave(
+            submittedDraft, academicPackage.getDraft(), actorId, academicPackage.getSubject());
     Instant now = now();
     academicPackage.replaceDraft(drafts.serialize(normalized), now);
     packages.save(academicPackage);

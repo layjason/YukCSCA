@@ -4,6 +4,7 @@ import {
   normalizeOfficialSyllabus,
   notStatedOfficialDate,
 } from '../officialSyllabusNormalize';
+import { ensureExamStructure } from '../subjectProfile';
 import type { OfficialFieldKey } from '../validationMapping';
 import type { ExamLanguage, OfficialSyllabus } from '../types';
 
@@ -92,13 +93,11 @@ export function OfficialSourcePanel({
     const current = new Set(examLanguages);
     if (checked) current.add(language);
     else current.delete(language);
+    const structure = ensureExamStructure(normalized);
     patch({
       ...normalized,
       examStructure: {
-        durationMinutes: 60,
-        totalPoints: 100,
-        questionCount: 48,
-        questionType: 'SINGLE_ANSWER',
+        ...structure,
         examLanguages: Array.from(current) as ExamLanguage[],
       },
     });

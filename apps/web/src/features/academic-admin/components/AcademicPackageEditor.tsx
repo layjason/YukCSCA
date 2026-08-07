@@ -19,6 +19,7 @@ import { pruneEmptyLocalizedVersions } from '../localizedContentDraft';
 import { ensureSingleMockShell } from '../mockDraft';
 import { normalizeOfficialSyllabus } from '../officialSyllabusNormalize';
 import { toDraftProvenanceInput, toEditableProvenance } from '../provenanceDraft';
+import { ensureExamStructure } from '../subjectProfile';
 import {
   fieldErrorsFromMapped,
   firstTabFromMapped,
@@ -67,13 +68,19 @@ interface AcademicPackageEditorProps {
 }
 
 function withNormalizedDraft(pkg: AcademicPackage): AcademicPackage {
+  const examStructure = ensureExamStructure(pkg.draft.officialSyllabus, pkg.subject);
+  const officialSyllabus = normalizeOfficialSyllabus({
+    ...pkg.draft.officialSyllabus,
+    subject: pkg.subject,
+    examStructure,
+  });
   return {
     ...pkg,
     draft: {
       ...pkg.draft,
-      officialSyllabus: normalizeOfficialSyllabus(pkg.draft.officialSyllabus),
+      officialSyllabus,
       // Persist-ready single mock shell so publish path is reachable without a silent empty mocks[].
-      mocks: ensureSingleMockShell(pkg.draft.mocks ?? []),
+      mocks: ensureSingleMockShell(pkg.draft.mocks ?? [], examStructure),
     },
   };
 }
@@ -175,9 +182,15 @@ export function AcademicPackageEditor({
   };
 
   const constructDraftInput = (): AcademicPackageDraftInput => {
-    const mocks = ensureSingleMockShell(draft.mocks ?? []);
+    const examShape = ensureExamStructure(draft.officialSyllabus, pkg.subject);
+    const officialSyllabus = normalizeOfficialSyllabus({
+      ...draft.officialSyllabus,
+      subject: pkg.subject,
+      examStructure: examShape,
+    });
+    const mocks = ensureSingleMockShell(draft.mocks ?? [], examShape);
     return {
-      officialSyllabus: normalizeOfficialSyllabus(draft.officialSyllabus),
+      officialSyllabus,
       outlineItems: draft.outlineItems,
       learningObjectives: draft.learningObjectives,
       resources: draft.resources.map((r) => ({
@@ -206,10 +219,10 @@ export function AcademicPackageEditor({
         id: m.id,
         title: m.title ?? '',
         examLanguage: m.examLanguage || 'en',
-        durationMinutes: 60,
-        totalPoints: 100,
-        questionCount: 48,
-        questionType: 'SINGLE_ANSWER' as const,
+        durationMinutes: m.durationMinutes ?? examShape.durationMinutes,
+        totalPoints: m.totalPoints ?? examShape.totalPoints,
+        questionCount: m.questionCount ?? examShape.questionCount,
+        questionType: m.questionType ?? examShape.questionType,
         questions: m.questions,
         provenance: toDraftProvenanceInput(toEditableProvenance(m.provenance)),
       })),
