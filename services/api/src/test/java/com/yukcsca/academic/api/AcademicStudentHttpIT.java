@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.yukcsca.academic.application.AcademicRevisionStore;
 import com.yukcsca.academic.infrastructure.AcademicImageRepository;
 import com.yukcsca.academic.infrastructure.AcademicPackageRepository;
 import com.yukcsca.academic.infrastructure.AcademicRevisionRepository;
@@ -306,11 +307,8 @@ class AcademicStudentHttpIT {
             UUID.class,
             fixture.lessonId());
     assertThat(storedRevision).isNotEqualTo(unknownRevision);
-    assertThat(
-            revisions.findById(storedRevision).isPresent()
-                || packages.findById(fixture.packageId()).isPresent())
-        .isTrue();
-    assertThat(revisions.findById(storedRevision)).isPresent();
+    // Cast to application store: repository type also inherits CrudRepository#findById(ID).
+    assertThat(((AcademicRevisionStore) revisions).findById(storedRevision)).isPresent();
   }
 
   private record PublishedFixture(UUID packageId, UUID lessonId, UUID imageId) {}
