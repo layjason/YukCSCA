@@ -62,7 +62,7 @@ function destinationForRole(role: string | undefined): string {
     case 'ADMIN':
       return '/admin/academic-packages';
     case 'STUDENT':
-      return '/app/profile';
+      return '/app/learn';
     case 'UNASSIGNED':
       return '/onboarding/role';
     default:

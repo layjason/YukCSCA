@@ -5,6 +5,7 @@ import "./common.tsp";
 import "./auth.tsp";
 import "./profile.tsp";
 import "./academic-admin.tsp";
+import "./academic-student.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;

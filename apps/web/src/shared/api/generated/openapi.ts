@@ -4,6 +4,91 @@
  */
 
 export interface paths {
+  '/api/v1/academic/images/{imageId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns image bytes only when the image is referenced by the active published revision of a package the activated student may access. */
+    get: operations['AcademicStudentApi_getPublishedAcademicImage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists published academic packages with an active revision that the activated student may browse under pilot open-access. Subject is never hard-coded to Mathematics. */
+    get: operations['AcademicStudentApi_listPublishedPackages'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the student browse projection for the published package of the given subject: official-source panel, outline with product coverage, LESSON summaries with content progress, and optional continue target. */
+    get: operations['AcademicStudentApi_getPublishedPackageBrowse'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/lessons/{resourceId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one LESSON from the active published revision with ordered TEXT/MATH/IMAGE blocks for the requested explanation language, or an explicit language-unavailable body. Missing language is never silently substituted. */
+    get: operations['AcademicStudentApi_getPublishedLesson'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/lessons/{resourceId}/progress': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery, checkpoint unlock, or practice evidence. */
+    put: operations['AcademicStudentApi_upsertContentProgress'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/academic-images': {
     parameters: {
       query?: never;
@@ -630,6 +715,132 @@ export interface components {
       file: unknown;
       provenance: components['schemas']['AcademicAdmin.ProvenanceInput'];
     };
+    /** @description Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED. */
+    'AcademicStudent.ContentProgress': {
+      status: components['schemas']['AcademicStudent.ContentProgressStatus'];
+      /** @description Zero-based resume index into the blocks of the explanation-language version the student was reading. Null when not started or when no block position is recorded. */
+      resumeBlockIndex: number | null;
+      /** @description Last progress write time. Null when status is NOT_STARTED. */
+      updatedAt: string | null;
+      /** @description True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery. */
+      updatedSinceCompleted: boolean;
+    };
+    /**
+     * @description Persisted or projected content-progress status. Content complete is never mastery.
+     * @enum {string}
+     */
+    'AcademicStudent.ContentProgressStatus': 'NOT_STARTED' | 'IN_PROGRESS' | 'CONTENT_COMPLETE';
+    'AcademicStudent.ContentProgressValidationProblem': {
+      /** @enum {string} */
+      code: 'CONTENT_PROGRESS_VALIDATION_FAILED';
+      violations: components['schemas']['AcademicStudent.ContentProgressValidationViolation'][];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    'AcademicStudent.ContentProgressValidationViolation': {
+      path: string;
+      code: string;
+    };
+    'AcademicStudent.LessonBody':
+      | components['schemas']['AcademicStudent.LessonContentAvailable']
+      | components['schemas']['AcademicStudent.LessonLanguageUnavailable'];
+    /** @description Ordered LESSON body for one explanation language. */
+    'AcademicStudent.LessonContentAvailable': {
+      /** @enum {string} */
+      availability: 'AVAILABLE';
+      blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
+    };
+    /** @description Requested explanation language has no authored version. Clients must not silently substitute another language. */
+    'AcademicStudent.LessonLanguageUnavailable': {
+      /** @enum {string} */
+      availability: 'LANGUAGE_UNAVAILABLE';
+      requestedLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+    };
+    /** @description LESSON summary for outline browse and continue chips. Kind is always LESSON; other resource kinds are omitted. */
+    'AcademicStudent.LessonSummary': {
+      resourceId: components['schemas']['uuid'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      outlineItemIds: components['schemas']['uuid'][];
+      contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
+    };
+    /** @description Student-safe official CSCA source panel: open actions per configured language edition only. */
+    'AcademicStudent.OfficialSourcePanel': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      authority: string;
+      editionLabel: string;
+      /** @description One open action per configured official language edition (en and/or zh-CN). */
+      sourceLinks: components['schemas']['AcademicAdmin.OfficialSourceLink'][];
+      /** Format: date-time */
+      lastCheckedAt: string;
+      publishedOn?: components['schemas']['AcademicAdmin.OfficialDate'];
+      effectiveOn?: components['schemas']['AcademicAdmin.OfficialDate'];
+      updatedOn?: components['schemas']['AcademicAdmin.OfficialDate'];
+      permittedUse: components['schemas']['AcademicAdmin.PermittedUse'];
+    };
+    /**
+     * @description Product coverage of an outline item from LESSON presence only. Practice/mock/checkpoint availability is out of VS-008.
+     * @enum {string}
+     */
+    'AcademicStudent.ProductCoverage': 'FULLY_COVERED' | 'PARTIALLY_COVERED' | 'NOT_COVERED';
+    /** @description Student LESSON read projection for the active published revision. */
+    'AcademicStudent.PublishedLessonDetail': {
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      resourceId: components['schemas']['uuid'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      availableExplanationLanguages: components['schemas']['AcademicAdmin.ExplanationLanguage'][];
+      /** @description Language requested by the client (or the language the server evaluated). */
+      requestedExplanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      body: components['schemas']['AcademicStudent.LessonBody'];
+      contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
+    };
+    /** @description Browse projection for one published package by subject. */
+    'AcademicStudent.PublishedPackageBrowse': {
+      package: components['schemas']['AcademicStudent.PublishedPackageSummary'];
+      officialSource: components['schemas']['AcademicStudent.OfficialSourcePanel'];
+      outline: components['schemas']['AcademicStudent.SyllabusOutlineNode'][];
+      /** @description Optional continue target: last in-progress LESSON when present, otherwise null. Never implies mastery. */
+      continueLesson: components['schemas']['AcademicStudent.LessonSummary'] | null;
+    };
+    /** @description One published package the activated student may browse under pilot open-access. */
+    'AcademicStudent.PublishedPackageSummary': {
+      id: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      activeRevision: components['schemas']['AcademicStudent.StudentPublishedRevisionSummary'];
+      /** @description Exam languages declared on the published syllabus structure. Not used to split LESSON catalogs in VS-008. */
+      examLanguages: components['schemas']['AcademicAdmin.ExamLanguage'][];
+    };
+    /** @description Active published revision identity visible to students (no publisher user id). */
+    'AcademicStudent.StudentPublishedRevisionSummary': {
+      id: components['schemas']['uuid'];
+      /** Format: int64 */
+      revisionNumber: number;
+      /** Format: date-time */
+      publishedAt: string;
+    };
+    /** @description Outline node with product coverage and linked LESSON summaries for the active published revision. */
+    'AcademicStudent.SyllabusOutlineNode': {
+      id: components['schemas']['uuid'];
+      parentId: components['schemas']['uuid'] | null;
+      /** Format: int32 */
+      order: number;
+      summary: components['schemas']['AcademicAdmin.LocalizedText'];
+      productCoverage: components['schemas']['AcademicStudent.ProductCoverage'];
+      /** @description LESSON resources that reference this outline item in the active published revision. */
+      lessons: components['schemas']['AcademicStudent.LessonSummary'][];
+    };
+    /** @description Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource). */
+    'AcademicStudent.UpsertContentProgressRequest': {
+      status: components['schemas']['AcademicStudent.WritableContentProgressStatus'];
+      /** @description Zero-based resume block index within the language version the student is reading. Required when status is IN_PROGRESS; optional when CONTENT_COMPLETE. */
+      resumeBlockIndex?: number | null;
+      /** @description Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field. */
+      expectedPackageRevisionId?: components['schemas']['uuid'];
+    };
+    /**
+     * @description Writable content-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
+     * @enum {string}
+     */
+    'AcademicStudent.WritableContentProgressStatus': 'IN_PROGRESS' | 'CONTENT_COMPLETE';
     'Auth.AuthResponse': {
       accessToken: string;
       /** @enum {string} */
@@ -768,6 +979,327 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  AcademicStudentApi_getPublishedAcademicImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        imageId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'private, max-age=31536000, immutable';
+          'X-Content-Type-Options': 'nosniff';
+          [name: string]: unknown;
+        };
+        content: {
+          'image/png': unknown;
+          'image/jpeg': unknown;
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_listPublishedPackages: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.PublishedPackageSummary'][];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_getPublishedPackageBrowse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.PublishedPackageBrowse'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_getPublishedLesson: {
+    parameters: {
+      query: {
+        explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      };
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.PublishedLessonDetail'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_upsertContentProgress: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.UpsertContentProgressRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.ContentProgress'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.ContentProgressValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
   AcademicAdminApi_uploadAcademicImage: {
     parameters: {
       query?: never;

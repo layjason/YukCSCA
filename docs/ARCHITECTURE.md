@@ -58,11 +58,12 @@ verification delivery outbox state, password-recovery claims and delivery
 state, and retention. Profile owns student activation and student-owned profile
 maintenance, reaching identity only through application-facing account,
 authentication, and security-event APIs. Academic owns the pilot Mathematics
-package draft, immutable published revisions, bounded academic images, and
-minimized administrative audit. It reaches identity only through the
-application-facing current-account API. Modules
-never import another module's repository, JPA entity, controller, or
-infrastructure. New modules appear only with their first accepted use case.
+package draft, immutable published revisions, bounded academic images,
+minimized administrative audit, and student-safe published projections with
+per-student LESSON content progress (not mastery). It reaches identity only
+through the application-facing current-account API. Modules never import
+another module's repository, JPA entity, controller, or infrastructure. New
+modules appear only with their first accepted use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
@@ -148,25 +149,42 @@ refresh are idempotent and other roles are never overwritten. V6 enforces the
 single-admin pilot constraint.
 
 The `academic` module implements the accepted eight-operation administrator
-boundary for subject preparation packages. Package lifecycle is subject-agnostic
-(one package per subject; draft/publish/archive; JSONB revisions). Creatable
-subjects and default exam structure live in an allow-listed subject profile
-(pilot: Mathematics with its CSCA 2025 defaults). Publication validates the
-official-source reference (one or two language-edition PDF locators, typically
-en and/or zh-CN), three-language authored outline, mappings, resources,
-questions, LaTeX/image blocks, provenance, and a mock that matches the
-package's own exam structure in one transaction. Incomplete whole drafts
-can be saved with expected-revision checks. Published JSONB revisions are
+boundary for subject preparation packages plus the five-operation student
+published-content boundary under `/api/v1/academic/**`. Package lifecycle is
+subject-agnostic (one package per subject; draft/publish/archive; JSONB
+revisions). Creatable subjects and default exam structure live in an
+allow-listed subject profile (pilot: Mathematics with its CSCA 2025 defaults).
+Publication validates the official-source reference (one or two language-edition
+PDF locators, typically en and/or zh-CN), three-language authored outline,
+mappings, resources, questions, LaTeX/image blocks, provenance, and a mock that
+matches the package's own exam structure in one transaction. Incomplete whole
+drafts can be saved with expected-revision checks. Published JSONB revisions are
 immutable. PNG/JPEG assets are bounded, decoded, re-encoded without submitted
 metadata, hashed, and stored in PostgreSQL separately from revision documents.
-Archive retains revisions, images, and value-free audit evidence. Student
-consumption remains outside this slice.
+Archive retains revisions, images, and value-free audit evidence.
+
+Student consumption (VS-008) projects only `PUBLISHED` packages with an active
+revision: package list/browse by subject, LESSON body by explanation language
+(`id` | `en` | `zh-CN`) with explicit language-unavailable payloads,
+content-progress upsert keyed by `(account, package, resource)`, and image GET
+only when the image is referenced by an active published revision. Student
+responses never include drafts, questions, mocks, answer keys, or admin
+publisher identity. Pilot access is open to every activated `STUDENT` via
+`ContentAccessPolicy` (entitlements later). Progress is content status only
+(`NOT_STARTED` | `IN_PROGRESS` | `CONTENT_COMPLETE` + resume block index)—never
+mastery. Soft `updatedSinceCompleted` signals when the active revision is newer
+than the revision last marked content-complete without demoting status. V8
+stores `student_content_progress`.
 
 VS-005 is `DONE` after contract, PostgreSQL/Flyway (V6–V7), backend, production
 admin frontend (`/admin/academic-packages` under `features/academic-admin`),
 security/privacy, subject-profile extensibility, and product-owner journey
-evidence. KaTeX is used for admin formula preview only. Multi-subject content
-seeding and all student syllabus/practice/mock consumption remain later slices.
+evidence. VS-008 is `DONE` after contract (`academic-student.tsp` / R3), V8,
+backend student APIs, production Learn frontend
+(`features/learn`: `/app/learn`, subject browse, LESSON reader), security/
+privacy, prototype isolation, and product-owner journey evidence. KaTeX is used
+for admin formula preview and student LESSON MATH rendering. Multi-subject
+content seeding and checkpoint/practice/mock student flows remain later slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
 for the authenticated owning `STUDENT`. The application validates the complete
@@ -180,18 +198,20 @@ The VS-003 password-recovery backend and production frontend are `DONE` after
 focused contract, PostgreSQL/Flyway, backend, frontend, security/privacy, and
 product-owner journey evidence. The frontend consumes the generated recovery
 contract, reads fragment or query credentials, removes them from browser
-history, and exposes retry and return-to-sign-in states. Other role onboarding,
-learning, family, content, commerce, tutoring, and AI behavior do not exist yet.
-The VS-004 backend and production profile/default-language settings frontend are
-`DONE` after contract, PostgreSQL/Flyway, backend, frontend, route-boundary,
-security/privacy, code-surface, and product-owner journey evidence. The
-independently production-accessible student settings surface is deliberately
-limited to `/app/profile` and `/app/profile/languages`; `/app/more` remains
-inside the preview-workspace gate, and learning, family, access, commerce, and
-other workspace destinations remain prototype-only or unimplemented until their
+history, and exposes retry and return-to-sign-in states. The VS-004 backend and
+production profile/default-language settings frontend are `DONE` after contract,
+PostgreSQL/Flyway, backend, frontend, route-boundary, security/privacy,
+code-surface, and product-owner journey evidence. Production student surfaces
+now include `/app/profile`, `/app/profile/languages`, and Learn
+(`/app/learn`, subject browse, LESSON reader under `features/learn`); post-setup
+home routes activated students to `/app/learn`, and mobile More exposes
+production-safe destinations without re-entering the preview-workspace gate for
+those routes. Family, practice/checkpoint, mock execution, access, commerce,
+tutoring, and AI destinations remain prototype-only or unimplemented until their
 owning slices are accepted. VS-002 is also `DONE` after full implementation,
 verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
-and first Mathematics package path.
+and first Mathematics package path. VS-008 is `DONE` for the first production
+student consumer of published LESSON content with content progress only.
 
 ## Prototype boundaries
 

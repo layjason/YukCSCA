@@ -110,7 +110,7 @@ test('routes a restored unassigned Google account from root to role selection', 
   ).toBeInTheDocument();
 });
 
-test('routes a restored student from root to production Profile when preview state resets', async () => {
+test('routes a restored student from root to production Learn when preview state resets', async () => {
   useAuthMock.mockReturnValue({
     status: 'authenticated',
     user: {
@@ -127,29 +127,28 @@ test('routes a restored student from root to production Profile when preview sta
     replaceCurrentUser: vi.fn(),
   });
   setAccessToken('student-access-token');
+  // RootDecisionPage sends activated STUDENT to /app/learn (VS-008 pilot home).
   vi.stubGlobal(
     'fetch',
     vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          id: '00000000-0000-0000-0000-000000000002',
-          preferredName: 'Canonical Name',
-          birthYear: 2009,
-          currentGrade: 'GRADE_11',
-          city: 'Jakarta',
-          defaultExplanationLanguage: 'id',
-          createdAt: '2026-07-22T00:00:00Z',
-          updatedAt: '2026-07-22T00:00:00Z',
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     ),
   );
 
   try {
     renderApp(['/']);
-    expect(await screen.findByDisplayValue('Canonical Name')).toBeInTheDocument();
+    // Wait for Learn hub content (not the transient loading h1) so the node stays mounted.
+    expect(
+      await screen.findByText(/Belum ada paket terbit|No published packages yet/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: /^Belajar$|^Learn$/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /target akademik/i })).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Canonical Name')).not.toBeInTheDocument();
   } finally {
     clearAccessToken();
     vi.unstubAllGlobals();

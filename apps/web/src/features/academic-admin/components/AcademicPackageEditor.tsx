@@ -19,6 +19,7 @@ import { pruneEmptyLocalizedVersions } from '../localizedContentDraft';
 import { ensureSingleMockShell } from '../mockDraft';
 import { normalizeOfficialSyllabus } from '../officialSyllabusNormalize';
 import { toDraftProvenanceInput, toEditableProvenance } from '../provenanceDraft';
+import { formatAdminDate } from '../formatAdminDate';
 import { ensureExamStructure } from '../subjectProfile';
 import {
   fieldErrorsFromMapped,
@@ -89,7 +90,7 @@ export function AcademicPackageEditor({
   initialPackage,
   onBackToList,
 }: AcademicPackageEditorProps): React.JSX.Element {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [pkg, setPkg] = useState<AcademicPackage>(() => withNormalizedDraft(initialPackage));
   const [activeTab, setActiveTab] = useState<AdminEditorTab>('source');
@@ -274,7 +275,10 @@ export function AcademicPackageEditor({
       setPkg(withNormalizedDraft(updated));
       showToast(
         t('admin.academic.toasts.published', {
-          revision: updated.activeRevision?.revisionNumber || 1,
+          date: formatAdminDate(
+            updated.activeRevision?.publishedAt ?? updated.updatedAt,
+            i18n.language,
+          ),
         }),
       );
     } catch (err) {
@@ -390,16 +394,14 @@ export function AcademicPackageEditor({
             <p className="admin-editor-meta">
               {pkg.activeRevision
                 ? t('admin.academic.activeRevision', {
-                    revision: pkg.activeRevision.revisionNumber,
-                    date: new Date(pkg.activeRevision.publishedAt).toLocaleDateString(),
+                    date: formatAdminDate(pkg.activeRevision.publishedAt, i18n.language),
                   })
                 : t('admin.academic.noActiveRevision')}
               {' · '}
-              {t('admin.academic.draftRevision', { revision: pkg.draftRevision })}
+              {t('admin.academic.lastUpdated', {
+                date: formatAdminDate(pkg.updatedAt, i18n.language),
+              })}
             </p>
-            {isCorrectionDraft ? (
-              <p className="admin-hint">{t('admin.academic.correctionDraftHint')}</p>
-            ) : null}
           </div>
         </div>
 

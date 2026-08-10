@@ -27,9 +27,9 @@ import { SubjectsPage } from '@/prototype/student/onboarding/SubjectsPage';
 import { DiagnosticPage } from '@/prototype/student/onboarding/DiagnosticPage';
 import { DiagnosticResultPage } from '@/prototype/student/onboarding/DiagnosticResultPage';
 import { PlanReviewPage } from '@/prototype/student/onboarding/PlanReviewPage';
-import { LearnPage } from '@/prototype/student/learning/LearnPage';
-import { SyllabusPage } from '@/prototype/student/learning/SyllabusPage';
-import { LessonPage } from '@/prototype/student/learning/LessonPage';
+import LearnPackagesPage from '@/features/learn/LearnPackagesPage';
+import PackageBrowsePage from '@/features/learn/PackageBrowsePage';
+import LessonReaderPage from '@/features/learn/LessonReaderPage';
 import { PracticePage } from '@/prototype/student/practice/PracticePage';
 import { PracticeSessionPage } from '@/prototype/student/practice/PracticeSessionPage';
 import { PracticeResultPage } from '@/prototype/student/practice/PracticeResultPage';
@@ -178,9 +178,9 @@ const routeElements = {
   'onboarding-diagnostic-result': <DiagnosticResultPage />,
   'onboarding-plan-review': <PlanReviewPage />,
   today: <StudentTodayRoute />,
-  learn: <LearnPage />,
-  'learn-syllabus': <SyllabusPage />,
-  'learn-lesson': <LessonPage />,
+  learn: <LearnPackagesPage />,
+  'learn-subject': <PackageBrowsePage />,
+  'learn-lesson': <LessonReaderPage />,
   practice: <PracticePage />,
   'practice-session': <PracticeSessionPage />,
   'practice-result': <PracticeResultPage />,

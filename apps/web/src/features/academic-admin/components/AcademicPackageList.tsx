@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { formatAdminDate } from '../formatAdminDate';
 import { creatableSubjects } from '../subjectProfile';
 import type { AcademicPackageSummary } from '../types';
 
@@ -15,7 +16,7 @@ export function AcademicPackageList({
   onSelectPackage,
   isLoading = false,
 }: AcademicPackageListProps): React.JSX.Element {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // One package per subject; create stays available for subjects without a package.
   const canCreatePackage = creatableSubjects(packages).length > 0;
 
@@ -117,12 +118,13 @@ export function AcademicPackageList({
                       <p className="admin-package-card-detail">
                         {pkg.activeRevision
                           ? t('admin.academic.activeRevision', {
-                              revision: pkg.activeRevision.revisionNumber,
-                              date: new Date(pkg.activeRevision.publishedAt).toLocaleDateString(),
+                              date: formatAdminDate(pkg.activeRevision.publishedAt, i18n.language),
                             })
                           : t('admin.academic.noActiveRevision')}
                         {' · '}
-                        {t('admin.academic.draftRevision', { revision: pkg.draftRevision })}
+                        {t('admin.academic.lastUpdated', {
+                          date: formatAdminDate(pkg.updatedAt, i18n.language),
+                        })}
                       </p>
                     </div>
 

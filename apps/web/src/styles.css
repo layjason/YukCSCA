@@ -616,10 +616,12 @@ button {
 
 .app-content {
   flex: 1;
-  padding: var(--space-xl);
-  max-width: 860px;
+  /* Fill the shell main column (no narrow centered column on wide screens). */
+  padding: var(--space-lg) clamp(var(--space-md), 2.5vw, var(--space-xxl));
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .app-bottom-nav {
