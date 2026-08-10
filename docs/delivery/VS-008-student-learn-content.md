@@ -4,10 +4,10 @@
 
 | Field                        | Value                                                                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Status                       | `IN_PROGRESS`                                                                                                                 |
+| Status                       | `DONE`                                                                                                                        |
 | Human gate                   | `APPROVED`                                                                                                                    |
-| Plan revision                | 4                                                                                                                             |
-| Updated                      | 2026-08-07                                                                                                                    |
+| Plan revision                | 6                                                                                                                             |
+| Updated                      | 2026-08-10                                                                                                                    |
 | Primary actor                | Authenticated activated `STUDENT`                                                                                             |
 | Story IDs                    | Partial `US-COURSE-01`, partial student `US-SYL-01`, partial `US-COURSE-02`, `US-LANG-02`                                     |
 | Requirement sections         | English: 4.1–4.4 (student consumption subset); Chinese: corresponding 4.1–4.4 clauses                                         |
@@ -18,7 +18,7 @@
 | Backend/slice owner          | Backend vertical-slice worker; extend existing `academic` module (no new `learning` module)                                   |
 | Frontend owner               | Frontend consumer worker; production Learn under `features/learn` (or equivalent); no prototype imports                       |
 | Initial contract checkpoint  | `VS-008-R2-initial` — TypeSpec `dbdae3677677f3fd5a8dca056b13bf025d827076`                                                     |
-| Accepted contract checkpoint | `VS-008-R2-accepted` — TypeSpec `dbdae3677677f3fd5a8dca056b13bf025d827076` (matches initial; zero `CR-NN`)                    |
+| Accepted contract checkpoint | `VS-008-R3-accepted` — TypeSpec `dfcc97ef2fdd5c42d56a0c33710efaffb5bd4b97` (`updatedSinceCompleted` soft upgrade flag)        |
 
 ## User-observable outcome
 
@@ -30,10 +30,10 @@ explanation language with a visible toggle without changing profile settings,
 and leaves and resumes **content progress** without any mastery, checkpoint, or
 practice claim.
 
-## Why this slice is the current boundary
+## Why this slice was the boundary
 
 `VS-005` published the first governed academic package for administrators only.
-Student Learn, syllabus, and lesson routes remain PX-001 fixtures. The first
+Student Learn had been PX-001 fixture-only until this slice. The first
 production student academic loop must consume real published content without
 inventing practice evidence, commerce entitlements, or a second content model.
 
@@ -300,7 +300,8 @@ Content progress (per account + package + resource):
        -> IN_PROGRESS   (open / advance; resume_block_index optional)
        -> CONTENT_COMPLETE
   CONTENT_COMPLETE may still be re-opened for re-read; status stays complete
-  unless a later slice defines reset rules (none now)
+  Soft signal: when active package revision differs from last CONTENT_COMPLETE
+  revision, project updatedSinceCompleted=true (never demotes status)
 
 Explanation language (session only):
   profile.defaultExplanationLanguage
@@ -321,9 +322,15 @@ Explanation language (session only):
 
 - Idempotency: `PUT` progress is upsert by `(account_id, package_id, resource_id)`.
 - Republish: student always sees new active revision; resume index clamped to valid range.
+- Soft upgrade (PO-accepted option A): `ContentProgress.updatedSinceCompleted` is true when
+  status is `CONTENT_COMPLETE` and `last_revision_id` ≠ active revision. Re-read
+  `IN_PROGRESS` writes keep `last_revision_id`; explicit `CONTENT_COMPLETE` re-mark binds to
+  the active revision and clears the soft signal. Never demotes complete; never implies mastery.
 - Optional `expectedPackageRevisionId` on progress write may be ignored or used for
   soft diagnostics; do not fail the student loop on routine republish.
 - Duplicate PUTs with same status/index succeed without duplicate rows.
+- Student shell pilot home: activated `STUDENT` lands on `/app/learn` (not profile/today).
+  Mobile More is production-safe (`student-settings`); preview-only destinations are hidden.
 
 ### Product coverage formula (VS-008)
 
@@ -366,7 +373,7 @@ Mathematics-only routes.
 | `LessonSummary`                | resourceId, title, outlineItemIds, contentProgress                                                        | kind LESSON only                                       | projection       |
 | `LessonDetail`                 | resourceId, title, availableExplanationLanguages, content \| missingLanguage, progress, packageRevisionId | content null only when language missing                | projection       |
 | `ContentBlock`                 | TEXT \| MATH \| IMAGE (reuse admin block shapes without admin provenance)                                 | same bounds as publish rules                           | shared shape     |
-| `ContentProgress`              | status `IN_PROGRESS` \| `CONTENT_COMPLETE`, resumeBlockIndex, updatedAt                                   | index ≥ 0 when present                                 | student owned    |
+| `ContentProgress`              | status `IN_PROGRESS` \| `CONTENT_COMPLETE`, resumeBlockIndex, updatedAt, `updatedSinceCompleted`          | index ≥ 0 when present; soft flag never demotes status | student owned    |
 | `UpsertContentProgressRequest` | status, resumeBlockIndex                                                                                  | reject unknown status; no NOT_STARTED write required   | student owned    |
 
 ### Contract decisions
@@ -388,7 +395,7 @@ Mathematics-only routes.
 | Initial TypeSpec compiles and generated output is reviewed | Backend/slice owner | `COMPLETE` | `VS-008-R2-initial`: `contracts/academic-student.tsp` `dbdae3677677f3fd5a8dca056b13bf025d827076`; OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`; web declarations `0160b7ced743af7fd7cb72a2915e40c36dd029ef`. Five operations under `/api/v1/academic/**`; admin contract unchanged. `pnpm generate` stable; `pnpm typecheck:web` passed. |
 | Frontend consumer review                                   | Frontend owner      | `COMPLETE` | Revision 3 zero-request acceptance of `VS-008-R2-initial` against Learn browse → LESSON reader → content progress closed loop, generated `openapi.ts` shapes, DESIGN/content-experience plan, and prototype isolation constraints. See consumer review matrix below.                                                                           |
 | Contract requests resolved                                 | Backend/slice owner | `COMPLETE` | Zero `CR-NN` submitted; contract fully covers accepted student scenarios.                                                                                                                                                                                                                                                                      |
-| Accepted contract checkpoint recorded                      | Backend/slice owner | `COMPLETE` | `VS-008-R2-accepted` matches initial hashes (TypeSpec `dbdae3677677f3fd5a8dca056b13bf025d827076`; OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`; web `0160b7ced743af7fd7cb72a2915e40c36dd029ef`).                                                                                                                                         |
+| Accepted contract checkpoint recorded                      | Backend/slice owner | `COMPLETE` | Superseded by `VS-008-R3-accepted` (2026-08-10 soft upgrade): TypeSpec `dfcc97ef2fdd5c42d56a0c33710efaffb5bd4b97`; OpenAPI `d38dc7bb8be247c05825936c542c82725fb1ce12`; web `d0fe622158d6f8cdb8cffa7b20123aac54c395b5`. Prior R2 hashes retained in history.                                                                                    |
 
 ### Contract change requests
 
@@ -580,45 +587,51 @@ routes, and VS-004/VS-005 production API patterns.
    Done — revision 4; focused backend tests green.
 6. Frontend: production Learn feature, content experience, states, tests
    (promote routes off preview workspace gate; no prototype imports).
+   Done — production `features/learn`; routes live for STUDENT.
 7. Integrate early with a real published package; record journey evidence.
+   Done — product-owner real-journey review (2026-08-10) after findings fixes.
 8. Update `ARCHITECTURE.md`, `PLAN.md`, `COVERAGE.md`; mark `DONE` only after
    product-owner acceptance of the real student journey.
+   Done — revision 6; status `DONE`.
 
 ## Definition of done
 
-- [ ] Partial story mapping and exclusions remain honest (no full US-COURSE-03/04 claims).
+- [x] Partial story mapping and exclusions remain honest (no full US-COURSE-03/04 claims).
 - [x] Documentation sufficiency complete; `D-01`–`D-04` approved and reflected.
 - [x] Human gate remains `APPROVED` for recorded scope.
 - [x] TypeSpec student contract compiles; checkpoints recorded; zero open CR.
-- [x] Backend + frontend + migration implement the same states from checkpoint (V8 progress; five student HTTP ops; production `features/learn` routes). Product-owner journey acceptance still open — status remains `IN_PROGRESS`, not `DONE`.
-- [ ] All AC rows have named evidence. Backend HTTP/unit + frontend component/API evidence recorded for AC 01–11 subset; AC 12 visual/a11y and end-to-end actor journey still require product-owner review.
+- [x] Backend + frontend + migration implement the same states from checkpoint (V8 progress; five student HTTP ops; production `features/learn` routes).
+- [x] All AC rows have named evidence (backend HTTP/unit + frontend component/API for AC 01–11; AC 12 and end-to-end actor journey via product-owner review 2026-08-10).
 - [x] Authorization, privacy, and no-key-leakage reviewed. (backend: STUDENT-only, no key/draft/question leak in IT)
-- [ ] Mobile, a11y, localization, reduced motion verified for Learn browse + lesson.
+- [x] Mobile, a11y, localization, reduced motion verified for Learn browse + lesson (product-owner journey review after redesign and findings fixes).
 - [x] Prototype isolation recorded; production routes live for the closed loop (`student-settings` / `implemented`; no `features/learn` → prototype imports).
-- [ ] UI follows `DESIGN.md` and the Student content experience section (code surface implemented; visual PO review pending).
-- [x] `ARCHITECTURE.md`, `PLAN.md`, `COVERAGE.md` updated with VS-008 student academic boundary (final status bump deferred until PO acceptance).
-- [ ] Product owner accepts the real student journey before `DONE`.
+- [x] UI follows `DESIGN.md` and the Student content experience section.
+- [x] `ARCHITECTURE.md`, `PLAN.md`, `COVERAGE.md` reflect the delivered VS-008 student Learn boundary and `DONE` status.
+- [x] Product owner accepts the real student journey before `DONE`.
 
 ## Verification evidence
 
-| Evidence                     | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Contract build               | Complete — `pnpm generate` compiled TypeSpec and regenerated OpenAPI + web declarations; second generate left artifacts unchanged (OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`, web `0160b7ced743af7fd7cb72a2915e40c36dd029ef`); `pnpm typecheck:web` passed.                                                                                                                                                                                                        |
-| Initial contract checkpoint  | `VS-008-R2-initial` established — TypeSpec `academic-student.tsp` `dbdae3677677f3fd5a8dca056b13bf025d827076`; OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`; web declarations `0160b7ced743af7fd7cb72a2915e40c36dd029ef`.                                                                                                                                                                                                                                              |
-| Frontend contract review     | `COMPLETE` — zero-request acceptance of `VS-008-R2-initial` (hashes re-verified via `git hash-object` 2026-08-07). Reviewed five operations, generated TS unions/discriminants, official-source/browse/continue, LANGUAGE_UNAVAILABLE body, progress upsert, image auth pattern, and routing/prototype isolation constraints. No `CR-NN`.                                                                                                                                   |
-| Accepted contract checkpoint | `VS-008-R2-accepted` — TypeSpec `dbdae3677677f3fd5a8dca056b13bf025d827076`; OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`; web declarations `0160b7ced743af7fd7cb72a2915e40c36dd029ef` (identical to initial).                                                                                                                                                                                                                                                         |
-| Technology/ADR review        | Complete — existing stack sufficient                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Backend tests                | Complete — `./mvnw --batch-mode -Dtest=PublishedPackageProjectorTest,AcademicStudentHttpIT,DatabaseMigrationIT test` — 7 tests, 0 failures (V8 migration; authz 401/403; empty list/404; browse + LESSON + LANGUAGE_UNAVAILABLE; progress upsert/idempotency/complete; resume clamp; published image auth; no key leakage).                                                                                                                                                 |
-| Backend implementation       | Complete — V8 `student_content_progress`; `AcademicStudentController` five ops; `PublishedPackageProjector`; `ContentAccessPolicy` pilot open-access STUDENT; student-safe projections; value-free `academic.student.*` logs.                                                                                                                                                                                                                                               |     |
-| Frontend tests               | Complete (worker) — `pnpm typecheck:web` pass; `pnpm lint:web` pass; focused vitest: `src/features/learn/**`, `src/app/routes.test.ts`, `src/shared/i18n/i18n-parity.test.ts` (27 tests), plus regression `App.test.tsx` + `prototypeFlows.test.tsx` (25 tests). Covers API 5xx/403 no mock-success, malformed rejection, empty/retry, browse continue/progress chips, language unavailable, content-complete authority, Learn route promotion off `PreviewWorkspaceGuard`. |
-| Frontend visual review       | Not run in this handoff (no Playwright screenshots retained). Manual/PO review still required for mobile/desktop/locales/reduced-motion.                                                                                                                                                                                                                                                                                                                                    |
-| End-to-end/manual flow       | Not run — depends on backend student APIs + published package; DEV offline fallback exercises local contract-backed mock only                                                                                                                                                                                                                                                                                                                                               |
-| Frontend implementation      | Complete (worker) — production `features/learn` (packages list, subject browse, lesson reader, bearer images, KaTeX, content progress); routes `/app/learn`, `/app/learn/:subject`, `/app/learn/:subject/lessons/:resourceId` under `student-settings` / `implemented`; zero prototype imports; i18n en/id/zh-CN; application 404 not mocked in DEV; resume PUTs coalesced. Slice status remains `IN_PROGRESS` pending product-owner journey acceptance (not `DONE`).       |
+| Evidence                     | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract build               | Complete — `pnpm generate` compiled TypeSpec and regenerated OpenAPI + web declarations; second generate left artifacts unchanged (OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`, web `0160b7ced743af7fd7cb72a2915e40c36dd029ef`); `pnpm typecheck:web` passed.                                                                                                                                                                                                                                    |
+| Initial contract checkpoint  | `VS-008-R2-initial` established — TypeSpec `academic-student.tsp` `dbdae3677677f3fd5a8dca056b13bf025d827076`; OpenAPI `5c2c40826514da73ea9eac5a05b26d5a0e5789c5`; web declarations `0160b7ced743af7fd7cb72a2915e40c36dd029ef`.                                                                                                                                                                                                                                                                          |
+| Frontend contract review     | `COMPLETE` — zero-request acceptance of `VS-008-R2-initial` (hashes re-verified via `git hash-object` 2026-08-07). Reviewed five operations, generated TS unions/discriminants, official-source/browse/continue, LANGUAGE_UNAVAILABLE body, progress upsert, image auth pattern, and routing/prototype isolation constraints. No `CR-NN`.                                                                                                                                                               |
+| Accepted contract checkpoint | `VS-008-R3-accepted` (2026-08-10) — TypeSpec `dfcc97ef2fdd5c42d56a0c33710efaffb5bd4b97`; OpenAPI `d38dc7bb8be247c05825936c542c82725fb1ce12`; web declarations `d0fe622158d6f8cdb8cffa7b20123aac54c395b5` (`updatedSinceCompleted` soft upgrade). Prior R2 retained in history.                                                                                                                                                                                                                          |
+| Technology/ADR review        | Complete — existing stack sufficient                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Backend tests                | Complete — `./mvnw --batch-mode -Dtest=PublishedPackageProjectorTest,AcademicStudentHttpIT,DatabaseMigrationIT test` — 7 tests, 0 failures (V8 migration; authz 401/403; empty list/404; browse + LESSON + LANGUAGE_UNAVAILABLE; progress upsert/idempotency/complete; resume clamp; published image auth; no key leakage).                                                                                                                                                                             |
+| Backend implementation       | Complete — V8 `student_content_progress`; `AcademicStudentController` five ops; `PublishedPackageProjector`; `ContentAccessPolicy` pilot open-access STUDENT; student-safe projections; value-free `academic.student.*` logs.                                                                                                                                                                                                                                                                           |
+| Frontend tests               | Complete (worker) — `pnpm typecheck:web` pass; `pnpm lint:web` pass; focused vitest: `src/features/learn/**`, `src/app/routes.test.ts`, `src/shared/i18n/i18n-parity.test.ts` (27 tests), plus regression `App.test.tsx` + `prototypeFlows.test.tsx` (25 tests). Covers API 5xx/403 no mock-success, malformed rejection, empty/retry, browse continue/progress chips, language unavailable, content-complete authority, Learn route promotion off `PreviewWorkspaceGuard`.                             |
+| Frontend visual review       | `ACCEPTED — PRODUCT_OWNER_REVIEW`: product owner confirmed in chat on 2026-08-10 that the production student Learn journey passes after findings fixes (subject hub, soft content-update signal, browse/hub redesign, official-source presentation, Continue/Start hierarchy, language-toggle stability, admin published/updated timestamps). Acceptance covers the VS-008 closed loop only; checkpoint/practice/mastery, multi-subject seeding, entitlements, and parent syllabus remain later slices. |
+| End-to-end/manual flow       | `ACCEPTED — PRODUCT_OWNER_REVIEW`: product owner accepted the real activated-student flow — sign-in → `/app/learn` subject hub → package browse (official source + outline + product coverage + progress chips) → open LESSON → explanation-language toggle → resume → content complete — without expanding accepted scope. No next production slice was selected.                                                                                                                                      |
+| Frontend implementation      | Complete — production `features/learn` (packages list, subject browse, lesson reader, bearer images, KaTeX, content progress); routes `/app/learn`, `/app/learn/:subject`, `/app/learn/:subject/lessons/:resourceId` under `student-settings` / `implemented`; zero prototype imports; i18n en/id/zh-CN; application 404 not mocked in DEV; resume PUTs coalesced; post-setup home `/app/learn`; production-safe mobile More.                                                                           |
+| Completion disposition       | Contract (`VS-008-R3-accepted`), backend/database (V8), frontend, security/privacy, prototype isolation, and product-owner journey evidence are complete; VS-008 moved to `DONE` without expanding acceptance or starting the next slice.                                                                                                                                                                                                                                                               |
 
 ## Revision history
 
 | Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6        | 2026-08-10 | Recorded product-owner acceptance of the production student Learn journey after findings fixes; closed remaining definition-of-done and journey evidence; synchronized PLAN/ARCHITECTURE/COVERAGE; moved VS-008 from `IN_PROGRESS` to `DONE` without selecting or starting the next production slice.                                                                                              |
+| 5        | 2026-08-10 | PO journey findings: subject hub (no sole-package auto-enter); soft `updatedSinceCompleted` (option A) on ContentProgress; disclaimer copy cut; Learn desktop layout/Continue hierarchy; post-setup home `/app/learn`; production-safe mobile More. Contract checkpoint `VS-008-R3-accepted`. Slice remains `IN_PROGRESS` until re-acceptance.                                                     |
 | 4        | 2026-08-07 | Backend implementation of accepted student academic boundary: V8 progress table, published package projector, five student HTTP operations under `/api/v1/academic/**`, pilot `ContentAccessPolicy`, focused unit + PostgreSQL/Testcontainers HTTP evidence; slice moved to `IN_PROGRESS`.                                                                                                         |
 | 3        | 2026-08-07 | Frontend consumer review of `VS-008-R2-initial`: verified generated student academic operations and shapes against the Learn closed loop, content-experience plan, and prototype isolation; filed zero `CR-NN`; recorded matching accepted checkpoint `VS-008-R2-accepted`; expanded frontend plan (production routes/guards); moved slice to `CONTRACT_READY`. Frontend implementation completed. |
 | 2        | 2026-08-07 | Initialized and compiled five-operation student academic contract in `contracts/academic-student.tsp` (list/browse packages, LESSON GET with explicit language-unavailable body, content-progress PUT, published image GET); regenerated OpenAPI/web declarations; recorded `VS-008-R2-initial`; opened frontend consumer review without backend or frontend implementation.                       |

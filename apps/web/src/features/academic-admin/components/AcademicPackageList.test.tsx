@@ -5,7 +5,8 @@ import type { AcademicPackageSummary } from '../types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: { count?: number }) => {
+    i18n: { language: 'en' },
+    t: (key: string, opts?: { count?: number; date?: string }) => {
       if (key === 'admin.shell.workspace') return 'Admin workspace';
       if (key === 'admin.academic.title') return 'Academic Packages';
       if (key === 'admin.academic.subtitle') return 'Configure 2025 CSCA Mathematics syllabus';
@@ -14,13 +15,14 @@ vi.mock('react-i18next', () => ({
       if (key === 'admin.academic.statusDraft') return 'Draft';
       if (key === 'admin.academic.statusPublished') return 'Published';
       if (key === 'admin.academic.hasUnpublishedChanges') return 'Pending changes';
-      if (key === 'admin.academic.noActiveRevision') return 'No published revision yet';
+      if (key === 'admin.academic.noActiveRevision') return 'Not published yet';
+      if (key === 'admin.academic.activeRevision') return `Published ${opts?.date ?? ''}`;
+      if (key === 'admin.academic.lastUpdated') return `Updated ${opts?.date ?? ''}`;
       if (key === 'admin.academic.emptyTitle') return 'No academic packages yet';
       if (key === 'admin.academic.emptyBody')
         return 'Initialize the first CSCA 2025 Mathematics preparation package to begin.';
       if (key === 'admin.academic.packageHeading') return 'CSCA 2025 Mathematics Package';
       if (key === 'admin.academic.subjectTag') return 'Mathematics 2025';
-      if (key === 'admin.academic.draftRevision') return 'Draft rev 1';
       if (key === 'admin.academic.packageListLabel') return 'Package list';
       if (key === 'admin.academic.packageListHeading') return 'Your packages';
       if (key === 'admin.academic.packageCount') return `${opts?.count ?? 0} total`;

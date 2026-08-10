@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { resolveLocalizedText } from '../localizedText';
 import { coverageLabelKey } from '../progressHelpers';
 import type { AcademicSubject, SyllabusOutlineNode } from '../types';
-import { ContentProgressChip } from './ContentProgressChip';
+import { ContentProgressFrom } from './ContentProgressChip';
 
 interface OutlineLessonListProps {
   subject: AcademicSubject;
@@ -34,11 +34,6 @@ export function OutlineLessonList({ subject, outline }: OutlineLessonListProps):
   return (
     <section className="learn-outline" aria-labelledby="learn-outline-heading">
       <h2 id="learn-outline-heading">{t('learn.browse.outlineTitle')}</h2>
-      <p className="learn-outline-legend">
-        <span>{t('learn.browse.coverageLegend')}</span>
-        {' · '}
-        <span>{t('learn.browse.progressLegend')}</span>
-      </p>
       <ol className="learn-outline-tree" role="list">
         {tree.map((node) => (
           <OutlineNodeItem
@@ -88,15 +83,20 @@ function OutlineNodeItem({
             const title =
               resolveLocalizedText(lesson.title, interfaceLanguage) ||
               t('learn.browse.untitledLesson');
+            const progress = lesson.contentProgress;
+            const isNext =
+              progress.status === 'NOT_STARTED' ||
+              progress.status === 'IN_PROGRESS' ||
+              progress.updatedSinceCompleted;
             return (
               <li key={lesson.resourceId} className="learn-lesson-row">
                 <Link
                   to={`/app/learn/${subject}/lessons/${lesson.resourceId}`}
-                  className="learn-lesson-link"
+                  className={`learn-lesson-link${isNext && progress.status !== 'CONTENT_COMPLETE' ? ' learn-lesson-link-next' : ''}${progress.updatedSinceCompleted ? ' learn-lesson-link-updated' : ''}`}
                 >
                   <span className="learn-lesson-link-text">
                     <span className="learn-lesson-link-title">{title}</span>
-                    <ContentProgressChip status={lesson.contentProgress.status} />
+                    <ContentProgressFrom progress={progress} />
                   </span>
                   <ChevronRight size={18} aria-hidden="true" className="learn-lesson-chevron" />
                 </Link>

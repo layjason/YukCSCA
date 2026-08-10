@@ -82,6 +82,9 @@ model ContentProgress {
 
   @doc("Last progress write time. Null when status is NOT_STARTED.")
   updatedAt: utcDateTime | null;
+
+  @doc("True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery.")
+  updatedSinceCompleted: boolean;
 }
 
 @doc("LESSON summary for outline browse and continue chips. Kind is always LESSON; other resource kinds are omitted.")

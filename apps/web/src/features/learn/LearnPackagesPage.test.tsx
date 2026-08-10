@@ -28,7 +28,7 @@ function renderPage(path = '/app/learn') {
   );
 }
 
-test('auto-enters sole published package subject', async () => {
+test('shows subject hub including sole published package without auto-enter', async () => {
   vi.spyOn(learnApi, 'listPublishedPackages').mockResolvedValue([
     {
       id: '11111111-1111-4111-8111-111111111111',
@@ -43,9 +43,12 @@ test('auto-enters sole published package subject', async () => {
   ]);
 
   renderPage();
-  await waitFor(() => {
-    expect(screen.getByText('browse-mathematics')).toBeInTheDocument();
-  });
+  expect(await screen.findByRole('heading', { name: /Mathematics/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Mathematics/i })).toHaveAttribute(
+    'href',
+    '/app/learn/MATHEMATICS',
+  );
+  expect(screen.queryByText('browse-mathematics')).not.toBeInTheDocument();
 });
 
 test('shows honest empty state when no packages', async () => {

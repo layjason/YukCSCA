@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, Play } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { getPublishedPackageBrowse } from './api/learnApi';
 import { OfficialSourceCard } from './components/OfficialSourceCard';
 import { OutlineLessonList } from './components/OutlineLessonList';
-import { ContentProgressChip } from './components/ContentProgressChip';
+import { ContentProgressFrom } from './components/ContentProgressChip';
+import { findFirstIncompleteLesson } from './browseHelpers';
+import { formatLearnDate } from './formatLearnDate';
 import { resolveLocalizedText } from './localizedText';
 import { isAcademicSubject, type PublishedPackageBrowse } from './types';
 import './learn.css';
@@ -55,7 +57,7 @@ export function PackageBrowsePage(): React.JSX.Element {
 
   if (!subject) {
     return (
-      <div className="page-content learn-page">
+      <div className="page-content learn-page learn-page-fill">
         <h1>{t('learn.title')}</h1>
         <section className="state-notice state-notice-error" role="alert">
           <h2>{t('learn.errors.invalidSubjectTitle')}</h2>
@@ -70,7 +72,7 @@ export function PackageBrowsePage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <div className="page-content learn-page" aria-busy="true" aria-live="polite">
+      <div className="page-content learn-page learn-page-fill" aria-busy="true" aria-live="polite">
         <div className="learn-browse-header-skeleton">
           <span className="loading-indicator" aria-hidden="true" />
           <p>{t('learn.loading')}</p>
@@ -82,7 +84,7 @@ export function PackageBrowsePage(): React.JSX.Element {
 
   if (notFound) {
     return (
-      <div className="page-content learn-page">
+      <div className="page-content learn-page learn-page-fill">
         <h1>{t(`learn.subjects.${subject}`)}</h1>
         <section className="empty-state state-notice state-notice-info" aria-live="polite">
           <h2>{t('learn.browse.notFoundTitle')}</h2>
@@ -97,7 +99,7 @@ export function PackageBrowsePage(): React.JSX.Element {
 
   if (error || !browse) {
     return (
-      <div className="page-content learn-page">
+      <div className="page-content learn-page learn-page-fill">
         <h1>{t(`learn.subjects.${subject}`)}</h1>
         <section className="state-notice state-notice-error" role="alert">
           <h2>{t('learn.errors.title')}</h2>
@@ -110,44 +112,101 @@ export function PackageBrowsePage(): React.JSX.Element {
     );
   }
 
-  const continueTitle = browse.continueLesson
-    ? resolveLocalizedText(browse.continueLesson.title, i18n.language)
+  // In-progress → Continue only. Otherwise Start reading → first not-done lesson.
+  const continueLesson = browse.continueLesson;
+  const startLesson = continueLesson ? null : findFirstIncompleteLesson(browse.outline);
+  const continueTitle = continueLesson
+    ? resolveLocalizedText(continueLesson.title, i18n.language)
     : '';
+  const startTitle = startLesson ? resolveLocalizedText(startLesson.title, i18n.language) : '';
+  const updatedLabel = t('learn.browse.lastUpdated', {
+    date: formatLearnDate(browse.package.activeRevision.publishedAt, i18n.language),
+  });
 
   return (
-    <div className="page-content learn-page learn-browse-page">
-      <header className="learn-browse-header">
+    <div className="page-content learn-page learn-page-fill learn-browse-page">
+      <header className="learn-browse-hero">
         <Link to="/app/learn" className="learn-back-link">
-          <ArrowLeft size={18} aria-hidden="true" />
+          <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />
           {t('learn.backToLearn')}
         </Link>
-        <h1>{t(`learn.subjects.${subject}`)}</h1>
-        <p className="task-meta">
-          {t('learn.browse.revision', {
-            number: browse.package.activeRevision.revisionNumber,
-          })}
-        </p>
+
+        <div className="learn-browse-hero-body">
+          <div className="learn-browse-hero-copy">
+            <div className="learn-browse-hero-icon" aria-hidden="true">
+              <BookOpen size={28} strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="learn-hub-eyebrow">{t('learn.browse.subjectEyebrow')}</p>
+              <div className="learn-browse-title-row">
+                <h1>{t(`learn.subjects.${subject}`)}</h1>
+              </div>
+              <p className="learn-browse-updated">
+                <CalendarDays size={15} strokeWidth={1.75} aria-hidden="true" />
+                {updatedLabel}
+              </p>
+            </div>
+          </div>
+
+          {continueLesson ? (
+            <section className="learn-continue-card" aria-labelledby="learn-continue-heading">
+              <div className="learn-continue-copy">
+                <p className="learn-continue-eyebrow">{t('learn.continue')}</p>
+                <h2 id="learn-continue-heading" className="learn-continue-title">
+                  {continueTitle}
+                </h2>
+                <ContentProgressFrom progress={continueLesson.contentProgress} />
+              </div>
+              <Link
+                to={`/app/learn/${subject}/lessons/${continueLesson.resourceId}`}
+                className="btn-primary learn-continue-action"
+              >
+                <Play size={18} strokeWidth={2} aria-hidden="true" />
+                {t('learn.continue')}
+              </Link>
+            </section>
+          ) : startLesson ? (
+            <section
+              className="learn-continue-card learn-start-card-action"
+              aria-labelledby="learn-start-heading"
+            >
+              <div className="learn-continue-copy">
+                <p className="learn-continue-eyebrow">{t('learn.startReadingTitle')}</p>
+                <h2 id="learn-start-heading" className="learn-continue-title">
+                  {startTitle || t('learn.startReadingDescription')}
+                </h2>
+                <ContentProgressFrom progress={startLesson.contentProgress} />
+              </div>
+              <Link
+                to={`/app/learn/${subject}/lessons/${startLesson.resourceId}`}
+                className="btn-primary learn-continue-action"
+              >
+                <Play size={18} strokeWidth={2} aria-hidden="true" />
+                {t('learn.startReadingTitle')}
+              </Link>
+            </section>
+          ) : (
+            <section className="learn-start-card" aria-labelledby="learn-all-done-heading">
+              <div className="learn-start-card-copy">
+                <h2 id="learn-all-done-heading">{t('learn.allLessonsDoneTitle')}</h2>
+                <p>{t('learn.allLessonsDoneDescription')}</p>
+              </div>
+            </section>
+          )}
+        </div>
       </header>
 
-      {browse.continueLesson ? (
-        <section className="learn-continue-card" aria-labelledby="learn-continue-heading">
-          <h2 id="learn-continue-heading">{t('learn.continue')}</h2>
-          <p className="learn-continue-title">{continueTitle}</p>
-          <ContentProgressChip status={browse.continueLesson.contentProgress.status} />
-          <Link
-            to={`/app/learn/${subject}/lessons/${browse.continueLesson.resourceId}`}
-            className="btn-primary learn-continue-action"
-          >
-            <Play size={18} aria-hidden="true" />
-            {t('learn.continue')}
-          </Link>
-        </section>
-      ) : null}
+      <div className="learn-browse-layout">
+        <div className="learn-browse-main">
+          <div className="learn-outline-panel">
+            <OutlineLessonList subject={subject} outline={browse.outline} />
+          </div>
+        </div>
 
-      <OfficialSourceCard panel={browse.officialSource} />
-      <OutlineLessonList subject={subject} outline={browse.outline} />
-
-      <p className="learn-content-progress-note">{t('learn.contentProgressNote')}</p>
+        <aside className="learn-browse-aside">
+          <OfficialSourceCard panel={browse.officialSource} />
+        </aside>
+      </div>
     </div>
   );
 }

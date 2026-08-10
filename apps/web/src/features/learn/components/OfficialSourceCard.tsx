@@ -1,5 +1,6 @@
-import { ExternalLink } from 'lucide-react';
+import { BookMarked, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatLearnDate } from '../formatLearnDate';
 import type { OfficialSourcePanel } from '../types';
 
 interface OfficialSourceCardProps {
@@ -8,59 +9,75 @@ interface OfficialSourceCardProps {
 
 export function OfficialSourceCard({ panel }: OfficialSourceCardProps): React.JSX.Element {
   const { t, i18n } = useTranslation();
-
-  const lastChecked = formatDate(panel.lastCheckedAt, i18n.language);
+  const lastChecked = formatLearnDate(panel.lastCheckedAt, i18n.language);
 
   return (
     <section className="learn-official-source" aria-labelledby="learn-official-source-heading">
-      <h2 id="learn-official-source-heading">{t('learn.browse.officialSource')}</h2>
-      <dl className="learn-official-source-meta">
+      <header className="learn-official-source-header">
+        <span className="learn-official-source-icon" aria-hidden="true">
+          <BookMarked size={20} strokeWidth={1.75} />
+        </span>
         <div>
-          <dt>{t('learn.browse.authority')}</dt>
-          <dd>{panel.authority}</dd>
+          <p className="learn-official-eyebrow">{t('learn.browse.officialSourceEyebrow')}</p>
+          <h2 id="learn-official-source-heading">{t('learn.browse.officialSource')}</h2>
         </div>
-        <div>
+      </header>
+
+      <p className="learn-official-authority">{panel.authority}</p>
+
+      <dl className="learn-official-source-meta">
+        <div className="learn-official-meta-item">
           <dt>{t('learn.browse.edition')}</dt>
           <dd>{panel.editionLabel}</dd>
         </div>
-        <div>
+        <div className="learn-official-meta-item">
           <dt>{t('learn.browse.lastChecked')}</dt>
           <dd>{lastChecked}</dd>
         </div>
-        <div>
+        <div className="learn-official-meta-item learn-official-meta-span">
           <dt>{t('learn.browse.permittedUse')}</dt>
-          <dd>{t(`learn.browse.permittedUseValues.${panel.permittedUse}`)}</dd>
+          <dd>
+            <span className="learn-official-use-chip">
+              {t(`learn.browse.permittedUseValues.${panel.permittedUse}`)}
+            </span>
+          </dd>
         </div>
       </dl>
+
       <ul className="learn-official-source-links" role="list">
-        {panel.sourceLinks.map((link) => (
-          <li key={`${link.language}-${link.url}`}>
-            <a
-              href={link.url}
-              className="btn-secondary learn-official-open"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink size={16} aria-hidden="true" />
-              {t('learn.browse.openOfficial', {
-                language: t(`learn.browse.examLanguage.${link.language}`),
-              })}
-            </a>
-          </li>
-        ))}
+        {panel.sourceLinks.map((link) => {
+          const languageLabel = t(`learn.browse.examLanguage.${link.language}`);
+          const languageCode = link.language === 'zh-CN' ? '中文' : 'EN';
+          return (
+            <li key={`${link.language}-${link.url}`}>
+              <a
+                href={link.url}
+                className="learn-official-open"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="learn-official-lang-badge" aria-hidden="true">
+                  {languageCode}
+                </span>
+                <span className="learn-official-open-copy">
+                  <span className="learn-official-open-title">
+                    {t('learn.browse.openOfficialTitle', { language: languageLabel })}
+                  </span>
+                  <span className="learn-official-open-sub">
+                    {t('learn.browse.openOfficialSub')}
+                  </span>
+                </span>
+                <ExternalLink
+                  size={18}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  className="learn-official-open-icon"
+                />
+              </a>
+            </li>
+          );
+        })}
       </ul>
-      <p className="learn-official-source-note">{t('learn.browse.officialSourceNote')}</p>
     </section>
   );
-}
-
-function formatDate(iso: string, locale: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      dateStyle: 'medium',
-      timeZone: 'Asia/Jakarta',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
 }

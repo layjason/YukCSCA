@@ -188,7 +188,8 @@ class AcademicStudentHttpIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
         .andExpect(jsonPath("$.resumeBlockIndex").value(2))
-        .andExpect(jsonPath("$.updatedAt").exists());
+        .andExpect(jsonPath("$.updatedAt").exists())
+        .andExpect(jsonPath("$.updatedSinceCompleted").value(false));
 
     mvc.perform(
             put("/api/v1/academic/packages/MATHEMATICS/lessons/{id}/progress", fixture.lessonId())
@@ -196,7 +197,8 @@ class AcademicStudentHttpIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"IN_PROGRESS\",\"resumeBlockIndex\":2}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+        .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$.updatedSinceCompleted").value(false));
     assertThat(progress.count()).isEqualTo(1);
 
     mvc.perform(
@@ -221,6 +223,7 @@ class AcademicStudentHttpIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.contentProgress.status").value("CONTENT_COMPLETE"))
         .andExpect(jsonPath("$.contentProgress.resumeBlockIndex").value(2))
+        .andExpect(jsonPath("$.contentProgress.updatedSinceCompleted").value(false))
         .andExpect(jsonPath("$.mastery").doesNotExist());
 
     // Re-read may update resume index but must not demote CONTENT_COMPLETE (no reset rules).
@@ -231,7 +234,8 @@ class AcademicStudentHttpIT {
                 .content("{\"status\":\"IN_PROGRESS\",\"resumeBlockIndex\":1}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CONTENT_COMPLETE"))
-        .andExpect(jsonPath("$.resumeBlockIndex").value(1));
+        .andExpect(jsonPath("$.resumeBlockIndex").value(1))
+        .andExpect(jsonPath("$.updatedSinceCompleted").value(false));
 
     mvc.perform(
             get("/api/v1/academic/images/{id}", fixture.imageId())
@@ -311,7 +315,76 @@ class AcademicStudentHttpIT {
     assertThat(((AcademicRevisionStore) revisions).findById(storedRevision)).isPresent();
   }
 
-  private record PublishedFixture(UUID packageId, UUID lessonId, UUID imageId) {}
+  @Test
+  void softUpgradeFlagsUpdatedSinceCompletedUntilRemarkCompleteOnNewRevision() throws Exception {
+    PublishedFixture fixture = publishValidPackage();
+
+    mvc.perform(
+            put("/api/v1/academic/packages/MATHEMATICS/lessons/{id}/progress", fixture.lessonId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":1}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CONTENT_COMPLETE"))
+        .andExpect(jsonPath("$.updatedSinceCompleted").value(false));
+
+    UUID completeRevision =
+        jdbc.queryForObject(
+            "select last_revision_id from student_content_progress where resource_id = ?",
+            UUID.class,
+            fixture.lessonId());
+    assertThat(completeRevision).isNotNull();
+
+    // Republish same LESSON resource id under a new active package revision.
+    ObjectNode nextDraft = fixture.draft().deepCopy();
+    ((ObjectNode) nextDraft.path("officialSyllabus")).put("editionLabel", "2025-r2");
+    save(fixture.packageId(), 1, nextDraft);
+    publish(fixture.packageId(), 2);
+
+    mvc.perform(
+            get("/api/v1/academic/packages/MATHEMATICS/lessons/{id}", fixture.lessonId())
+                .param("explanationLanguage", "id")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.contentProgress.status").value("CONTENT_COMPLETE"))
+        .andExpect(jsonPath("$.contentProgress.updatedSinceCompleted").value(true));
+
+    // Re-read IN_PROGRESS must not demote complete and must keep last complete revision.
+    mvc.perform(
+            put("/api/v1/academic/packages/MATHEMATICS/lessons/{id}/progress", fixture.lessonId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"IN_PROGRESS\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CONTENT_COMPLETE"))
+        .andExpect(jsonPath("$.updatedSinceCompleted").value(true));
+
+    UUID preservedRevision =
+        jdbc.queryForObject(
+            "select last_revision_id from student_content_progress where resource_id = ?",
+            UUID.class,
+            fixture.lessonId());
+    assertThat(preservedRevision).isEqualTo(completeRevision);
+
+    // Explicit CONTENT_COMPLETE re-bind clears the soft signal.
+    mvc.perform(
+            put("/api/v1/academic/packages/MATHEMATICS/lessons/{id}/progress", fixture.lessonId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CONTENT_COMPLETE"))
+        .andExpect(jsonPath("$.updatedSinceCompleted").value(false));
+
+    UUID remappedRevision =
+        jdbc.queryForObject(
+            "select last_revision_id from student_content_progress where resource_id = ?",
+            UUID.class,
+            fixture.lessonId());
+    assertThat(remappedRevision).isNotEqualTo(completeRevision);
+  }
+
+  private record PublishedFixture(UUID packageId, UUID lessonId, UUID imageId, ObjectNode draft) {}
 
   private PublishedFixture publishValidPackage() throws Exception {
     UUID packageId = createPackage();
@@ -320,7 +393,7 @@ class AcademicStudentHttpIT {
     UUID lessonId = UUID.fromString(findLessonId(draft));
     save(packageId, 0, draft);
     publish(packageId, 1);
-    return new PublishedFixture(packageId, lessonId, imageId);
+    return new PublishedFixture(packageId, lessonId, imageId, draft);
   }
 
   private String findLessonId(ObjectNode draft) {

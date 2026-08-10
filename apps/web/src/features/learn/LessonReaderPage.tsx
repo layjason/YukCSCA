@@ -7,12 +7,13 @@ import { Toast, type ToastTone } from '@/shared/components/Toast';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { getPublishedLesson, upsertContentProgress } from './api/learnApi';
 import { ContentBlockView } from './components/ContentBlockView';
-import { ContentProgressChip } from './components/ContentProgressChip';
+import { ContentProgressFrom } from './components/ContentProgressChip';
 import { LanguageToggle } from './components/LanguageToggle';
 import { resolveLocalizedTextForExplanation } from './localizedText';
 import {
   clampResumeBlockIndex,
   createResumeProgressCoalescer,
+  isUpdatedSinceCompleted,
   type ResumeProgressCoalescer,
 } from './progressHelpers';
 import {
@@ -40,19 +41,25 @@ export function LessonReaderPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [completeAck, setCompleteAck] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [resumeHighlightIndex, setResumeHighlightIndex] = useState<number | null>(null);
   const [contentVisible, setContentVisible] = useState(false);
 
   const resumeAppliedRef = useRef(false);
   const progressSeededRef = useRef(false);
+  /** When true, next lesson body load must not jump scroll to the resume block (language switch). */
+  const skipResumeScrollRef = useRef(false);
+  /** Preserve viewport while explanation language reloads. */
+  const preservedScrollYRef = useRef<number | null>(null);
+  const activeLessonKeyRef = useRef<string | null>(null);
   const lastSavedIndexRef = useRef<number | null>(null);
   const resumeCoalescerRef = useRef<ResumeProgressCoalescer | null>(null);
   const blockElsRef = useRef<Map<number, HTMLElement>>(new Map());
 
   const dismissToast = useCallback(() => setToast(null), []);
   const contentComplete = progress?.status === 'CONTENT_COMPLETE';
+  const needsReview = isUpdatedSinceCompleted(progress);
+  const lessonKey = subject && resourceId ? `${subject}:${resourceId}` : null;
 
   // Load profile default explanation language once (session-only override lives in state).
   useEffect(() => {
@@ -76,22 +83,32 @@ export function LessonReaderPage(): React.JSX.Element {
     };
   }, []);
 
+  const hasLessonBodyRef = useRef(false);
+
   const loadLesson = useCallback(async () => {
     if (!subject || !resourceId || !explanationLanguage) return;
-    setLoading(true);
+    // Soft reload keeps chrome + body mounted during language switches (avoids height collapse jumps).
+    const softReload = skipResumeScrollRef.current && hasLessonBodyRef.current;
+    if (!softReload) {
+      setLoading(true);
+      setContentVisible(false);
+    }
     setError(null);
     setNotFound(false);
-    setContentVisible(false);
     try {
       const data = await getPublishedLesson(subject, resourceId, explanationLanguage);
       setLesson(data);
+      hasLessonBodyRef.current = true;
       setProgress(data.contentProgress);
       const clamped =
         data.body.availability === 'AVAILABLE'
           ? clampResumeBlockIndex(data.contentProgress.resumeBlockIndex, data.body.blocks.length)
           : null;
-      lastSavedIndexRef.current = clamped;
-      resumeCoalescerRef.current?.setLastSaved(clamped);
+      // On language switch keep the local reading index; only seed from server on first open.
+      if (!softReload) {
+        lastSavedIndexRef.current = clamped;
+        resumeCoalescerRef.current?.setLastSaved(clamped);
+      }
       // Prefer available language if profile default is missing for this resource.
       if (
         data.body.availability === 'LANGUAGE_UNAVAILABLE' &&
@@ -100,10 +117,25 @@ export function LessonReaderPage(): React.JSX.Element {
       ) {
         // Keep explicit unavailable state — do not auto-switch (no silent fallback).
       }
-      requestAnimationFrame(() => setContentVisible(true));
+      requestAnimationFrame(() => {
+        setContentVisible(true);
+        // Restore scroll after language switch so the page does not jump to the resume block.
+        const preservedY = preservedScrollYRef.current;
+        if (preservedY != null) {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: preservedY, left: 0, behavior: 'auto' });
+            preservedScrollYRef.current = null;
+          });
+        }
+      });
     } catch (err) {
-      setLesson(null);
-      setProgress(null);
+      if (!softReload) {
+        setLesson(null);
+        setProgress(null);
+        hasLessonBodyRef.current = false;
+      }
+      preservedScrollYRef.current = null;
+      skipResumeScrollRef.current = false;
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
       } else if (err instanceof ApiError && err.status === 403) {
@@ -119,12 +151,22 @@ export function LessonReaderPage(): React.JSX.Element {
   }, [subject, resourceId, explanationLanguage, t]);
 
   useEffect(() => {
-    if (!profileLanguageReady || !explanationLanguage) return;
-    resumeAppliedRef.current = false;
-    progressSeededRef.current = false;
-    lastSavedIndexRef.current = null;
+    if (!profileLanguageReady || !explanationLanguage || !lessonKey) return;
+
+    if (activeLessonKeyRef.current !== lessonKey) {
+      // Fresh lesson entry: allow one-time resume scroll and reset progress seed.
+      activeLessonKeyRef.current = lessonKey;
+      resumeAppliedRef.current = false;
+      progressSeededRef.current = false;
+      lastSavedIndexRef.current = null;
+      skipResumeScrollRef.current = false;
+      preservedScrollYRef.current = null;
+      hasLessonBodyRef.current = false;
+    }
+    // Language-only reloads keep skipResumeScrollRef / preservedScrollY set by handleLanguageChange.
+
     void loadLesson();
-  }, [profileLanguageReady, explanationLanguage, loadLesson]);
+  }, [profileLanguageReady, explanationLanguage, lessonKey, loadLesson]);
 
   // Seed IN_PROGRESS on first open when not started.
   useEffect(() => {
@@ -151,9 +193,17 @@ export function LessonReaderPage(): React.JSX.Element {
     }
   }, [lesson, subject, resourceId, progress]);
 
-  // One-time resume scroll + highlight.
+  // One-time resume scroll + highlight — only on first open of a lesson, never on language switch.
   useEffect(() => {
     if (!lesson || lesson.body.availability !== 'AVAILABLE' || resumeAppliedRef.current) return;
+
+    if (skipResumeScrollRef.current) {
+      resumeAppliedRef.current = true;
+      skipResumeScrollRef.current = false;
+      setResumeHighlightIndex(null);
+      return;
+    }
+
     const blocks = lesson.body.blocks;
     const clamped = clampResumeBlockIndex(progress?.resumeBlockIndex, blocks.length);
     if (clamped == null || clamped <= 0) {
@@ -161,12 +211,18 @@ export function LessonReaderPage(): React.JSX.Element {
       return;
     }
     resumeAppliedRef.current = true;
-    const el = blockElsRef.current.get(clamped);
-    if (el) {
-      el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    // Wait a frame so block refs are mounted after language/content paint.
+    const frame = window.requestAnimationFrame(() => {
+      const el = blockElsRef.current.get(clamped);
+      if (!el) return;
+      el.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'center',
+      });
       setResumeHighlightIndex(clamped);
       window.setTimeout(() => setResumeHighlightIndex(null), prefersReducedMotion() ? 0 : 1600);
-    }
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [lesson, progress?.resumeBlockIndex]);
 
   // Coalesce IN_PROGRESS resume PUTs while reading (not when content is complete).
@@ -258,8 +314,10 @@ export function LessonReaderPage(): React.JSX.Element {
         expectedPackageRevisionId: lesson.packageRevisionId,
       });
       setProgress(next);
-      setCompleteAck(true);
-      setToast({ message: t('learn.lesson.contentCompleteAck'), tone: 'success' });
+      setToast({
+        message: needsReview ? t('learn.lesson.reviewedAck') : t('learn.lesson.contentCompleteAck'),
+        tone: 'success',
+      });
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         setToast({ message: t('learn.errors.progressValidation'), tone: 'error' });
@@ -273,8 +331,10 @@ export function LessonReaderPage(): React.JSX.Element {
 
   function handleLanguageChange(lang: ExplanationLanguage): void {
     if (lang === explanationLanguage) return;
+    // Keep the student at the same reading position; do not re-run resume jump.
+    skipResumeScrollRef.current = true;
+    preservedScrollYRef.current = window.scrollY;
     setExplanationLanguage(lang);
-    setCompleteAck(false);
   }
 
   if (!subject || !resourceId) {
@@ -353,7 +413,7 @@ export function LessonReaderPage(): React.JSX.Element {
   const body = lesson.body;
   const isAvailable = body.availability === 'AVAILABLE';
   const blocks = isAvailable ? body.blocks : [];
-  const isComplete = progress?.status === 'CONTENT_COMPLETE';
+  const isComplete = progress?.status === 'CONTENT_COMPLETE' && !needsReview;
 
   return (
     <div className="page-content learn-page lesson-reader-page">
@@ -363,7 +423,7 @@ export function LessonReaderPage(): React.JSX.Element {
             <ArrowLeft size={18} aria-hidden="true" />
             {t('learn.backToBrowse')}
           </Link>
-          {progress ? <ContentProgressChip status={progress.status} /> : null}
+          {progress ? <ContentProgressFrom progress={progress} /> : null}
         </div>
         <h1 className="learn-reader-title">{title || t('learn.lesson.title')}</h1>
         <LanguageToggle
@@ -376,7 +436,11 @@ export function LessonReaderPage(): React.JSX.Element {
           onChange={handleLanguageChange}
           disabled={loading}
         />
-        <p className="learn-language-note">{t('learn.lesson.tempLanguageNote')}</p>
+        {needsReview ? (
+          <p className="learn-update-banner" role="status">
+            {t('learn.lesson.updatedSinceComplete')}
+          </p>
+        ) : null}
         {blocks.length > 0 ? (
           <div
             className="learn-progress-track"
@@ -403,14 +467,14 @@ export function LessonReaderPage(): React.JSX.Element {
         ) : null}
       </header>
 
-      {loading ? (
+      {loading && !isAvailable && blocks.length === 0 ? (
         <div className="learn-reader-skeleton" aria-busy="true">
           <div className="learn-skeleton learn-skeleton-block" />
           <div className="learn-skeleton learn-skeleton-block" />
         </div>
       ) : null}
 
-      {!loading && !isAvailable ? (
+      {!isAvailable && !loading ? (
         <section
           className="learn-language-unavailable state-notice state-notice-info"
           role="status"
@@ -421,18 +485,17 @@ export function LessonReaderPage(): React.JSX.Element {
               language: t(`studentActivation.languages.${body.requestedLanguage}`),
             })}
           </p>
-          {lesson.availableExplanationLanguages.length > 0 ? (
-            <p>{t('learn.lesson.languageUnavailableHint')}</p>
-          ) : (
+          {lesson.availableExplanationLanguages.length === 0 ? (
             <p>{t('learn.lesson.noLanguagesAvailable')}</p>
-          )}
+          ) : null}
         </section>
       ) : null}
 
-      {!loading && isAvailable ? (
+      {isAvailable ? (
         <article
-          className={`learn-reader-body${contentVisible ? ' is-visible' : ''}`}
+          className={`learn-reader-body${contentVisible ? ' is-visible' : ''}${loading ? ' is-reloading' : ''}`}
           aria-label={title || t('learn.lesson.title')}
+          aria-busy={loading || undefined}
         >
           {blocks.map((block, index) => (
             <ContentBlockView
@@ -449,9 +512,9 @@ export function LessonReaderPage(): React.JSX.Element {
         </article>
       ) : null}
 
-      {!loading && isAvailable ? (
+      {isAvailable ? (
         <footer className="learn-reader-actions">
-          {isComplete || completeAck ? (
+          {isComplete && !needsReview ? (
             <p className="learn-complete-ack" role="status">
               <Check size={18} aria-hidden="true" />
               {t('learn.lesson.contentCompleteAck')}
@@ -461,13 +524,16 @@ export function LessonReaderPage(): React.JSX.Element {
               type="button"
               className="btn-primary learn-complete-button"
               onClick={() => void handleMarkComplete()}
-              disabled={saving}
+              disabled={saving || loading}
               aria-busy={saving}
             >
-              {saving ? t('learn.lesson.savingProgress') : t('learn.lesson.markContentComplete')}
+              {saving
+                ? t('learn.lesson.savingProgress')
+                : needsReview
+                  ? t('learn.lesson.markReviewed')
+                  : t('learn.lesson.markContentComplete')}
             </button>
           )}
-          <p className="learn-content-progress-note">{t('learn.contentProgressNote')}</p>
         </footer>
       ) : null}
 

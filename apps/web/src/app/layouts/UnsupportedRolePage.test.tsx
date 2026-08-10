@@ -56,7 +56,7 @@ describe('UnsupportedRolePage', () => {
 
     expect(screen.getByText('You can’t open this page')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(navigate).toHaveBeenCalledWith('/app/profile', { replace: true });
+    expect(navigate).toHaveBeenCalledWith('/app/learn', { replace: true });
   });
 
   test('signs out and redirects to login', async () => {

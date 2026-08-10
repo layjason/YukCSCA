@@ -722,6 +722,8 @@ export interface components {
       resumeBlockIndex: number | null;
       /** @description Last progress write time. Null when status is NOT_STARTED. */
       updatedAt: string | null;
+      /** @description True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery. */
+      updatedSinceCompleted: boolean;
     };
     /**
      * @description Persisted or projected content-progress status. Content complete is never mastery.

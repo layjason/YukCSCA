@@ -2324,6 +2324,7 @@ components:
         - status
         - resumeBlockIndex
         - updatedAt
+        - updatedSinceCompleted
       properties:
         status:
           $ref: '#/components/schemas/AcademicStudent.ContentProgressStatus'
@@ -2340,6 +2341,9 @@ components:
               format: date-time
             - type: 'null'
           description: Last progress write time. Null when status is NOT_STARTED.
+        updatedSinceCompleted:
+          type: boolean
+          description: True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery.
       description: Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED.
     AcademicStudent.ContentProgressStatus:
       type: string

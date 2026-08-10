@@ -52,7 +52,12 @@ const lesson: PublishedLessonDetail = {
     availability: 'AVAILABLE',
     blocks: [{ kind: 'TEXT', text: 'Hello' }],
   },
-  contentProgress: { status: 'NOT_STARTED', resumeBlockIndex: null, updatedAt: null },
+  contentProgress: {
+    status: 'NOT_STARTED',
+    resumeBlockIndex: null,
+    updatedAt: null,
+    updatedSinceCompleted: false,
+  },
 };
 
 afterEach(() => {
@@ -149,6 +154,7 @@ test('upsertContentProgress sends PUT body and returns authoritative progress', 
     status: 'CONTENT_COMPLETE' as const,
     resumeBlockIndex: 2,
     updatedAt: '2026-08-07T00:00:00Z',
+    updatedSinceCompleted: false,
   };
   const fetchMock = vi.fn().mockResolvedValue(
     new Response(JSON.stringify(progress), {

@@ -22,6 +22,7 @@ test('progress labels never use mastery vocabulary keys', () => {
   expect(progressStatusLabelKey('NOT_STARTED')).toBe('learn.progress.notStarted');
   expect(progressStatusLabelKey('IN_PROGRESS')).toBe('learn.progress.inProgress');
   expect(progressStatusLabelKey('CONTENT_COMPLETE')).toBe('learn.progress.contentComplete');
+  expect(progressStatusLabelKey('CONTENT_COMPLETE', true)).toBe('learn.progress.updated');
   expect(progressStatusLabelKey('CONTENT_COMPLETE')).not.toContain('master');
 });
 

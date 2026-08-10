@@ -91,8 +91,11 @@ public class AcademicStudentService {
     List<StudentContentProgress> progressRows =
         progressStore.findByAccountIdAndPackageId(actorId, academicPackage.getId());
     Map<UUID, StudentContentProgress> progressByResource = indexProgress(progressRows);
-    List<OutlineNodeProjection> outline = projector.outline(content, lessons, progressByResource);
-    LessonSummaryProjection continueLesson = projector.continueLesson(lessons, progressRows);
+    UUID activeRevisionId = revision.getId();
+    List<OutlineNodeProjection> outline =
+        projector.outline(content, lessons, progressByResource, activeRevisionId);
+    LessonSummaryProjection continueLesson =
+        projector.continueLesson(lessons, progressRows, activeRevisionId);
     LOGGER.info(
         "academic.student.browse subject={} packageId={} revisionId={}",
         academicPackage.getSubject(),
@@ -129,7 +132,7 @@ public class AcademicStudentService {
     List<JsonNode> blocks =
         available ? lesson.blocksByLanguage().get(explanationLanguage) : List.of();
     ContentProgressProjection progressProjection =
-        projector.contentProgress(progress, available ? blocks.size() : null);
+        projector.contentProgress(progress, available ? blocks.size() : null, revision.getId());
     LOGGER.info(
         "academic.student.lesson_open subject={} resourceId={} explanationLanguage={}",
         academicPackage.getSubject(),
@@ -192,16 +195,30 @@ public class AcademicStudentService {
           expectedPackageRevisionId,
           revision.getId());
     }
-    UUID lastRevisionId = revision.getId();
+    UUID activeRevisionId = revision.getId();
     StudentContentProgress existing =
         progressStore
             .findByAccountIdAndPackageIdAndResourceId(actorId, academicPackage.getId(), resourceId)
             .orElse(null);
-    // VS-008 invariant: CONTENT_COMPLETE stays complete on re-read; no reset rules yet.
-    if (existing != null
-        && existing.getStatus() == StudentContentProgressStatus.CONTENT_COMPLETE
-        && progressStatus == StudentContentProgressStatus.IN_PROGRESS) {
+    // CONTENT_COMPLETE stays complete on re-read. Preserve last_revision_id from the last
+    // explicit CONTENT_COMPLETE write so republish can soft-signal updatedSinceCompleted until the
+    // student marks complete again on the new active revision.
+    boolean wasComplete =
+        existing != null && existing.getStatus() == StudentContentProgressStatus.CONTENT_COMPLETE;
+    boolean explicitComplete =
+        progressStatus == StudentContentProgressStatus.CONTENT_COMPLETE
+            && status != null
+            && status.equals(StudentContentProgressStatus.CONTENT_COMPLETE.name());
+    if (wasComplete && progressStatus == StudentContentProgressStatus.IN_PROGRESS) {
       progressStatus = StudentContentProgressStatus.CONTENT_COMPLETE;
+    }
+    UUID lastRevisionId;
+    if (explicitComplete) {
+      lastRevisionId = activeRevisionId;
+    } else if (wasComplete && existing != null && existing.getLastRevisionId() != null) {
+      lastRevisionId = existing.getLastRevisionId();
+    } else {
+      lastRevisionId = activeRevisionId;
     }
     StudentContentProgress saved;
     if (existing == null) {
@@ -225,7 +242,7 @@ public class AcademicStudentService {
         academicPackage.getSubject(),
         resourceId,
         progressStatus);
-    return projector.contentProgress(saved, null);
+    return projector.contentProgress(saved, null, activeRevisionId);
   }
 
   @Transactional(readOnly = true)

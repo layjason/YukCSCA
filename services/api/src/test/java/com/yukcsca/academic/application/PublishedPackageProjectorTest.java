@@ -55,9 +55,10 @@ class PublishedPackageProjectorTest {
     lesson.putArray("outlineItemIds").add(childCovered.toString());
     lesson.putArray("versions").addObject().put("language", "id").putArray("blocks");
 
+    UUID activeRevisionId = UUID.randomUUID();
     List<PublishedPackageProjector.LessonResourceProjection> lessons = projector.lessons(content);
     List<PublishedPackageProjector.OutlineNodeProjection> nodes =
-        projector.outline(content, lessons, Map.of());
+        projector.outline(content, lessons, Map.of(), activeRevisionId);
 
     assertThat(nodes).hasSize(3);
     assertThat(find(nodes, childCovered).productCoverage()).isEqualTo("FULLY_COVERED");
@@ -67,6 +68,7 @@ class PublishedPackageProjectorTest {
 
   @Test
   void contentProgressClampsResumeIndexToBlockCount() {
+    UUID completedRevision = UUID.randomUUID();
     StudentContentProgress progress =
         new StudentContentProgress(
             UUID.randomUUID(),
@@ -75,12 +77,40 @@ class PublishedPackageProjectorTest {
             UUID.randomUUID(),
             StudentContentProgressStatus.IN_PROGRESS,
             40,
-            UUID.randomUUID(),
+            completedRevision,
             Instant.parse("2026-08-01T00:00:00Z"));
 
-    assertThat(projector.contentProgress(progress, 3).resumeBlockIndex()).isEqualTo(2);
-    assertThat(projector.contentProgress(progress, 0).resumeBlockIndex()).isNull();
-    assertThat(projector.contentProgress(null, 3).status()).isEqualTo("NOT_STARTED");
+    assertThat(projector.contentProgress(progress, 3, completedRevision).resumeBlockIndex())
+        .isEqualTo(2);
+    assertThat(projector.contentProgress(progress, 0, completedRevision).resumeBlockIndex())
+        .isNull();
+    assertThat(projector.contentProgress(null, 3, completedRevision).status())
+        .isEqualTo("NOT_STARTED");
+    assertThat(projector.contentProgress(null, 3, completedRevision).updatedSinceCompleted())
+        .isFalse();
+  }
+
+  @Test
+  void contentProgressFlagsUpdatedSinceCompletedWhenActiveRevisionDiffers() {
+    UUID completedRevision = UUID.randomUUID();
+    UUID activeRevision = UUID.randomUUID();
+    StudentContentProgress progress =
+        new StudentContentProgress(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            "MATHEMATICS",
+            UUID.randomUUID(),
+            StudentContentProgressStatus.CONTENT_COMPLETE,
+            2,
+            completedRevision,
+            Instant.parse("2026-08-01T00:00:00Z"));
+
+    assertThat(projector.contentProgress(progress, null, completedRevision).updatedSinceCompleted())
+        .isFalse();
+    assertThat(projector.contentProgress(progress, null, activeRevision).updatedSinceCompleted())
+        .isTrue();
+    assertThat(projector.contentProgress(progress, null, activeRevision).status())
+        .isEqualTo("CONTENT_COMPLETE");
   }
 
   @Test

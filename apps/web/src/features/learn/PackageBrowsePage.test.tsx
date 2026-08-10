@@ -57,6 +57,7 @@ const browse: PublishedPackageBrowse = {
             status: 'IN_PROGRESS',
             resumeBlockIndex: 1,
             updatedAt: '2026-08-06T00:00:00Z',
+            updatedSinceCompleted: false,
           },
         },
       ],
@@ -74,6 +75,7 @@ const browse: PublishedPackageBrowse = {
       status: 'IN_PROGRESS',
       resumeBlockIndex: 1,
       updatedAt: '2026-08-06T00:00:00Z',
+      updatedSinceCompleted: false,
     },
   },
 };
@@ -120,4 +122,63 @@ test('rejects invalid subject param without calling API', async () => {
   renderBrowse('/app/learn/NOT_A_SUBJECT');
   expect(await screen.findByText(/Unknown subject/i)).toBeInTheDocument();
   await waitFor(() => expect(spy).not.toHaveBeenCalled());
+});
+
+test('start reading links to first incomplete lesson when nothing is in progress', async () => {
+  const firstId = '11111111-1111-4111-8111-111111111111';
+  const secondId = '22222222-2222-4222-8222-222222222222';
+  vi.spyOn(learnApi, 'getPublishedPackageBrowse').mockResolvedValue({
+    ...browse,
+    continueLesson: null,
+    outline: [
+      {
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        parentId: null,
+        order: 0,
+        summary: { english: 'Algebra', indonesian: 'Aljabar', simplifiedChinese: '代数' },
+        productCoverage: 'FULLY_COVERED',
+        lessons: [
+          {
+            resourceId: firstId,
+            title: {
+              english: 'Done lesson',
+              indonesian: 'Selesai',
+              simplifiedChinese: '已完成',
+            },
+            outlineItemIds: [],
+            contentProgress: {
+              status: 'CONTENT_COMPLETE',
+              resumeBlockIndex: 0,
+              updatedAt: '2026-08-06T00:00:00Z',
+              updatedSinceCompleted: false,
+            },
+          },
+          {
+            resourceId: secondId,
+            title: {
+              english: 'Next lesson',
+              indonesian: 'Berikutnya',
+              simplifiedChinese: '下一课',
+            },
+            outlineItemIds: [],
+            contentProgress: {
+              status: 'NOT_STARTED',
+              resumeBlockIndex: null,
+              updatedAt: null,
+              updatedSinceCompleted: false,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  renderBrowse();
+  expect(await screen.findByRole('heading', { name: /Mathematics/i })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /^Continue$/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Start reading/i })).toHaveAttribute(
+    'href',
+    `/app/learn/MATHEMATICS/lessons/${secondId}`,
+  );
+  expect(screen.getAllByText('Next lesson').length).toBeGreaterThan(0);
 });

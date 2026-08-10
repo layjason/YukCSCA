@@ -124,7 +124,8 @@ public class PublishedPackageProjector {
   public List<OutlineNodeProjection> outline(
       JsonNode content,
       List<LessonResourceProjection> lessons,
-      Map<UUID, StudentContentProgress> progressByResource) {
+      Map<UUID, StudentContentProgress> progressByResource,
+      UUID activeRevisionId) {
     JsonNode items = content.path("outlineItems");
     if (!items.isArray()) return List.of();
 
@@ -158,7 +159,9 @@ public class PublishedPackageProjector {
         raw.stream().sorted(Comparator.comparingInt(RawOutline::order)).toList()) {
       List<LessonSummaryProjection> nodeLessons =
           lessonsByOutline.getOrDefault(node.id(), List.of()).stream()
-              .map(lesson -> lessonSummary(lesson, progressByResource.get(lesson.id())))
+              .map(
+                  lesson ->
+                      lessonSummary(lesson, progressByResource.get(lesson.id()), activeRevisionId))
               .toList();
       projected.add(
           new OutlineNodeProjection(
@@ -173,15 +176,18 @@ public class PublishedPackageProjector {
   }
 
   public LessonSummaryProjection lessonSummary(
-      LessonResourceProjection lesson, StudentContentProgress progress) {
+      LessonResourceProjection lesson, StudentContentProgress progress, UUID activeRevisionId) {
     return new LessonSummaryProjection(
-        lesson.id(), lesson.title(), lesson.outlineItemIds(), contentProgress(progress, null));
+        lesson.id(),
+        lesson.title(),
+        lesson.outlineItemIds(),
+        contentProgress(progress, null, activeRevisionId));
   }
 
   public ContentProgressProjection contentProgress(
-      StudentContentProgress progress, Integer clampToBlockCount) {
+      StudentContentProgress progress, Integer clampToBlockCount, UUID activeRevisionId) {
     if (progress == null) {
-      return new ContentProgressProjection(PROGRESS_NOT_STARTED, null, null);
+      return new ContentProgressProjection(PROGRESS_NOT_STARTED, null, null, false);
     }
     Integer resume = progress.getResumeBlockIndex();
     if (resume != null && clampToBlockCount != null) {
@@ -193,12 +199,19 @@ public class PublishedPackageProjector {
         resume = 0;
       }
     }
+    boolean updatedSinceCompleted =
+        progress.getStatus() == StudentContentProgressStatus.CONTENT_COMPLETE
+            && progress.getLastRevisionId() != null
+            && activeRevisionId != null
+            && !progress.getLastRevisionId().equals(activeRevisionId);
     return new ContentProgressProjection(
-        progress.getStatus().name(), resume, progress.getUpdatedAt());
+        progress.getStatus().name(), resume, progress.getUpdatedAt(), updatedSinceCompleted);
   }
 
   public LessonSummaryProjection continueLesson(
-      List<LessonResourceProjection> lessons, List<StudentContentProgress> progressRows) {
+      List<LessonResourceProjection> lessons,
+      List<StudentContentProgress> progressRows,
+      UUID activeRevisionId) {
     Map<UUID, LessonResourceProjection> byId = new HashMap<>();
     for (LessonResourceProjection lesson : lessons) {
       byId.put(lesson.id(), lesson);
@@ -209,7 +222,7 @@ public class PublishedPackageProjector {
         .map(
             row -> {
               LessonResourceProjection lesson = byId.get(row.getResourceId());
-              return lesson == null ? null : lessonSummary(lesson, row);
+              return lesson == null ? null : lessonSummary(lesson, row, activeRevisionId);
             })
         .filter(Objects::nonNull)
         .findFirst()
@@ -424,7 +437,7 @@ public class PublishedPackageProjector {
       List<String> examLanguages) {}
 
   public record ContentProgressProjection(
-      String status, Integer resumeBlockIndex, Instant updatedAt) {}
+      String status, Integer resumeBlockIndex, Instant updatedAt, boolean updatedSinceCompleted) {}
 
   public record LessonSummaryProjection(
       UUID resourceId,

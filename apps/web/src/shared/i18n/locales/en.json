@@ -240,18 +240,23 @@
     "backToLearn": "Back to Learn",
     "backToBrowse": "Back to syllabus",
     "openSubject": "Open subject",
-    "packagesLede": "Choose a published subject package to browse the syllabus and study lessons.",
+    "packagesEyebrow": "Your subjects",
+    "packagesLede": "Choose a subject package to browse the syllabus and open lessons.",
     "emptyPackagesTitle": "No published packages yet",
-    "emptyPackagesDescription": "When your school or the platform publishes a preparation package, it will appear here. This is not sample syllabus data.",
+    "emptyPackagesDescription": "When a preparation package is published, it will appear here.",
     "continue": "Continue",
-    "contentProgressNote": "Content complete means you finished reading this lesson. It is not mastery, a checkpoint, or practice evidence.",
+    "startReadingTitle": "Start reading",
+    "startReadingDescription": "Open the next lesson that is not done yet.",
+    "allLessonsDoneTitle": "All lessons done",
+    "allLessonsDoneDescription": "You can re-open any lesson from the outline below.",
     "subjects": {
       "MATHEMATICS": "Mathematics"
     },
     "progress": {
       "notStarted": "Not started",
       "inProgress": "In progress",
-      "contentComplete": "Content complete"
+      "contentComplete": "Done",
+      "updated": "Updated"
     },
     "coverage": {
       "fullyCovered": "Covered",
@@ -259,6 +264,8 @@
       "notCovered": "In development"
     },
     "browse": {
+      "subjectEyebrow": "Subject package",
+      "officialSourceEyebrow": "Reference",
       "officialSource": "Official CSCA source",
       "authority": "Authority",
       "edition": "Edition",
@@ -268,35 +275,35 @@
         "REFERENCE_ONLY": "Reference only"
       },
       "openOfficial": "Open official syllabus ({{language}})",
+      "openOfficialTitle": "{{language}} syllabus",
+      "openOfficialSub": "Opens official PDF in a new tab",
       "examLanguage": {
         "en": "English",
         "zh-CN": "Chinese"
       },
       "examLanguagesLabel": "Exam languages",
-      "officialSourceNote": "Official documents are external reference material. YukCSCA outline summaries and lessons are platform-authored.",
       "outlineTitle": "Syllabus outline",
-      "coverageLegend": "Coverage shows whether a published lesson exists",
-      "progressLegend": "chips show your content progress only",
       "emptyOutlineTitle": "Outline not available yet",
       "emptyOutlineDescription": "This package does not list outline topics with lessons yet.",
       "untitledTopic": "Untitled topic",
       "untitledLesson": "Untitled lesson",
       "notFoundTitle": "Package not found",
       "notFoundDescription": "There is no published package for this subject yet, or it is no longer available.",
-      "revision": "Published revision {{number}}"
+      "lastUpdated": "Updated {{date}}"
     },
     "lesson": {
       "title": "Lesson",
-      "tempLanguageNote": "This language toggle is temporary for this lesson. It does not change your profile default.",
       "explanationLanguage": "Explanation language",
-      "languageUnavailableTitle": "This explanation language is not available",
-      "languageUnavailableDescription": "No authored version exists for {{language}}. Choose another available language — the app will not substitute content silently.",
-      "languageUnavailableHint": "Use the language toggle above to switch to an available version.",
+      "languageUnavailableTitle": "This language is not available",
+      "languageUnavailableDescription": "No version is available for {{language}}. Choose another language above.",
       "languageUnavailableOption": "Not available for this lesson",
-      "noLanguagesAvailable": "No explanation-language versions are published for this lesson yet.",
-      "markContentComplete": "Mark content complete",
+      "noLanguagesAvailable": "No explanation languages are published for this lesson yet.",
+      "markContentComplete": "Mark as done",
+      "markReviewed": "Mark as reviewed",
       "savingProgress": "Saving…",
-      "contentCompleteAck": "Content complete — you can re-read anytime. This is not mastery.",
+      "contentCompleteAck": "Done — you can re-read anytime.",
+      "reviewedAck": "Review saved.",
+      "updatedSinceComplete": "This lesson was updated since you last finished it.",
       "progressAria": "Reading progress through lesson blocks",
       "mathAria": "Mathematical expression: {{latex}}",
       "mathError": "This formula could not be displayed.",
@@ -609,7 +616,7 @@
   },
   "more": {
     "title": "More",
-    "description": "Open exam, account, language, family, and access destinations without crowding daily mobile navigation.",
+    "description": "Account and language settings.",
     "navLabel": "More student destinations",
     "destinations": {
       "mock-exams": "Take the representative preview exam",
@@ -1559,9 +1566,9 @@
       "hasUnpublishedChanges": "Pending changes",
       "resumeCorrection": "Resume correction",
       "resumeCorrectionCta": "Resume correction",
-      "correctionDraftHint": "You are editing a correction draft. The published revision stays active until this draft is published successfully.",
-      "activeRevision": "Revision {{revision}} published on {{date}}",
-      "noActiveRevision": "No published revision yet",
+      "activeRevision": "Published {{date}}",
+      "noActiveRevision": "Not published yet",
+      "lastUpdated": "Updated {{date}}",
       "draftRevision": "Draft rev {{revision}}",
       "loadingPackages": "Loading packages…",
       "loadingPackage": "Loading package…",
@@ -1902,7 +1909,7 @@
       },
       "toasts": {
         "draftSaved": "Draft saved successfully.",
-        "published": "Academic package published successfully as active revision {{revision}}.",
+        "published": "Academic package published successfully on {{date}}.",
         "archived": "Academic package archived successfully.",
         "imageUploaded": "Diagram uploaded successfully.",
         "staleRevision": "The draft was changed elsewhere. Reload and try again.",

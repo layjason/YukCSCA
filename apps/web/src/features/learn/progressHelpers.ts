@@ -9,7 +9,13 @@ export function clampResumeBlockIndex(
   return Math.min(Math.floor(resumeBlockIndex), blockCount - 1);
 }
 
-export function progressStatusLabelKey(status: ContentProgressStatus): string {
+export function progressStatusLabelKey(
+  status: ContentProgressStatus,
+  updatedSinceCompleted = false,
+): string {
+  if (status === 'CONTENT_COMPLETE' && updatedSinceCompleted) {
+    return 'learn.progress.updated';
+  }
   switch (status) {
     case 'IN_PROGRESS':
       return 'learn.progress.inProgress';
@@ -21,7 +27,13 @@ export function progressStatusLabelKey(status: ContentProgressStatus): string {
   }
 }
 
-export function progressChipClass(status: ContentProgressStatus): string {
+export function progressChipClass(
+  status: ContentProgressStatus,
+  updatedSinceCompleted = false,
+): string {
+  if (status === 'CONTENT_COMPLETE' && updatedSinceCompleted) {
+    return 'learn-progress-chip learn-progress-chip-updated';
+  }
   switch (status) {
     case 'IN_PROGRESS':
       return 'learn-progress-chip learn-progress-chip-in-progress';
@@ -35,6 +47,10 @@ export function progressChipClass(status: ContentProgressStatus): string {
 
 export function isContentComplete(progress: ContentProgress | null | undefined): boolean {
   return progress?.status === 'CONTENT_COMPLETE';
+}
+
+export function isUpdatedSinceCompleted(progress: ContentProgress | null | undefined): boolean {
+  return progress?.status === 'CONTENT_COMPLETE' && progress.updatedSinceCompleted === true;
 }
 
 export function coverageLabelKey(

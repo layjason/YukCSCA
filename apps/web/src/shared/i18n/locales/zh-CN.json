@@ -240,18 +240,23 @@
     "backToLearn": "返回学习",
     "backToBrowse": "返回大纲",
     "openSubject": "打开科目",
-    "packagesLede": "选择已发布的科目包，浏览大纲并学习课时。",
+    "packagesEyebrow": "你的科目",
+    "packagesLede": "选择科目包，浏览大纲并打开课时。",
     "emptyPackagesTitle": "尚无已发布的科目包",
-    "emptyPackagesDescription": "学校或平台发布备考包后会显示在这里。这不是示例大纲数据。",
+    "emptyPackagesDescription": "备考包发布后会显示在这里。",
     "continue": "继续",
-    "contentProgressNote": "“内容完成”表示你已读完本课，不代表掌握、检查点或练习证据。",
+    "startReadingTitle": "开始阅读",
+    "startReadingDescription": "打开下一节尚未完成的课时。",
+    "allLessonsDoneTitle": "全部课时已完成",
+    "allLessonsDoneDescription": "你可以从下方大纲重新打开任意课时。",
     "subjects": {
       "MATHEMATICS": "数学"
     },
     "progress": {
       "notStarted": "未开始",
       "inProgress": "进行中",
-      "contentComplete": "内容完成"
+      "contentComplete": "已完成",
+      "updated": "有更新"
     },
     "coverage": {
       "fullyCovered": "已覆盖",
@@ -259,6 +264,8 @@
       "notCovered": "开发中"
     },
     "browse": {
+      "subjectEyebrow": "科目包",
+      "officialSourceEyebrow": "参考",
       "officialSource": "CSCA 官方来源",
       "authority": "权威机构",
       "edition": "版本",
@@ -268,35 +275,35 @@
         "REFERENCE_ONLY": "仅供参考"
       },
       "openOfficial": "打开官方大纲（{{language}}）",
+      "openOfficialTitle": "{{language}}大纲",
+      "openOfficialSub": "在新标签页打开官方 PDF",
       "examLanguage": {
         "en": "英文",
         "zh-CN": "中文"
       },
       "examLanguagesLabel": "考试语言",
-      "officialSourceNote": "官方文件为外部参考材料。YukCSCA 大纲摘要与课时由平台编写。",
       "outlineTitle": "大纲结构",
-      "coverageLegend": "覆盖表示是否已有已发布课时",
-      "progressLegend": "标签仅表示你的内容进度",
       "emptyOutlineTitle": "大纲尚不可用",
       "emptyOutlineDescription": "该科目包尚未列出含课时的大纲主题。",
       "untitledTopic": "未命名主题",
       "untitledLesson": "未命名课时",
       "notFoundTitle": "未找到科目包",
       "notFoundDescription": "该科目尚无已发布包，或已不可用。",
-      "revision": "已发布修订 {{number}}"
+      "lastUpdated": "更新于 {{date}}"
     },
     "lesson": {
       "title": "课时",
-      "tempLanguageNote": "此语言切换仅用于本课，不会更改个人资料中的默认讲解语言。",
       "explanationLanguage": "讲解语言",
-      "languageUnavailableTitle": "此讲解语言不可用",
-      "languageUnavailableDescription": "没有 {{language}} 的已编写版本。请选择其他可用语言——应用不会静默替换内容。",
-      "languageUnavailableHint": "使用上方语言切换到可用版本。",
+      "languageUnavailableTitle": "此语言不可用",
+      "languageUnavailableDescription": "没有 {{language}} 版本。请在上方选择其他语言。",
       "languageUnavailableOption": "本课不可用",
-      "noLanguagesAvailable": "本课尚无已发布的讲解语言版本。",
-      "markContentComplete": "标记内容完成",
+      "noLanguagesAvailable": "本课尚无已发布的讲解语言。",
+      "markContentComplete": "标记完成",
+      "markReviewed": "标记已复习",
       "savingProgress": "保存中…",
-      "contentCompleteAck": "内容完成——你可以随时重读。这不代表掌握。",
+      "contentCompleteAck": "已完成——你可以随时重读。",
+      "reviewedAck": "复习已保存。",
+      "updatedSinceComplete": "自你上次完成后，本课已更新。",
       "progressAria": "课时内容块阅读进度",
       "mathAria": "数学表达式：{{latex}}",
       "mathError": "无法显示该公式。",
@@ -609,7 +616,7 @@
   },
   "more": {
     "title": "更多",
-    "description": "在不挤占手机日常导航的情况下，进入考试、账户、语言、家庭和访问状态。",
+    "description": "账户与语言设置。",
     "navLabel": "更多学生目的地",
     "destinations": {
       "mock-exams": "参加代表性预览模拟考试",
@@ -1559,9 +1566,9 @@
       "hasUnpublishedChanges": "有未发布更改",
       "resumeCorrection": "继续修正",
       "resumeCorrectionCta": "继续修正",
-      "correctionDraftHint": "您正在编辑修正草稿。已发布版本在本草稿成功发布前保持有效。",
-      "activeRevision": "第 {{revision}} 版已于 {{date}} 发布",
-      "noActiveRevision": "尚无已发布版本",
+      "activeRevision": "发布于 {{date}}",
+      "noActiveRevision": "尚未发布",
+      "lastUpdated": "更新于 {{date}}",
       "draftRevision": "草稿版本 {{revision}}",
       "loadingPackages": "正在加载内容包…",
       "loadingPackage": "正在加载内容包…",
@@ -1902,7 +1909,7 @@
       },
       "toasts": {
         "draftSaved": "草稿已保存。",
-        "published": "学术内容包已发布为活动版本 {{revision}}。",
+        "published": "学术内容包已于 {{date}} 发布。",
         "archived": "学术内容包已归档。",
         "imageUploaded": "图示上传成功。",
         "staleRevision": "草稿已在其他位置更改。请重新加载后再试。",

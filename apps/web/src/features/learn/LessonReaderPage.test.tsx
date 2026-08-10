@@ -35,7 +35,12 @@ const baseLesson: PublishedLessonDetail = {
       { kind: 'MATH', latex: 'x^2-1', displayMode: true },
     ],
   },
-  contentProgress: { status: 'NOT_STARTED', resumeBlockIndex: null, updatedAt: null },
+  contentProgress: {
+    status: 'NOT_STARTED',
+    resumeBlockIndex: null,
+    updatedAt: null,
+    updatedSinceCompleted: false,
+  },
 };
 
 function renderReader(path = `/app/learn/MATHEMATICS/lessons/${baseLesson.resourceId}`) {
@@ -70,6 +75,7 @@ test('loads lesson with profile default language and seeds in-progress progress'
     status: 'IN_PROGRESS',
     resumeBlockIndex: 0,
     updatedAt: '2026-08-07T00:00:00Z',
+    updatedSinceCompleted: false,
   });
 
   renderReader();
@@ -105,6 +111,7 @@ test('language toggle reloads requested language without silent fallback on unav
       status: 'IN_PROGRESS',
       resumeBlockIndex: 0,
       updatedAt: '2026-08-07T00:00:00Z',
+      updatedSinceCompleted: false,
     },
   };
   const unavailable: PublishedLessonDetail = {
@@ -121,6 +128,7 @@ test('language toggle reloads requested language without silent fallback on unav
     status: 'IN_PROGRESS',
     resumeBlockIndex: 0,
     updatedAt: '2026-08-07T00:00:00Z',
+    updatedSinceCompleted: false,
   });
 
   renderReader();
@@ -128,7 +136,7 @@ test('language toggle reloads requested language without silent fallback on unav
 
   fireEvent.click(screen.getByRole('button', { name: /Chinese|中文|Tionghoa/i }));
 
-  expect(await screen.findByText(/explanation language is not available/i)).toBeInTheDocument();
+  expect(await screen.findByText(/language is not available/i)).toBeInTheDocument();
   expect(screen.queryByText(/English body/i)).not.toBeInTheDocument();
 });
 
@@ -145,6 +153,7 @@ test('mark content complete uses authoritative response', async () => {
       status: 'IN_PROGRESS',
       resumeBlockIndex: 0,
       updatedAt: '2026-08-07T00:00:00Z',
+      updatedSinceCompleted: false,
     },
   });
   vi.spyOn(learnApi, 'upsertContentProgress').mockImplementation(async (_s, _r, request) => {
@@ -153,19 +162,58 @@ test('mark content complete uses authoritative response', async () => {
         status: 'CONTENT_COMPLETE',
         resumeBlockIndex: 0,
         updatedAt: '2026-08-07T01:00:00Z',
+        updatedSinceCompleted: false,
       };
     }
     return {
       status: 'IN_PROGRESS',
       resumeBlockIndex: request.resumeBlockIndex ?? 0,
       updatedAt: '2026-08-07T00:30:00Z',
+      updatedSinceCompleted: false,
     };
   });
 
   renderReader();
   expect(await screen.findByText(/English body/i)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: /Mark content complete/i }));
-  expect(await screen.findByText(/Content complete/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Mark as done/i }));
+  await waitFor(() => {
+    expect(screen.getAllByText(/Done — you can re-read anytime/i).length).toBeGreaterThan(0);
+  });
+  expect(screen.getByText(/^Done$/i)).toBeInTheDocument();
   expect(screen.queryByText(/Mastered/i)).not.toBeInTheDocument();
+});
+
+test('shows soft update banner and review action when content republished after complete', async () => {
+  mockProfile('en');
+  vi.spyOn(learnApi, 'getPublishedLesson').mockResolvedValue({
+    ...baseLesson,
+    packageRevisionId: '99999999-9999-4999-8999-999999999999',
+    requestedExplanationLanguage: 'en',
+    body: {
+      availability: 'AVAILABLE',
+      blocks: [{ kind: 'TEXT', text: 'Updated lesson body' }],
+    },
+    contentProgress: {
+      status: 'CONTENT_COMPLETE',
+      resumeBlockIndex: 0,
+      updatedAt: '2026-08-07T00:00:00Z',
+      updatedSinceCompleted: true,
+    },
+  });
+  vi.spyOn(learnApi, 'upsertContentProgress').mockResolvedValue({
+    status: 'CONTENT_COMPLETE',
+    resumeBlockIndex: 0,
+    updatedAt: '2026-08-08T00:00:00Z',
+    updatedSinceCompleted: false,
+  });
+
+  renderReader();
+  expect(await screen.findByText(/Updated lesson body/i)).toBeInTheDocument();
+  expect(screen.getByText(/updated since you last finished/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Mark as reviewed/i }));
+  await waitFor(() => {
+    expect(screen.queryByText(/updated since you last finished/i)).not.toBeInTheDocument();
+  });
+  expect(screen.getByText(/^Done$/i)).toBeInTheDocument();
 });

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { ArrowRight, BookOpen, CalendarDays } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { listPublishedPackages } from './api/learnApi';
+import { formatLearnDate } from './formatLearnDate';
 import type { PublishedPackageSummary } from './types';
 import './learn.css';
 
 export function LearnPackagesPage(): React.JSX.Element {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [packages, setPackages] = useState<PublishedPackageSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function LearnPackagesPage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <div className="page-content learn-page" aria-busy="true" aria-live="polite">
+      <div className="page-content learn-page learn-page-fill" aria-busy="true" aria-live="polite">
         <h1>{t('learn.title')}</h1>
         <div className="learn-skeleton learn-skeleton-list">
           <span className="loading-indicator" aria-hidden="true" />
@@ -50,7 +52,7 @@ export function LearnPackagesPage(): React.JSX.Element {
 
   if (error) {
     return (
-      <div className="page-content learn-page">
+      <div className="page-content learn-page learn-page-fill">
         <h1>{t('learn.title')}</h1>
         <section className="state-notice state-notice-error" role="alert">
           <h2>{t('learn.errors.title')}</h2>
@@ -63,17 +65,14 @@ export function LearnPackagesPage(): React.JSX.Element {
     );
   }
 
-  if (packages && packages.length === 1) {
-    const sole = packages[0];
-    if (sole) {
-      return <Navigate to={`/app/learn/${sole.subject}`} replace />;
-    }
-  }
-
   if (!packages || packages.length === 0) {
     return (
-      <div className="page-content learn-page">
-        <h1>{t('learn.title')}</h1>
+      <div className="page-content learn-page learn-page-fill">
+        <header className="learn-hub-hero">
+          <p className="learn-hub-eyebrow">{t('learn.packagesEyebrow')}</p>
+          <h1>{t('learn.title')}</h1>
+          <p className="learn-lede">{t('learn.packagesLede')}</p>
+        </header>
         <section className="empty-state state-notice state-notice-info" aria-live="polite">
           <h2>{t('learn.emptyPackagesTitle')}</h2>
           <p>{t('learn.emptyPackagesDescription')}</p>
@@ -83,30 +82,67 @@ export function LearnPackagesPage(): React.JSX.Element {
   }
 
   return (
-    <div className="page-content learn-page">
-      <h1>{t('learn.title')}</h1>
-      <p className="learn-lede">{t('learn.packagesLede')}</p>
+    <div className="page-content learn-page learn-page-fill learn-packages-page">
+      <header className="learn-hub-hero">
+        <p className="learn-hub-eyebrow">{t('learn.packagesEyebrow')}</p>
+        <h1>{t('learn.title')}</h1>
+        <p className="learn-lede">{t('learn.packagesLede')}</p>
+      </header>
+
       <ul className="learn-package-list" role="list">
-        {packages.map((pkg) => (
-          <li key={pkg.id} className="learn-package-card">
-            <div className="learn-package-card-body">
-              <h2>{t(`learn.subjects.${pkg.subject}`)}</h2>
-              <p className="task-meta">
-                {t('learn.browse.revision', { number: pkg.activeRevision.revisionNumber })}
-              </p>
-              <p className="task-meta">
-                {t('learn.browse.examLanguagesLabel')}:{' '}
-                {pkg.examLanguages.map((lang) => t(`learn.browse.examLanguage.${lang}`)).join(', ')}
-              </p>
-            </div>
-            <Link to={`/app/learn/${pkg.subject}`} className="btn-primary">
-              {t('learn.openSubject')}
-            </Link>
-          </li>
-        ))}
+        {packages.map((pkg, index) => {
+          const accent = packageAccentClass(index);
+          return (
+            <li key={pkg.id}>
+              <Link to={`/app/learn/${pkg.subject}`} className={`learn-package-card ${accent}`}>
+                <span className="learn-package-card-accent" aria-hidden="true" />
+                <div className="learn-package-card-top">
+                  <span className="learn-package-card-icon" aria-hidden="true">
+                    <BookOpen size={24} strokeWidth={1.75} />
+                  </span>
+                  <span className="learn-package-card-action">
+                    {t('learn.openSubject')}
+                    <ArrowRight size={18} strokeWidth={2} aria-hidden="true" />
+                  </span>
+                </div>
+                <div className="learn-package-card-body">
+                  <h2>{t(`learn.subjects.${pkg.subject}`)}</h2>
+                  <p className="learn-package-card-meta">
+                    <CalendarDays size={14} strokeWidth={1.75} aria-hidden="true" />
+                    {t('learn.browse.lastUpdated', {
+                      date: formatLearnDate(pkg.activeRevision.publishedAt, i18n.language),
+                    })}
+                  </p>
+                  {pkg.examLanguages.length > 0 ? (
+                    <ul
+                      className="learn-package-lang-list"
+                      aria-label={t('learn.browse.examLanguagesLabel')}
+                    >
+                      {pkg.examLanguages.map((lang) => (
+                        <li key={lang} className="learn-package-lang-chip">
+                          {t(`learn.browse.examLanguage.${lang}`)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
+}
+
+function packageAccentClass(index: number): string {
+  const accents = [
+    'learn-package-card-sky',
+    'learn-package-card-lime',
+    'learn-package-card-lilac',
+    'learn-package-card-cream',
+  ];
+  return accents[index % accents.length] ?? 'learn-package-card-sky';
 }
 
 export default LearnPackagesPage;

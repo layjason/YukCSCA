@@ -5,7 +5,8 @@ import type { AcademicPackage } from '../types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    i18n: { language: 'en' },
+    t: (key: string, opts?: { date?: string }) => {
       const map: Record<string, string> = {
         'admin.academic.statusDraft': 'Draft',
         'admin.academic.saveDraft': 'Save draft',
@@ -22,9 +23,11 @@ vi.mock('react-i18next', () => ({
         'admin.academic.tabs.questions': 'Questions',
         'admin.academic.tabs.mock': 'Timed mock',
         'admin.academic.hasUnpublishedChanges': 'Pending changes',
-        'admin.academic.noActiveRevision': 'No published revision yet',
-        'admin.academic.draftRevision': 'Draft rev 1',
+        'admin.academic.noActiveRevision': 'Not published yet',
+        'admin.academic.activeRevision': `Published ${opts?.date ?? ''}`,
+        'admin.academic.lastUpdated': `Updated ${opts?.date ?? ''}`,
         'admin.academic.toasts.draftSaved': 'Draft saved successfully.',
+        'admin.academic.toasts.published': `Published on ${opts?.date ?? ''}`,
       };
       return map[key] ?? key;
     },

@@ -35,12 +35,8 @@ export function RootDecisionPage(): React.JSX.Element {
       return <Navigate to="/onboarding/role" replace />;
     }
     if (user?.role === 'STUDENT') {
-      return (
-        <Navigate
-          to={studentPreviewState.onboardingStep === 'complete' ? '/app/today' : '/app/profile'}
-          replace
-        />
-      );
+      // Pilot home is production Learn (real content). Today remains a preview surface.
+      return <Navigate to="/app/learn" replace />;
     }
     if (user?.role === 'ADMIN') {
       return <Navigate to="/admin/academic-packages" replace />;

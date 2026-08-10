@@ -17,7 +17,12 @@ const IMAGE_ID = '00000000-0000-4000-8000-0000000000d1';
 const progressByResource = new Map<string, ContentProgress>();
 
 function defaultProgress(): ContentProgress {
-  return { status: 'NOT_STARTED', resumeBlockIndex: null, updatedAt: null };
+  return {
+    status: 'NOT_STARTED',
+    resumeBlockIndex: null,
+    updatedAt: null,
+    updatedSinceCompleted: false,
+  };
 }
 
 function getProgress(resourceId: string): ContentProgress {
@@ -239,13 +244,19 @@ export function devUpsertContentProgress(
   resumeBlockIndex?: number | null,
 ): ContentProgress | null {
   if (subject !== 'MATHEMATICS' || resourceId !== LESSON_ID) return null;
+  const existing = getProgress(resourceId);
   const next: ContentProgress = {
-    status,
+    status:
+      existing.status === 'CONTENT_COMPLETE' && status === 'IN_PROGRESS'
+        ? 'CONTENT_COMPLETE'
+        : status,
     resumeBlockIndex:
       status === 'CONTENT_COMPLETE'
-        ? (resumeBlockIndex ?? getProgress(resourceId).resumeBlockIndex)
+        ? (resumeBlockIndex ?? existing.resumeBlockIndex)
         : (resumeBlockIndex ?? 0),
     updatedAt: new Date().toISOString(),
+    // DEV fixture has a single static revision; soft-update only appears from the real API.
+    updatedSinceCompleted: false,
   };
   progressByResource.set(resourceId, next);
   return next;

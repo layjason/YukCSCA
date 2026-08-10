@@ -821,7 +821,7 @@ export const routeManifest = defineRoutes([
     '/app/more',
     'nav.more',
     'implemented',
-    'student-workspace-preview',
+    'student-settings',
     'student',
     'hidden',
     [],
