@@ -111,44 +111,36 @@ public class AcademicStudentService {
   @Transactional(readOnly = true)
   public PublishedLessonResult getPublishedLesson(
       UUID actorId, String subject, UUID resourceId, String explanationLanguage) {
-    requireStudent(actorId);
-    if (explanationLanguage == null || !EXPLANATION_LANGUAGES.contains(explanationLanguage)) {
-      throw new InvalidStudentAcademicRequestException(
-          "explanationLanguage must be one of id, en, or zh-CN.");
-    }
-    AcademicPackage academicPackage = requirePublishedPackage(subject);
-    AcademicRevision revision = requireActiveRevision(academicPackage);
-    JsonNode content = projector.parseContent(revision.getContent());
-    LessonResourceProjection lesson =
-        projector.lessons(content).stream()
-            .filter(value -> value.id().equals(resourceId))
-            .findFirst()
-            .orElseThrow(() -> new AcademicNotFoundException("Lesson not found."));
-    StudentContentProgress progress =
-        progressStore
-            .findByAccountIdAndPackageIdAndResourceId(actorId, academicPackage.getId(), resourceId)
-            .orElse(null);
-    boolean available = lesson.blocksByLanguage().containsKey(explanationLanguage);
-    List<JsonNode> blocks =
-        available ? lesson.blocksByLanguage().get(explanationLanguage) : List.of();
-    ContentProgressProjection progressProjection =
-        projector.contentProgress(progress, available ? blocks.size() : null, revision.getId());
-    LOGGER.info(
-        "academic.student.lesson_open subject={} resourceId={} explanationLanguage={}",
-        academicPackage.getSubject(),
-        resourceId,
-        explanationLanguage);
-    return new PublishedLessonResult(
-        academicPackage.getId(),
-        revision.getId(),
-        academicPackage.getSubject(),
-        lesson.id(),
-        lesson.title(),
-        lesson.availableExplanationLanguages(),
-        explanationLanguage,
-        available,
-        available ? blocks : null,
-        progressProjection);
+    return getPublishedStudyResource(
+        actorId, subject, resourceId, explanationLanguage, "LESSON", "Lesson not found.");
+  }
+
+  @Transactional(readOnly = true)
+  public PublishedRemediationResult getPublishedRemediation(
+      UUID actorId, String subject, UUID resourceId, String explanationLanguage) {
+    PublishedLessonResult base =
+        getPublishedStudyResource(
+            actorId,
+            subject,
+            resourceId,
+            explanationLanguage,
+            "REMEDIATION",
+            "Remediation not found.");
+    PublishedPackageProjector.StudyResourceProjection resource =
+        loadStudyResource(subject, resourceId, "REMEDIATION", "Remediation not found.");
+    return new PublishedRemediationResult(
+        base.packageId(),
+        base.packageRevisionId(),
+        base.subject(),
+        base.resourceId(),
+        base.title(),
+        base.availableExplanationLanguages(),
+        base.requestedExplanationLanguage(),
+        base.languageAvailable(),
+        base.blocks(),
+        base.contentProgress(),
+        resource.outlineItemIds(),
+        resource.objectiveIds());
   }
 
   @Transactional
@@ -159,6 +151,104 @@ public class AcademicStudentService {
       String status,
       Integer resumeBlockIndex,
       UUID expectedPackageRevisionId) {
+    return upsertStudyResourceProgress(
+        actorId,
+        subject,
+        resourceId,
+        status,
+        resumeBlockIndex,
+        expectedPackageRevisionId,
+        "LESSON",
+        "Lesson not found.");
+  }
+
+  @Transactional
+  public ContentProgressProjection upsertRemediationContentProgress(
+      UUID actorId,
+      String subject,
+      UUID resourceId,
+      String status,
+      Integer resumeBlockIndex,
+      UUID expectedPackageRevisionId) {
+    return upsertStudyResourceProgress(
+        actorId,
+        subject,
+        resourceId,
+        status,
+        resumeBlockIndex,
+        expectedPackageRevisionId,
+        "REMEDIATION",
+        "Remediation not found.");
+  }
+
+  private PublishedLessonResult getPublishedStudyResource(
+      UUID actorId,
+      String subject,
+      UUID resourceId,
+      String explanationLanguage,
+      String kind,
+      String notFoundMessage) {
+    requireStudent(actorId);
+    if (explanationLanguage == null || !EXPLANATION_LANGUAGES.contains(explanationLanguage)) {
+      throw new InvalidStudentAcademicRequestException(
+          "explanationLanguage must be one of id, en, or zh-CN.");
+    }
+    AcademicPackage academicPackage = requirePublishedPackage(subject);
+    AcademicRevision revision = requireActiveRevision(academicPackage);
+    JsonNode content = projector.parseContent(revision.getContent());
+    PublishedPackageProjector.StudyResourceProjection resource =
+        projector.studyResourcesOfKind(content, kind).stream()
+            .filter(value -> value.id().equals(resourceId))
+            .findFirst()
+            .orElseThrow(() -> new AcademicNotFoundException(notFoundMessage));
+    StudentContentProgress progress =
+        progressStore
+            .findByAccountIdAndPackageIdAndResourceId(actorId, academicPackage.getId(), resourceId)
+            .orElse(null);
+    boolean available = resource.blocksByLanguage().containsKey(explanationLanguage);
+    List<JsonNode> blocks =
+        available ? resource.blocksByLanguage().get(explanationLanguage) : List.of();
+    ContentProgressProjection progressProjection =
+        projector.contentProgress(progress, available ? blocks.size() : null, revision.getId());
+    LOGGER.info(
+        "academic.student.{}_open subject={} resourceId={} explanationLanguage={}",
+        kind.toLowerCase(),
+        academicPackage.getSubject(),
+        resourceId,
+        explanationLanguage);
+    return new PublishedLessonResult(
+        academicPackage.getId(),
+        revision.getId(),
+        academicPackage.getSubject(),
+        resource.id(),
+        resource.title(),
+        resource.availableExplanationLanguages(),
+        explanationLanguage,
+        available,
+        available ? blocks : null,
+        progressProjection);
+  }
+
+  private PublishedPackageProjector.StudyResourceProjection loadStudyResource(
+      String subject, UUID resourceId, String kind, String notFoundMessage) {
+    AcademicPackage academicPackage = requirePublishedPackage(subject);
+    AcademicRevision revision = requireActiveRevision(academicPackage);
+    JsonNode content = projector.parseContent(revision.getContent());
+    return projector.studyResourcesOfKind(content, kind).stream()
+        .filter(value -> value.id().equals(resourceId))
+        .findFirst()
+        .orElseThrow(() -> new AcademicNotFoundException(notFoundMessage));
+  }
+
+  private ContentProgressProjection upsertStudyResourceProgress(
+      UUID actorId,
+      String subject,
+      UUID resourceId,
+      String status,
+      Integer resumeBlockIndex,
+      UUID expectedPackageRevisionId,
+      String kind,
+      String notFoundMessage) {
     requireStudent(actorId);
     if (status == null || !WRITABLE_STATUSES.contains(status)) {
       throw validation("status", "UNSUPPORTED");
@@ -178,10 +268,11 @@ public class AcademicStudentService {
     AcademicPackage academicPackage = requirePublishedPackage(subject);
     AcademicRevision revision = requireActiveRevision(academicPackage);
     JsonNode content = projector.parseContent(revision.getContent());
-    boolean lessonExists =
-        projector.lessons(content).stream().anyMatch(value -> value.id().equals(resourceId));
-    if (!lessonExists) {
-      throw new AcademicNotFoundException("Lesson not found.");
+    boolean resourceExists =
+        projector.studyResourcesOfKind(content, kind).stream()
+            .anyMatch(value -> value.id().equals(resourceId));
+    if (!resourceExists) {
+      throw new AcademicNotFoundException(notFoundMessage);
     }
 
     Instant now = now();
@@ -238,9 +329,10 @@ public class AcademicStudentService {
       saved = progressStore.save(existing);
     }
     LOGGER.info(
-        "academic.student.progress subject={} resourceId={} status={}",
+        "academic.student.progress subject={} resourceId={} kind={} status={}",
         academicPackage.getSubject(),
         resourceId,
+        kind,
         progressStatus);
     return projector.contentProgress(saved, null, activeRevisionId);
   }
@@ -335,4 +427,18 @@ public class AcademicStudentService {
       boolean languageAvailable,
       List<JsonNode> blocks,
       ContentProgressProjection contentProgress) {}
+
+  public record PublishedRemediationResult(
+      UUID packageId,
+      UUID packageRevisionId,
+      String subject,
+      UUID resourceId,
+      PublishedPackageProjector.LocalizedTextProjection title,
+      List<String> availableExplanationLanguages,
+      String requestedExplanationLanguage,
+      boolean languageAvailable,
+      List<JsonNode> blocks,
+      ContentProgressProjection contentProgress,
+      List<UUID> outlineItemIds,
+      List<UUID> objectiveIds) {}
 }
