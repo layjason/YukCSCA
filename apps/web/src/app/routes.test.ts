@@ -6,7 +6,7 @@ describe('route manifest', () => {
     const ids = routeManifest.map((route) => route.id);
     const paths = routeManifest.map((route) => route.path);
 
-    expect(routeManifest).toHaveLength(72);
+    expect(routeManifest).toHaveLength(74);
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(paths).size).toBe(paths.length);
   });
@@ -42,5 +42,24 @@ describe('route manifest', () => {
     expect(lesson.path).toBe('/app/learn/:subject/lessons/:resourceId');
     expect(lesson.access).toBe('student-settings');
     expect(lesson.availability).toBe('implemented');
+  });
+
+  it('promotes production Practice and assessment routes off preview workspace gate', () => {
+    const practice = getRouteById('practice');
+    const session = getRouteById('practice-session');
+    const mistakes = getRouteById('practice-mistakes');
+    const checkpoint = getRouteById('learn-checkpoint');
+    const remediation = getRouteById('learn-remediation');
+
+    for (const route of [practice, session, mistakes, checkpoint, remediation]) {
+      expect(route.availability).toBe('implemented');
+      expect(route.access).toBe('student-settings');
+      expect(route.prototypeOnly).toBeUndefined();
+    }
+
+    expect(session.path).toBe('/app/practice/sessions/:sessionId');
+    expect(checkpoint.path).toBe('/app/learn/:subject/lessons/:resourceId/checkpoint');
+    expect(remediation.path).toBe('/app/learn/:subject/remediation/:resourceId');
+    expect(isRouteActive(practice, '/app/practice/mistakes')).toBe(true);
   });
 });

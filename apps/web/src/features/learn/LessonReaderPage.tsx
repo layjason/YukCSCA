@@ -23,6 +23,7 @@ import {
   type ExplanationLanguage,
   type PublishedLessonDetail,
 } from './types';
+import { CheckpointCta } from '@/features/assessment/components/CheckpointCta';
 import './learn.css';
 
 export function LessonReaderPage(): React.JSX.Element {
@@ -534,6 +535,9 @@ export function LessonReaderPage(): React.JSX.Element {
                   : t('learn.lesson.markContentComplete')}
             </button>
           )}
+          {isComplete && !needsReview && subject && resourceId ? (
+            <CheckpointCta subject={subject} resourceId={resourceId} enabled />
+          ) : null}
         </footer>
       ) : null}
 

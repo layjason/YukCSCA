@@ -73,7 +73,7 @@ export function MockResultPage(): React.JSX.Element {
             : t('mock.result.continueRecommendation')}
         </p>
         {hasPriorityProposal && (
-          <Link to="/app/practice/practice-factorisation-1" className="btn-secondary">
+          <Link to="/app/practice" className="btn-secondary">
             {t('mock.result.openRemediation')}
           </Link>
         )}

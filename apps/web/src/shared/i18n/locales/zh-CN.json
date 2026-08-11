@@ -77,7 +77,9 @@
     "access": "权限",
     "more": "更多",
     "backToDashboard": "返回仪表板",
-    "backToProfile": "返回个人资料"
+    "backToProfile": "返回个人资料",
+    "checkpoint": "关卡",
+    "remediation": "复习"
   },
   "shell": {
     "navLabel": "主导航",
@@ -1918,6 +1920,164 @@
         "publishFailed": "发布失败",
         "archiveFailed": "归档失败"
       }
+    }
+  },
+  "assessment": {
+    "loading": "加载中…",
+    "retry": "重试",
+    "starting": "开始中…",
+    "backToPractice": "练习",
+    "backToLearn": "学习",
+    "backToLesson": "返回课时",
+    "examLanguage": "考试语言",
+    "examLanguages": {
+      "en": "英语",
+      "zhCN": "中文"
+    },
+    "purpose": {
+      "CHECKPOINT": "关卡",
+      "TOPIC_PRACTICE": "专题练习",
+      "REVALIDATION": "复测"
+    },
+    "practice": {
+      "eyebrow": "练习",
+      "title": "练习",
+      "mistakesLink": "错题",
+      "continue": "继续",
+      "topicSets": "专题套题",
+      "start": "开始",
+      "progress": "已答 {{answered}} / {{total}}",
+      "questionCount": "{{count}} 题",
+      "minutes": "约 {{minutes}} 分钟",
+      "emptyTitle": "暂无练习",
+      "emptyDescription": "已发布的专题练习会显示在这里。"
+    },
+    "session": {
+      "progressAria": "第 {{current}} / {{total}} 题",
+      "itemOf": "{{current}} / {{total}}",
+      "previous": "上一题",
+      "next": "下一题",
+      "checkAnswer": "检查",
+      "saveAnswer": "保存答案",
+      "submitSet": "提交套题",
+      "notFoundTitle": "未找到练习会话",
+      "notFoundDescription": "会话已失效或链接过期。",
+      "finish": "完成"
+    },
+    "hints": {
+      "regionLabel": "提示",
+      "showNext": "显示提示",
+      "revealIfStuck": "需要更大提示？",
+      "tier": "提示 {{n}}",
+      "revealTier": "解题路径 {{n}}",
+      "exhausted": "没有更多提示",
+      "revalidationBlocked": "复测时隐藏完整解法",
+      "confirmTitle": "这可能会透露答案",
+      "confirmBody": "只有真正卡住时再打开。使用后可能无法获得关卡通过。",
+      "confirmCancel": "先不看",
+      "confirmReveal": "给我看"
+    },
+    "feedback": {
+      "correct": "正确",
+      "incorrect": "还不对"
+    },
+    "related": {
+      "lesson": "课时",
+      "remediation": "复习"
+    },
+    "result": {
+      "checkpointPass": "关卡通过",
+      "checkpointFail": "继续练习",
+      "topicScore": "练习完成",
+      "revalidationPass": "复测通过",
+      "revalidationFail": "仍需巩固",
+      "score": "{{correct}} / {{total}} 正确",
+      "strongAssistanceNote": "使用了完整解题路径——独立复测仍然有帮助。",
+      "reviewMistakes": "查看错题",
+      "morePractice": "更多练习",
+      "backToLesson": "返回课时"
+    },
+    "checkpoint": {
+      "eyebrow": "关卡",
+      "title": "关卡",
+      "start": "开始关卡",
+      "lockedTitle": "关卡未解锁",
+      "ctaReadyTitle": "准备好关卡了吗？",
+      "ctaReadyHint": "对本课的简短检查。",
+      "ctaLockedTitle": "关卡未就绪",
+      "notFoundTitle": "关卡不可用",
+      "notFoundDescription": "本课暂无关卡。",
+      "lock": {
+        "LESSON_NOT_CONTENT_COMPLETE": "请先完成课时。",
+        "NO_CHECKPOINT_PUBLISHED": "本课尚未发布关卡。",
+        "NO_EXAM_LANGUAGE_EDITION": "没有可用的考试语言版本。"
+      }
+    },
+    "mistakes": {
+      "eyebrow": "复习",
+      "title": "错题",
+      "detailTitle": "错题",
+      "backToList": "全部错题",
+      "emptyTitle": "暂无错题",
+      "emptyDescription": "练习中的错题会出现在这里。",
+      "notFoundTitle": "未找到错题",
+      "notFoundDescription": "错题已失效或链接过期。",
+      "errorCount": "错 {{count}} 次",
+      "readyToRevalidate": "可复测",
+      "annotation": "你的笔记",
+      "errorCause": "可能原因",
+      "causeNone": "未设置",
+      "privateNote": "私密笔记",
+      "privateNotePlaceholder": "可选 — 仅自己可见",
+      "saveAnnotation": "保存笔记",
+      "nextSteps": "下一步",
+      "studyRemediation": "学习复习",
+      "revalidate": "复测",
+      "revalidationLocked": "先完成复习，再复测。",
+      "revalidationIneligible": "复测暂不可用。",
+      "status": {
+        "OPEN": "待处理",
+        "REMEDIATION_IN_PROGRESS": "复习中",
+        "AWAITING_REVALIDATION": "待复测",
+        "REVALIDATION_PASSED": "已通过"
+      },
+      "causes": {
+        "CONCEPTUAL_GAP": "概念缺口",
+        "PREREQUISITE_GAP": "前置不足",
+        "TERMINOLOGY_MISUNDERSTANDING": "术语误解",
+        "CARELESSNESS": "粗心",
+        "TIME_MANAGEMENT": "时间压力"
+      }
+    },
+    "remediation": {
+      "eyebrow": "复习",
+      "title": "补救复习",
+      "markComplete": "标记复习完成",
+      "completeAck": "复习完成 — 准备好后复测。",
+      "notFoundTitle": "未找到复习",
+      "notFoundDescription": "当前包中没有该复习资源。"
+    },
+    "errors": {
+      "forbidden": "没有访问权限。",
+      "unauthorized": "请重新登录。",
+      "loadPractice": "无法加载练习。",
+      "loadSession": "无法加载会话。",
+      "loadResult": "无法加载结果。",
+      "loadCheckpoint": "无法加载关卡。",
+      "loadMistakes": "无法加载错题。",
+      "loadMistake": "无法加载该错题。",
+      "loadRemediation": "无法加载复习。",
+      "startFailed": "无法开始。",
+      "setUnavailable": "该套题不可用。",
+      "answerFailed": "无法保存答案。",
+      "hintFailed": "无法显示提示。",
+      "submitFailed": "无法提交套题。",
+      "saveAnnotation": "无法保存笔记。",
+      "revalidationFailed": "无法开始复测。",
+      "saveProgress": "无法保存进度。",
+      "sessionCancelled": "会话已取消。",
+      "invalidSession": "会话链接无效。",
+      "invalidLesson": "课时链接无效。"
     }
   }
 }

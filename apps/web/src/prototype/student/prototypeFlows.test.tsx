@@ -131,29 +131,28 @@ describe('PX-001 integrated preview states', () => {
     expect(screen.getByText(/belum cukup untuk menetapkan penguasaan/i)).toBeInTheDocument();
   });
 
-  test('preserves practice answers across a recoverable submit failure and succeeds on retry', async () => {
-    renderScenario('/app/practice/practice-factorisation-1', 'practice-submit-error');
-
-    for (let questionIndex = 0; questionIndex < 4; questionIndex += 1) {
-      const radios = screen.getAllByRole('radio');
-      const answer = radios[questionIndex === 0 ? 1 : 0];
-      if (!answer) throw new Error('Expected a practice answer option');
-      fireEvent.click(answer);
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: questionIndex === 3 ? /kirim jawaban/i : /berikutnya/i,
-        }),
-      );
-    }
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(/jawaban.*tetap/i);
-    expect(screen.getAllByRole('radio')[0]).toBeChecked();
-
-    fireEvent.click(screen.getByRole('button', { name: /coba lagi/i }));
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /hasil latihan/i })).toBeInTheDocument(),
+  test('opens production Practice hub for activated student without preview workspace gate', async () => {
+    // VS-009 promoted /app/practice off prototype; answer-preservation lives in features/assessment tests.
+    const listSets = vi.spyOn(
+      await import('@/features/assessment/api/assessmentApi'),
+      'listAssessmentSets',
     );
-    expect(screen.getByText(/3 dari 4/i)).toBeInTheDocument();
+    const listSessions = vi.spyOn(
+      await import('@/features/assessment/api/assessmentApi'),
+      'listAssessmentSessions',
+    );
+    listSets.mockResolvedValue([]);
+    listSessions.mockResolvedValue([]);
+
+    renderScenario('/app/practice', 'practice-submit-error');
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /practice|latihan|练习/i })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(/no practice sets yet|belum ada set latihan|暂无练习/i),
+    ).toBeInTheDocument();
+    expect(listSets).toHaveBeenCalled();
   });
 
   test('resumes an interrupted mock with the current answer and requires priority approval', () => {
