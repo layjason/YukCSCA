@@ -4,16 +4,26 @@
 
 ## Plan metadata
 
-| Field                        | Value                                                                                                                                                           |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plan ID                      | `YUK-P0-DELIVERY`                                                                                                                                               |
-| Plan version                 | `0.5.28`                                                                                                                                                        |
-| Updated                      | 2026-08-11                                                                                                                                                      |
-| Current baseline             | [`VS-008`](delivery/VS-008-student-learn-content.md) student published LESSON browse and study — `DONE`                                                         |
-| Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE`                                                            |
-| Current production slice     | [`VS-009`](delivery/VS-009-assessment-practice-remediation.md) assessment practice and remediation — `CONTRACT_READY` (student FE in progress; backend pending) |
-| Requirement baseline         | English/Chinese V1.5, 2026-08-07                                                                                                                                |
-| Story baseline               | `USER_STORIES.md` version 0.3.3                                                                                                                                 |
+| Field                        | Value                                                                                                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan ID                      | `YUK-P0-DELIVERY`                                                                                                                                         |
+| Plan version                 | `0.5.29`                                                                                                                                                  |
+| Updated                      | 2026-08-11                                                                                                                                                |
+| Current baseline             | [`VS-008`](delivery/VS-008-student-learn-content.md) student published LESSON browse and study — `DONE`                                                   |
+| Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE`                                                      |
+| Current production slice     | [`VS-009`](delivery/VS-009-assessment-practice-remediation.md) assessment practice and remediation — `IN_PROGRESS`                                        |
+| Requirement baseline         | English/Chinese V1.5, 2026-08-07                                                                                                                          |
+| Story baseline               | `USER_STORIES.md` version 0.3.3                                                                                                                           |
+| Field                        | Value                                                                                                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan ID                      | `YUK-P0-DELIVERY`                                                                                                                                         |
+| Plan version                 | `0.5.28`                                                                                                                                                  |
+| Updated                      | 2026-08-11                                                                                                                                                |
+| Current baseline             | [`VS-008`](delivery/VS-008-student-learn-content.md) student published LESSON browse and study — `DONE`                                                   |
+| Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE`                                                      |
+| Current production slice     | [`VS-009`](delivery/VS-009-assessment-practice-remediation.md) assessment practice and remediation — `IN_PROGRESS`                                        |
+| Requirement baseline         | English/Chinese V1.5, 2026-08-07                                                                                                                          |
+| Story baseline               | `USER_STORIES.md` version 0.3.3                                                                                                                           |
 
 Plan versions are review markers for delivery-document changes. They are not npm/Maven package versions and are not TypeSpec API versions. This repository does not add pnpm checks solely to validate plan metadata; Git review, slice revision history, and acceptance evidence provide traceability.
 
@@ -184,7 +194,8 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 | Version | Date | Change |
 | ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | |
-| 0.5.28 | 2026-08-11 | Implemented VS-009 student frontend from `VS-009-R5-accepted`: `features/assessment` (Practice hub, session player with soft STRONG hints, result, mistakes, remediation reader, Learn checkpoint CTA), promoted Practice/Mistakes routes off preview gate, en/id/zh-CN, focused tests green. Slice remains `CONTRACT_READY` pending backend assessment module and product-owner journeys. |
+| 0.5.29 | 2026-08-11 | Implemented VS-009 student frontend from `VS-009-R5-accepted`: `features/assessment` (Practice hub, session player with soft STRONG hints, result, mistakes, remediation reader, Learn checkpoint CTA), promoted Practice/Mistakes routes off preview gate, en/id/zh-CN, focused tests green. Slice remains `CONTRACT_READY` pending backend assessment module and product-owner journeys. |
+| 0.5.28 | 2026-08-11 | VS-009 backend implementation from `VS-009-R5-accepted`: new `assessment` module (sessions/hints/answers/submit/mistakes/revalidation/evidence), academic publish validation for AssessmentSet + hint tiers, student REMEDIATION read/progress, Flyway V9, unit + Testcontainers HTTP IT proof. Slice remains `CONTRACT_READY` (not product-owner `DONE`); production frontend journeys still required. |
 | 0.5.27 | 2026-08-11 | Frontend re-review of VS-009 `VS-009-R5-cr-applied`: all `CR-01`–`CR-04` confirmed resolved; zero further CR; accepted checkpoint `VS-009-R5-accepted` (identical hashes); slice revision 6; status **`CONTRACT_READY`**. Backend and frontend implementation may proceed; no domain/UI code in this step. |
 | 0.5.26 | 2026-08-11 | Backend accepted and applied VS-009 frontend `CR-01`–`CR-04` (hint ladder metadata; mistake attempt copy + latest response + stem preview; IN_PROGRESS session list; related resource refs); recorded `VS-009-R5-cr-applied`; slice revision 5; zero open CR; status remains `SHAPING` pending frontend re-review before `CONTRACT_READY`. Prior same-day FE review of `VS-009-R3-initial` (filed the four CRs) is superseded for checkpoint purposes by this disposition. |
 | 0.5.25 | 2026-08-11 | Initialized VS-009 TypeSpec contract (`VS-009-R3-initial`): new `contracts/assessment-student.tsp` (12 student assessment operations), additive AssessmentSet/hint tiers on admin draft, additive REMEDIATION student academic read+progress; regenerated OpenAPI and web declarations; slice revision 3; status remains `SHAPING` pending frontend consumer review. No domain/UI implementation. |

@@ -752,7 +752,7 @@ Reviewed **2026-08-11** as frontend-worker against:
 - [ ] Documentation sufficiency complete; `D-01`–`D-16` reflected in contract/code.
 - [ ] Human gate remains `APPROVED` (or reopened with evidence).
 - [x] TypeSpec compiles; initial + accepted checkpoints; FE consumer review; no open CR (`VS-009-R5-accepted`, `CONTRACT_READY`).
-- [ ] Backend assessment module + academic extensions + migrations + tests match checkpoint.
+- [x] Backend assessment module + academic extensions + migrations + tests match checkpoint (2026-08-11 backend-worker).
 - [x] Frontend production replaces prototype for accepted loop; no prototype imports.
 - [ ] All AC rows have named evidence.
 - [ ] Authorization, privacy (private notes), no key leakage reviewed.
@@ -762,21 +762,21 @@ Reviewed **2026-08-11** as frontend-worker against:
 
 ## Verification evidence
 
-| Evidence                      | Result                                                                                                        |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Contract build                | `pnpm contract:build` — TypeSpec 1.14 compile OK after CR application (2026-08-11)                            |
-| Generate + web typecheck      | `pnpm generate` + `pnpm typecheck:web` — passed after `CR-01`–`CR-04` apply                                   |
-| Initial contract checkpoint   | `VS-009-R3-initial` (historical)                                                                              |
-| Post-CR contract checkpoint   | `VS-009-R5-cr-applied` established (hashes below)                                                             |
-| Frontend contract review      | **Complete (rev 4)** on R3-initial; **re-review complete (rev 6)** on R5 — **accepted**                       |
-| CR disposition                | All `CR-01`–`CR-04` **RESOLVED** (accepted, applied, FE-confirmed); **zero open CR**                          |
-| Accepted contract checkpoint  | **`VS-009-R5-accepted`** — same hashes as R5-cr-applied; status **`CONTRACT_READY`**                          |
-| Technology/ADR review         | Complete at shaping — existing stack + new assessment module                                                  |
-| Backend tests                 | Not run (contract-only; no Java implementation)                                                               |
-| Frontend tests / visual / e2e | `pnpm typecheck:web`, `pnpm lint:web`, `pnpm test:web` — 206 passed (2026-08-11, FE rev 7)                    |
-| Frontend production surfaces  | Practice hub, session player, result, mistakes, remediation, Learn checkpoint CTA under `features/assessment` |
-| Research synthesis            | Expanded 2026-08-11 (Bloom, VanLehn, ITS keep/change, practice platforms)                                     |
-| Product grill decisions       | `D-01`–`D-16` APPROVED 2026-08-11                                                                             |
+| Evidence                      | Result                                                                                                                                                                                                                                                                            |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract build                | `pnpm contract:build` — TypeSpec 1.14 compile OK after CR application (2026-08-11)                                                                                                                                                                                                |
+| Generate + web typecheck      | `pnpm generate` + `pnpm typecheck:web` — passed after `CR-01`–`CR-04` apply                                                                                                                                                                                                       |
+| Initial contract checkpoint   | `VS-009-R3-initial` (historical)                                                                                                                                                                                                                                                  |
+| Post-CR contract checkpoint   | `VS-009-R5-cr-applied` established (hashes below)                                                                                                                                                                                                                                 |
+| Frontend contract review      | **Complete (rev 4)** on R3-initial; **re-review complete (rev 6)** on R5 — **accepted**                                                                                                                                                                                           |
+| CR disposition                | All `CR-01`–`CR-04` **RESOLVED** (accepted, applied, FE-confirmed); **zero open CR**                                                                                                                                                                                              |
+| Accepted contract checkpoint  | **`VS-009-R5-accepted`** — same hashes as R5-cr-applied; status **`CONTRACT_READY`**                                                                                                                                                                                              |
+| Technology/ADR review         | Complete at shaping — existing stack + new assessment module                                                                                                                                                                                                                      |
+| Backend tests                 | 2026-08-11: unit + Testcontainers HTTP IT for assessment + academic extensions — **PASS** (`./mvnw -Dtest=com.yukcsca.assessment.**,com.yukcsca.academic.**`; Flyway V9 applied; BUILD SUCCESS). Backend implementation complete; **not** product-owner `DONE` until FE journeys. |
+| Frontend tests / visual / e2e | `pnpm typecheck:web`, `pnpm lint:web`, `pnpm test:web` — 206 passed (2026-08-11, FE rev 7)                                                                                                                                                                                        |
+| Frontend production surfaces  | Practice hub, session player, result, mistakes, remediation, Learn checkpoint CTA under `features/assessment`                                                                                                                                                                     |     |
+| Research synthesis            | Expanded 2026-08-11 (Bloom, VanLehn, ITS keep/change, practice platforms)                                                                                                                                                                                                         |
+| Product grill decisions       | `D-01`–`D-16` APPROVED 2026-08-11                                                                                                                                                                                                                                                 |
 
 ### `VS-009-R3-initial` artifact hashes (`git hash-object`) — historical
 

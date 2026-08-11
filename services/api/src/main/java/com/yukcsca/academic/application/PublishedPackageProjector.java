@@ -87,14 +87,32 @@ public class PublishedPackageProjector {
   }
 
   public List<LessonResourceProjection> lessons(JsonNode content) {
-    List<LessonResourceProjection> lessons = new ArrayList<>();
-    JsonNode resources = content.path("resources");
-    if (!resources.isArray()) return List.of();
-    for (JsonNode resource : resources) {
-      if (!"LESSON".equals(text(resource, "kind"))) continue;
+    return studyResourcesOfKind(content, "LESSON").stream()
+        .map(
+            resource ->
+                new LessonResourceProjection(
+                    resource.id(),
+                    resource.title(),
+                    resource.outlineItemIds(),
+                    resource.availableExplanationLanguages(),
+                    resource.blocksByLanguage()))
+        .toList();
+  }
+
+  public List<StudyResourceProjection> remediations(JsonNode content) {
+    return studyResourcesOfKind(content, "REMEDIATION");
+  }
+
+  public List<StudyResourceProjection> studyResourcesOfKind(JsonNode content, String kind) {
+    List<StudyResourceProjection> resources = new ArrayList<>();
+    JsonNode nodes = content.path("resources");
+    if (!nodes.isArray()) return List.of();
+    for (JsonNode resource : nodes) {
+      if (!kind.equals(text(resource, "kind"))) continue;
       UUID id = uuid(resource.path("id"));
       if (id == null) continue;
       List<UUID> outlineItemIds = uuidArray(resource.path("outlineItemIds"));
+      List<UUID> objectiveIds = uuidArray(resource.path("objectiveIds"));
       List<String> languages = new ArrayList<>();
       Map<String, List<JsonNode>> blocksByLanguage = new LinkedHashMap<>();
       JsonNode versions = resource.path("versions");
@@ -114,11 +132,17 @@ public class PublishedPackageProjector {
           blocksByLanguage.put(language, List.copyOf(blocks));
         }
       }
-      lessons.add(
-          new LessonResourceProjection(
-              id, localized(resource.path("title")), outlineItemIds, languages, blocksByLanguage));
+      resources.add(
+          new StudyResourceProjection(
+              id,
+              kind,
+              localized(resource.path("title")),
+              outlineItemIds,
+              objectiveIds,
+              languages,
+              blocksByLanguage));
     }
-    return List.copyOf(lessons);
+    return List.copyOf(resources);
   }
 
   public List<OutlineNodeProjection> outline(
@@ -290,6 +314,11 @@ public class PublishedPackageProjector {
    * Student-safe content blocks: only contracted TEXT / MATH / IMAGE fields. Extra keys on the
    * published revision node (admin-only metadata, typos, future fields) are stripped.
    */
+  /** Public projection of a content block for assessment attempt copies and remediation bodies. */
+  public JsonNode projectBlockPublic(JsonNode block) {
+    return projectBlock(block);
+  }
+
   private JsonNode projectBlock(JsonNode block) {
     String kind = text(block, "kind");
     if (kind == null) return null;
@@ -457,6 +486,15 @@ public class PublishedPackageProjector {
       UUID id,
       LocalizedTextProjection title,
       List<UUID> outlineItemIds,
+      List<String> availableExplanationLanguages,
+      Map<String, List<JsonNode>> blocksByLanguage) {}
+
+  public record StudyResourceProjection(
+      UUID id,
+      String kind,
+      LocalizedTextProjection title,
+      List<UUID> outlineItemIds,
+      List<UUID> objectiveIds,
       List<String> availableExplanationLanguages,
       Map<String, List<JsonNode>> blocksByLanguage) {}
 }

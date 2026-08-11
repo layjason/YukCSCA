@@ -50,6 +50,10 @@ public class AcademicRevision {
     return id;
   }
 
+  public UUID getPackageId() {
+    return packageId;
+  }
+
   public long getRevisionNumber() {
     return revisionNumber;
   }
