@@ -7,7 +7,7 @@ namespace YukCSCA.AcademicStudent;
 // referenced so LESSON bodies stay aligned with publish validation without exposing drafts,
 // questions, mocks, answer keys, or admin provenance.
 
-@doc("Product coverage of an outline item from LESSON presence only. Practice/mock/checkpoint availability is out of VS-008.")
+@doc("Product coverage of an outline item from LESSON presence only. Checkpoint and practice availability are separate assessment catalog projections (VS-009).")
 enum ProductCoverage {
   FULLY_COVERED,
   PARTIALLY_COVERED,
@@ -159,6 +159,31 @@ model PublishedLessonDetail {
   contentProgress: ContentProgress;
 }
 
+@doc("Student REMEDIATION read projection for the active published revision. Same block model as LESSON; kind is always REMEDIATION.")
+model PublishedRemediationDetail {
+  packageId: YukCSCA.uuid;
+  packageRevisionId: YukCSCA.uuid;
+  subject: AcademicAdmin.AcademicSubject;
+  resourceId: YukCSCA.uuid;
+  title: AcademicAdmin.LocalizedText;
+
+  @minItems(0)
+  @maxItems(3)
+  availableExplanationLanguages: AcademicAdmin.ExplanationLanguage[];
+
+  @doc("Language requested by the client (or the language the server evaluated).")
+  requestedExplanationLanguage: AcademicAdmin.ExplanationLanguage;
+
+  body: LessonBody;
+  contentProgress: ContentProgress;
+
+  @maxItems(32)
+  outlineItemIds: YukCSCA.uuid[];
+
+  @maxItems(32)
+  objectiveIds: YukCSCA.uuid[];
+}
+
 @doc("Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource).")
 model UpsertContentProgressRequest {
   status: WritableContentProgressStatus;
@@ -214,6 +239,13 @@ model PublishedLessonResponse {
   @body body: PublishedLessonDetail;
 }
 
+model PublishedRemediationResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "no-store";
+  @header("Pragma") pragma: "no-cache";
+  @body body: PublishedRemediationDetail;
+}
+
 model ContentProgressResponse {
   @statusCode statusCode: 200;
   @header("Cache-Control") cacheControl: "no-store";
@@ -267,11 +299,43 @@ interface AcademicStudentApi {
     | YukCSCA.BadRequestResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery, checkpoint unlock, or practice evidence.")
+  @doc("Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint.")
   @put
   @route("/packages/{subject}/lessons/{resourceId}/progress")
   @useAuth(BearerAuth)
   upsertContentProgress(
+    @path subject: AcademicAdmin.AcademicSubject,
+    @path resourceId: YukCSCA.uuid,
+    @body request: UpsertContentProgressRequest,
+  ):
+    | ContentProgressResponse
+    | ContentProgressValidationResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Returns one published REMEDIATION resource with ordered TEXT/MATH/IMAGE blocks for the requested explanation language, or an explicit language-unavailable body. Missing language is never silently substituted.")
+  @get
+  @route("/packages/{subject}/remediation/{resourceId}")
+  @useAuth(BearerAuth)
+  getPublishedRemediation(
+    @path subject: AcademicAdmin.AcademicSubject,
+    @path resourceId: YukCSCA.uuid,
+    @query explanationLanguage: AcademicAdmin.ExplanationLanguage,
+  ):
+    | PublishedRemediationResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.BadRequestResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Creates or replaces the authenticated student's content progress for one REMEDIATION resource. Same status model as LESSON; content complete is corrective study evidence for revalidation eligibility, never mastery.")
+  @put
+  @route("/packages/{subject}/remediation/{resourceId}/progress")
+  @useAuth(BearerAuth)
+  upsertRemediationContentProgress(
     @path subject: AcademicAdmin.AcademicSubject,
     @path resourceId: YukCSCA.uuid,
     @body request: UpsertContentProgressRequest,

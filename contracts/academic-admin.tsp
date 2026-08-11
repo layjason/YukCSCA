@@ -45,6 +45,29 @@ enum QuestionDifficulty {
   ADVANCED,
 }
 
+@doc("Strength of a mathematical hint tier. STRONG is a full or near-full solution and counts as strong assistance for checkpoint pass and revalidation evidence rules.")
+enum HintStrength {
+  STANDARD,
+  STRONG,
+}
+
+@doc("Published assessment-set purpose. CHECKPOINT is lesson-gated formative; TOPIC_PRACTICE is free practice. Mock papers remain a separate package object.")
+enum AssessmentSetPurpose {
+  CHECKPOINT,
+  TOPIC_PRACTICE,
+}
+
+@doc("When item correctness and solution content become visible to the student.")
+enum AssessmentFeedbackMode {
+  IMMEDIATE,
+  SET_END,
+}
+
+@doc("Checkpoint pass policy. Pilot uses all-correct with no strong assistance; enum is extensible for later thresholds.")
+enum CheckpointPassPolicy {
+  ALL_CORRECT_NO_STRONG_ASSISTANCE,
+}
+
 enum ContentOrigin {
   YUKCSCA_ORIGINAL,
   LICENSED,
@@ -256,6 +279,15 @@ model QuestionOption {
   blocks: ContentBlock[];
 }
 
+@doc("One ordered mathematical hint tier. Tiers must be strictly ordered; any STRONG disclosure counts as strong assistance.")
+model HintTier {
+  strength: HintStrength;
+
+  @minItems(1)
+  @maxItems(20)
+  blocks: ContentBlock[];
+}
+
 model Question<Provenance> {
   id: YukCSCA.uuid;
   examLanguage?: ExamLanguage;
@@ -268,9 +300,61 @@ model Question<Provenance> {
   correctOptionKey?: string;
 
   explanations: LocalizedContent[];
+
+  @doc("Ordered mathematical hint ladder. Empty when no hints are authored. Chinese language-assist tiers are out of VS-009.")
+  @maxItems(8)
+  hintTiers?: HintTier[];
+
+  @doc("Optional short common-mistake notes shown after item feedback. Not a full remediation resource.")
+  @maxItems(6)
+  commonMistakeNotes?: LocalizedText[];
+
+  @doc("Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.")
+  @maxItems(8)
+  relatedResourceIds?: YukCSCA.uuid[];
+
   outlineItemIds: YukCSCA.uuid[];
   objectiveIds: YukCSCA.uuid[];
   provenance: Provenance;
+}
+
+@doc("Admin-authored assessment set bound to one exam language and an ordered question list. Materialized for students only after package publish.")
+model AssessmentSet {
+  id: YukCSCA.uuid;
+  purpose: AssessmentSetPurpose;
+  title: LocalizedText;
+  examLanguage: ExamLanguage;
+
+  @doc("Optional difficulty filter tag for TOPIC_PRACTICE catalog queries.")
+  difficulty?: QuestionDifficulty | null;
+
+  @doc("Ordered question ids. Hard max 12; CHECKPOINT recommended max 5 is soft admin guidance.")
+  @minItems(1)
+  @maxItems(12)
+  questionIds: YukCSCA.uuid[];
+
+  @maxItems(32)
+  outlineItemIds: YukCSCA.uuid[];
+
+  @maxItems(32)
+  objectiveIds: YukCSCA.uuid[];
+
+  @doc("Required when purpose is CHECKPOINT: the LESSON resource that must be content-complete before start.")
+  lessonResourceId?: YukCSCA.uuid | null;
+
+  @minValue(1)
+  @maxValue(180)
+  estimatedMinutes?: int32 | null;
+
+  @doc("Defaults to IMMEDIATE when omitted on save.")
+  feedbackMode?: AssessmentFeedbackMode;
+
+  @doc("Required for CHECKPOINT at publish. TOPIC_PRACTICE may omit.")
+  passPolicy?: CheckpointPassPolicy | null;
+
+  @doc("Preferred published REMEDIATION resource ids for the fail path. Empty means resolve by shared objective/outline.")
+  @maxItems(8)
+  remediationResourceIds?: YukCSCA.uuid[];
 }
 
 model MockQuestion {
@@ -320,6 +404,10 @@ model AcademicPackageDraftInput {
   resources: StudyResource<DraftProvenanceInput>[];
   questions: Question<DraftProvenanceInput>[];
 
+  @doc("Assessment sets (checkpoint and topic practice). Empty array when none authored.")
+  @maxItems(64)
+  assessmentSets?: AssessmentSet[];
+
   @maxItems(1)
   mocks: MockPaper[];
 }
@@ -330,6 +418,10 @@ model AcademicPackageDraft {
   learningObjectives: LearningObjective[];
   resources: StudyResource<DraftProvenanceRecord>[];
   questions: Question<DraftProvenanceRecord>[];
+
+  @doc("Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.")
+  @maxItems(64)
+  assessmentSets?: AssessmentSet[];
 
   @maxItems(1)
   mocks: MockPaperRecord[];
