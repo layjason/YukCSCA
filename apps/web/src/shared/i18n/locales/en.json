@@ -77,7 +77,9 @@
     "access": "Access",
     "more": "More",
     "backToDashboard": "Back to Dashboard",
-    "backToProfile": "Back to Profile"
+    "backToProfile": "Back to Profile",
+    "checkpoint": "Checkpoint",
+    "remediation": "Review"
   },
   "shell": {
     "navLabel": "Main navigation",
@@ -1918,6 +1920,164 @@
         "publishFailed": "Publish failed",
         "archiveFailed": "Archive failed"
       }
+    }
+  },
+  "assessment": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "starting": "Starting…",
+    "backToPractice": "Practice",
+    "backToLearn": "Learn",
+    "backToLesson": "Back to lesson",
+    "examLanguage": "Exam language",
+    "examLanguages": {
+      "en": "English",
+      "zhCN": "Chinese"
+    },
+    "purpose": {
+      "CHECKPOINT": "Checkpoint",
+      "TOPIC_PRACTICE": "Topic practice",
+      "REVALIDATION": "Revalidation"
+    },
+    "practice": {
+      "eyebrow": "Practice",
+      "title": "Practice",
+      "mistakesLink": "Mistakes",
+      "continue": "Continue",
+      "topicSets": "Topic sets",
+      "start": "Start",
+      "progress": "{{answered}} / {{total}} answered",
+      "questionCount": "{{count}} questions",
+      "minutes": "~{{minutes}} min",
+      "emptyTitle": "No practice sets yet",
+      "emptyDescription": "Published topic practice will show up here."
+    },
+    "session": {
+      "progressAria": "Question {{current}} of {{total}}",
+      "itemOf": "{{current}} / {{total}}",
+      "previous": "Previous question",
+      "next": "Next",
+      "checkAnswer": "Check",
+      "saveAnswer": "Save answer",
+      "submitSet": "Submit set",
+      "notFoundTitle": "Session not found",
+      "notFoundDescription": "This session is gone or the link is out of date.",
+      "finish": "Finish"
+    },
+    "hints": {
+      "regionLabel": "Hints",
+      "showNext": "Show hint",
+      "revealIfStuck": "Need a bigger nudge?",
+      "tier": "Hint {{n}}",
+      "revealTier": "Worked path {{n}}",
+      "exhausted": "No more hints",
+      "revalidationBlocked": "Full solution hidden on recheck",
+      "confirmTitle": "This may reveal the answer",
+      "confirmBody": "Only open this if you are really stuck. Using it can block checkpoint pass credit.",
+      "confirmCancel": "Not yet",
+      "confirmReveal": "Show me"
+    },
+    "feedback": {
+      "correct": "Correct",
+      "incorrect": "Not quite"
+    },
+    "related": {
+      "lesson": "Lesson",
+      "remediation": "Review"
+    },
+    "result": {
+      "checkpointPass": "Checkpoint passed",
+      "checkpointFail": "Keep practicing",
+      "topicScore": "Practice complete",
+      "revalidationPass": "Recheck passed",
+      "revalidationFail": "Still needs work",
+      "score": "{{correct}} / {{total}} correct",
+      "strongAssistanceNote": "A full worked path was used — independent recheck still helps.",
+      "reviewMistakes": "Review mistakes",
+      "morePractice": "More practice",
+      "backToLesson": "Back to lesson"
+    },
+    "checkpoint": {
+      "eyebrow": "Checkpoint",
+      "title": "Checkpoint",
+      "start": "Start checkpoint",
+      "lockedTitle": "Checkpoint locked",
+      "ctaReadyTitle": "Ready for a checkpoint?",
+      "ctaReadyHint": "Short check on this lesson.",
+      "ctaLockedTitle": "Checkpoint not ready",
+      "notFoundTitle": "Checkpoint unavailable",
+      "notFoundDescription": "No checkpoint is linked to this lesson right now.",
+      "lock": {
+        "LESSON_NOT_CONTENT_COMPLETE": "Finish the lesson first.",
+        "NO_CHECKPOINT_PUBLISHED": "No checkpoint published for this lesson.",
+        "NO_EXAM_LANGUAGE_EDITION": "No exam-language edition available."
+      }
+    },
+    "mistakes": {
+      "eyebrow": "Review",
+      "title": "Mistakes",
+      "detailTitle": "Mistake",
+      "backToList": "All mistakes",
+      "emptyTitle": "No mistakes yet",
+      "emptyDescription": "Wrong answers from practice will land here.",
+      "notFoundTitle": "Mistake not found",
+      "notFoundDescription": "This mistake is gone or the link is out of date.",
+      "errorCount": "{{count}}× wrong",
+      "readyToRevalidate": "Ready to recheck",
+      "annotation": "Your notes",
+      "errorCause": "Likely cause",
+      "causeNone": "Not set",
+      "privateNote": "Private note",
+      "privateNotePlaceholder": "Optional — only you see this",
+      "saveAnnotation": "Save notes",
+      "nextSteps": "Next",
+      "studyRemediation": "Study review",
+      "revalidate": "Recheck",
+      "revalidationLocked": "Study the review first, then recheck.",
+      "revalidationIneligible": "Recheck is not available yet.",
+      "status": {
+        "OPEN": "Open",
+        "REMEDIATION_IN_PROGRESS": "Studying",
+        "AWAITING_REVALIDATION": "Ready",
+        "REVALIDATION_PASSED": "Passed"
+      },
+      "causes": {
+        "CONCEPTUAL_GAP": "Concept gap",
+        "PREREQUISITE_GAP": "Prerequisite gap",
+        "TERMINOLOGY_MISUNDERSTANDING": "Terminology",
+        "CARELESSNESS": "Careless slip",
+        "TIME_MANAGEMENT": "Time pressure"
+      }
+    },
+    "remediation": {
+      "eyebrow": "Review",
+      "title": "Remediation",
+      "markComplete": "Mark review done",
+      "completeAck": "Review done — recheck when ready.",
+      "notFoundTitle": "Review not found",
+      "notFoundDescription": "This review resource is not in the active package."
+    },
+    "errors": {
+      "forbidden": "You do not have access.",
+      "unauthorized": "Sign in again to continue.",
+      "loadPractice": "Could not load practice.",
+      "loadSession": "Could not load this session.",
+      "loadResult": "Could not load the result.",
+      "loadCheckpoint": "Could not load the checkpoint.",
+      "loadMistakes": "Could not load mistakes.",
+      "loadMistake": "Could not load this mistake.",
+      "loadRemediation": "Could not load the review.",
+      "startFailed": "Could not start.",
+      "setUnavailable": "This set is not available.",
+      "answerFailed": "Could not save your answer.",
+      "hintFailed": "Could not show the hint.",
+      "submitFailed": "Could not submit the set.",
+      "saveAnnotation": "Could not save notes.",
+      "revalidationFailed": "Could not start recheck.",
+      "saveProgress": "Could not save progress.",
+      "sessionCancelled": "This session was cancelled.",
+      "invalidSession": "Invalid session link.",
+      "invalidLesson": "Invalid lesson link."
     }
   }
 }

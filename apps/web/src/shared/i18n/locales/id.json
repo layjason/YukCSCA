@@ -77,7 +77,9 @@
     "access": "Akses",
     "more": "Lainnya",
     "backToDashboard": "Kembali ke Beranda",
-    "backToProfile": "Kembali ke Profil"
+    "backToProfile": "Kembali ke Profil",
+    "checkpoint": "Checkpoint",
+    "remediation": "Ulasan"
   },
   "shell": {
     "navLabel": "Navigasi utama",
@@ -1918,6 +1920,164 @@
         "publishFailed": "Gagal menerbitkan",
         "archiveFailed": "Gagal mengarsipkan"
       }
+    }
+  },
+  "assessment": {
+    "loading": "Memuat…",
+    "retry": "Coba lagi",
+    "starting": "Memulai…",
+    "backToPractice": "Latihan",
+    "backToLearn": "Belajar",
+    "backToLesson": "Kembali ke pelajaran",
+    "examLanguage": "Bahasa ujian",
+    "examLanguages": {
+      "en": "Inggris",
+      "zhCN": "Tionghoa"
+    },
+    "purpose": {
+      "CHECKPOINT": "Checkpoint",
+      "TOPIC_PRACTICE": "Latihan topik",
+      "REVALIDATION": "Ulang cek"
+    },
+    "practice": {
+      "eyebrow": "Latihan",
+      "title": "Latihan",
+      "mistakesLink": "Kesalahan",
+      "continue": "Lanjutkan",
+      "topicSets": "Set topik",
+      "start": "Mulai",
+      "progress": "{{answered}} / {{total}} dijawab",
+      "questionCount": "{{count}} soal",
+      "minutes": "~{{minutes}} mnt",
+      "emptyTitle": "Belum ada set latihan",
+      "emptyDescription": "Latihan topik yang diterbitkan akan muncul di sini."
+    },
+    "session": {
+      "progressAria": "Soal {{current}} dari {{total}}",
+      "itemOf": "{{current}} / {{total}}",
+      "previous": "Soal sebelumnya",
+      "next": "Berikutnya",
+      "checkAnswer": "Periksa",
+      "saveAnswer": "Simpan jawaban",
+      "submitSet": "Kirim set",
+      "notFoundTitle": "Sesi tidak ditemukan",
+      "notFoundDescription": "Sesi ini hilang atau tautannya kedaluwarsa.",
+      "finish": "Selesai"
+    },
+    "hints": {
+      "regionLabel": "Petunjuk",
+      "showNext": "Tampilkan petunjuk",
+      "revealIfStuck": "Butuh dorongan lebih besar?",
+      "tier": "Petunjuk {{n}}",
+      "revealTier": "Alur kerja {{n}}",
+      "exhausted": "Tidak ada petunjuk lagi",
+      "revalidationBlocked": "Solusi penuh disembunyikan saat ulang cek",
+      "confirmTitle": "Ini mungkin mengungkap jawaban",
+      "confirmBody": "Buka hanya jika benar-benar buntu. Menggunakannya dapat memblokir kelulusan checkpoint.",
+      "confirmCancel": "Belum",
+      "confirmReveal": "Tampilkan"
+    },
+    "feedback": {
+      "correct": "Benar",
+      "incorrect": "Belum tepat"
+    },
+    "related": {
+      "lesson": "Pelajaran",
+      "remediation": "Ulasan"
+    },
+    "result": {
+      "checkpointPass": "Checkpoint lulus",
+      "checkpointFail": "Terus berlatih",
+      "topicScore": "Latihan selesai",
+      "revalidationPass": "Ulang cek lulus",
+      "revalidationFail": "Masih perlu dikerjakan",
+      "score": "{{correct}} / {{total}} benar",
+      "strongAssistanceNote": "Alur kerja penuh dipakai — ulang cek mandiri tetap membantu.",
+      "reviewMistakes": "Tinjau kesalahan",
+      "morePractice": "Latihan lain",
+      "backToLesson": "Kembali ke pelajaran"
+    },
+    "checkpoint": {
+      "eyebrow": "Checkpoint",
+      "title": "Checkpoint",
+      "start": "Mulai checkpoint",
+      "lockedTitle": "Checkpoint terkunci",
+      "ctaReadyTitle": "Siap checkpoint?",
+      "ctaReadyHint": "Cek singkat untuk pelajaran ini.",
+      "ctaLockedTitle": "Checkpoint belum siap",
+      "notFoundTitle": "Checkpoint tidak tersedia",
+      "notFoundDescription": "Tidak ada checkpoint tertaut ke pelajaran ini.",
+      "lock": {
+        "LESSON_NOT_CONTENT_COMPLETE": "Selesaikan pelajaran dulu.",
+        "NO_CHECKPOINT_PUBLISHED": "Belum ada checkpoint untuk pelajaran ini.",
+        "NO_EXAM_LANGUAGE_EDITION": "Tidak ada edisi bahasa ujian."
+      }
+    },
+    "mistakes": {
+      "eyebrow": "Ulasan",
+      "title": "Kesalahan",
+      "detailTitle": "Kesalahan",
+      "backToList": "Semua kesalahan",
+      "emptyTitle": "Belum ada kesalahan",
+      "emptyDescription": "Jawaban salah dari latihan akan muncul di sini.",
+      "notFoundTitle": "Kesalahan tidak ditemukan",
+      "notFoundDescription": "Catatan ini hilang atau tautannya kedaluwarsa.",
+      "errorCount": "{{count}}× salah",
+      "readyToRevalidate": "Siap ulang cek",
+      "annotation": "Catatanmu",
+      "errorCause": "Kemungkinan penyebab",
+      "causeNone": "Belum diisi",
+      "privateNote": "Catatan pribadi",
+      "privateNotePlaceholder": "Opsional — hanya kamu yang melihat",
+      "saveAnnotation": "Simpan catatan",
+      "nextSteps": "Langkah berikutnya",
+      "studyRemediation": "Pelajari ulasan",
+      "revalidate": "Ulang cek",
+      "revalidationLocked": "Pelajari ulasan dulu, lalu ulang cek.",
+      "revalidationIneligible": "Ulang cek belum tersedia.",
+      "status": {
+        "OPEN": "Terbuka",
+        "REMEDIATION_IN_PROGRESS": "Mempelajari",
+        "AWAITING_REVALIDATION": "Siap",
+        "REVALIDATION_PASSED": "Lulus"
+      },
+      "causes": {
+        "CONCEPTUAL_GAP": "Celan konsep",
+        "PREREQUISITE_GAP": "Prasyarat",
+        "TERMINOLOGY_MISUNDERSTANDING": "Istilah",
+        "CARELESSNESS": "Kurang teliti",
+        "TIME_MANAGEMENT": "Tekanan waktu"
+      }
+    },
+    "remediation": {
+      "eyebrow": "Ulasan",
+      "title": "Remediasi",
+      "markComplete": "Tandai ulasan selesai",
+      "completeAck": "Ulasan selesai — ulang cek saat siap.",
+      "notFoundTitle": "Ulasan tidak ditemukan",
+      "notFoundDescription": "Sumber ulasan ini tidak ada di paket aktif."
+    },
+    "errors": {
+      "forbidden": "Kamu tidak memiliki akses.",
+      "unauthorized": "Masuk lagi untuk melanjutkan.",
+      "loadPractice": "Tidak dapat memuat latihan.",
+      "loadSession": "Tidak dapat memuat sesi ini.",
+      "loadResult": "Tidak dapat memuat hasil.",
+      "loadCheckpoint": "Tidak dapat memuat checkpoint.",
+      "loadMistakes": "Tidak dapat memuat kesalahan.",
+      "loadMistake": "Tidak dapat memuat kesalahan ini.",
+      "loadRemediation": "Tidak dapat memuat ulasan.",
+      "startFailed": "Tidak dapat memulai.",
+      "setUnavailable": "Set ini tidak tersedia.",
+      "answerFailed": "Tidak dapat menyimpan jawaban.",
+      "hintFailed": "Tidak dapat menampilkan petunjuk.",
+      "submitFailed": "Tidak dapat mengirim set.",
+      "saveAnnotation": "Tidak dapat menyimpan catatan.",
+      "revalidationFailed": "Tidak dapat memulai ulang cek.",
+      "saveProgress": "Tidak dapat menyimpan progres.",
+      "sessionCancelled": "Sesi ini dibatalkan.",
+      "invalidSession": "Tautan sesi tidak valid.",
+      "invalidLesson": "Tautan pelajaran tidak valid."
     }
   }
 }
