@@ -31,6 +31,10 @@ public class AcademicDraftProcessor {
   private static final Set<String> DIFFICULTIES = Set.of("FOUNDATION", "STANDARD", "ADVANCED");
   private static final Set<String> ORIGINS = Set.of("YUKCSCA_ORIGINAL", "LICENSED", "OPEN_LICENSE");
   private static final Set<String> QUESTION_TYPES = Set.of("SINGLE_ANSWER");
+  private static final Set<String> HINT_STRENGTHS = Set.of("STANDARD", "STRONG");
+  private static final Set<String> ASSESSMENT_SET_PURPOSES = Set.of("CHECKPOINT", "TOPIC_PRACTICE");
+  private static final Set<String> FEEDBACK_MODES = Set.of("IMMEDIATE", "SET_END");
+  private static final Set<String> PASS_POLICIES = Set.of("ALL_CORRECT_NO_STRONG_ASSISTANCE");
 
   private final JsonMapper json;
 
@@ -58,6 +62,7 @@ public class AcademicDraftProcessor {
     draft.putArray("learningObjectives");
     draft.putArray("resources");
     draft.putArray("questions");
+    draft.putArray("assessmentSets");
     draft.putArray("mocks");
     return serialize(draft);
   }
@@ -99,6 +104,11 @@ public class AcademicDraftProcessor {
         List.of("outlineItems", "learningObjectives", "resources", "questions", "mocks")) {
       requireArray(submittedObject, field, "draft." + field, violations);
     }
+    // assessmentSets is additive: omit means empty; if present must be an array.
+    if (submittedObject.has("assessmentSets")
+        && !submittedObject.path("assessmentSets").isArray()) {
+      violations.add(new AcademicViolation("draft.assessmentSets", AcademicViolationCode.INVALID));
+    }
     JsonNode mocks = submittedObject.get("mocks");
     if (mocks != null && mocks.isArray() && mocks.size() > 1) {
       violations.add(new AcademicViolation("draft.mocks", AcademicViolationCode.OUT_OF_RANGE));
@@ -107,6 +117,9 @@ public class AcademicDraftProcessor {
     if (!violations.isEmpty()) throw new AcademicValidationException(violations);
 
     ObjectNode normalized = submittedObject.deepCopy();
+    if (!normalized.has("assessmentSets") || !normalized.path("assessmentSets").isArray()) {
+      normalized.putArray("assessmentSets");
+    }
     // Package identity owns subject; drafts cannot reassign a package to another subject.
     ObjectNode syllabus =
         normalized.get("officialSyllabus") instanceof ObjectNode existing
@@ -147,7 +160,7 @@ public class AcademicDraftProcessor {
         validateObjectives(draft.path("learningObjectives"), outlineIds, violations);
     validateResources(
         draft.path("resources"), outlineIds, objectiveIds, availableImageIds, violations);
-    Map<UUID, String> questionLanguages =
+    Map<UUID, QuestionSnapshot> questions =
         validateQuestions(
             draft.path("questions"),
             outlineIds,
@@ -155,6 +168,15 @@ public class AcademicDraftProcessor {
             availableImageIds,
             structure,
             violations);
+    Set<UUID> resourceIds = uniqueIds(draft.path("resources"), "draft.resources", violations);
+    Map<UUID, String> resourceKinds = resourceKinds(draft.path("resources"));
+    validateQuestionRelatedResources(draft.path("questions"), resourceIds, violations);
+    validateAssessmentSets(
+        draft.path("assessmentSets"), questions, resourceIds, resourceKinds, violations);
+    Map<UUID, String> questionLanguages = new HashMap<>();
+    for (Map.Entry<UUID, QuestionSnapshot> entry : questions.entrySet()) {
+      questionLanguages.put(entry.getKey(), entry.getValue().examLanguage());
+    }
     validateMock(draft.path("mocks"), questionLanguages, structure, violations);
     if (!violations.isEmpty()) throw new AcademicValidationException(violations);
   }
@@ -164,6 +186,7 @@ public class AcademicDraftProcessor {
     validateItemShape(draft.path("learningObjectives"), "draft.learningObjectives", violations);
     validateItemShape(draft.path("resources"), "draft.resources", violations);
     validateItemShape(draft.path("questions"), "draft.questions", violations);
+    validateItemShape(draft.path("assessmentSets"), "draft.assessmentSets", violations);
     validateItemShape(draft.path("mocks"), "draft.mocks", violations);
   }
 
@@ -343,7 +366,7 @@ public class AcademicDraftProcessor {
     }
   }
 
-  private Map<UUID, String> validateQuestions(
+  private Map<UUID, QuestionSnapshot> validateQuestions(
       JsonNode questions,
       Set<UUID> outlineIds,
       Set<UUID> objectiveIds,
@@ -351,12 +374,15 @@ public class AcademicDraftProcessor {
       ExamStructureSnapshot structure,
       List<AcademicViolation> violations) {
     uniqueIds(questions, "draft.questions", violations);
-    Map<UUID, String> languages = new HashMap<>();
+    Map<UUID, QuestionSnapshot> snapshots = new HashMap<>();
     int requiredCount = structure == null ? 1 : structure.questionCount();
     if (!questions.isArray() || questions.size() < requiredCount) {
       violations.add(new AcademicViolation("draft.questions", AcademicViolationCode.OUT_OF_RANGE));
-      return languages;
+      return snapshots;
     }
+    Set<UUID> allResourceIds = new HashSet<>();
+    // Resource ids collected after resources validated; relatedResourceIds checked in a second pass
+    // via assessment set / question related ids against resource set later if needed.
     for (int index = 0; index < questions.size(); index++) {
       JsonNode question = questions.get(index);
       String path = "draft.questions[" + index + "]";
@@ -365,8 +391,6 @@ public class AcademicDraftProcessor {
       if (!EXAM_LANGUAGES.contains(language)) {
         violations.add(
             new AcademicViolation(path + ".examLanguage", AcademicViolationCode.UNSUPPORTED));
-      } else if (id != null) {
-        languages.put(id, language);
       }
       if (!DIFFICULTIES.contains(text(question, "difficulty"))) {
         violations.add(
@@ -402,10 +426,307 @@ public class AcademicDraftProcessor {
           question.path("outlineItemIds"), outlineIds, path + ".outlineItemIds", violations);
       validateReferences(
           question.path("objectiveIds"), objectiveIds, path + ".objectiveIds", violations);
+      validateHintTiers(question.path("hintTiers"), path + ".hintTiers", imageIds, violations);
+      validateOptionalLocalizedTextArray(
+          question.path("commonMistakeNotes"), path + ".commonMistakeNotes", 6, violations);
+      validateOptionalResourceIdArray(
+          question.path("relatedResourceIds"),
+          path + ".relatedResourceIds",
+          8,
+          allResourceIds,
+          violations);
       validateProvenance(question.path("provenance"), path + ".provenance", violations);
+      if (id != null && language != null && EXAM_LANGUAGES.contains(language)) {
+        snapshots.put(
+            id,
+            new QuestionSnapshot(
+                language,
+                text(question, "difficulty"),
+                uuidList(question.path("outlineItemIds")),
+                uuidList(question.path("objectiveIds"))));
+      }
     }
-    return languages;
+    return snapshots;
   }
+
+  private void validateHintTiers(
+      JsonNode hintTiers, String path, Set<UUID> imageIds, List<AcademicViolation> violations) {
+    if (hintTiers == null || hintTiers.isMissingNode() || hintTiers.isNull()) {
+      return;
+    }
+    if (!hintTiers.isArray()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+      return;
+    }
+    if (hintTiers.size() > 8) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    // Strict order: STANDARD tiers first, then trailing STRONG only. STANDARD after STRONG fails.
+    boolean sawStrong = false;
+    for (int index = 0; index < hintTiers.size(); index++) {
+      JsonNode tier = hintTiers.get(index);
+      String tierPath = path + "[" + index + "]";
+      if (!tier.isObject()) {
+        violations.add(new AcademicViolation(tierPath, AcademicViolationCode.INVALID));
+        continue;
+      }
+      String strength = text(tier, "strength");
+      if (!HINT_STRENGTHS.contains(strength)) {
+        violations.add(
+            new AcademicViolation(tierPath + ".strength", AcademicViolationCode.UNSUPPORTED));
+      } else if ("STRONG".equals(strength)) {
+        sawStrong = true;
+      } else if (sawStrong) {
+        violations.add(
+            new AcademicViolation(tierPath + ".strength", AcademicViolationCode.INCOMPATIBLE));
+      }
+      validateBlocks(tier.path("blocks"), tierPath + ".blocks", imageIds, violations);
+    }
+  }
+
+  private void validateOptionalLocalizedTextArray(
+      JsonNode values, String path, int maxItems, List<AcademicViolation> violations) {
+    if (values == null || values.isMissingNode() || values.isNull()) {
+      return;
+    }
+    if (!values.isArray()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+      return;
+    }
+    if (values.size() > maxItems) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    for (int index = 0; index < values.size(); index++) {
+      validateLocalizedText(values.get(index), path + "[" + index + "]", violations);
+    }
+  }
+
+  private void validateOptionalResourceIdArray(
+      JsonNode values,
+      String path,
+      int maxItems,
+      Set<UUID> knownResourceIds,
+      List<AcademicViolation> violations) {
+    if (values == null || values.isMissingNode() || values.isNull()) {
+      return;
+    }
+    if (!values.isArray()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+      return;
+    }
+    if (values.size() > maxItems) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    Set<UUID> unique = new HashSet<>();
+    for (int index = 0; index < values.size(); index++) {
+      UUID id = parseUuid(values.get(index).asText());
+      if (id == null) {
+        violations.add(
+            new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.INVALID));
+      } else if (!unique.add(id)) {
+        violations.add(
+            new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.DUPLICATE));
+      } else if (!knownResourceIds.isEmpty() && !knownResourceIds.contains(id)) {
+        violations.add(
+            new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.INCOMPATIBLE));
+      }
+    }
+  }
+
+  private void validateQuestionRelatedResources(
+      JsonNode questions, Set<UUID> resourceIds, List<AcademicViolation> violations) {
+    if (!questions.isArray()) return;
+    for (int index = 0; index < questions.size(); index++) {
+      JsonNode related = questions.get(index).path("relatedResourceIds");
+      if (related == null || related.isMissingNode() || related.isNull()) continue;
+      if (!related.isArray()) continue;
+      for (int r = 0; r < related.size(); r++) {
+        UUID id = parseUuid(related.get(r).asText());
+        if (id != null && !resourceIds.contains(id)) {
+          violations.add(
+              new AcademicViolation(
+                  "draft.questions[" + index + "].relatedResourceIds[" + r + "]",
+                  AcademicViolationCode.INCOMPATIBLE));
+        }
+      }
+    }
+  }
+
+  private void validateAssessmentSets(
+      JsonNode assessmentSets,
+      Map<UUID, QuestionSnapshot> questions,
+      Set<UUID> resourceIds,
+      Map<UUID, String> resourceKinds,
+      List<AcademicViolation> violations) {
+    if (assessmentSets == null || assessmentSets.isMissingNode() || assessmentSets.isNull()) {
+      return;
+    }
+    if (!assessmentSets.isArray()) {
+      violations.add(new AcademicViolation("draft.assessmentSets", AcademicViolationCode.INVALID));
+      return;
+    }
+    if (assessmentSets.size() > 64) {
+      violations.add(
+          new AcademicViolation("draft.assessmentSets", AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    uniqueIds(assessmentSets, "draft.assessmentSets", violations);
+    // Re-validate question relatedResourceIds now that resource ids are known.
+    // (Snapshot path does not carry those ids; callers validate questions first.)
+    for (int index = 0; index < assessmentSets.size(); index++) {
+      JsonNode set = assessmentSets.get(index);
+      String path = "draft.assessmentSets[" + index + "]";
+      if (!set.isObject()) {
+        violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+        continue;
+      }
+      String purpose = text(set, "purpose");
+      if (!ASSESSMENT_SET_PURPOSES.contains(purpose)) {
+        violations.add(new AcademicViolation(path + ".purpose", AcademicViolationCode.UNSUPPORTED));
+      }
+      validateLocalizedText(set.path("title"), path + ".title", violations);
+      String examLanguage = text(set, "examLanguage");
+      if (!EXAM_LANGUAGES.contains(examLanguage)) {
+        violations.add(
+            new AcademicViolation(path + ".examLanguage", AcademicViolationCode.UNSUPPORTED));
+      }
+      String difficulty = text(set, "difficulty");
+      if (difficulty != null && !DIFFICULTIES.contains(difficulty)) {
+        violations.add(
+            new AcademicViolation(path + ".difficulty", AcademicViolationCode.UNSUPPORTED));
+      }
+      JsonNode questionIds = set.path("questionIds");
+      if (!questionIds.isArray() || questionIds.isEmpty() || questionIds.size() > 12) {
+        violations.add(
+            new AcademicViolation(path + ".questionIds", AcademicViolationCode.OUT_OF_RANGE));
+      } else {
+        Set<UUID> unique = new HashSet<>();
+        for (int q = 0; q < questionIds.size(); q++) {
+          UUID qid = parseUuid(questionIds.get(q).asText());
+          String qPath = path + ".questionIds[" + q + "]";
+          if (qid == null || !questions.containsKey(qid)) {
+            violations.add(new AcademicViolation(qPath, AcademicViolationCode.INCOMPATIBLE));
+          } else if (!unique.add(qid)) {
+            violations.add(new AcademicViolation(qPath, AcademicViolationCode.DUPLICATE));
+          } else if (examLanguage != null
+              && !examLanguage.equals(questions.get(qid).examLanguage())) {
+            violations.add(new AcademicViolation(qPath, AcademicViolationCode.INCOMPATIBLE));
+          }
+        }
+      }
+      if ("CHECKPOINT".equals(purpose)) {
+        UUID lessonId = parseUuid(text(set, "lessonResourceId"));
+        if (lessonId == null) {
+          violations.add(
+              new AcademicViolation(path + ".lessonResourceId", AcademicViolationCode.REQUIRED));
+        } else if (!"LESSON".equals(resourceKinds.get(lessonId))) {
+          violations.add(
+              new AcademicViolation(
+                  path + ".lessonResourceId", AcademicViolationCode.INCOMPATIBLE));
+        }
+        String passPolicy = text(set, "passPolicy");
+        if (passPolicy == null) {
+          violations.add(
+              new AcademicViolation(path + ".passPolicy", AcademicViolationCode.REQUIRED));
+        } else if (!PASS_POLICIES.contains(passPolicy)) {
+          violations.add(
+              new AcademicViolation(path + ".passPolicy", AcademicViolationCode.UNSUPPORTED));
+        }
+      } else if (set.hasNonNull("lessonResourceId")) {
+        UUID lessonId = parseUuid(text(set, "lessonResourceId"));
+        if (lessonId != null && !"LESSON".equals(resourceKinds.get(lessonId))) {
+          violations.add(
+              new AcademicViolation(
+                  path + ".lessonResourceId", AcademicViolationCode.INCOMPATIBLE));
+        }
+      }
+      String feedbackMode = text(set, "feedbackMode");
+      if (feedbackMode != null && !FEEDBACK_MODES.contains(feedbackMode)) {
+        violations.add(
+            new AcademicViolation(path + ".feedbackMode", AcademicViolationCode.UNSUPPORTED));
+      }
+      if (set.has("estimatedMinutes")
+          && !set.path("estimatedMinutes").isNull()
+          && set.path("estimatedMinutes").canConvertToInt()) {
+        int minutes = set.path("estimatedMinutes").asInt();
+        if (minutes < 1 || minutes > 180) {
+          violations.add(
+              new AcademicViolation(
+                  path + ".estimatedMinutes", AcademicViolationCode.OUT_OF_RANGE));
+        }
+      }
+      validateOptionalUuidRefs(
+          set.path("outlineItemIds"), path + ".outlineItemIds", 32, violations);
+      validateOptionalUuidRefs(set.path("objectiveIds"), path + ".objectiveIds", 32, violations);
+      JsonNode remediationIds = set.path("remediationResourceIds");
+      if (remediationIds != null && !remediationIds.isMissingNode() && !remediationIds.isNull()) {
+        if (!remediationIds.isArray() || remediationIds.size() > 8) {
+          violations.add(
+              new AcademicViolation(
+                  path + ".remediationResourceIds", AcademicViolationCode.OUT_OF_RANGE));
+        } else {
+          Set<UUID> unique = new HashSet<>();
+          for (int r = 0; r < remediationIds.size(); r++) {
+            UUID rid = parseUuid(remediationIds.get(r).asText());
+            String rPath = path + ".remediationResourceIds[" + r + "]";
+            if (rid == null || !resourceIds.contains(rid)) {
+              violations.add(new AcademicViolation(rPath, AcademicViolationCode.INCOMPATIBLE));
+            } else if (!"REMEDIATION".equals(resourceKinds.get(rid))) {
+              violations.add(new AcademicViolation(rPath, AcademicViolationCode.INCOMPATIBLE));
+            } else if (!unique.add(rid)) {
+              violations.add(new AcademicViolation(rPath, AcademicViolationCode.DUPLICATE));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private void validateOptionalUuidRefs(
+      JsonNode values, String path, int maxItems, List<AcademicViolation> violations) {
+    if (values == null || values.isMissingNode() || values.isNull()) {
+      return;
+    }
+    if (!values.isArray() || values.size() > maxItems) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    for (int index = 0; index < values.size(); index++) {
+      if (parseUuid(values.get(index).asText()) == null) {
+        violations.add(
+            new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.INVALID));
+      }
+    }
+  }
+
+  private static Map<UUID, String> resourceKinds(JsonNode resources) {
+    Map<UUID, String> kinds = new HashMap<>();
+    if (!resources.isArray()) return kinds;
+    for (JsonNode resource : resources) {
+      UUID id = parseUuid(text(resource, "id"));
+      String kind = text(resource, "kind");
+      if (id != null && kind != null) {
+        kinds.put(id, kind);
+      }
+    }
+    return kinds;
+  }
+
+  private static List<UUID> uuidList(JsonNode values) {
+    List<UUID> ids = new ArrayList<>();
+    if (!values.isArray()) return ids;
+    for (JsonNode value : values) {
+      UUID id = parseUuid(value.asText());
+      if (id != null) ids.add(id);
+    }
+    return List.copyOf(ids);
+  }
+
+  private record QuestionSnapshot(
+      String examLanguage, String difficulty, List<UUID> outlineItemIds, List<UUID> objectiveIds) {}
 
   private void validateMock(
       JsonNode mocks,

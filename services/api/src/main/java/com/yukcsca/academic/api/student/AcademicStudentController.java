@@ -78,6 +78,36 @@ public class AcademicStudentController {
             request.expectedPackageRevisionId()));
   }
 
+  @GetMapping("/packages/{subject}/remediation/{resourceId}")
+  public PublishedRemediationResponse getPublishedRemediation(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable String subject,
+      @PathVariable UUID resourceId,
+      @RequestParam String explanationLanguage,
+      HttpServletResponse response) {
+    noStore(response);
+    return PublishedRemediationResponse.from(
+        academic.getPublishedRemediation(actor(jwt), subject, resourceId, explanationLanguage));
+  }
+
+  @PutMapping("/packages/{subject}/remediation/{resourceId}/progress")
+  public ContentProgressResponse upsertRemediationContentProgress(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable String subject,
+      @PathVariable UUID resourceId,
+      @Valid @RequestBody UpsertContentProgressRequest request,
+      HttpServletResponse response) {
+    noStore(response);
+    return ContentProgressResponse.from(
+        academic.upsertRemediationContentProgress(
+            actor(jwt),
+            subject,
+            resourceId,
+            request.status(),
+            request.resumeBlockIndex(),
+            request.expectedPackageRevisionId()));
+  }
+
   @GetMapping("/images/{imageId}")
   public ResponseEntity<byte[]> getPublishedAcademicImage(
       @AuthenticationPrincipal Jwt jwt, @PathVariable UUID imageId) {
