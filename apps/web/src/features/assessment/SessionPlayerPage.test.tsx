@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/i18n';
+import { ApiError } from '@/shared/api/httpClient';
 import * as api from './api/assessmentApi';
 import SessionPlayerPage from './SessionPlayerPage';
 import type { AssessmentSession, SessionItemView, SessionResult } from './types';
@@ -173,4 +174,24 @@ test('handleLock maps answer failure separately from finish submit failure', asy
   );
   expect(answer).toHaveBeenCalled();
   expect(submit).not.toHaveBeenCalled();
+});
+
+test('cancelled session 409 shows a specific recovery path', async () => {
+  vi.spyOn(api, 'getAssessmentSession').mockRejectedValue(
+    new ApiError(409, {
+      title: 'Cancelled',
+      code: 'SESSION_NOT_RESUMABLE',
+      detail: 'Cancelled sessions cannot be resumed.',
+    }),
+  );
+
+  renderPlayer();
+
+  expect(
+    await screen.findByText(/this session was cancelled|sesi ini dibatalkan|会话已取消/i),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /practice|latihan|练习/i })).toHaveAttribute(
+    'href',
+    '/app/practice',
+  );
 });

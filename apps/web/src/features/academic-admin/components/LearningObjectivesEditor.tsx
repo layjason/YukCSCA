@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { selectionAfterDeleteId } from '../listSelection';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import { useAdminNotify } from '../adminNotify';
 import type { LearningObjective, SyllabusOutlineItem } from '../types';
 
 interface LearningObjectivesEditorProps {
@@ -20,6 +21,7 @@ export function LearningObjectivesEditor({
   onChange,
 }: LearningObjectivesEditorProps): React.JSX.Element {
   const { t } = useTranslation();
+  const notify = useAdminNotify();
   const [selectedId, setSelectedId] = useState<string | null>(objectives[0]?.id || null);
   const selected = objectives.find((item) => item.id === selectedId) || objectives[0];
 
@@ -36,6 +38,10 @@ export function LearningObjectivesEditor({
     };
     onChange([...objectives, created]);
     setSelectedId(created.id);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.objective') }),
+      'success',
+    );
   };
 
   const handleDelete = (id: string) => {
@@ -48,6 +54,10 @@ export function LearningObjectivesEditor({
     if (selectedId === id || selected?.id === id) {
       setSelectedId(nextSelectedId);
     }
+    notify(
+      t('admin.academic.toasts.removed', { name: t('admin.academic.toasts.names.objective') }),
+      'error',
+    );
   };
 
   const outlineLabel = (id: string) => {
@@ -65,13 +75,15 @@ export function LearningObjectivesEditor({
   return (
     <div className="admin-split-editor">
       <div className="admin-split-sidebar">
-        <div className="admin-split-sidebar-header">
+        <div className="admin-split-sidebar-header admin-split-sidebar-header-stack">
           <h3 className="admin-sidebar-title">
             {t('admin.academic.objectives.title')} ({objectives.length})
           </h3>
-          <button type="button" className="btn-secondary admin-btn-compact" onClick={handleAdd}>
-            + {t('admin.academic.objectives.addObjective')}
-          </button>
+          <div className="admin-equal-actions" data-count="1">
+            <button type="button" className="btn-secondary admin-btn-compact" onClick={handleAdd}>
+              + {t('admin.academic.objectives.addObjective')}
+            </button>
+          </div>
         </div>
 
         {objectives.length === 0 ? (
@@ -142,7 +154,7 @@ export function LearningObjectivesEditor({
                 type="button"
                 className="btn-secondary admin-btn-compact"
                 disabled={outlineItems.length === 0}
-                onClick={() =>
+                onClick={() => {
                   update({
                     ...selected,
                     mappings: [
@@ -152,8 +164,14 @@ export function LearningObjectivesEditor({
                         rationale: '',
                       },
                     ],
-                  })
-                }
+                  });
+                  notify(
+                    t('admin.academic.toasts.added', {
+                      name: t('admin.academic.toasts.names.mapping'),
+                    }),
+                    'success',
+                  );
+                }}
               >
                 + {t('admin.academic.objectives.addMapping')}
               </button>
@@ -211,12 +229,18 @@ export function LearningObjectivesEditor({
                 {selected.mappings.length > 1 ? (
                   <AdminRemoveButton
                     label={t('admin.academic.objectives.removeMapping')}
-                    onClick={() =>
+                    onClick={() => {
                       update({
                         ...selected,
                         mappings: selected.mappings.filter((_, i) => i !== index),
-                      })
-                    }
+                      });
+                      notify(
+                        t('admin.academic.toasts.removed', {
+                          name: t('admin.academic.toasts.names.mapping'),
+                        }),
+                        'error',
+                      );
+                    }}
                   />
                 ) : null}
               </div>

@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BookOpen, RefreshCw, Wrench } from 'lucide-react';
+import { BookOpen, RefreshCw, Wrench } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
-import { getMistake, startRevalidation, updateMistakeAnnotation } from './api/assessmentApi';
+import {
+  getMistake,
+  listAssessmentSessions,
+  startRevalidation,
+  updateMistakeAnnotation,
+} from './api/assessmentApi';
+import { matchingInProgressSession } from './sessionResume';
+import { anyAssistanceUsed, mistakeNextAction } from './assessmentPolicy';
 import { AssessmentBlocks } from './components/AssessmentBlocks';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { OptionRadiogroup } from './components/OptionRadiogroup';
@@ -24,6 +31,7 @@ export function MistakeDetailPage(): React.JSX.Element {
   const [notFound, setNotFound] = useState(false);
   const [note, setNote] = useState('');
   const [cause, setCause] = useState<ErrorCause | ''>('');
+  const [inProgressSessionId, setInProgressSessionId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!mistakeId) return;
@@ -31,10 +39,19 @@ export function MistakeDetailPage(): React.JSX.Element {
     setError(null);
     setNotFound(false);
     try {
-      const data = await getMistake(mistakeId);
+      const [data, inProgress] = await Promise.all([
+        getMistake(mistakeId),
+        listAssessmentSessions({ status: 'IN_PROGRESS' }).catch(() => []),
+      ]);
       setMistake(data);
       setNote(data.privateNote ?? '');
       setCause(data.errorCause ?? '');
+      setInProgressSessionId(
+        matchingInProgressSession(inProgress, {
+          purpose: 'REVALIDATION',
+          mistakeId,
+        })?.sessionId ?? null,
+      );
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
@@ -135,16 +152,33 @@ export function MistakeDetailPage(): React.JSX.Element {
     mistake.remediationCandidates.find((c) => c.preferred && c.kind === 'REMEDIATION') ??
     mistake.remediationCandidates.find((c) => c.kind === 'REMEDIATION') ??
     mistake.remediationCandidates.find((c) => c.kind === 'LESSON');
+  const nextAction = mistakeNextAction(
+    mistake.status,
+    mistake.revalidationEligible,
+    inProgressSessionId != null,
+  );
+  const remediationHref = preferredRemediation
+    ? preferredRemediation.kind === 'REMEDIATION'
+      ? `/app/learn/${mistake.subject}/remediation/${preferredRemediation.resourceId}?mistakeId=${mistake.mistakeId}`
+      : `/app/learn/${mistake.subject}/lessons/${preferredRemediation.resourceId}?mistakeId=${mistake.mistakeId}`
+    : null;
+  const remediationLabel =
+    preferredRemediation != null
+      ? resolveLocalizedText(preferredRemediation.title, i18n.language) ||
+        t('assessment.mistakes.studyRemediation')
+      : t('assessment.mistakes.studyRemediation');
 
   return (
     <div className="page-content assessment-page mistake-detail">
-      <Link to="/app/practice/mistakes" className="learn-back-link">
-        <ArrowLeft size={18} aria-hidden="true" />
+      <Link to="/app/practice/mistakes" className="back-btn">
+        <span className="back-arrow" aria-hidden="true">
+          ←
+        </span>
         {t('assessment.mistakes.backToList')}
       </Link>
 
       <header className="assessment-hero assessment-hero-sky">
-        <span className={`assessment-chip status-${mistake.status.toLowerCase()}`}>
+        <span className={`assessment-status status-${mistake.status.toLowerCase()}`}>
           {t(`assessment.mistakes.status.${mistake.status}`)}
         </span>
         <h1>{t('assessment.mistakes.detailTitle')}</h1>
@@ -156,106 +190,131 @@ export function MistakeDetailPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <section className="assessment-item-card">
-        <div className="assessment-stem">
-          <AssessmentBlocks blocks={mistake.attemptQuestion.stem} />
-        </div>
-        <OptionRadiogroup
-          options={mistake.attemptQuestion.options}
-          name="mistake-attempt"
-          value={mistake.latestResponse.selectedOptionKey}
-          onChange={() => undefined}
-          disabled
-          showCorrectness
-          correctKey={mistake.latestResponse.correctOptionKey}
-          selectedKey={mistake.latestResponse.selectedOptionKey}
-        />
-        {mistake.latestResponse.feedback ? (
-          <FeedbackPanel
-            feedback={mistake.latestResponse.feedback}
-            subject={mistake.subject}
-            interfaceLanguage={i18n.language}
+      <div className="mistake-detail-layout">
+        <section className="assessment-item-card">
+          <div className="assessment-stem">
+            <AssessmentBlocks blocks={mistake.attemptQuestion.stem} />
+          </div>
+          <OptionRadiogroup
+            options={mistake.attemptQuestion.options}
+            name="mistake-attempt"
+            value={mistake.latestResponse.selectedOptionKey}
+            onChange={() => undefined}
+            disabled
+            showCorrectness
+            correctKey={mistake.latestResponse.correctOptionKey}
+            selectedKey={mistake.latestResponse.selectedOptionKey}
           />
-        ) : null}
-      </section>
-
-      <section className="assessment-section">
-        <h2 className="assessment-section-title">{t('assessment.mistakes.annotation')}</h2>
-        <label className="assessment-field">
-          <span className="assessment-field-label">{t('assessment.mistakes.errorCause')}</span>
-          <select
-            value={cause}
-            onChange={(e) => setCause(e.target.value as ErrorCause | '')}
-            disabled={busy}
-          >
-            <option value="">{t('assessment.mistakes.causeNone')}</option>
-            {ERROR_CAUSES.map((c) => (
-              <option key={c} value={c}>
-                {t(`assessment.mistakes.causes.${c}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="assessment-field">
-          <span className="assessment-field-label">{t('assessment.mistakes.privateNote')}</span>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            maxLength={2000}
-            disabled={busy}
-            placeholder={t('assessment.mistakes.privateNotePlaceholder')}
-          />
-        </label>
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={busy}
-          onClick={() => void handleSaveAnnotation()}
-        >
-          {t('assessment.mistakes.saveAnnotation')}
-        </button>
-      </section>
-
-      <section className="assessment-section">
-        <h2 className="assessment-section-title">{t('assessment.mistakes.nextSteps')}</h2>
-        <div className="assessment-result-actions">
-          {preferredRemediation ? (
-            <Link
-              to={
-                preferredRemediation.kind === 'REMEDIATION'
-                  ? `/app/learn/${mistake.subject}/remediation/${preferredRemediation.resourceId}?mistakeId=${mistake.mistakeId}`
-                  : `/app/learn/${mistake.subject}/lessons/${preferredRemediation.resourceId}`
-              }
-              className="btn-primary"
-            >
-              {preferredRemediation.kind === 'REMEDIATION' ? (
-                <Wrench size={18} aria-hidden="true" />
-              ) : (
-                <BookOpen size={18} aria-hidden="true" />
-              )}
-              {resolveLocalizedText(preferredRemediation.title, i18n.language) ||
-                t('assessment.mistakes.studyRemediation')}
-            </Link>
+          {mistake.latestResponse.feedback ? (
+            <FeedbackPanel
+              feedback={mistake.latestResponse.feedback}
+              subject={mistake.subject}
+              interfaceLanguage={i18n.language}
+              assistanceUsed={anyAssistanceUsed(mistake.assistanceSummary)}
+            />
           ) : null}
-          {mistake.revalidationEligible ? (
+        </section>
+
+        <div className="mistake-detail-side">
+          <section className="assessment-section">
+            <h2 className="assessment-section-title">{t('assessment.mistakes.annotation')}</h2>
+            <label className="assessment-field">
+              <span className="assessment-field-label">{t('assessment.mistakes.errorCause')}</span>
+              <select
+                value={cause}
+                onChange={(e) => setCause(e.target.value as ErrorCause | '')}
+                disabled={busy}
+              >
+                <option value="">{t('assessment.mistakes.causeNone')}</option>
+                {ERROR_CAUSES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`assessment.mistakes.causes.${c}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="assessment-field">
+              <span className="assessment-field-label">{t('assessment.mistakes.privateNote')}</span>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                maxLength={2000}
+                disabled={busy}
+                placeholder={t('assessment.mistakes.privateNotePlaceholder')}
+              />
+            </label>
             <button
               type="button"
-              className="btn-primary"
+              className="btn-secondary"
               disabled={busy}
-              onClick={() => void handleRevalidate()}
-              aria-busy={busy}
+              onClick={() => void handleSaveAnnotation()}
             >
-              <RefreshCw size={18} aria-hidden="true" />
-              {t('assessment.mistakes.revalidate')}
+              {t('assessment.mistakes.saveAnnotation')}
             </button>
-          ) : (
-            <p className="assessment-card-meta" role="status">
-              {t('assessment.mistakes.revalidationLocked')}
-            </p>
-          )}
+          </section>
+
+          <section className="assessment-section">
+            <h2 className="assessment-section-title">{t('assessment.mistakes.nextSteps')}</h2>
+            <div className="assessment-result-actions">
+              {nextAction === 'already_passed' ? (
+                <>
+                  <p className="assessment-card-meta" role="status">
+                    {t('assessment.mistakes.alreadyPassed')}
+                  </p>
+                  {remediationHref && preferredRemediation ? (
+                    <Link to={remediationHref} className="btn-secondary">
+                      {preferredRemediation.kind === 'REMEDIATION' ? (
+                        <Wrench size={18} aria-hidden="true" />
+                      ) : (
+                        <BookOpen size={18} aria-hidden="true" />
+                      )}
+                      {t('assessment.mistakes.reviewAgain')}
+                    </Link>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  {remediationHref && preferredRemediation ? (
+                    <Link to={remediationHref} className="btn-primary">
+                      {preferredRemediation.kind === 'REMEDIATION' ? (
+                        <Wrench size={18} aria-hidden="true" />
+                      ) : (
+                        <BookOpen size={18} aria-hidden="true" />
+                      )}
+                      {remediationLabel}
+                    </Link>
+                  ) : null}
+                  {nextAction === 'continue_revalidation' && inProgressSessionId ? (
+                    <Link
+                      to={`/app/practice/sessions/${inProgressSessionId}`}
+                      className="btn-primary"
+                    >
+                      <RefreshCw size={18} aria-hidden="true" />
+                      {t('assessment.mistakes.continueRevalidation')}
+                    </Link>
+                  ) : nextAction === 'start_revalidation' ? (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={busy}
+                      onClick={() => void handleRevalidate()}
+                      aria-busy={busy}
+                    >
+                      <RefreshCw size={18} aria-hidden="true" />
+                      {t('assessment.mistakes.revalidate')}
+                    </button>
+                  ) : (
+                    <p className="assessment-card-meta" role="status">
+                      {t('assessment.mistakes.revalidationLocked')}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

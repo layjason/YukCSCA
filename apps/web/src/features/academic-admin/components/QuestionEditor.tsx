@@ -10,6 +10,7 @@ import { ContentBlockEditor } from './ContentBlockEditor';
 import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import { useAdminNotify } from '../adminNotify';
 import type {
   LearningObjective,
   Question,
@@ -17,12 +18,15 @@ import type {
   ContentBlock,
   TextContentBlock,
   MathContentBlock,
+  StudyResource,
+  HintTier,
 } from '../types';
 
 interface QuestionEditorProps {
   questions: Question[];
   outlineItems: SyllabusOutlineItem[];
   objectives: LearningObjective[];
+  resources?: StudyResource[];
   onChange: (updated: Question[]) => void;
   disabled?: boolean;
 }
@@ -71,10 +75,12 @@ export function QuestionEditor({
   questions,
   outlineItems,
   objectives,
+  resources = [],
   onChange,
   disabled = false,
 }: QuestionEditorProps): React.JSX.Element {
   const { t } = useTranslation();
+  const notify = useAdminNotify();
   const [selectedId, setSelectedId] = useState<string | null>(questions[0]?.id || null);
 
   const selectedQuestion = questions.find((q) => q.id === selectedId) || questions[0];
@@ -84,6 +90,10 @@ export function QuestionEditor({
     const newQuestion = createEmptyQuestion(outlineItems, objectives);
     onChange([...questions, newQuestion]);
     setSelectedId(newQuestion.id);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.question') }),
+      'success',
+    );
   };
 
   const handleDuplicateQuestion = () => {
@@ -94,6 +104,10 @@ export function QuestionEditor({
     next.splice(sourceIndex >= 0 ? sourceIndex + 1 : next.length, 0, clone);
     onChange(next);
     setSelectedId(clone.id);
+    notify(
+      t('admin.academic.toasts.duplicated', { name: t('admin.academic.toasts.names.question') }),
+      'info',
+    );
   };
 
   const handleUpdateQuestion = (updated: Question) => {
@@ -110,6 +124,10 @@ export function QuestionEditor({
     if (selectedId === id || selectedQuestion?.id === id) {
       setSelectedId(nextSelectedId);
     }
+    notify(
+      t('admin.academic.toasts.removed', { name: t('admin.academic.toasts.names.question') }),
+      'error',
+    );
   };
 
   const toggleId = (ids: string[], id: string, checked: boolean): string[] => {
@@ -134,18 +152,20 @@ export function QuestionEditor({
   return (
     <div className="admin-split-editor">
       <div className="admin-split-sidebar">
-        <div className="admin-split-sidebar-header">
+        <div className="admin-split-sidebar-header admin-split-sidebar-header-stack">
           <h3 className="admin-sidebar-title">
             {t('admin.academic.questions.title')} ({questions.length})
           </h3>
-          <button
-            type="button"
-            className="btn-secondary admin-btn-compact"
-            onClick={handleAddQuestion}
-            disabled={disabled}
-          >
-            + {t('admin.academic.questions.addQuestion')}
-          </button>
+          <div className="admin-equal-actions" data-count="1">
+            <button
+              type="button"
+              className="btn-secondary admin-btn-compact"
+              onClick={handleAddQuestion}
+              disabled={disabled}
+            >
+              + {t('admin.academic.questions.addQuestion')}
+            </button>
+          </div>
         </div>
 
         <div className="admin-stack-tight">
@@ -413,6 +433,203 @@ export function QuestionEditor({
                 })
               }
             />
+          </div>
+
+          <div className="admin-stack-sm">
+            <div className="admin-row-between">
+              <h4 className="admin-section-title-lg">{t('admin.academic.questions.hints')}</h4>
+              <button
+                type="button"
+                className="btn-secondary admin-btn-compact"
+                disabled={disabled || (selectedQuestion.hintTiers?.length ?? 0) >= 8}
+                onClick={() => {
+                  const tiers: HintTier[] = [...(selectedQuestion.hintTiers ?? [])];
+                  tiers.push({
+                    strength: 'STANDARD',
+                    blocks: [{ kind: 'TEXT', text: '' }],
+                  });
+                  handleUpdateQuestion({ ...selectedQuestion, hintTiers: tiers });
+                  notify(
+                    t('admin.academic.toasts.added', {
+                      name: t('admin.academic.toasts.names.hint'),
+                    }),
+                    'success',
+                  );
+                }}
+              >
+                + {t('admin.academic.questions.addHint')}
+              </button>
+            </div>
+            {(selectedQuestion.hintTiers ?? []).length === 0 ? (
+              <p className="admin-muted">{t('admin.academic.questions.hintsEmpty')}</p>
+            ) : (
+              <div className="admin-hint-list">
+                {(selectedQuestion.hintTiers ?? []).map((tier, tierIndex) => (
+                  <div key={`hint-${selectedQuestion.id}-${tierIndex}`} className="admin-hint-card">
+                    <div className="admin-hint-toolbar">
+                      <label
+                        className="admin-field-label admin-hint-strength-label"
+                        htmlFor={`hint-strength-${tierIndex}`}
+                      >
+                        {t('admin.academic.questions.hintStrength')}
+                      </label>
+                      <select
+                        id={`hint-strength-${tierIndex}`}
+                        className="text-input admin-hint-strength"
+                        value={tier.strength}
+                        disabled={disabled}
+                        onChange={(e) => {
+                          const tiers = [...(selectedQuestion.hintTiers ?? [])];
+                          tiers[tierIndex] = {
+                            ...tier,
+                            strength: e.target.value as HintTier['strength'],
+                          };
+                          handleUpdateQuestion({ ...selectedQuestion, hintTiers: tiers });
+                        }}
+                      >
+                        <option value="STANDARD">
+                          {t('admin.academic.questions.hintStandard')}
+                        </option>
+                        <option value="STRONG">{t('admin.academic.questions.hintStrong')}</option>
+                      </select>
+                      <AdminRemoveButton
+                        label={t('admin.academic.questions.removeHint')}
+                        disabled={disabled}
+                        onClick={() => {
+                          const tiers = (selectedQuestion.hintTiers ?? []).filter(
+                            (_, i) => i !== tierIndex,
+                          );
+                          handleUpdateQuestion({
+                            ...selectedQuestion,
+                            hintTiers: tiers,
+                          });
+                          notify(
+                            t('admin.academic.toasts.removed', {
+                              name: t('admin.academic.toasts.names.hint'),
+                            }),
+                            'error',
+                          );
+                        }}
+                      />
+                    </div>
+                    <ContentBlockEditor
+                      compact
+                      label={t('admin.academic.questions.hintContent')}
+                      blocks={tier.blocks}
+                      onChange={(blocks) => {
+                        const tiers = [...(selectedQuestion.hintTiers ?? [])];
+                        tiers[tierIndex] = { ...tier, blocks };
+                        handleUpdateQuestion({ ...selectedQuestion, hintTiers: tiers });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <fieldset className="admin-fieldset" disabled={disabled}>
+            <legend className="admin-fieldset-legend">
+              {t('admin.academic.questions.relatedResources')}
+            </legend>
+            {resources.length === 0 ? (
+              <p className="admin-muted">{t('admin.academic.resources.needObjectives')}</p>
+            ) : (
+              <div className="admin-check-list">
+                {resources
+                  .filter((r) => r.kind === 'LESSON' || r.kind === 'REMEDIATION' || !r.kind)
+                  .map((r) => {
+                    const label =
+                      r.title.english || r.title.indonesian || r.title.simplifiedChinese || r.id;
+                    const selectedIds = selectedQuestion.relatedResourceIds ?? [];
+                    return (
+                      <label key={r.id} className="admin-check-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(r.id)}
+                          onChange={(e) =>
+                            handleUpdateQuestion({
+                              ...selectedQuestion,
+                              relatedResourceIds: toggleId(selectedIds, r.id, e.target.checked),
+                            })
+                          }
+                        />
+                        <span>{label}</span>
+                      </label>
+                    );
+                  })}
+              </div>
+            )}
+          </fieldset>
+
+          <div className="admin-stack-sm">
+            <h4 className="admin-section-title-lg">
+              {t('admin.academic.questions.commonMistakeNotes')}
+            </h4>
+            {(() => {
+              const note = selectedQuestion.commonMistakeNotes?.[0] ?? {
+                english: '',
+                indonesian: '',
+                simplifiedChinese: '',
+              };
+              const setNote = (
+                field: 'english' | 'indonesian' | 'simplifiedChinese',
+                value: string,
+              ) => {
+                const next = { ...note, [field]: value };
+                const empty =
+                  !(next.english ?? '').trim() &&
+                  !(next.indonesian ?? '').trim() &&
+                  !(next.simplifiedChinese ?? '').trim();
+                handleUpdateQuestion({
+                  ...selectedQuestion,
+                  commonMistakeNotes: empty ? [] : [next],
+                });
+              };
+              return (
+                <div className="admin-grid-3">
+                  <div>
+                    <label htmlFor="cm-en" className="admin-field-label">
+                      {t('admin.academic.questions.commonMistakeEn')}
+                    </label>
+                    <textarea
+                      id="cm-en"
+                      className="text-input admin-field-control"
+                      rows={2}
+                      value={note.english ?? ''}
+                      disabled={disabled}
+                      onChange={(e) => setNote('english', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cm-id" className="admin-field-label">
+                      {t('admin.academic.questions.commonMistakeId')}
+                    </label>
+                    <textarea
+                      id="cm-id"
+                      className="text-input admin-field-control"
+                      rows={2}
+                      value={note.indonesian ?? ''}
+                      disabled={disabled}
+                      onChange={(e) => setNote('indonesian', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cm-zh" className="admin-field-label">
+                      {t('admin.academic.questions.commonMistakeZh')}
+                    </label>
+                    <textarea
+                      id="cm-zh"
+                      className="text-input admin-field-control"
+                      rows={2}
+                      value={note.simplifiedChinese ?? ''}
+                      disabled={disabled}
+                      onChange={(e) => setNote('simplifiedChinese', e.target.value)}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       ) : (

@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Lock, Play } from 'lucide-react';
+import { ArrowLeft, Lock, Play, RotateCcw } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
-import { getCheckpointForLesson, startAssessmentSession } from './api/assessmentApi';
+import {
+  cancelSession,
+  getCheckpointForLesson,
+  listAssessmentSessions,
+  startAssessmentSession,
+} from './api/assessmentApi';
 import { ExamLanguagePicker } from './components/ExamLanguagePicker';
 import { resolveLocalizedText } from './localizedText';
-import type { CheckpointForLesson, ExamLanguage } from './types';
+import { matchingInProgressSession, startReplacingInProgressSession } from './sessionResume';
+import type { AssessmentSessionResumeSummary, CheckpointForLesson, ExamLanguage } from './types';
 import { isAcademicSubject, isExamLanguage } from './types';
 import './assessment.css';
 
@@ -20,6 +26,7 @@ export function CheckpointPage(): React.JSX.Element {
   const subject = isAcademicSubject(subjectParam) ? subjectParam : null;
 
   const [checkpoint, setCheckpoint] = useState<CheckpointForLesson | null>(null);
+  const [resumes, setResumes] = useState<AssessmentSessionResumeSummary[]>([]);
   const [examLanguage, setExamLanguage] = useState<ExamLanguage | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -32,8 +39,12 @@ export function CheckpointPage(): React.JSX.Element {
     setError(null);
     setNotFound(false);
     try {
-      const data = await getCheckpointForLesson(subject, resourceId);
+      const [data, inProgress] = await Promise.all([
+        getCheckpointForLesson(subject, resourceId),
+        listAssessmentSessions({ status: 'IN_PROGRESS', subject }),
+      ]);
       setCheckpoint(data);
+      setResumes(inProgress);
       if (data.editions.length === 1 && isExamLanguage(data.editions[0]?.examLanguage)) {
         setExamLanguage(data.editions[0].examLanguage);
       }
@@ -54,13 +65,51 @@ export function CheckpointPage(): React.JSX.Element {
     void load();
   }, [load]);
 
-  async function handleStart(): Promise<void> {
+  async function handleStart(forceNew: boolean): Promise<void> {
     if (!checkpoint || !subject || !examLanguage || !checkpoint.startable) return;
     const edition = checkpoint.editions.find((e) => e.examLanguage === examLanguage);
     if (!edition) return;
     setStarting(true);
     setError(null);
     try {
+      const match = {
+        purpose: 'CHECKPOINT' as const,
+        setId: edition.setId,
+        examLanguage,
+      };
+      let existing = matchingInProgressSession(resumes, match);
+      if (forceNew) {
+        try {
+          const live = await listAssessmentSessions({ status: 'IN_PROGRESS', subject });
+          setResumes(live);
+          existing = matchingInProgressSession(live, match) ?? existing;
+        } catch {
+          // Keep the locally known row if the refresh fails.
+        }
+        const replaced = await startReplacingInProgressSession({
+          existingSessionId: existing?.sessionId,
+          cancel: cancelSession,
+          start: () =>
+            startAssessmentSession({
+              purpose: 'CHECKPOINT',
+              subject,
+              setId: edition.setId,
+              examLanguage,
+            }),
+        });
+        if (!replaced.ok) {
+          setError(
+            t(
+              replaced.reason === 'CANCEL_FAILED'
+                ? 'assessment.errors.startNewCancelFailed'
+                : 'assessment.errors.startNewResumeConflict',
+            ),
+          );
+          return;
+        }
+        void navigate(`/app/practice/sessions/${replaced.session.sessionId}`);
+        return;
+      }
       const session = await startAssessmentSession({
         purpose: 'CHECKPOINT',
         subject,
@@ -139,13 +188,20 @@ export function CheckpointPage(): React.JSX.Element {
     );
   }
 
-  const available = checkpoint.editions.map((e) => e.examLanguage);
+  const available = [...new Set(checkpoint.editions.map((e) => e.examLanguage))];
   const edition = examLanguage
     ? checkpoint.editions.find((e) => e.examLanguage === examLanguage)
     : null;
   const title = edition
     ? resolveLocalizedText(edition.title, i18n.language)
     : t('assessment.checkpoint.title');
+  const existing = edition
+    ? matchingInProgressSession(resumes, {
+        purpose: 'CHECKPOINT',
+        setId: edition.setId,
+        examLanguage: edition.examLanguage,
+      })
+    : undefined;
 
   return (
     <div className="page-content assessment-page checkpoint-page">
@@ -175,6 +231,17 @@ export function CheckpointPage(): React.JSX.Element {
         </div>
       ) : null}
 
+      {/* Soft signal only: checkpoint questions/sets changed since last submitted attempt. */}
+      {checkpoint.startable && checkpoint.checkpointUpdatedSinceLastAttempt ? (
+        <p className="assessment-update-banner" role="status">
+          <span className="assessment-badge is-updated">
+            {t('assessment.checkpoint.updatedBadge')}
+          </span>{' '}
+          <strong>{t('assessment.checkpoint.ctaUpdatedTitle')}</strong>{' '}
+          {t('assessment.checkpoint.ctaUpdatedHint')}
+        </p>
+      ) : null}
+
       {!checkpoint.startable ? (
         <section className="assessment-lock-panel" role="status">
           <Lock size={22} aria-hidden="true" />
@@ -198,18 +265,59 @@ export function CheckpointPage(): React.JSX.Element {
             />
           ) : null}
 
-          <div className="assessment-result-actions">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!examLanguage || starting || !edition}
-              onClick={() => void handleStart()}
-              aria-busy={starting}
-            >
-              <Play size={18} aria-hidden="true" />
-              {starting ? t('assessment.starting') : t('assessment.checkpoint.start')}
-            </button>
-          </div>
+          {existing ? (
+            <section className="assessment-continue-panel" aria-labelledby="checkpoint-continue">
+              <div>
+                <h2 id="checkpoint-continue">{t('assessment.checkpoint.continueTitle')}</h2>
+                <p>
+                  {t('assessment.practice.progress', {
+                    answered: existing.answeredItemCount,
+                    total: existing.questionCount,
+                  })}
+                </p>
+              </div>
+              <div className="assessment-result-actions">
+                <Link to={`/app/practice/sessions/${existing.sessionId}`} className="btn-primary">
+                  <RotateCcw size={18} aria-hidden="true" />
+                  {t('assessment.checkpoint.continue')}
+                </Link>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={starting || !examLanguage || !edition}
+                  onClick={() => void handleStart(true)}
+                  aria-busy={starting}
+                >
+                  {starting
+                    ? t('assessment.starting')
+                    : checkpoint.checkpointUpdatedSinceLastAttempt
+                      ? t('assessment.checkpoint.redoUpdated')
+                      : t('assessment.checkpoint.startNew')}
+                </button>
+              </div>
+            </section>
+          ) : (
+            <div className="assessment-result-actions">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!examLanguage || starting || !edition}
+                onClick={() => void handleStart(false)}
+                aria-busy={starting}
+              >
+                {checkpoint.checkpointUpdatedSinceLastAttempt ? (
+                  <RotateCcw size={18} aria-hidden="true" />
+                ) : (
+                  <Play size={18} aria-hidden="true" />
+                )}
+                {starting
+                  ? t('assessment.starting')
+                  : checkpoint.checkpointUpdatedSinceLastAttempt
+                    ? t('assessment.checkpoint.redoUpdated')
+                    : t('assessment.checkpoint.start')}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

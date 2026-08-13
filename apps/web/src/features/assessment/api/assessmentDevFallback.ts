@@ -1,3 +1,4 @@
+import { anyAssistanceUsed } from '../assessmentPolicy';
 import type {
   AcademicSubject,
   AssessmentSession,
@@ -132,6 +133,7 @@ export function devGetCheckpointForLesson(
       lessonContentComplete: false,
       startable: false,
       lockReason: 'NO_CHECKPOINT_PUBLISHED',
+      checkpointUpdatedSinceLastAttempt: false,
       editions: [],
     };
   }
@@ -143,6 +145,7 @@ export function devGetCheckpointForLesson(
     lessonContentComplete: true,
     startable: true,
     lockReason: null,
+    checkpointUpdatedSinceLastAttempt: false,
     editions: [
       {
         setId: SET_CHECKPOINT,
@@ -272,6 +275,16 @@ export function devListAssessmentSessions(
 export function devStartAssessmentSession(
   request: StartAssessmentSessionRequest,
 ): AssessmentSession {
+  for (const existing of sessions.values()) {
+    if (
+      existing.status === 'IN_PROGRESS' &&
+      existing.purpose === request.purpose &&
+      existing.setId === request.setId &&
+      existing.examLanguage === request.examLanguage
+    ) {
+      return existing;
+    }
+  }
   const sessionId = crypto.randomUUID();
   const feedbackMode = request.purpose === 'TOPIC_PRACTICE' ? 'SET_END' : 'IMMEDIATE';
   const items = [
@@ -435,7 +448,7 @@ export function devSubmitItemAnswer(
   };
   sessions.set(sessionId, nextSession);
 
-  if (!correct && lockNow) {
+  if (!correct && lockNow && session.purpose !== 'REVALIDATION') {
     upsertMistakeFromItem(nextSession, updated, correctKey);
   }
 
@@ -536,11 +549,20 @@ export function devSubmitSession(sessionId: string): SessionResult | null {
       correct,
       feedback,
     };
-    if (!correct && key) {
+    if (!correct && key && session.purpose !== 'REVALIDATION') {
       upsertMistakeFromItem(session, locked, correctKey);
     }
     return locked;
   });
+
+  if (session.purpose === 'REVALIDATION' && session.mistakeId) {
+    applyDevRevalidationOutcome(
+      session.sessionId,
+      session.mistakeId,
+      lockedItems,
+      session.assistanceSummary,
+    );
+  }
 
   const correctCount = lockedItems.filter((i) => i.correct === true).length;
   const total = lockedItems.length;
@@ -703,7 +725,18 @@ export function devListMistakes(status?: MistakeStatus): MistakeListResponseBody
 
 export function devGetMistake(mistakeId: string): MistakeDetail | null {
   if (mistakes.size === 0) devListMistakes();
-  return mistakes.get(mistakeId) ?? null;
+  const existing = mistakes.get(mistakeId);
+  if (!existing) return null;
+  if (existing.status === 'OPEN') {
+    const next: MistakeDetail = {
+      ...existing,
+      status: 'REMEDIATION_IN_PROGRESS',
+      updatedAt: now(),
+    };
+    mistakes.set(mistakeId, next);
+    return next;
+  }
+  return existing;
 }
 
 export function devUpdateMistakeAnnotation(
@@ -722,25 +755,96 @@ export function devUpdateMistakeAnnotation(
   return next;
 }
 
+function applyDevRevalidationOutcome(
+  sessionId: string,
+  mistakeId: string,
+  items: SessionItemView[],
+  assistance: AssessmentSession['assistanceSummary'],
+): void {
+  const existing = mistakes.get(mistakeId);
+  if (!existing) return;
+  const allCorrect = items.length > 0 && items.every((item) => item.correct === true);
+  const assisted = anyAssistanceUsed(assistance);
+  const remComplete = remediationProgress.get(REMEDIATION_ID)?.status === 'CONTENT_COMPLETE';
+  if (allCorrect && !assisted) {
+    mistakes.set(mistakeId, {
+      ...existing,
+      status: 'REVALIDATION_PASSED',
+      revalidationEligible: false,
+      lastSessionId: sessionId,
+      updatedAt: now(),
+    });
+    return;
+  }
+  mistakes.set(mistakeId, {
+    ...existing,
+    status: remComplete ? 'AWAITING_REVALIDATION' : 'OPEN',
+    revalidationEligible: remComplete,
+    lastSessionId: sessionId,
+    updatedAt: now(),
+  });
+}
+
+function assistedCorrectQuestionIds(mistakeId: string): Set<string> {
+  const excluded = new Set<string>();
+  for (const session of sessions.values()) {
+    if (
+      session.purpose !== 'REVALIDATION' ||
+      session.status !== 'SUBMITTED' ||
+      session.mistakeId !== mistakeId
+    ) {
+      continue;
+    }
+    if (!anyAssistanceUsed(session.assistanceSummary)) continue;
+    for (const item of session.items) {
+      if (item.correct === true) excluded.add(item.questionId);
+    }
+  }
+  return excluded;
+}
+
+function pickDevRevalidationQuestion(mistake: MistakeDetail): {
+  questionId: string;
+  stem: string;
+} {
+  const excluded = assistedCorrectQuestionIds(mistake.mistakeId);
+  const preferred =
+    [Q2, Q1].find((id) => id !== mistake.questionId && !excluded.has(id)) ??
+    [Q1, Q2].find((id) => !excluded.has(id)) ??
+    mistake.questionId;
+  if (preferred === Q2) {
+    return {
+      questionId: Q2,
+      stem: 'Re-check: what is the product of the roots of x² − 5x + 6 = 0?',
+    };
+  }
+  return { questionId: Q1, stem: 'Re-check: factorise x² − 5x + 6.' };
+}
+
 export function devStartRevalidation(mistakeId: string): AssessmentSession | null {
   const mistake = mistakes.get(mistakeId) ?? devGetMistake(mistakeId);
   if (!mistake) return null;
+  if (mistake.status === 'REVALIDATION_PASSED') return null;
   const progress = remediationProgress.get(REMEDIATION_ID);
   const eligible =
     mistake.revalidationEligible ||
     mistake.status === 'AWAITING_REVALIDATION' ||
-    mistake.status === 'REMEDIATION_IN_PROGRESS' ||
     progress?.status === 'CONTENT_COMPLETE';
   if (!eligible) return null;
 
+  for (const existing of sessions.values()) {
+    if (
+      existing.status === 'IN_PROGRESS' &&
+      existing.purpose === 'REVALIDATION' &&
+      existing.mistakeId === mistakeId
+    ) {
+      return existing;
+    }
+  }
+
   const sessionId = crypto.randomUUID();
-  const item = makeItem(
-    crypto.randomUUID(),
-    0,
-    mistake.questionId,
-    'Re-check: factorise x² − 5x + 6.',
-    'B',
-  );
+  const picked = pickDevRevalidationQuestion(mistake);
+  const item = makeItem(crypto.randomUUID(), 0, picked.questionId, picked.stem, 'B');
   // Strip STRONG from ladder for revalidation client view
   const revalItem: SessionItemView = {
     ...item,
@@ -845,6 +949,7 @@ export function devUpsertRemediationProgress(
   // Mark mistakes revalidation-eligible
   if (status === 'CONTENT_COMPLETE') {
     for (const [id, m] of mistakes) {
+      if (m.status === 'REVALIDATION_PASSED') continue;
       mistakes.set(id, {
         ...m,
         status: 'AWAITING_REVALIDATION',
@@ -876,6 +981,8 @@ export const DEV_IDS = {
   LESSON_ID,
   SET_CHECKPOINT,
   SET_TOPIC,
+  Q1,
+  Q2,
   MISTAKE_ID,
   REMEDIATION_ID,
 } as const;

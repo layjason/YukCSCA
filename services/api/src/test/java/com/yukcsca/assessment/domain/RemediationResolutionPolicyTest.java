@@ -61,11 +61,87 @@ class RemediationResolutionPolicyTest {
             original,
             "en",
             Set.of(objective),
+            Set.of(),
             List.of(
                 new QuestionCandidate(original, "en", Set.of(objective)),
                 new QuestionCandidate(alternate, "en", Set.of(objective)),
                 new QuestionCandidate(UUID.randomUUID(), "zh-CN", Set.of(objective))));
     assertThat(selected).isEqualTo(alternate);
+  }
+
+  @Test
+  void preferAlternateQuestionFallsBackToSharedOutline() {
+    UUID original = UUID.randomUUID();
+    UUID alternate = UUID.randomUUID();
+    UUID outline = UUID.randomUUID();
+    UUID selected =
+        RemediationResolutionPolicy.preferAlternateQuestion(
+            original,
+            "en",
+            Set.of(UUID.randomUUID()),
+            Set.of(outline),
+            List.of(
+                new QuestionCandidate(original, "en", Set.of(), Set.of(outline)),
+                new QuestionCandidate(alternate, "en", Set.of(), Set.of(outline))));
+    assertThat(selected).isEqualTo(alternate);
+  }
+
+  @Test
+  void preferObjectiveOverOutlineAlternate() {
+    UUID original = UUID.randomUUID();
+    UUID byOutline = UUID.randomUUID();
+    UUID byObjective = UUID.randomUUID();
+    UUID objective = UUID.randomUUID();
+    UUID outline = UUID.randomUUID();
+    UUID selected =
+        RemediationResolutionPolicy.preferAlternateQuestion(
+            original,
+            "en",
+            Set.of(objective),
+            Set.of(outline),
+            List.of(
+                new QuestionCandidate(original, "en", Set.of(objective), Set.of(outline)),
+                new QuestionCandidate(byOutline, "en", Set.of(), Set.of(outline)),
+                new QuestionCandidate(byObjective, "en", Set.of(objective), Set.of())));
+    assertThat(selected).isEqualTo(byObjective);
+  }
+
+  @Test
+  void skipsAssistedCorrectAlternateAndFallsBackToOriginal() {
+    UUID original = UUID.randomUUID();
+    UUID assisted = UUID.randomUUID();
+    UUID objective = UUID.randomUUID();
+    UUID selected =
+        RemediationResolutionPolicy.preferAlternateQuestion(
+            original,
+            "en",
+            Set.of(objective),
+            Set.of(),
+            List.of(
+                new QuestionCandidate(original, "en", Set.of(objective)),
+                new QuestionCandidate(assisted, "en", Set.of(objective))),
+            Set.of(assisted));
+    assertThat(selected).isEqualTo(original);
+  }
+
+  @Test
+  void prefersUnusedAlternateOverAssistedCorrect() {
+    UUID original = UUID.randomUUID();
+    UUID assisted = UUID.randomUUID();
+    UUID unused = UUID.randomUUID();
+    UUID objective = UUID.randomUUID();
+    UUID selected =
+        RemediationResolutionPolicy.preferAlternateQuestion(
+            original,
+            "en",
+            Set.of(objective),
+            Set.of(),
+            List.of(
+                new QuestionCandidate(original, "en", Set.of(objective)),
+                new QuestionCandidate(assisted, "en", Set.of(objective)),
+                new QuestionCandidate(unused, "en", Set.of(objective))),
+            Set.of(assisted));
+    assertThat(selected).isEqualTo(unused);
   }
 
   @Test
@@ -77,7 +153,25 @@ class RemediationResolutionPolicyTest {
             original,
             "en",
             Set.of(objective),
+            Set.of(),
             List.of(new QuestionCandidate(original, "en", Set.of(objective))));
+    assertThat(selected).isEqualTo(original);
+  }
+
+  @Test
+  void doesNotCloseWeaknessOnUnrelatedLanguageMatchWhenOriginalWasAssisted() {
+    UUID original = UUID.randomUUID();
+    UUID unrelated = UUID.randomUUID();
+    UUID selected =
+        RemediationResolutionPolicy.preferAlternateQuestion(
+            original,
+            "en",
+            Set.of(UUID.randomUUID()),
+            Set.of(UUID.randomUUID()),
+            List.of(
+                new QuestionCandidate(original, "en", Set.of(UUID.randomUUID())),
+                new QuestionCandidate(unrelated, "en", Set.of(UUID.randomUUID()))),
+            Set.of(original));
     assertThat(selected).isEqualTo(original);
   }
 }

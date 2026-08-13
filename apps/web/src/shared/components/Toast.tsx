@@ -1,9 +1,16 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Check, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export type ToastTone = 'success' | 'info' | 'error';
+export type ToastTone = 'success' | 'info' | 'warning' | 'error';
+
+const TONE_ICON = {
+  success: Check,
+  info: Info,
+  warning: TriangleAlert,
+  error: CircleAlert,
+} as const;
 
 export type ToastProps = {
   message: string;
@@ -24,6 +31,7 @@ export function Toast({
   durationMs = 4000,
 }: ToastProps): React.JSX.Element {
   const { t } = useTranslation();
+  const ToneIcon = TONE_ICON[tone];
 
   useEffect(() => {
     if (durationMs <= 0) return;
@@ -36,6 +44,9 @@ export function Toast({
   return createPortal(
     <div className="toast-container" aria-live="polite">
       <div className={`toast toast-${tone}`} role="status">
+        <span className="toast-icon" aria-hidden="true">
+          <ToneIcon strokeWidth={2.25} />
+        </span>
         <p className="toast-message">{message}</p>
         <button
           type="button"

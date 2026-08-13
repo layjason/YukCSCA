@@ -14,4 +14,7 @@ public interface AssessmentObjectiveEvidenceRepository
   @Override
   List<AssessmentObjectiveEvidence> findByAccountIdAndObjectiveIdOrderByOccurredAtDesc(
       UUID accountId, UUID objectiveId);
+
+  @Override
+  boolean existsBySourceSessionIdAndObjectiveId(UUID sourceSessionId, UUID objectiveId);
 }

@@ -140,6 +140,7 @@ class AssessmentStudentHttpIT {
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.startable").value(true))
+        .andExpect(jsonPath("$.checkpointUpdatedSinceLastAttempt").value(false))
         .andExpect(jsonPath("$.editions.length()").value(1));
 
     MvcResult started =
@@ -200,6 +201,91 @@ class AssessmentStudentHttpIT {
         .andExpect(jsonPath("$.evidenceWritten.length()").value(1))
         .andExpect(jsonPath("$.evidenceWritten[0].signal").value("CHECKPOINT_PASSED"))
         .andExpect(jsonPath("$.context.checkpointPassed").value(true));
+
+    mvc.perform(
+            get(
+                    "/api/v1/assessment/packages/MATHEMATICS/lessons/{id}/checkpoint",
+                    fixture.lessonId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.startable").value(true))
+        .andExpect(jsonPath("$.checkpointUpdatedSinceLastAttempt").value(false));
+  }
+
+  @Test
+  void checkpointUpdatedSinceLastAttemptIsHonestToCheckpointContent() throws Exception {
+    UUID packageId = createPackage();
+    UUID imageId = uploadOriginalImage();
+    ObjectNode draft = validDraftWithAssessment(imageId);
+    UUID lessonId = resourceId(draft, "LESSON");
+    UUID checkpointSetId = null;
+    UUID checkpointQuestionId = null;
+    for (JsonNode set : draft.path("assessmentSets")) {
+      if ("CHECKPOINT".equals(set.path("purpose").asText())) {
+        checkpointSetId = UUID.fromString(set.path("id").asText());
+        checkpointQuestionId = UUID.fromString(set.path("questionIds").get(0).asText());
+      }
+    }
+    save(packageId, 0, draft);
+    publish(packageId, 1);
+    completeLesson(lessonId);
+
+    // Start + submit checkpoint so a prior attempt exists.
+    MvcResult started =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"CHECKPOINT","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(checkpointSetId)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode session = json.readTree(started.getResponse().getContentAsString());
+    UUID sessionId = UUID.fromString(session.path("sessionId").asText());
+    UUID itemId = UUID.fromString(session.path("items").get(0).path("itemId").asText());
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", sessionId, itemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"A\"}"))
+        .andExpect(status().isOk());
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/submit", sessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk());
+
+    // Unrelated package metadata republish must not soft-signal checkpoint update.
+    ObjectNode metadataOnly = draft.deepCopy();
+    ((ObjectNode) metadataOnly.path("officialSyllabus")).put("editionLabel", "2025-r2");
+    save(packageId, 1, metadataOnly);
+    publish(packageId, 2);
+
+    mvc.perform(
+            get("/api/v1/assessment/packages/MATHEMATICS/lessons/{id}/checkpoint", lessonId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.checkpointUpdatedSinceLastAttempt").value(false));
+
+    // Changing the checkpoint question body must soft-signal redo.
+    ObjectNode questionChanged = metadataOnly.deepCopy();
+    for (JsonNode question : questionChanged.path("questions")) {
+      if (checkpointQuestionId.toString().equals(question.path("id").asText())) {
+        ((ObjectNode) question.path("stem").get(0)).put("text", "Question 1 revised");
+        break;
+      }
+    }
+    save(packageId, 2, questionChanged);
+    publish(packageId, 3);
+
+    mvc.perform(
+            get("/api/v1/assessment/packages/MATHEMATICS/lessons/{id}/checkpoint", lessonId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.checkpointUpdatedSinceLastAttempt").value(true))
+        .andExpect(jsonPath("$.startable").value(true));
   }
 
   @Test
@@ -266,6 +352,7 @@ class AssessmentStudentHttpIT {
         .andExpect(
             jsonPath("$.latestResponse.feedback.relatedResources[0].kind").value("REMEDIATION"))
         .andExpect(jsonPath("$.remediationCandidates[0].kind").value("REMEDIATION"))
+        .andExpect(jsonPath("$.status").value("REMEDIATION_IN_PROGRESS"))
         .andExpect(jsonPath("$.revalidationEligible").value(false));
 
     mvc.perform(
@@ -294,6 +381,7 @@ class AssessmentStudentHttpIT {
             get("/api/v1/assessment/mistakes/{id}", mistakeId)
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AWAITING_REVALIDATION"))
         .andExpect(jsonPath("$.revalidationEligible").value(true));
 
     MvcResult reval =
@@ -344,6 +432,106 @@ class AssessmentStudentHttpIT {
   }
 
   @Test
+  void assistedCorrectRevalidationThenRedoUsesAnotherQuestion() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+
+    MvcResult started =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"TOPIC_PRACTICE","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(fixture.practiceSetId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode session = json.readTree(started.getResponse().getContentAsString());
+    UUID sessionId = UUID.fromString(session.path("sessionId").asText());
+    UUID itemId = UUID.fromString(session.path("items").get(0).path("itemId").asText());
+
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", sessionId, itemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"B\"}"))
+        .andExpect(status().isOk());
+    MvcResult submitted =
+        mvc.perform(
+                post("/api/v1/assessment/sessions/{s}/submit", sessionId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+    UUID mistakeId =
+        UUID.fromString(
+            json.readTree(submitted.getResponse().getContentAsString())
+                .path("mistakeIds")
+                .get(0)
+                .asText());
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    MvcResult firstReval =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode firstSession = json.readTree(firstReval.getResponse().getContentAsString());
+    UUID firstSessionId = UUID.fromString(firstSession.path("sessionId").asText());
+    UUID firstItemId = UUID.fromString(firstSession.path("items").get(0).path("itemId").asText());
+    UUID firstQuestionId =
+        UUID.fromString(firstSession.path("items").get(0).path("questionId").asText());
+
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/items/{i}/hints", firstSessionId, firstItemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk());
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", firstSessionId, firstItemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"A\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.item.correct").value(true));
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/submit", firstSessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AWAITING_REVALIDATION"))
+        .andExpect(jsonPath("$.revalidationEligible").value(true));
+
+    MvcResult secondReval =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    UUID secondQuestionId =
+        UUID.fromString(
+            json.readTree(secondReval.getResponse().getContentAsString())
+                .path("items")
+                .get(0)
+                .path("questionId")
+                .asText());
+    assertThat(secondQuestionId).isNotEqualTo(firstQuestionId);
+  }
+
+  @Test
   void listMistakesCursorAdvancesToNextPage() throws Exception {
     Fixture fixture = publishAssessmentPackage();
     completeLesson(fixture.lessonId());
@@ -380,6 +568,651 @@ class AssessmentStudentHttpIT {
     assertThat(secondId).isNotEqualTo(firstId);
     assertThat(Set.of(firstId, secondId))
         .containsExactlyInAnyOrder(mistakeA.toString(), mistakeB.toString());
+  }
+
+  @Test
+  void listMistakesHonorsStatusFilter() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID firstMistake = failPractice(fixture.practiceSetId());
+    UUID secondMistake = failPractice(fixture.setEndPracticeId());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .param("status", "OPEN")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(2));
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .param("status", "OPEN")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(0));
+
+    MvcResult awaiting =
+        mvc.perform(
+                get("/api/v1/assessment/mistakes")
+                    .param("status", "AWAITING_REVALIDATION")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andReturn();
+    JsonNode awaitingItems =
+        json.readTree(awaiting.getResponse().getContentAsString()).path("items");
+    assertThat(
+            Set.of(
+                awaitingItems.get(0).path("mistakeId").asText(),
+                awaitingItems.get(1).path("mistakeId").asText()))
+        .containsExactlyInAnyOrder(firstMistake.toString(), secondMistake.toString());
+
+    mvc.perform(
+            get("/api/v1/assessment/sessions")
+                .param("status", "NOT_A_STATUS")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ASSESSMENT_VALIDATION_FAILED"));
+  }
+
+  @Test
+  void openingReviewAndStartingRemediationPromoteMistakeStatus() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID opened = failPractice(fixture.practiceSetId());
+    UUID studying = failPractice(fixture.setEndPracticeId());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .param("status", "OPEN")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(2));
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", opened)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REMEDIATION_IN_PROGRESS"));
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", opened)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REMEDIATION_IN_PROGRESS"));
+
+    mvc.perform(
+            post("/api/v1/assessment/mistakes/{id}/revalidation", opened)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("REVALIDATION_NOT_ELIGIBLE"));
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"IN_PROGRESS\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .param("status", "OPEN")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(0));
+
+    MvcResult studyingPage =
+        mvc.perform(
+                get("/api/v1/assessment/mistakes")
+                    .param("status", "REMEDIATION_IN_PROGRESS")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andReturn();
+    JsonNode studyingItems =
+        json.readTree(studyingPage.getResponse().getContentAsString()).path("items");
+    assertThat(
+            Set.of(
+                studyingItems.get(0).path("mistakeId").asText(),
+                studyingItems.get(1).path("mistakeId").asText()))
+        .containsExactlyInAnyOrder(opened.toString(), studying.toString());
+  }
+
+  @Test
+  void independentRevalidationPassIsNotDowngradedByGet() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID mistakeId = failPractice(fixture.practiceSetId());
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    MvcResult reval =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode revalSession = json.readTree(reval.getResponse().getContentAsString());
+    UUID revalSessionId = UUID.fromString(revalSession.path("sessionId").asText());
+    UUID revalItemId = UUID.fromString(revalSession.path("items").get(0).path("itemId").asText());
+
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", revalSessionId, revalItemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"A\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.item.correct").value(true));
+
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/submit", revalSessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REVALIDATION_PASSED"))
+        .andExpect(jsonPath("$.revalidationEligible").value(false));
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REVALIDATION_PASSED"));
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REVALIDATION_PASSED"))
+        .andExpect(jsonPath("$.revalidationEligible").value(false));
+
+    mvc.perform(
+            post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("REVALIDATION_NOT_ELIGIBLE"));
+  }
+
+  @Test
+  void startSessionResumesMatchingInProgressInsteadOfCreatingAnother() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+
+    MvcResult first =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"CHECKPOINT","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(fixture.checkpointSetId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String firstId =
+        json.readTree(first.getResponse().getContentAsString()).path("sessionId").asText();
+
+    MvcResult second =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"CHECKPOINT","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(fixture.checkpointSetId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.sessionId").value(firstId))
+            .andReturn();
+    assertThat(json.readTree(second.getResponse().getContentAsString()).path("sessionId").asText())
+        .isEqualTo(firstId);
+
+    mvc.perform(
+            get("/api/v1/assessment/sessions")
+                .param("status", "IN_PROGRESS")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1));
+  }
+
+  @Test
+  void startRevalidationResumesMatchingInProgressInsteadOfCreatingAnother() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID mistakeId = failPractice(fixture.practiceSetId());
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    MvcResult first =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String firstId =
+        json.readTree(first.getResponse().getContentAsString()).path("sessionId").asText();
+
+    mvc.perform(
+            post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.sessionId").value(firstId));
+  }
+
+  @Test
+  void parallelRevalidationFromSameSourceSetIsAllowed() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID firstMistake = failPractice(fixture.practiceSetId());
+    UUID secondMistake = failPractice(fixture.setEndPracticeId());
+    jdbc.update(
+        "update assessment_mistake set source_set_id = ? where id = ?",
+        fixture.practiceSetId(),
+        secondMistake);
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    MvcResult first =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", firstMistake)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    MvcResult second =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", secondMistake)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String firstId =
+        json.readTree(first.getResponse().getContentAsString()).path("sessionId").asText();
+    String secondId =
+        json.readTree(second.getResponse().getContentAsString()).path("sessionId").asText();
+    assertThat(firstId).isNotEqualTo(secondId);
+
+    mvc.perform(
+            get("/api/v1/assessment/sessions")
+                .param("status", "IN_PROGRESS")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2));
+  }
+
+  @Test
+  void concurrentStartSessionResumesOneInProgress() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    String body =
+        """
+        {"purpose":"CHECKPOINT","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+        """
+            .formatted(fixture.checkpointSetId());
+    java.util.concurrent.ExecutorService pool =
+        java.util.concurrent.Executors.newFixedThreadPool(2);
+    java.util.concurrent.Callable<String> start =
+        () -> {
+          MvcResult result =
+              mvc.perform(
+                      post("/api/v1/assessment/sessions")
+                          .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                          .contentType(MediaType.APPLICATION_JSON)
+                          .content(body))
+                  .andReturn();
+          assertThat(result.getResponse().getStatus()).isEqualTo(201);
+          return json.readTree(result.getResponse().getContentAsString())
+              .path("sessionId")
+              .asText();
+        };
+    java.util.concurrent.Future<String> first = pool.submit(start);
+    java.util.concurrent.Future<String> second = pool.submit(start);
+    assertThat(first.get()).isEqualTo(second.get());
+    pool.shutdown();
+
+    mvc.perform(
+            get("/api/v1/assessment/sessions")
+                .param("status", "IN_PROGRESS")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1));
+  }
+
+  @Test
+  void listMistakesPromotesAwaitingWithoutGet() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID mistakeId = failPractice(fixture.practiceSetId());
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .param("status", "AWAITING_REVALIDATION")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].mistakeId").value(mistakeId.toString()))
+        .andExpect(jsonPath("$.items[0].status").value("AWAITING_REVALIDATION"));
+  }
+
+  @Test
+  void listMistakesPromotesOpenRowsOlderThanAHundredNewerOpenMistakes() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+    UUID newestMistakeId = failPractice(fixture.practiceSetId());
+    UUID studentId = users.findByEmailIgnoreCase("student@example.com").orElseThrow().getId();
+    java.util.Map<String, Object> template =
+        jdbc.queryForMap("select * from assessment_mistake where id = ?", newestMistakeId);
+    Instant oldestUpdatedAt = Instant.parse("2025-01-01T00:00:00Z");
+    UUID oldestMistakeId = UUID.randomUUID();
+    for (int i = 0; i < 101; i++) {
+      UUID id = i == 0 ? oldestMistakeId : UUID.randomUUID();
+      Instant stamp = oldestUpdatedAt.plusSeconds(i);
+      jdbc.update(
+          """
+          insert into assessment_mistake (
+            id, account_id, subject, package_id, package_revision_id, question_id, exam_language,
+            status, error_count, last_attempt_id, last_session_id, source_set_id,
+            max_tier_disclosed, strong_used, language_assist_used, attempt_question_json,
+            latest_response_json, outline_item_ids, objective_ids, created_at, updated_at
+          ) values (
+            ?, ?, ?, ?, ?, ?, ?, 'OPEN', 1, ?, ?, ?, 0, false, false,
+            ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?
+          )
+          """,
+          id,
+          studentId,
+          template.get("subject"),
+          template.get("package_id"),
+          template.get("package_revision_id"),
+          UUID.randomUUID(),
+          template.get("exam_language"),
+          template.get("last_attempt_id"),
+          template.get("last_session_id"),
+          template.get("source_set_id"),
+          jsonb(template.get("attempt_question_json")),
+          jsonb(template.get("latest_response_json")),
+          jsonb(template.get("outline_item_ids")),
+          jsonb(template.get("objective_ids")),
+          java.sql.Timestamp.from(stamp),
+          java.sql.Timestamp.from(stamp));
+    }
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .param("status", "OPEN")
+                .param("limit", "100")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(0));
+
+    MvcResult firstPage =
+        mvc.perform(
+                get("/api/v1/assessment/mistakes")
+                    .param("status", "AWAITING_REVALIDATION")
+                    .param("limit", "100")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(100))
+            .andExpect(jsonPath("$.nextCursor").isNotEmpty())
+            .andReturn();
+    JsonNode firstBody = json.readTree(firstPage.getResponse().getContentAsString());
+    Set<String> awaitingIds = new java.util.HashSet<>();
+    firstBody.path("items").forEach(item -> awaitingIds.add(item.path("mistakeId").asText()));
+
+    MvcResult secondPage =
+        mvc.perform(
+                get("/api/v1/assessment/mistakes")
+                    .param("status", "AWAITING_REVALIDATION")
+                    .param("limit", "100")
+                    .param("cursor", firstBody.path("nextCursor").asText())
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andReturn();
+    json.readTree(secondPage.getResponse().getContentAsString())
+        .path("items")
+        .forEach(item -> awaitingIds.add(item.path("mistakeId").asText()));
+    assertThat(awaitingIds)
+        .hasSize(102)
+        .contains(oldestMistakeId.toString(), newestMistakeId.toString());
+  }
+
+  @Test
+  void strongHintBlocksCheckpointPassAndEvidence() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+
+    MvcResult started =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"CHECKPOINT","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(fixture.checkpointSetId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode session = json.readTree(started.getResponse().getContentAsString());
+    UUID sessionId = UUID.fromString(session.path("sessionId").asText());
+    UUID itemId = UUID.fromString(session.path("items").get(0).path("itemId").asText());
+
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/items/{i}/hints", sessionId, itemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.disclosed.strength").value("STANDARD"));
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/items/{i}/hints", sessionId, itemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.disclosed.strength").value("STRONG"));
+
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", sessionId, itemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"A\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.item.correct").value(true));
+
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/submit", sessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .header("Idempotency-Key", UUID.randomUUID().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.checkpointPassed").value(false))
+        .andExpect(jsonPath("$.strongAssistanceUsed").value(true))
+        .andExpect(jsonPath("$.evidenceWritten.length()").value(0));
+  }
+
+  @Test
+  void cancelledSessionGetReturnsConflict() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+
+    MvcResult started =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"CHECKPOINT","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(fixture.checkpointSetId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    UUID sessionId =
+        UUID.fromString(
+            json.readTree(started.getResponse().getContentAsString()).path("sessionId").asText());
+
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/cancel", sessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+    mvc.perform(
+            get("/api/v1/assessment/sessions/{s}", sessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("SESSION_NOT_RESUMABLE"));
+  }
+
+  @Test
+  void failedRevalidationOnAlternateDoesNotCreateSecondMistake() throws Exception {
+    Fixture fixture = publishAssessmentPackage();
+    completeLesson(fixture.lessonId());
+
+    MvcResult started =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"purpose":"TOPIC_PRACTICE","subject":"MATHEMATICS","setId":"%s","examLanguage":"en"}
+                        """
+                            .formatted(fixture.practiceSetId())))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode session = json.readTree(started.getResponse().getContentAsString());
+    UUID sessionId = UUID.fromString(session.path("sessionId").asText());
+    UUID itemId = UUID.fromString(session.path("items").get(0).path("itemId").asText());
+    UUID originalQuestionId =
+        UUID.fromString(session.path("items").get(0).path("questionId").asText());
+
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", sessionId, itemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"B\"}"))
+        .andExpect(status().isOk());
+    MvcResult submitted =
+        mvc.perform(
+                post("/api/v1/assessment/sessions/{s}/submit", sessionId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+    UUID mistakeId =
+        UUID.fromString(
+            json.readTree(submitted.getResponse().getContentAsString())
+                .path("mistakeIds")
+                .get(0)
+                .asText());
+
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/remediation/{id}/progress",
+                    fixture.remediationId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"CONTENT_COMPLETE\",\"resumeBlockIndex\":0}"))
+        .andExpect(status().isOk());
+
+    MvcResult reval =
+        mvc.perform(
+                post("/api/v1/assessment/mistakes/{id}/revalidation", mistakeId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode revalSession = json.readTree(reval.getResponse().getContentAsString());
+    UUID revalSessionId = UUID.fromString(revalSession.path("sessionId").asText());
+    UUID revalItemId = UUID.fromString(revalSession.path("items").get(0).path("itemId").asText());
+    UUID revalQuestionId =
+        UUID.fromString(revalSession.path("items").get(0).path("questionId").asText());
+    assertThat(revalQuestionId).isNotEqualTo(originalQuestionId);
+
+    mvc.perform(
+            put("/api/v1/assessment/sessions/{s}/items/{i}/answer", revalSessionId, revalItemId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedOptionKey\":\"B\"}"))
+        .andExpect(status().isOk());
+
+    mvc.perform(
+            post("/api/v1/assessment/sessions/{s}/submit", revalSessionId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.mistakeIds.length()").value(1))
+        .andExpect(jsonPath("$.mistakeIds[0]").value(mistakeId.toString()));
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes/{id}", mistakeId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.questionId").value(originalQuestionId.toString()))
+        .andExpect(jsonPath("$.errorCount").value(2))
+        .andExpect(jsonPath("$.attemptQuestion.questionId").value(originalQuestionId.toString()));
+
+    mvc.perform(
+            get("/api/v1/assessment/mistakes")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].mistakeId").value(mistakeId.toString()));
   }
 
   @Test
@@ -458,6 +1291,16 @@ class AssessmentStudentHttpIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items[0].status").value("LOCKED"))
         .andExpect(jsonPath("$.items[0].feedback.correctOptionKey").value("A"));
+  }
+
+  private static String jsonb(Object value) {
+    if (value == null) {
+      return "null";
+    }
+    if (value instanceof org.postgresql.util.PGobject pgObject && pgObject.getValue() != null) {
+      return pgObject.getValue();
+    }
+    return value.toString();
   }
 
   private void completeLesson(UUID lessonId) throws Exception {

@@ -83,7 +83,7 @@ model ContentProgress {
   @doc("Last progress write time. Null when status is NOT_STARTED.")
   updatedAt: utcDateTime | null;
 
-  @doc("True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery.")
+  @doc("True when status is CONTENT_COMPLETE and this study resource's student-visible content (title, outline/objective links, language versions, blocks) differs between the package revision recorded when the student last marked complete and the active published revision. Unrelated package changes (edition labels, other lessons, assessment questions) do not set this flag. Soft signal only; never demotes content complete or implies mastery.")
   updatedSinceCompleted: boolean;
 }
 

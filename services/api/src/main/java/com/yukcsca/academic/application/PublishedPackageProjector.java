@@ -18,6 +18,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Projects active published revision JSON into student-safe shapes. Never exposes questions, mocks,
@@ -149,7 +151,8 @@ public class PublishedPackageProjector {
       JsonNode content,
       List<LessonResourceProjection> lessons,
       Map<UUID, StudentContentProgress> progressByResource,
-      UUID activeRevisionId) {
+      UUID activeRevisionId,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
     JsonNode items = content.path("outlineItems");
     if (!items.isArray()) return List.of();
 
@@ -185,7 +188,12 @@ public class PublishedPackageProjector {
           lessonsByOutline.getOrDefault(node.id(), List.of()).stream()
               .map(
                   lesson ->
-                      lessonSummary(lesson, progressByResource.get(lesson.id()), activeRevisionId))
+                      lessonSummary(
+                          lesson,
+                          progressByResource.get(lesson.id()),
+                          activeRevisionId,
+                          content,
+                          historicalContentByRevisionId))
               .toList();
       projected.add(
           new OutlineNodeProjection(
@@ -200,16 +208,41 @@ public class PublishedPackageProjector {
   }
 
   public LessonSummaryProjection lessonSummary(
-      LessonResourceProjection lesson, StudentContentProgress progress, UUID activeRevisionId) {
+      LessonResourceProjection lesson,
+      StudentContentProgress progress,
+      UUID activeRevisionId,
+      JsonNode activeContent,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
     return new LessonSummaryProjection(
         lesson.id(),
         lesson.title(),
         lesson.outlineItemIds(),
-        contentProgress(progress, null, activeRevisionId));
+        contentProgress(
+            progress,
+            null,
+            activeRevisionId,
+            lesson.id(),
+            activeContent,
+            historicalContentByRevisionId));
+  }
+
+  /**
+   * Soft “updated since complete” for one study resource. When historical content is available,
+   * only that resource’s student-visible body is compared — package-wide republish of unrelated
+   * material (edition labels, other lessons, questions) does not flag this resource.
+   */
+  public ContentProgressProjection contentProgress(
+      StudentContentProgress progress, Integer clampToBlockCount, UUID activeRevisionId) {
+    return contentProgress(progress, clampToBlockCount, activeRevisionId, null, null, null);
   }
 
   public ContentProgressProjection contentProgress(
-      StudentContentProgress progress, Integer clampToBlockCount, UUID activeRevisionId) {
+      StudentContentProgress progress,
+      Integer clampToBlockCount,
+      UUID activeRevisionId,
+      UUID resourceId,
+      JsonNode activeContent,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
     if (progress == null) {
       return new ContentProgressProjection(PROGRESS_NOT_STARTED, null, null, false);
     }
@@ -224,18 +257,115 @@ public class PublishedPackageProjector {
       }
     }
     boolean updatedSinceCompleted =
-        progress.getStatus() == StudentContentProgressStatus.CONTENT_COMPLETE
-            && progress.getLastRevisionId() != null
-            && activeRevisionId != null
-            && !progress.getLastRevisionId().equals(activeRevisionId);
+        computeUpdatedSinceCompleted(
+            progress, activeRevisionId, resourceId, activeContent, historicalContentByRevisionId);
     return new ContentProgressProjection(
         progress.getStatus().name(), resume, progress.getUpdatedAt(), updatedSinceCompleted);
+  }
+
+  private boolean computeUpdatedSinceCompleted(
+      StudentContentProgress progress,
+      UUID activeRevisionId,
+      UUID resourceId,
+      JsonNode activeContent,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
+    if (progress.getStatus() != StudentContentProgressStatus.CONTENT_COMPLETE) {
+      return false;
+    }
+    UUID lastRevisionId = progress.getLastRevisionId();
+    if (lastRevisionId == null || activeRevisionId == null) {
+      return false;
+    }
+    if (lastRevisionId.equals(activeRevisionId)) {
+      return false;
+    }
+    // Without resource content context, keep a package-revision soft signal (tests / callers).
+    if (resourceId == null || activeContent == null) {
+      return true;
+    }
+    JsonNode historical =
+        historicalContentByRevisionId == null
+            ? null
+            : historicalContentByRevisionId.get(lastRevisionId);
+    if (historical == null) {
+      // Missing historical revision → soft-signal so students re-check material.
+      return true;
+    }
+    return !studyResourceContentEquals(historical, activeContent, resourceId);
+  }
+
+  /**
+   * True when the student-visible study resource body is the same in both package contents. Missing
+   * resource on either side is treated as unequal.
+   */
+  public boolean studyResourceContentEquals(
+      JsonNode previousContent, JsonNode activeContent, UUID resourceId) {
+    JsonNode previous = studyResourceFingerprint(previousContent, resourceId);
+    JsonNode active = studyResourceFingerprint(activeContent, resourceId);
+    if (previous == null || active == null) {
+      return previous == null && active == null;
+    }
+    return previous.equals(active);
+  }
+
+  /**
+   * Canonical student-visible fingerprint for one LESSON/REMEDIATION/etc. resource (title, links,
+   * language versions, blocks). Ignores package metadata and other resources.
+   */
+  public JsonNode studyResourceFingerprint(JsonNode content, UUID resourceId) {
+    if (content == null || resourceId == null) {
+      return null;
+    }
+    JsonNode nodes = content.path("resources");
+    if (!nodes.isArray()) {
+      return null;
+    }
+    for (JsonNode resource : nodes) {
+      UUID id = uuid(resource.path("id"));
+      if (!resourceId.equals(id)) {
+        continue;
+      }
+      ObjectNode fingerprint = json.createObjectNode();
+      fingerprint.put("id", id.toString());
+      String kind = text(resource, "kind");
+      if (kind != null) {
+        fingerprint.put("kind", kind);
+      }
+      fingerprint.set("title", resource.path("title").deepCopy());
+      fingerprint.set("outlineItemIds", resource.path("outlineItemIds").deepCopy());
+      fingerprint.set("objectiveIds", resource.path("objectiveIds").deepCopy());
+      ArrayNode versionsOut = fingerprint.putArray("versions");
+      JsonNode versions = resource.path("versions");
+      if (versions.isArray()) {
+        for (JsonNode version : versions) {
+          ObjectNode versionOut = versionsOut.addObject();
+          String language = text(version, "language");
+          if (language != null) {
+            versionOut.put("language", language);
+          }
+          ArrayNode blocksOut = versionOut.putArray("blocks");
+          JsonNode blockNodes = version.path("blocks");
+          if (blockNodes.isArray()) {
+            for (JsonNode block : blockNodes) {
+              JsonNode projected = projectBlock(block);
+              if (projected != null) {
+                blocksOut.add(projected);
+              }
+            }
+          }
+        }
+      }
+      return fingerprint;
+    }
+    return null;
   }
 
   public LessonSummaryProjection continueLesson(
       List<LessonResourceProjection> lessons,
       List<StudentContentProgress> progressRows,
-      UUID activeRevisionId) {
+      UUID activeRevisionId,
+      JsonNode activeContent,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
     Map<UUID, LessonResourceProjection> byId = new HashMap<>();
     for (LessonResourceProjection lesson : lessons) {
       byId.put(lesson.id(), lesson);
@@ -246,7 +376,10 @@ public class PublishedPackageProjector {
         .map(
             row -> {
               LessonResourceProjection lesson = byId.get(row.getResourceId());
-              return lesson == null ? null : lessonSummary(lesson, row, activeRevisionId);
+              return lesson == null
+                  ? null
+                  : lessonSummary(
+                      lesson, row, activeRevisionId, activeContent, historicalContentByRevisionId);
             })
         .filter(Objects::nonNull)
         .findFirst()

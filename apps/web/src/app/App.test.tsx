@@ -130,11 +130,13 @@ test('routes a restored student from root to production Learn when preview state
   // RootDecisionPage sends activated STUDENT to /app/learn (VS-008 pilot home).
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+    vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
     ),
   );
 
@@ -145,7 +147,10 @@ test('routes a restored student from root to production Learn when preview state
       await screen.findByText(/Belum ada paket terbit|No published packages yet/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: /^Belajar$|^Learn$/i }),
+      screen.getByRole('heading', {
+        level: 1,
+        name: /Pelajaranmu|Your lessons|Pelajaran Test|Test's lessons/i,
+      }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /target akademik/i })).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('Canonical Name')).not.toBeInTheDocument();

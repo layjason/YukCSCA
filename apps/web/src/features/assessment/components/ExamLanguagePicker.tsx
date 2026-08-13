@@ -18,6 +18,8 @@ export function ExamLanguagePicker({
   id = 'exam-language',
 }: ExamLanguagePickerProps): React.JSX.Element {
   const { t } = useTranslation();
+  // Dedupe while preserving first-seen order (legacy packages may list one set per question).
+  const unique = [...new Set(available)];
 
   return (
     <div className="assessment-exam-lang" role="group" aria-labelledby={`${id}-label`}>
@@ -25,7 +27,7 @@ export function ExamLanguagePicker({
         {t('assessment.examLanguage')}
       </span>
       <div className="assessment-chip-row">
-        {available.map((lang) => {
+        {unique.map((lang) => {
           const selected = value === lang;
           return (
             <button

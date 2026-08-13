@@ -394,6 +394,8 @@ export async function saveAcademicPackageDraft(
               reviewedAt: null,
             },
           })),
+          // Preserve VS-009 assessment sets on offline draft save (omit must not wipe).
+          assessmentSets: draft.assessmentSets ?? [],
         },
       };
       if (index >= 0) memoryDevPackages[index] = updated;

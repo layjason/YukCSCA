@@ -8,15 +8,23 @@ import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { ContentBlockView } from '@/features/learn/components/ContentBlockView';
 import { LanguageToggle } from '@/features/learn/components/LanguageToggle';
 import {
+  getMistake,
   getPublishedRemediation,
+  listAssessmentSessions,
   startRevalidation,
   upsertRemediationProgress,
 } from './api/assessmentApi';
+import { matchingInProgressSession } from './sessionResume';
+import { mistakeNextAction } from './assessmentPolicy';
 import { resolveLocalizedTextForExplanation } from './localizedText';
-import type { ContentProgress, ExplanationLanguage, PublishedRemediationDetail } from './types';
+import type {
+  ContentProgress,
+  ExplanationLanguage,
+  MistakeDetail,
+  PublishedRemediationDetail,
+} from './types';
 import { isAcademicSubject, isExplanationLanguage } from './types';
 import './assessment.css';
-import '@/features/learn/learn.css';
 
 export function RemediationReaderPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
@@ -38,6 +46,8 @@ export function RemediationReaderPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  const [inProgressSessionId, setInProgressSessionId] = useState<string | null>(null);
+  const [linkedMistake, setLinkedMistake] = useState<MistakeDetail | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -77,6 +87,12 @@ export function RemediationReaderPage(): React.JSX.Element {
         });
         setProgress(next);
       }
+      if (mistakeId) {
+        const linked = await getMistake(mistakeId).catch(() => undefined);
+        setLinkedMistake(linked ?? null);
+      } else {
+        setLinkedMistake(null);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
@@ -86,11 +102,33 @@ export function RemediationReaderPage(): React.JSX.Element {
     } finally {
       setLoading(false);
     }
-  }, [subject, resourceId, explanationLanguage, t]);
+  }, [subject, resourceId, explanationLanguage, mistakeId, t]);
 
   useEffect(() => {
     if (profileReady && explanationLanguage) void load();
   }, [profileReady, explanationLanguage, load]);
+
+  useEffect(() => {
+    if (!mistakeId) {
+      setInProgressSessionId(null);
+      return;
+    }
+    let active = true;
+    void listAssessmentSessions({ status: 'IN_PROGRESS' })
+      .then((rows) => {
+        if (!active) return;
+        setInProgressSessionId(
+          matchingInProgressSession(rows, { purpose: 'REVALIDATION', mistakeId })?.sessionId ??
+            null,
+        );
+      })
+      .catch(() => {
+        if (active) setInProgressSessionId(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [mistakeId]);
 
   async function handleComplete(): Promise<void> {
     if (!subject || !resourceId || !resource || saving) return;
@@ -102,7 +140,18 @@ export function RemediationReaderPage(): React.JSX.Element {
         expectedPackageRevisionId: resource.packageRevisionId,
       });
       setProgress(next);
-      setToast({ message: t('assessment.remediation.completeAck'), tone: 'success' });
+      let refreshed = linkedMistake;
+      if (mistakeId) {
+        refreshed = (await getMistake(mistakeId).catch(() => undefined)) ?? null;
+        setLinkedMistake(refreshed);
+      }
+      const passed = refreshed?.status === 'REVALIDATION_PASSED';
+      setToast({
+        message: passed
+          ? t('assessment.remediation.alreadyPassed')
+          : t('assessment.remediation.completeAck'),
+        tone: 'success',
+      });
     } catch {
       setToast({ message: t('assessment.errors.saveProgress'), tone: 'error' });
     } finally {
@@ -187,6 +236,13 @@ export function RemediationReaderPage(): React.JSX.Element {
   const isAvailable = body.availability === 'AVAILABLE';
   const blocks = isAvailable ? body.blocks : [];
   const isComplete = progress?.status === 'CONTENT_COMPLETE';
+  const nextAction = linkedMistake
+    ? mistakeNextAction(
+        linkedMistake.status,
+        linkedMistake.revalidationEligible,
+        inProgressSessionId != null,
+      )
+    : null;
 
   return (
     <div className="page-content assessment-page remediation-reader learn-page">
@@ -231,9 +287,16 @@ export function RemediationReaderPage(): React.JSX.Element {
             <>
               <p className="learn-complete-ack" role="status">
                 <Check size={18} aria-hidden="true" />
-                {t('assessment.remediation.completeAck')}
+                {nextAction === 'already_passed'
+                  ? t('assessment.remediation.alreadyPassed')
+                  : t('assessment.remediation.completeAck')}
               </p>
-              {mistakeId ? (
+              {nextAction === 'continue_revalidation' && inProgressSessionId ? (
+                <Link to={`/app/practice/sessions/${inProgressSessionId}`} className="btn-primary">
+                  <RefreshCw size={18} aria-hidden="true" />
+                  {t('assessment.mistakes.continueRevalidation')}
+                </Link>
+              ) : nextAction === 'start_revalidation' ? (
                 <button
                   type="button"
                   className="btn-primary"

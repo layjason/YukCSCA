@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   allItemsAnswered,
   allItemsLocked,
+  anyAssistanceUsed,
   canFinishInProgressSession,
   canLockAnswer,
   containsProhibitedMasteryClaim,
   feedbackVisibleForItem,
+  itemUsedAssistance,
   isHintActionDisabled,
+  mistakeNextAction,
   nextHintTier,
   resultCopyKind,
   resumeItemIndex,
@@ -62,6 +65,17 @@ describe('hint ladder policy', () => {
       reason: 'revalidation_strong',
     });
     expect(isHintActionDisabled(view, 'CHECKPOINT').disabled).toBe(false);
+  });
+
+  it('marks exhausted when no next tier remains', () => {
+    const view = item({
+      itemId: 'i1',
+      hintLadder: [{ tierIndex: 0, strength: 'STANDARD', disclosed: true }],
+    });
+    expect(isHintActionDisabled(view, 'CHECKPOINT')).toEqual({
+      disabled: true,
+      reason: 'exhausted',
+    });
   });
 });
 
@@ -167,6 +181,56 @@ describe('result copy', () => {
     expect(containsProhibitedMasteryClaim('Checkpoint passed')).toBe(false);
     expect(containsProhibitedMasteryClaim('Mastered')).toBe(true);
     expect(containsProhibitedMasteryClaim('Stable Mastery')).toBe(true);
+  });
+
+  it('blocks revalidation pass when any assistance was used (D-16)', () => {
+    expect(
+      anyAssistanceUsed({ maxTierDisclosed: 1, strongUsed: false, languageAssistUsed: false }),
+    ).toBe(true);
+    expect(
+      anyAssistanceUsed({ maxTierDisclosed: 0, strongUsed: false, languageAssistUsed: false }),
+    ).toBe(false);
+    expect(resultCopyKind('REVALIDATION', null, 1, 1, { assistanceUsed: true })).toBe(
+      'revalidation_assisted',
+    );
+    expect(resultCopyKind('REVALIDATION', null, 1, 1, { assistanceUsed: false })).toBe(
+      'revalidation_pass',
+    );
+    expect(resultCopyKind('REVALIDATION', null, 0, 1, { assistanceUsed: false })).toBe(
+      'revalidation_fail',
+    );
+    expect(resultCopyKind('REVALIDATION', null, 0, 1, { assistanceUsed: true })).toBe(
+      'revalidation_fail',
+    );
+  });
+
+  it('blocks checkpoint pass on STRONG when server flag is null (D-10 fallback)', () => {
+    expect(resultCopyKind('CHECKPOINT', null, 2, 2, { strongAssistanceUsed: true })).toBe(
+      'checkpoint_fail',
+    );
+    expect(resultCopyKind('CHECKPOINT', null, 2, 2, { strongAssistanceUsed: false })).toBe(
+      'checkpoint_pass',
+    );
+  });
+
+  it('treats disclosed hint tiers as item assistance', () => {
+    expect(
+      itemUsedAssistance(
+        item({
+          itemId: 'a',
+          disclosedTierCount: 1,
+          hintLadder: [{ tierIndex: 0, strength: 'STANDARD', disclosed: true }],
+        }),
+      ),
+    ).toBe(true);
+    expect(itemUsedAssistance(item({ itemId: 'b' }))).toBe(false);
+  });
+
+  it('never offers Recheck after an independent pass', () => {
+    expect(mistakeNextAction('REVALIDATION_PASSED', false, false)).toBe('already_passed');
+    expect(mistakeNextAction('REVALIDATION_PASSED', true, false)).toBe('already_passed');
+    expect(mistakeNextAction('AWAITING_REVALIDATION', true, false)).toBe('start_revalidation');
+    expect(mistakeNextAction('OPEN', false, false)).toBe('study_first');
   });
 
   it('scores items from review projection', () => {

@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,10 +93,14 @@ public class AcademicStudentService {
         progressStore.findByAccountIdAndPackageId(actorId, academicPackage.getId());
     Map<UUID, StudentContentProgress> progressByResource = indexProgress(progressRows);
     UUID activeRevisionId = revision.getId();
+    Map<UUID, JsonNode> historicalContent =
+        loadHistoricalRevisionContent(progressRows, activeRevisionId);
     List<OutlineNodeProjection> outline =
-        projector.outline(content, lessons, progressByResource, activeRevisionId);
+        projector.outline(
+            content, lessons, progressByResource, activeRevisionId, historicalContent);
     LessonSummaryProjection continueLesson =
-        projector.continueLesson(lessons, progressRows, activeRevisionId);
+        projector.continueLesson(
+            lessons, progressRows, activeRevisionId, content, historicalContent);
     LOGGER.info(
         "academic.student.browse subject={} packageId={} revisionId={}",
         academicPackage.getSubject(),
@@ -208,8 +213,18 @@ public class AcademicStudentService {
     boolean available = resource.blocksByLanguage().containsKey(explanationLanguage);
     List<JsonNode> blocks =
         available ? resource.blocksByLanguage().get(explanationLanguage) : List.of();
+    Map<UUID, JsonNode> historicalContent =
+        progress == null
+            ? Map.of()
+            : loadHistoricalRevisionContent(List.of(progress), revision.getId());
     ContentProgressProjection progressProjection =
-        projector.contentProgress(progress, available ? blocks.size() : null, revision.getId());
+        projector.contentProgress(
+            progress,
+            available ? blocks.size() : null,
+            revision.getId(),
+            resourceId,
+            content,
+            historicalContent);
     LOGGER.info(
         "academic.student.{}_open subject={} resourceId={} explanationLanguage={}",
         kind.toLowerCase(),
@@ -334,7 +349,47 @@ public class AcademicStudentService {
         resourceId,
         kind,
         progressStatus);
-    return projector.contentProgress(saved, null, activeRevisionId);
+    Map<UUID, JsonNode> historicalContent =
+        loadHistoricalRevisionContent(List.of(saved), activeRevisionId);
+    return projector.contentProgress(
+        saved, null, activeRevisionId, resourceId, content, historicalContent);
+  }
+
+  /**
+   * Loads prior published revision JSON for completed progress rows whose last complete revision
+   * differs from the active one. Used to soft-signal only when that resource actually changed.
+   */
+  private Map<UUID, JsonNode> loadHistoricalRevisionContent(
+      List<StudentContentProgress> progressRows, UUID activeRevisionId) {
+    Set<UUID> needed = new HashSet<>();
+    for (StudentContentProgress row : progressRows) {
+      if (row.getStatus() != StudentContentProgressStatus.CONTENT_COMPLETE) {
+        continue;
+      }
+      UUID last = row.getLastRevisionId();
+      if (last != null && activeRevisionId != null && !last.equals(activeRevisionId)) {
+        needed.add(last);
+      }
+    }
+    if (needed.isEmpty()) {
+      return Map.of();
+    }
+    Map<UUID, JsonNode> byRevision = new HashMap<>();
+    for (UUID revisionId : needed) {
+      revisions
+          .findById(revisionId)
+          .ifPresent(
+              historical -> {
+                try {
+                  byRevision.put(revisionId, projector.parseContent(historical.getContent()));
+                } catch (RuntimeException exception) {
+                  LOGGER.warn(
+                      "academic.student.progress historical_revision_unreadable revisionId={}",
+                      revisionId);
+                }
+              });
+    }
+    return byRevision;
   }
 
   @Transactional(readOnly = true)

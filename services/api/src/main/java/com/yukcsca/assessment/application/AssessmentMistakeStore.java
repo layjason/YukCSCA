@@ -1,7 +1,9 @@
 package com.yukcsca.assessment.application;
 
 import com.yukcsca.assessment.domain.AssessmentMistake;
+import com.yukcsca.assessment.domain.MistakeStatus;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,4 +30,20 @@ public interface AssessmentMistakeStore {
 
   List<AssessmentMistake> findByAccountIdAndSubjectAfterCursor(
       UUID accountId, String subject, Instant cursorUpdatedAt, UUID cursorId, int limit);
+
+  List<AssessmentMistake> findPage(UUID accountId, String subject, MistakeStatus status, int limit);
+
+  List<AssessmentMistake> findPageAfterCursor(
+      UUID accountId,
+      String subject,
+      MistakeStatus status,
+      Instant cursorUpdatedAt,
+      UUID cursorId,
+      int limit);
+
+  List<AssessmentMistake> findByAccountIdAndStatusInOrderByUpdatedAtDesc(
+      UUID accountId, Collection<MistakeStatus> statuses);
+
+  List<AssessmentMistake> findByAccountIdAndSubjectAndStatusInOrderByUpdatedAtDesc(
+      UUID accountId, String subject, Collection<MistakeStatus> statuses);
 }

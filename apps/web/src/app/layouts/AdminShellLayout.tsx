@@ -3,15 +3,26 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 import { RouteFocusManager } from '@/app/focus/RouteFocusManager';
 import { adminMobileNavRoutes, adminNavRoutes, isRouteActive } from '@/app/routes';
+import { NavCollapseIcon, ShellNavIcon, SignOutIcon } from '@/app/layouts/navIcons';
+import { useDesktopNavExpanded } from '@/app/layouts/useDesktopNavExpanded';
 
 export function AdminShellLayout(): React.JSX.Element {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const location = useLocation();
+  const { expanded, toggle } = useDesktopNavExpanded();
+  const displayName = user?.displayName ?? t('admin.shell.fallbackName');
 
   return (
-    <div className="admin-shell">
-      <nav className="admin-shell-nav" aria-label={t('admin.shell.navLabel')}>
+    <div className={expanded ? 'admin-shell' : 'admin-shell admin-shell-nav-collapsed'}>
+      <nav
+        className={
+          expanded
+            ? 'admin-shell-nav admin-shell-nav-expanded'
+            : 'admin-shell-nav admin-shell-nav-collapsed'
+        }
+        aria-label={t('admin.shell.navLabel')}
+      >
         <div className="admin-shell-brand">
           <span className="admin-shell-logo" aria-hidden="true">
             Y
@@ -20,6 +31,18 @@ export function AdminShellLayout(): React.JSX.Element {
             <span className="admin-shell-name">YukCSCA</span>
             <span className="admin-shell-role">{t('admin.shell.workspace')}</span>
           </div>
+          {expanded ? (
+            <button
+              type="button"
+              className="app-nav-toggle"
+              onClick={toggle}
+              aria-pressed={true}
+              aria-label={t('shell.collapseNav')}
+              title={t('shell.collapseNav')}
+            >
+              <NavCollapseIcon expanded />
+            </button>
+          ) : null}
         </div>
 
         <ul className="admin-shell-nav-list" role="list">
@@ -35,9 +58,11 @@ export function AdminShellLayout(): React.JSX.Element {
                       : 'admin-shell-nav-item'
                   }
                   aria-current={active ? 'page' : undefined}
+                  aria-label={expanded ? undefined : t(route.labelKey)}
+                  title={expanded ? undefined : t(route.labelKey)}
                 >
                   <span className="admin-shell-nav-icon" aria-hidden="true">
-                    {getAdminNavIcon(route.id)}
+                    <ShellNavIcon id={route.id} />
                   </span>
                   <span className="admin-shell-nav-label">{t(route.labelKey)}</span>
                 </NavLink>
@@ -47,15 +72,37 @@ export function AdminShellLayout(): React.JSX.Element {
         </ul>
 
         <div className="admin-shell-footer">
-          <div className="admin-shell-user-block">
-            <span className="admin-shell-user-label">{t('admin.shell.signedInAs')}</span>
-            <span className="admin-shell-user">
-              {user?.displayName ?? t('admin.shell.fallbackName')}
-            </span>
-          </div>
-          <button type="button" className="nav-logout-btn" onClick={() => void logout()}>
-            {t('shell.logout')}
-          </button>
+          {expanded ? (
+            <>
+              <div className="admin-shell-user-block">
+                <span className="admin-shell-user-label">{t('admin.shell.signedInAs')}</span>
+                <span className="admin-shell-user" title={displayName}>
+                  {displayName}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="nav-logout-btn"
+                onClick={() => void logout()}
+                aria-label={t('shell.logout')}
+                title={t('shell.logout')}
+              >
+                <SignOutIcon />
+                <span className="nav-logout-label">{t('shell.logout')}</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="app-nav-toggle"
+              onClick={toggle}
+              aria-pressed={false}
+              aria-label={t('shell.expandNav')}
+              title={t('shell.expandNav')}
+            >
+              <NavCollapseIcon expanded={false} />
+            </button>
+          )}
         </div>
       </nav>
 
@@ -81,7 +128,7 @@ export function AdminShellLayout(): React.JSX.Element {
               aria-current={active ? 'page' : undefined}
             >
               <span className="admin-shell-nav-icon" aria-hidden="true">
-                {getAdminNavIcon(route.id)}
+                <ShellNavIcon id={route.id} />
               </span>
               <span className="admin-shell-bottom-label">{t(route.labelKey)}</span>
             </NavLink>
@@ -90,13 +137,4 @@ export function AdminShellLayout(): React.JSX.Element {
       </nav>
     </div>
   );
-}
-
-function getAdminNavIcon(id: string): string {
-  switch (id) {
-    case 'admin-packages':
-      return '\u25A3';
-    default:
-      return '\u2022';
-  }
 }

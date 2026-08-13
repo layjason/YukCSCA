@@ -11,6 +11,7 @@ import type {
   ExamLanguage,
   ExplanationLanguage,
   ItemAnswerResult,
+  LocalizedText,
   MistakeDetail,
   MistakeListResponseBody,
   MistakeStatus,
@@ -122,7 +123,15 @@ function assertSession(value: unknown): asserts value is AssessmentSession {
 }
 
 function assertCheckpoint(value: unknown): asserts value is CheckpointForLesson {
-  if (!value || typeof value !== 'object' || !('startable' in value) || !('editions' in value)) {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('startable' in value) ||
+    !('editions' in value) ||
+    !('checkpointUpdatedSinceLastAttempt' in value) ||
+    typeof (value as { checkpointUpdatedSinceLastAttempt: unknown })
+      .checkpointUpdatedSinceLastAttempt !== 'boolean'
+  ) {
     throw new ApiError(500, { title: 'Invalid checkpoint response', code: 'CONTRACT_MISMATCH' });
   }
 }
@@ -179,11 +188,17 @@ export async function listAssessmentSets(
   options?: {
     purpose?: 'CHECKPOINT' | 'TOPIC_PRACTICE';
     examLanguage?: ExamLanguage;
+    outlineItemId?: string;
+    objectiveId?: string;
+    difficulty?: 'FOUNDATION' | 'STANDARD' | 'ADVANCED';
   },
 ): Promise<AssessmentSetSummary[]> {
   const query = new URLSearchParams();
   if (options?.purpose) query.set('purpose', options.purpose);
   if (options?.examLanguage) query.set('examLanguage', options.examLanguage);
+  if (options?.outlineItemId) query.set('outlineItemId', options.outlineItemId);
+  if (options?.objectiveId) query.set('objectiveId', options.objectiveId);
+  if (options?.difficulty) query.set('difficulty', options.difficulty);
   const qs = query.toString();
   try {
     const response = await fetch(
@@ -338,7 +353,13 @@ export async function submitSession(sessionId: string): Promise<SessionResult> {
   try {
     const response = await fetch(
       `${ASSESSMENT_BASE}/sessions/${encodeURIComponent(sessionId)}/submit`,
-      { method: 'POST', headers: authorizationHeaders(false) },
+      {
+        method: 'POST',
+        headers: {
+          ...authorizationHeaders(false),
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+      },
     );
     if (isDevFallback() && response.status === 401) {
       const mock = devSubmitSession(sessionId);
@@ -382,11 +403,13 @@ export async function listMistakes(options?: {
   status?: MistakeStatus;
   subject?: AcademicSubject;
   cursor?: string;
+  limit?: number;
 }): Promise<MistakeListResponseBody> {
   const query = new URLSearchParams();
   if (options?.status) query.set('status', options.status);
   if (options?.subject) query.set('subject', options.subject);
   if (options?.cursor) query.set('cursor', options.cursor);
+  if (options?.limit != null) query.set('limit', String(options.limit));
   const qs = query.toString();
   try {
     const response = await fetch(`${ASSESSMENT_BASE}/mistakes${qs ? `?${qs}` : ''}`, {
@@ -501,6 +524,40 @@ export async function getPublishedRemediation(
     if (shouldUseAssessmentDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       const mock = devGetPublishedRemediation(subject, resourceId, explanationLanguage);
       if (mock) return mock;
+    }
+    throw err;
+  }
+}
+
+/** Outline titles for Practice topic filters. Academic browse only; does not import Learn UI. */
+export async function listOutlineLabels(
+  subject: AcademicSubject,
+): Promise<Array<{ id: string; summary: LocalizedText }>> {
+  try {
+    const response = await fetch(`${ACADEMIC_BASE}/packages/${encodeURIComponent(subject)}`, {
+      headers: authorizationHeaders(false),
+    });
+    if (isDevFallback() && response.status === 401) {
+      return [];
+    }
+    const data = await parseJsonResponse<unknown>(response);
+    if (!data || typeof data !== 'object' || !('outline' in data) || !Array.isArray(data.outline)) {
+      throw new ApiError(500, { title: 'Invalid package browse', code: 'CONTRACT_MISMATCH' });
+    }
+    return data.outline
+      .map((node) => {
+        if (!node || typeof node !== 'object' || !('id' in node) || !('summary' in node)) {
+          return null;
+        }
+        const id = (node as { id: unknown }).id;
+        const summary = (node as { summary: unknown }).summary;
+        if (typeof id !== 'string' || !summary || typeof summary !== 'object') return null;
+        return { id, summary: summary as LocalizedText };
+      })
+      .filter((row): row is { id: string; summary: LocalizedText } => row != null);
+  } catch (err) {
+    if (shouldUseAssessmentDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      return [];
     }
     throw err;
   }

@@ -37,3 +37,24 @@ export function resolveLocalizedTextForExplanation(
   if (preferredValue) return preferredValue;
   return resolveLocalizedText(text, interfaceLanguage);
 }
+
+const EXPLANATION_ORDER: readonly ExplanationLanguage[] = ['id', 'en', 'zh-CN'];
+
+export function availableExplanationLanguages(
+  items: ReadonlyArray<{ language: ExplanationLanguage }>,
+): ExplanationLanguage[] {
+  const present = new Set(items.map((item) => item.language));
+  return EXPLANATION_ORDER.filter((language) => present.has(language));
+}
+
+export function pickLocalizedContent<T extends { language: ExplanationLanguage }>(
+  items: readonly T[],
+  preferred: ExplanationLanguage,
+): T | undefined {
+  return (
+    items.find((item) => item.language === preferred) ??
+    items.find((item) => item.language === 'en') ??
+    items.find((item) => item.language === 'id') ??
+    items[0]
+  );
+}

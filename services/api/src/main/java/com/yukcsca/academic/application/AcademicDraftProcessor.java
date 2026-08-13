@@ -574,6 +574,9 @@ public class AcademicDraftProcessor {
       return;
     }
     uniqueIds(assessmentSets, "draft.assessmentSets", violations);
+    // One CHECKPOINT edition per (lesson, exam language) — student UI exposes one startable
+    // edition per language for a lesson (contract max 2 editions: en + zh-CN).
+    Set<String> checkpointLessonLanguageKeys = new HashSet<>();
     // Re-validate question relatedResourceIds now that resource ids are known.
     // (Snapshot path does not carry those ids; callers validate questions first.)
     for (int index = 0; index < assessmentSets.size(); index++) {
@@ -626,6 +629,12 @@ public class AcademicDraftProcessor {
           violations.add(
               new AcademicViolation(
                   path + ".lessonResourceId", AcademicViolationCode.INCOMPATIBLE));
+        } else if (examLanguage != null && EXAM_LANGUAGES.contains(examLanguage)) {
+          String key = lessonId + "|" + examLanguage;
+          if (!checkpointLessonLanguageKeys.add(key)) {
+            violations.add(
+                new AcademicViolation(path + ".examLanguage", AcademicViolationCode.DUPLICATE));
+          }
         }
         String passPolicy = text(set, "passPolicy");
         if (passPolicy == null) {

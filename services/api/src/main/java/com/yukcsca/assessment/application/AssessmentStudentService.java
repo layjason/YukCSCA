@@ -37,8 +37,12 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -60,6 +64,7 @@ public class AssessmentStudentService {
   private final AssessmentObjectiveEvidenceStore evidence;
   private final JsonMapper json;
   private final Clock clock;
+  private final TransactionTemplate requiresNewTx;
 
   public AssessmentStudentService(
       PublishedAssessmentCatalog catalog,
@@ -72,7 +77,8 @@ public class AssessmentStudentService {
       AssessmentMistakeStore mistakes,
       AssessmentObjectiveEvidenceStore evidence,
       JsonMapper json,
-      Clock clock) {
+      Clock clock,
+      PlatformTransactionManager transactionManager) {
     this.catalog = catalog;
     this.progressQuery = progressQuery;
     this.accessPolicy = accessPolicy;
@@ -84,6 +90,8 @@ public class AssessmentStudentService {
     this.evidence = evidence;
     this.json = json;
     this.clock = clock;
+    this.requiresNewTx = new TransactionTemplate(transactionManager);
+    this.requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
   }
 
   @Transactional(readOnly = true)
@@ -151,7 +159,17 @@ public class AssessmentStudentService {
     } else if (!contentComplete) {
       lockReason = "LESSON_NOT_CONTENT_COMPLETE";
     } else {
+      // One edition per exam language (student chooser). Prefer first published set if
+      // legacy packages still carry duplicates; admin publish now rejects duplicates.
+      java.util.LinkedHashMap<String, AssessmentSetView> byLanguage =
+          new java.util.LinkedHashMap<>();
       for (AssessmentSetView set : checkpoints) {
+        if (set.examLanguage() == null || set.examLanguage().isBlank()) {
+          continue;
+        }
+        byLanguage.putIfAbsent(set.examLanguage(), set);
+      }
+      for (AssessmentSetView set : byLanguage.values()) {
         editions.add(
             new CheckpointEditionView(
                 set.setId(),
@@ -168,6 +186,8 @@ public class AssessmentStudentService {
         startable = true;
       }
     }
+    boolean checkpointUpdatedSinceLastAttempt =
+        computeCheckpointUpdatedSinceLastAttempt(actorId, pkg, lessonResourceId);
     return new CheckpointForLessonView(
         pkg.subject(),
         pkg.packageId(),
@@ -176,16 +196,119 @@ public class AssessmentStudentService {
         contentComplete,
         startable,
         lockReason,
+        checkpointUpdatedSinceLastAttempt,
         List.copyOf(editions));
+  }
+
+  /**
+   * Soft signal: prior submitted CHECKPOINT for this lesson exists and the published checkpoint
+   * material (sets + referenced questions) changed vs that attempt's package revision.
+   */
+  private boolean computeCheckpointUpdatedSinceLastAttempt(
+      UUID actorId, PublishedPackageAssessmentView activePkg, UUID lessonResourceId) {
+    AssessmentSession prior =
+        sessions
+            .findFirstByAccountIdAndPurposeAndLessonResourceIdAndStatusOrderByUpdatedAtDesc(
+                actorId,
+                AssessmentSessionPurpose.CHECKPOINT,
+                lessonResourceId,
+                AssessmentSessionStatus.SUBMITTED)
+            .orElse(null);
+    if (prior == null) {
+      return false;
+    }
+    UUID attemptRevisionId = prior.getPackageRevisionId();
+    if (attemptRevisionId == null || attemptRevisionId.equals(activePkg.packageRevisionId())) {
+      return false;
+    }
+    PublishedPackageAssessmentView attemptPkg =
+        catalog.findByPackageRevision(activePkg.packageId(), attemptRevisionId).orElse(null);
+    if (attemptPkg == null) {
+      // Historical revision missing — soft-signal so the student re-checks the checkpoint.
+      return true;
+    }
+    return !checkpointLessonContentEquals(attemptPkg, activePkg, lessonResourceId);
+  }
+
+  private static boolean checkpointLessonContentEquals(
+      PublishedPackageAssessmentView previous,
+      PublishedPackageAssessmentView active,
+      UUID lessonResourceId) {
+    List<AssessmentSetView> previousSets = checkpointSetsForLesson(previous, lessonResourceId);
+    List<AssessmentSetView> activeSets = checkpointSetsForLesson(active, lessonResourceId);
+    if (previousSets.size() != activeSets.size()) {
+      return false;
+    }
+    for (int i = 0; i < previousSets.size(); i++) {
+      AssessmentSetView prevSet = previousSets.get(i);
+      AssessmentSetView activeSet = activeSets.get(i);
+      if (!assessmentSetShellEquals(prevSet, activeSet)) {
+        return false;
+      }
+      if (!questionContentEquals(
+          previous, active, prevSet.questionIds(), activeSet.questionIds())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static List<AssessmentSetView> checkpointSetsForLesson(
+      PublishedPackageAssessmentView pkg, UUID lessonResourceId) {
+    return pkg.assessmentSets().stream()
+        .filter(set -> "CHECKPOINT".equals(set.purpose()))
+        .filter(set -> lessonResourceId.equals(set.lessonResourceId()))
+        .sorted(
+            java.util.Comparator.comparing(
+                set -> set.examLanguage() == null ? "" : set.examLanguage()))
+        .toList();
+  }
+
+  private static boolean assessmentSetShellEquals(AssessmentSetView a, AssessmentSetView b) {
+    return Objects.equals(a.setId(), b.setId())
+        && Objects.equals(a.examLanguage(), b.examLanguage())
+        && Objects.equals(a.title(), b.title())
+        && Objects.equals(a.difficulty(), b.difficulty())
+        && Objects.equals(a.questionIds(), b.questionIds())
+        && Objects.equals(a.feedbackMode(), b.feedbackMode())
+        && Objects.equals(a.passPolicy(), b.passPolicy())
+        && Objects.equals(a.estimatedMinutes(), b.estimatedMinutes())
+        && Objects.equals(a.outlineItemIds(), b.outlineItemIds())
+        && Objects.equals(a.objectiveIds(), b.objectiveIds());
+  }
+
+  private static boolean questionContentEquals(
+      PublishedPackageAssessmentView previous,
+      PublishedPackageAssessmentView active,
+      List<UUID> previousQuestionIds,
+      List<UUID> activeQuestionIds) {
+    if (!Objects.equals(previousQuestionIds, activeQuestionIds)) {
+      return false;
+    }
+    for (UUID questionId : previousQuestionIds) {
+      QuestionView prevQ = previous.questionsById().get(questionId);
+      QuestionView activeQ = active.questionsById().get(questionId);
+      if (!Objects.equals(prevQ, activeQ)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Transactional(readOnly = true)
   public List<SessionResumeSummaryView> listSessions(UUID actorId, String status, String subject) {
     requireStudent(actorId);
-    AssessmentSessionStatus sessionStatus =
-        status == null || status.isBlank()
-            ? AssessmentSessionStatus.IN_PROGRESS
-            : AssessmentSessionStatus.valueOf(status);
+    AssessmentSessionStatus sessionStatus;
+    if (status == null || status.isBlank()) {
+      sessionStatus = AssessmentSessionStatus.IN_PROGRESS;
+    } else {
+      try {
+        sessionStatus = AssessmentSessionStatus.valueOf(status);
+      } catch (IllegalArgumentException exception) {
+        throw new AssessmentValidationException(
+            List.of(new AssessmentViolation("status", "UNSUPPORTED")));
+      }
+    }
     List<AssessmentSession> rows =
         subject == null || subject.isBlank()
             ? sessions.findByAccountIdAndStatusOrderByUpdatedAtDesc(actorId, sessionStatus)
@@ -242,31 +365,78 @@ public class AssessmentStudentService {
             "CHECKPOINT_LOCKED", "Lesson content is not complete.", "LESSON_NOT_CONTENT_COMPLETE");
       }
     }
+    Optional<AssessmentSession> existing =
+        sessions.findFirstByAccountIdAndPurposeAndSetIdAndExamLanguageAndStatusOrderByUpdatedAtDesc(
+            actorId,
+            AssessmentSessionPurpose.valueOf(purpose),
+            set.setId(),
+            examLanguage,
+            AssessmentSessionStatus.IN_PROGRESS);
+    if (existing.isPresent()) {
+      AssessmentSession session = existing.get();
+      List<AssessmentItemAttempt> attempts =
+          items.findBySessionIdOrderByItemOrderAsc(session.getId());
+      LOGGER.info(
+          "assessment.session.resumed sessionId={} purpose={} subject={} setId={}",
+          session.getId(),
+          purpose,
+          subject,
+          setId);
+      return toSessionView(session, attempts, false);
+    }
     Instant now = now();
-    AssessmentSession session =
-        sessions.save(
-            new AssessmentSession(
-                actorId,
-                pkg.subject(),
-                pkg.packageId(),
-                pkg.packageRevisionId(),
-                AssessmentSessionPurpose.valueOf(purpose),
-                set.setId(),
-                null,
-                set.lessonResourceId(),
-                examLanguage,
-                set.feedbackMode() == null ? "IMMEDIATE" : set.feedbackMode(),
-                writeLocalized(set.title()),
-                false,
-                now));
-    List<AssessmentItemAttempt> created = materializeItems(session, set, pkg, now);
-    LOGGER.info(
-        "assessment.session.started sessionId={} purpose={} subject={} setId={}",
-        session.getId(),
-        purpose,
-        subject,
-        setId);
-    return toSessionView(session, created, false);
+    try {
+      // Insert in REQUIRES_NEW so a unique-index collision does not abort this request
+      // transaction; PostgreSQL otherwise rejects the resume SELECT after flush fails.
+      return requiresNewTx.execute(
+          status -> {
+            AssessmentSession session =
+                sessions.save(
+                    new AssessmentSession(
+                        actorId,
+                        pkg.subject(),
+                        pkg.packageId(),
+                        pkg.packageRevisionId(),
+                        AssessmentSessionPurpose.valueOf(purpose),
+                        set.setId(),
+                        null,
+                        set.lessonResourceId(),
+                        examLanguage,
+                        set.feedbackMode() == null ? "IMMEDIATE" : set.feedbackMode(),
+                        writeLocalized(set.title()),
+                        false,
+                        now));
+            sessions.flush();
+            List<AssessmentItemAttempt> created = materializeItems(session, set, pkg, now);
+            LOGGER.info(
+                "assessment.session.started sessionId={} purpose={} subject={} setId={}",
+                session.getId(),
+                purpose,
+                subject,
+                setId);
+            return toSessionView(session, created, false);
+          });
+    } catch (DataIntegrityViolationException exception) {
+      return sessions
+          .findFirstByAccountIdAndPurposeAndSetIdAndExamLanguageAndStatusOrderByUpdatedAtDesc(
+              actorId,
+              AssessmentSessionPurpose.valueOf(purpose),
+              set.setId(),
+              examLanguage,
+              AssessmentSessionStatus.IN_PROGRESS)
+          .map(
+              session -> {
+                List<AssessmentItemAttempt> attempts =
+                    items.findBySessionIdOrderByItemOrderAsc(session.getId());
+                LOGGER.info(
+                    "assessment.session.resumedAfterConflict sessionId={} purpose={} setId={}",
+                    session.getId(),
+                    purpose,
+                    setId);
+                return toSessionView(session, attempts, false);
+              })
+          .orElseThrow(() -> exception);
+    }
   }
 
   @Transactional(readOnly = true)
@@ -374,9 +544,11 @@ public class AssessmentStudentService {
     }
     // IMMEDIATE: lock on answer
     if (item.getStatus() == ItemAttemptStatus.LOCKED) {
-      // Idempotent re-read of already locked answer
-      return new ItemAnswerView(
-          toItemView(item, true, session.isStrongHintsDisabled()), assistanceSummary(session));
+      if (selectedOptionKey.equals(item.getSelectedOptionKey())) {
+        return new ItemAnswerView(
+            toItemView(item, true, session.isStrongHintsDisabled()), assistanceSummary(session));
+      }
+      throw new AssessmentConflictException("ITEM_ALREADY_LOCKED", "Item is already locked.");
     }
     item.selectAnswer(selectedOptionKey, now);
     item.lock(isCorrect, now);
@@ -396,7 +568,13 @@ public class AssessmentStudentService {
   @Transactional
   public SessionResultView submitSession(UUID actorId, UUID sessionId) {
     requireStudent(actorId);
-    AssessmentSession session = requireOwnedSession(actorId, sessionId);
+    AssessmentSession session =
+        sessions
+            .lockById(sessionId)
+            .orElseThrow(() -> new AssessmentNotFoundException("Session not found."));
+    if (!session.getAccountId().equals(actorId)) {
+      throw new AssessmentAccessDeniedException();
+    }
     if (session.getStatus() == AssessmentSessionStatus.SUBMITTED) {
       // Idempotent return of prior result
       List<AssessmentItemAttempt> existing =
@@ -455,6 +633,9 @@ public class AssessmentStudentService {
                           .ifPresent(set -> objectiveIds.addAll(set.objectiveIds())));
         }
         for (UUID objectiveId : objectiveIds) {
+          if (evidence.existsBySourceSessionIdAndObjectiveId(session.getId(), objectiveId)) {
+            continue;
+          }
           AssessmentObjectiveEvidence row =
               evidence.save(
                   new AssessmentObjectiveEvidence(
@@ -478,27 +659,17 @@ public class AssessmentStudentService {
       }
     }
     List<UUID> mistakeIds = new ArrayList<>();
-    for (AssessmentItemAttempt item : attempts) {
-      if (Boolean.FALSE.equals(item.getCorrect())) {
-        AssessmentMistake mistake = upsertMistake(session, item, now);
-        mistakeIds.add(mistake.getId());
-      }
-    }
     if (session.getPurpose() == AssessmentSessionPurpose.REVALIDATION
         && session.getMistakeId() != null) {
-      AssessmentMistake mistake =
-          mistakes
-              .findById(session.getMistakeId())
-              .orElseThrow(() -> new AssessmentNotFoundException("Mistake not found."));
-      boolean anyAssistance = assistance.countBySessionId(session.getId()) > 0;
-      boolean itemCorrect =
-          attempts.size() == 1 && Boolean.TRUE.equals(attempts.getFirst().getCorrect());
-      if (CheckpointPassEvaluator.revalidationPasses(itemCorrect, anyAssistance)) {
-        mistake.markRevalidationPassed(now);
-      } else {
-        mistake.markRevalidationFailed(now);
+      applyRevalidationOutcome(session, attempts, now);
+      mistakeIds.add(session.getMistakeId());
+    } else {
+      for (AssessmentItemAttempt item : attempts) {
+        if (Boolean.FALSE.equals(item.getCorrect())) {
+          AssessmentMistake mistake = upsertMistake(session, item, now);
+          mistakeIds.add(mistake.getId());
+        }
       }
-      mistakes.save(mistake);
     }
     session.markSubmitted(checkpointPassed, now);
     sessions.save(session);
@@ -533,17 +704,17 @@ public class AssessmentStudentService {
     return toSessionView(session, attempts, false);
   }
 
-  @Transactional(readOnly = true)
-  public MistakeListView listMistakes(UUID actorId, String subject, String cursor, Integer limit) {
+  @Transactional
+  public MistakeListView listMistakes(
+      UUID actorId, String subject, String status, String cursor, Integer limit) {
     requireStudent(actorId);
     int pageSize = limit == null ? 20 : Math.min(100, Math.max(1, limit));
+    String subjectFilter = subject == null || subject.isBlank() ? null : subject;
+    refreshOpenMistakeEligibility(actorId, subjectFilter);
+    MistakeStatus statusFilter = parseMistakeStatus(status);
     List<AssessmentMistake> rows;
     if (cursor == null || cursor.isBlank()) {
-      rows =
-          subject == null || subject.isBlank()
-              ? mistakes.findByAccountIdOrderByUpdatedAtDesc(actorId, pageSize + 1)
-              : mistakes.findByAccountIdAndSubjectOrderByUpdatedAtDesc(
-                  actorId, subject, pageSize + 1);
+      rows = mistakes.findPage(actorId, subjectFilter, statusFilter, pageSize + 1);
     } else {
       UUID cursorId = parseUuid(cursor);
       if (cursorId == null) {
@@ -557,16 +728,22 @@ public class AssessmentStudentService {
       if (!cursorRow.getAccountId().equals(actorId)) {
         throw new AssessmentAccessDeniedException();
       }
-      if (subject != null && !subject.isBlank() && !subject.equals(cursorRow.getSubject())) {
+      if (subjectFilter != null && !subjectFilter.equals(cursorRow.getSubject())) {
+        throw new AssessmentValidationException(
+            List.of(new AssessmentViolation("cursor", "INCOMPATIBLE")));
+      }
+      if (statusFilter != null && statusFilter != cursorRow.getStatus()) {
         throw new AssessmentValidationException(
             List.of(new AssessmentViolation("cursor", "INCOMPATIBLE")));
       }
       rows =
-          subject == null || subject.isBlank()
-              ? mistakes.findByAccountIdAfterCursor(
-                  actorId, cursorRow.getUpdatedAt(), cursorRow.getId(), pageSize + 1)
-              : mistakes.findByAccountIdAndSubjectAfterCursor(
-                  actorId, subject, cursorRow.getUpdatedAt(), cursorRow.getId(), pageSize + 1);
+          mistakes.findPageAfterCursor(
+              actorId,
+              subjectFilter,
+              statusFilter,
+              cursorRow.getUpdatedAt(),
+              cursorRow.getId(),
+              pageSize + 1);
     }
     boolean hasMore = rows.size() > pageSize;
     List<AssessmentMistake> page = hasMore ? rows.subList(0, pageSize) : rows;
@@ -575,11 +752,16 @@ public class AssessmentStudentService {
     return new MistakeListView(items, nextCursor);
   }
 
-  @Transactional(readOnly = true)
+  @Transactional
   public MistakeDetailView getMistake(UUID actorId, UUID mistakeId) {
     requireStudent(actorId);
     AssessmentMistake mistake = requireOwnedMistake(actorId, mistakeId);
     refreshRemediationEligibility(mistake);
+    // Opening the notebook starts review: OPEN → REMEDIATION_IN_PROGRESS.
+    if (mistake.getStatus() == MistakeStatus.OPEN) {
+      mistake.markRemediationInProgress(now());
+      mistakes.save(mistake);
+    }
     return toMistakeDetail(mistake);
   }
 
@@ -627,62 +809,213 @@ public class AssessmentStudentService {
       throw new AssessmentConflictException(
           "REVALIDATION_NOT_ELIGIBLE", "Mistake is not ready for revalidation.");
     }
+    if (mistake.getStatus() != MistakeStatus.AWAITING_REVALIDATION) {
+      mistake.markAwaitingRevalidation(now());
+      mistakes.save(mistake);
+    }
+    Optional<AssessmentSession> existingRevalidation =
+        sessions.findFirstByAccountIdAndPurposeAndMistakeIdAndStatusOrderByUpdatedAtDesc(
+            actorId,
+            AssessmentSessionPurpose.REVALIDATION,
+            mistakeId,
+            AssessmentSessionStatus.IN_PROGRESS);
+    if (existingRevalidation.isPresent()) {
+      AssessmentSession session = existingRevalidation.get();
+      List<AssessmentItemAttempt> attempts =
+          items.findBySessionIdOrderByItemOrderAsc(session.getId());
+      LOGGER.info(
+          "assessment.revalidation.resumed mistakeId={} sessionId={}", mistakeId, session.getId());
+      return toSessionView(session, attempts, true);
+    }
     PublishedPackageAssessmentView pkg =
         catalog
             .findActiveBySubject(mistake.getSubject())
             .orElseThrow(() -> new AssessmentNotFoundException("Published package not found."));
     Set<UUID> objectiveIds = new HashSet<>(uuidListFromJson(mistake.getObjectiveIdsJson()));
+    Set<UUID> outlineItemIds = new HashSet<>(uuidListFromJson(mistake.getOutlineItemIdsJson()));
+    List<RemediationResolutionPolicy.QuestionCandidate> candidates =
+        revalidationQuestionCandidates(pkg, mistake);
+    Set<UUID> assistedCorrectQuestionIds =
+        assistedCorrectRevalidationQuestionIds(actorId, mistakeId);
+    UUID selectedQuestionId =
+        RemediationResolutionPolicy.preferAlternateQuestion(
+            mistake.getQuestionId(),
+            mistake.getExamLanguage(),
+            objectiveIds,
+            outlineItemIds,
+            candidates,
+            assistedCorrectQuestionIds);
+    QuestionView selectedQuestion = pkg.questionsById().get(selectedQuestionId);
+    if (selectedQuestion == null) {
+      selectedQuestion = pkg.questionsById().get(mistake.getQuestionId());
+    }
+    if (selectedQuestion == null) {
+      throw new AssessmentConflictException(
+          "SET_NOT_AVAILABLE", "No revalidation question is available.");
+    }
+    QuestionView question = selectedQuestion;
+    Instant now = now();
+    try {
+      return requiresNewTx.execute(
+          status -> {
+            AssessmentSession session =
+                sessions.save(
+                    new AssessmentSession(
+                        actorId,
+                        pkg.subject(),
+                        pkg.packageId(),
+                        pkg.packageRevisionId(),
+                        AssessmentSessionPurpose.REVALIDATION,
+                        mistake.getSourceSetId(),
+                        mistake.getId(),
+                        null,
+                        mistake.getExamLanguage(),
+                        "IMMEDIATE",
+                        null,
+                        true,
+                        now));
+            sessions.flush();
+            AssessmentItemAttempt item =
+                items.save(
+                    new AssessmentItemAttempt(
+                        session.getId(),
+                        actorId,
+                        0,
+                        question.questionId(),
+                        writeQuestionCopy(question, pkg),
+                        now));
+            LOGGER.info(
+                "assessment.revalidation.started mistakeId={} sessionId={} usedAlternateQuestion={}",
+                mistakeId,
+                session.getId(),
+                !question.questionId().equals(mistake.getQuestionId()));
+            return toSessionView(session, List.of(item), true);
+          });
+    } catch (DataIntegrityViolationException exception) {
+      return sessions
+          .findFirstByAccountIdAndPurposeAndMistakeIdAndStatusOrderByUpdatedAtDesc(
+              actorId,
+              AssessmentSessionPurpose.REVALIDATION,
+              mistakeId,
+              AssessmentSessionStatus.IN_PROGRESS)
+          .map(
+              session -> {
+                List<AssessmentItemAttempt> attempts =
+                    items.findBySessionIdOrderByItemOrderAsc(session.getId());
+                LOGGER.info(
+                    "assessment.revalidation.resumedAfterConflict mistakeId={} sessionId={}",
+                    mistakeId,
+                    session.getId());
+                return toSessionView(session, attempts, true);
+              })
+          .orElseThrow(() -> exception);
+    }
+  }
+
+  private void applyRevalidationOutcome(
+      AssessmentSession session, List<AssessmentItemAttempt> attempts, Instant now) {
+    AssessmentMistake mistake =
+        mistakes
+            .findById(session.getMistakeId())
+            .orElseThrow(() -> new AssessmentNotFoundException("Mistake not found."));
+    boolean anyAssistance = assistance.countBySessionId(session.getId()) > 0;
+    AssessmentItemAttempt item = attempts.isEmpty() ? null : attempts.getFirst();
+    boolean itemCorrect =
+        item != null && attempts.size() == 1 && Boolean.TRUE.equals(item.getCorrect());
+    if (CheckpointPassEvaluator.revalidationPasses(itemCorrect, anyAssistance)) {
+      mistake.markRevalidationPassed(now);
+    } else if (item != null && Boolean.FALSE.equals(item.getCorrect())) {
+      if (item.getQuestionId().equals(mistake.getQuestionId())) {
+        ObjectNode copy = parseObject(item.getQuestionCopyJson());
+        String latestResponseJson =
+            writeLatestResponse(
+                item.getSelectedOptionKey(),
+                false,
+                copy.path("correctOptionKey").asText(),
+                buildFeedback(copy, false),
+                session.getId(),
+                item.getId(),
+                now);
+        mistake.recordIncorrectAttempt(
+            item.getId(),
+            session.getId(),
+            session.getPackageRevisionId(),
+            item.getDisclosedTierCount(),
+            item.isStrongAssistance(),
+            latestResponseJson,
+            now);
+      } else {
+        // Alternate item: keep notebook identity on the original question.
+        mistake.recordFailedRevalidation(item.getId(), session.getId(), now);
+      }
+    } else {
+      mistake.markRevalidationFailed(now);
+    }
+    mistakes.save(mistake);
+  }
+
+  /**
+   * Questions the student already answered correctly with a hint on a prior REVALIDATION session
+   * for this mistake. The next recheck should use a different item (D-16 independent evidence).
+   */
+  private Set<UUID> assistedCorrectRevalidationQuestionIds(UUID actorId, UUID mistakeId) {
+    List<AssessmentSession> prior =
+        sessions.findByAccountIdAndPurposeAndMistakeIdAndStatusOrderByUpdatedAtDesc(
+            actorId,
+            AssessmentSessionPurpose.REVALIDATION,
+            mistakeId,
+            AssessmentSessionStatus.SUBMITTED);
+    Set<UUID> excluded = new LinkedHashSet<>();
+    for (AssessmentSession priorSession : prior) {
+      if (assistance.countBySessionId(priorSession.getId()) <= 0) {
+        continue;
+      }
+      for (AssessmentItemAttempt priorItem :
+          items.findBySessionIdOrderByItemOrderAsc(priorSession.getId())) {
+        if (Boolean.TRUE.equals(priorItem.getCorrect())) {
+          excluded.add(priorItem.getQuestionId());
+        }
+      }
+    }
+    return excluded;
+  }
+
+  private List<RemediationResolutionPolicy.QuestionCandidate> revalidationQuestionCandidates(
+      PublishedPackageAssessmentView pkg, AssessmentMistake mistake) {
+    LinkedHashSet<UUID> orderedIds = new LinkedHashSet<>();
+    if (mistake.getSourceSetId() != null) {
+      pkg.assessmentSets().stream()
+          .filter(set -> set.setId().equals(mistake.getSourceSetId()))
+          .findFirst()
+          .ifPresent(set -> orderedIds.addAll(set.questionIds()));
+    }
+    pkg.questionsById().keySet().stream().sorted().forEach(orderedIds::add);
     List<RemediationResolutionPolicy.QuestionCandidate> candidates = new ArrayList<>();
-    for (QuestionView question : pkg.questionsById().values()) {
+    for (UUID questionId : orderedIds) {
+      QuestionView question = pkg.questionsById().get(questionId);
+      if (question == null) {
+        continue;
+      }
       candidates.add(
           new RemediationResolutionPolicy.QuestionCandidate(
               question.questionId(),
               question.examLanguage(),
-              new HashSet<>(question.objectiveIds())));
+              new HashSet<>(question.objectiveIds()),
+              new HashSet<>(question.outlineItemIds())));
     }
-    UUID selectedQuestionId =
-        RemediationResolutionPolicy.preferAlternateQuestion(
-            mistake.getQuestionId(), mistake.getExamLanguage(), objectiveIds, candidates);
-    QuestionView question = pkg.questionsById().get(selectedQuestionId);
-    if (question == null) {
-      question = pkg.questionsById().get(mistake.getQuestionId());
+    return candidates;
+  }
+
+  private MistakeStatus parseMistakeStatus(String status) {
+    if (status == null || status.isBlank()) {
+      return null;
     }
-    if (question == null) {
-      throw new AssessmentConflictException(
-          "SET_NOT_AVAILABLE", "No revalidation question is available.");
+    try {
+      return MistakeStatus.valueOf(status);
+    } catch (IllegalArgumentException exception) {
+      throw new AssessmentValidationException(
+          List.of(new AssessmentViolation("status", "UNSUPPORTED")));
     }
-    Instant now = now();
-    AssessmentSession session =
-        sessions.save(
-            new AssessmentSession(
-                actorId,
-                pkg.subject(),
-                pkg.packageId(),
-                pkg.packageRevisionId(),
-                AssessmentSessionPurpose.REVALIDATION,
-                mistake.getSourceSetId(),
-                mistake.getId(),
-                null,
-                mistake.getExamLanguage(),
-                "IMMEDIATE",
-                null,
-                true,
-                now));
-    AssessmentItemAttempt item =
-        items.save(
-            new AssessmentItemAttempt(
-                session.getId(),
-                actorId,
-                0,
-                question.questionId(),
-                writeQuestionCopy(question, pkg),
-                now));
-    LOGGER.info(
-        "assessment.revalidation.started mistakeId={} sessionId={} usedAlternateQuestion={}",
-        mistakeId,
-        session.getId(),
-        !question.questionId().equals(mistake.getQuestionId()));
-    return toSessionView(session, List.of(item), true);
   }
 
   private AssessmentMistake upsertMistake(
@@ -797,20 +1130,45 @@ public class AssessmentStudentService {
     return false;
   }
 
+  private void refreshOpenMistakeEligibility(UUID actorId, String subjectFilter) {
+    List<MistakeStatus> openStatuses =
+        List.of(MistakeStatus.OPEN, MistakeStatus.REMEDIATION_IN_PROGRESS);
+    List<AssessmentMistake> rows =
+        subjectFilter == null
+            ? mistakes.findByAccountIdAndStatusInOrderByUpdatedAtDesc(actorId, openStatuses)
+            : mistakes.findByAccountIdAndSubjectAndStatusInOrderByUpdatedAtDesc(
+                actorId, subjectFilter, openStatuses);
+    for (AssessmentMistake mistake : rows) {
+      refreshRemediationEligibility(mistake);
+    }
+  }
+
   private void refreshRemediationEligibility(AssessmentMistake mistake) {
-    if (mistake.getStatus() == MistakeStatus.OPEN
-        || mistake.getStatus() == MistakeStatus.REMEDIATION_IN_PROGRESS) {
-      if (correctiveComplete(mistake)
-          && mistake.getStatus() != MistakeStatus.AWAITING_REVALIDATION) {
-        mistake.markAwaitingRevalidation(now());
-        mistakes.save(mistake);
-      } else if (!correctiveComplete(mistake)
-          && mistake.getStatus() == MistakeStatus.OPEN
-          && !remediationCandidates(mistake).isEmpty()) {
-        // leave OPEN until student studies; optional mark REMEDIATION_IN_PROGRESS when progress
-        // starts is deferred (progress is academic-owned)
+    if (mistake.getStatus() != MistakeStatus.OPEN
+        && mistake.getStatus() != MistakeStatus.REMEDIATION_IN_PROGRESS) {
+      return;
+    }
+    if (correctiveComplete(mistake)) {
+      mistake.markAwaitingRevalidation(now());
+      mistakes.save(mistake);
+      return;
+    }
+    if (mistake.getStatus() == MistakeStatus.OPEN && correctiveStudyStarted(mistake)) {
+      mistake.markRemediationInProgress(now());
+      mistakes.save(mistake);
+    }
+  }
+
+  private boolean correctiveStudyStarted(AssessmentMistake mistake) {
+    for (RemediationResolutionPolicy.Candidate candidate : remediationCandidates(mistake)) {
+      Optional<StudentContentProgressQuery.ContentProgressStatusView> progress =
+          progressQuery.find(
+              mistake.getAccountId(), mistake.getPackageId(), candidate.resourceId());
+      if (progress.isPresent() && !"NOT_STARTED".equals(progress.get().status())) {
+        return true;
       }
     }
+    return false;
   }
 
   private List<RemediationResolutionPolicy.Candidate> remediationCandidates(
@@ -1620,6 +1978,7 @@ public class AssessmentStudentService {
       boolean lessonContentComplete,
       boolean startable,
       String lockReason,
+      boolean checkpointUpdatedSinceLastAttempt,
       List<CheckpointEditionView> editions) {}
 
   public record SessionResumeSummaryView(

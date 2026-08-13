@@ -205,12 +205,13 @@ security/privacy, subject-profile extensibility, and product-owner journey
 evidence. VS-008 is `DONE` after contract (`academic-student.tsp` / R3), V8,
 backend student APIs, production Learn frontend
 (`features/learn`: `/app/learn`, subject browse, LESSON reader), security/
-privacy, prototype isolation, and product-owner journey evidence. VS-009 is
-`CONTRACT_READY` with backend implementation in progress (assessment module +
-academic extensions + V9 + tests); production Practice/Mistakes/checkpoint UI
-and product-owner journeys remain frontend-owned. KaTeX is used for admin
-formula preview and student LESSON MATH rendering. Multi-subject content
-seeding and mock student flows remain later slices.
+privacy, prototype isolation, and product-owner journey evidence. VS-009 is `DONE` after contract (`assessment-student.tsp` /
+`VS-009-R8-accepted`), V9+ assessment tables, backend student APIs, production
+Practice/Mistakes/checkpoint/remediation UI (`features/assessment`),
+security/privacy, prototype isolation, and product-owner journey evidence
+(2026-08-14). KaTeX is used for admin formula preview and student LESSON MATH
+rendering. Multi-subject content seeding and mock student flows remain later
+slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
 for the authenticated owning `STUDENT`. The application validates the complete
@@ -228,19 +229,21 @@ history, and exposes retry and return-to-sign-in states. The VS-004 backend and
 production profile/default-language settings frontend are `DONE` after contract,
 PostgreSQL/Flyway, backend, frontend, route-boundary, security/privacy,
 code-surface, and product-owner journey evidence. Production student surfaces
-now include `/app/profile`, `/app/profile/languages`, and Learn
-(`/app/learn`, subject browse, LESSON reader under `features/learn`); post-setup
-home routes activated students to `/app/learn`, and mobile More exposes
-production-safe destinations without re-entering the preview-workspace gate for
-those routes. Family, practice/checkpoint UI, mock execution, access, commerce,
-tutoring, and AI destinations remain prototype-only or unimplemented until their
-owning frontend slices land. VS-002 is also `DONE` after full implementation,
+now include `/app/profile`, `/app/profile/languages`, Learn
+(`/app/learn`, subject browse, LESSON reader under `features/learn`), and
+assessment (`/app/practice`, sessions, mistakes, Learn checkpoint CTA,
+remediation reader under `features/assessment`); post-setup home routes
+activated students to `/app/learn`, and mobile More exposes production-safe
+destinations without re-entering the preview-workspace gate for those routes.
+Family, mock execution, access, commerce, tutoring, and AI destinations remain
+prototype-only or unimplemented until their owning frontend slices land. VS-002 is also `DONE` after full implementation,
 verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
 and first Mathematics package path. VS-008 is `DONE` for the first production
 student consumer of published LESSON content with content progress only.
-VS-009 backend assessment APIs are implemented under `/api/v1/assessment/**`
-from checkpoint `VS-009-R5-accepted`; slice remains incomplete until production
-frontend journeys pass product-owner acceptance.
+VS-009 student assessment APIs are implemented under `/api/v1/assessment/**`
+from checkpoint `VS-009-R8-accepted` and are `DONE` after product-owner
+acceptance of the checkpoint, topic-practice, and mistake→remediation→revalidation
+journeys.
 
 ## Prototype boundaries
 

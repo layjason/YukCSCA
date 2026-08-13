@@ -14,17 +14,34 @@ interface HintPanelProps {
 
 /**
  * Progressive math hints. STRONG uses soft stuck/reveal wording — never a bare "Strong" label.
- * REVALIDATION pre-disables STRONG without probing the API.
+ * REVALIDATION: hide STRONG entirely (do not show a disabled "cannot be shown" control).
+ * Exhausted ladder: hide the action (no "No more hints" dead button).
  */
-export function HintPanel({ item, purpose, busy, onDisclose }: HintPanelProps): React.JSX.Element {
+export function HintPanel({
+  item,
+  purpose,
+  busy,
+  onDisclose,
+}: HintPanelProps): React.JSX.Element | null {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const gate = isHintActionDisabled(item, purpose);
   const needsConfirm = shouldConfirmBeforeHint(item);
   const next = nextHintTier(item);
 
+  const hideAction =
+    gate.reason === 'exhausted' ||
+    gate.reason === 'revalidation_strong' ||
+    gate.reason === 'locked' ||
+    !next;
+
+  const hasDisclosed = item.disclosedHints.length > 0;
+  if (hideAction && !hasDisclosed && !confirmOpen) {
+    return null;
+  }
+
   async function handlePrimary(): Promise<void> {
-    if (gate.disabled || busy) return;
+    if (gate.disabled || busy || hideAction) return;
     if (needsConfirm && !confirmOpen) {
       setConfirmOpen(true);
       return;
@@ -34,15 +51,18 @@ export function HintPanel({ item, purpose, busy, onDisclose }: HintPanelProps): 
   }
 
   function hintButtonLabel(): string {
-    if (gate.reason === 'exhausted') return t('assessment.hints.exhausted');
-    if (gate.reason === 'revalidation_strong') return t('assessment.hints.revalidationBlocked');
     if (needsConfirm) return t('assessment.hints.revealIfStuck');
     return t('assessment.hints.showNext');
   }
 
+  /** Sequential Hint 1…N — STRONG is just the next rung, not a separate “Full solution” label. */
+  function disclosedLabel(tierIndex: number): string {
+    return t('assessment.hints.tier', { n: tierIndex + 1 });
+  }
+
   return (
     <section className="assessment-hints" aria-label={t('assessment.hints.regionLabel')}>
-      {item.disclosedHints.length > 0 ? (
+      {hasDisclosed ? (
         <ul className="assessment-hint-list">
           {item.disclosedHints.map((hint) => (
             <li
@@ -51,11 +71,7 @@ export function HintPanel({ item, purpose, busy, onDisclose }: HintPanelProps): 
             >
               <div className="assessment-hint-meta">
                 <Lightbulb size={16} aria-hidden="true" />
-                <span>
-                  {hint.strength === 'STRONG'
-                    ? t('assessment.hints.revealTier', { n: hint.tierIndex + 1 })
-                    : t('assessment.hints.tier', { n: hint.tierIndex + 1 })}
-                </span>
+                <span>{disclosedLabel(hint.tierIndex)}</span>
               </div>
               <AssessmentBlocks blocks={hint.blocks} />
             </li>
@@ -93,18 +109,18 @@ export function HintPanel({ item, purpose, busy, onDisclose }: HintPanelProps): 
             </div>
           </div>
         </div>
-      ) : (
+      ) : !hideAction ? (
         <button
           type="button"
           className={`btn-secondary assessment-hint-btn${needsConfirm ? ' is-caution' : ''}`}
           onClick={() => void handlePrimary()}
-          disabled={gate.disabled || busy || !next}
-          aria-disabled={gate.disabled || busy || !next}
+          disabled={gate.disabled || busy}
+          aria-disabled={gate.disabled || busy}
         >
           <Lightbulb size={18} aria-hidden="true" />
           {hintButtonLabel()}
         </button>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -160,12 +160,31 @@ public class AssessmentMistake {
     this.updatedAt = now;
   }
 
+  /**
+   * Failed revalidation on an alternate question: increment error count and reopen, but keep the
+   * original attempt copy and latest response so the notebook identity does not switch items.
+   */
+  public void recordFailedRevalidation(UUID attemptId, UUID sessionId, Instant now) {
+    if (attemptId != null && attemptId.equals(this.lastAttemptId)) {
+      this.updatedAt = now;
+      return;
+    }
+    this.errorCount += 1;
+    this.lastAttemptId = attemptId;
+    this.lastSessionId = sessionId;
+    this.status = MistakeStatus.OPEN;
+    this.updatedAt = now;
+  }
+
   public void markAwaitingRevalidation(Instant now) {
     this.status = MistakeStatus.AWAITING_REVALIDATION;
     this.updatedAt = now;
   }
 
   public void markRemediationInProgress(Instant now) {
+    if (this.status != MistakeStatus.OPEN) {
+      return;
+    }
     this.status = MistakeStatus.REMEDIATION_IN_PROGRESS;
     this.updatedAt = now;
   }

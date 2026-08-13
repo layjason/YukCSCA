@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
+import { Toast, type ToastTone } from '@/shared/components/Toast';
 import {
   discloseHint,
   getAssessmentSession,
@@ -14,6 +15,7 @@ import {
   canFinishInProgressSession,
   canLockAnswer,
   feedbackVisibleForItem,
+  itemUsedAssistance,
   mergeItemIntoSession,
   resumeItemIndex,
   shouldAutoSubmitAfterLastImmediateLock,
@@ -21,8 +23,9 @@ import {
 import { AssessmentBlocks } from './components/AssessmentBlocks';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { HintPanel } from './components/HintPanel';
+import { ItemNavigator } from './components/ItemNavigator';
 import { OptionRadiogroup } from './components/OptionRadiogroup';
-import type { AssessmentSession, SessionItemView } from './types';
+import type { AssessmentSession, SessionItemView, SessionResult } from './types';
 import './assessment.css';
 
 export function SessionPlayerPage(): React.JSX.Element {
@@ -37,6 +40,10 @@ export function SessionPlayerPage(): React.JSX.Element {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  /** After SET_END submit, stay briefly on player with right/wrong colors before summary. */
+  const [postSubmitReview, setPostSubmitReview] = useState(false);
+  const [submittedResult, setSubmittedResult] = useState<SessionResult | null>(null);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
@@ -46,6 +53,7 @@ export function SessionPlayerPage(): React.JSX.Element {
     try {
       const data = await getAssessmentSession(sessionId);
       if (data.status === 'SUBMITTED') {
+        // Allow deep-link into result; avoid trapping on player unless mid-review.
         void navigate(`/app/practice/sessions/${sessionId}/result`, { replace: true });
         return;
       }
@@ -63,6 +71,11 @@ export function SessionPlayerPage(): React.JSX.Element {
         setNotFound(true);
       } else if (err instanceof ApiError && err.status === 403) {
         setError(t('assessment.errors.forbidden'));
+      } else if (
+        err instanceof ApiError &&
+        (err.status === 409 || err.code === 'SESSION_NOT_RESUMABLE')
+      ) {
+        setError(t('assessment.errors.sessionCancelled'));
       } else {
         setError(t('assessment.errors.loadSession'));
       }
@@ -91,6 +104,10 @@ export function SessionPlayerPage(): React.JSX.Element {
     setSelected(session.items[clamped]?.selectedOptionKey ?? null);
   }
 
+  function showToast(message: string, tone: ToastTone): void {
+    setToast({ message, tone });
+  }
+
   async function handleLock(): Promise<void> {
     if (!session || !item || !canLockAnswer(item, selected) || busy) return;
     setBusy(true);
@@ -104,11 +121,15 @@ export function SessionPlayerPage(): React.JSX.Element {
       nextSession = mergeItemIntoSession(session, result.item, result.sessionAssistanceSummary);
       setSession(nextSession);
       setSelected(result.item.selectedOptionKey);
+      if (session.feedbackMode === 'SET_END') {
+        showToast(t('assessment.session.answerSaved'), 'success');
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'ITEM_ALREADY_LOCKED') {
         void load();
       } else {
         setError(t('assessment.errors.answerFailed'));
+        showToast(t('assessment.errors.answerFailed'), 'error');
       }
       setBusy(false);
       return;
@@ -125,6 +146,7 @@ export function SessionPlayerPage(): React.JSX.Element {
         });
       } catch {
         setError(t('assessment.errors.submitFailed'));
+        showToast(t('assessment.errors.submitFailed'), 'error');
       } finally {
         setBusy(false);
       }
@@ -143,9 +165,10 @@ export function SessionPlayerPage(): React.JSX.Element {
       setSession(mergeItemIntoSession(session, result.item, result.sessionAssistanceSummary));
     } catch (err) {
       if (err instanceof ApiError && err.code === 'STRONG_HINT_BLOCKED') {
-        setError(t('assessment.hints.revalidationBlocked'));
+        // STRONG is hidden on revalidation; treat as no-op messaging.
+        setError(null);
       } else if (err instanceof ApiError && err.code === 'HINT_EXHAUSTED') {
-        setError(t('assessment.hints.exhausted'));
+        setError(null);
       } else {
         setError(t('assessment.errors.hintFailed'));
       }
@@ -160,16 +183,32 @@ export function SessionPlayerPage(): React.JSX.Element {
     setError(null);
     try {
       const result = await submitSession(session.sessionId);
-      setSession(applySessionResult(session, result));
-      void navigate(`/app/practice/sessions/${session.sessionId}/result`, {
-        state: { result },
-      });
+      const next = applySessionResult(session, result);
+      setSession(next);
+      setSubmittedResult(result);
+      // SET_END: show right/wrong on the player first, then student opens summary.
+      if (session.feedbackMode === 'SET_END') {
+        setPostSubmitReview(true);
+        setItemIndex(0);
+        showToast(t('assessment.session.setSubmitted'), 'success');
+      } else {
+        void navigate(`/app/practice/sessions/${session.sessionId}/result`, {
+          state: { result },
+        });
+      }
     } catch {
-      // Keep all-locked / all-answered state; Finish remains available for retry.
       setError(t('assessment.errors.submitFailed'));
+      showToast(t('assessment.errors.submitFailed'), 'error');
     } finally {
       setBusy(false);
     }
+  }
+
+  function goToResult(): void {
+    if (!sessionId) return;
+    void navigate(`/app/practice/sessions/${sessionId}/result`, {
+      state: submittedResult ? { result: submittedResult } : undefined,
+    });
   }
 
   if (!sessionId) {
@@ -212,13 +251,21 @@ export function SessionPlayerPage(): React.JSX.Element {
   }
 
   if (error && !session) {
+    const cancelled = error === t('assessment.errors.sessionCancelled');
     return (
       <div className="page-content assessment-page">
         <section className="state-notice state-notice-error" role="alert">
           <p>{error}</p>
-          <button type="button" className="btn-primary" onClick={() => void load()}>
-            {t('assessment.retry')}
-          </button>
+          {cancelled ? <p>{t('assessment.errors.sessionCancelledHint')}</p> : null}
+          {cancelled ? (
+            <Link to="/app/practice" className="btn-primary">
+              {t('assessment.backToPractice')}
+            </Link>
+          ) : (
+            <button type="button" className="btn-primary" onClick={() => void load()}>
+              {t('assessment.retry')}
+            </button>
+          )}
         </section>
       </div>
     );
@@ -233,9 +280,16 @@ export function SessionPlayerPage(): React.JSX.Element {
   }
 
   const locked = item.status === 'LOCKED';
-  const showFeedback = feedbackVisibleForItem(item, session.feedbackMode, session.status);
-  const progressPct = Math.round(((itemIndex + 1) / session.items.length) * 100);
-  const canFinish = canFinishInProgressSession(session);
+  const reviewing = postSubmitReview || session.status === 'SUBMITTED';
+  const showFeedback = feedbackVisibleForItem(
+    item,
+    session.feedbackMode,
+    reviewing ? 'SUBMITTED' : session.status,
+  );
+  const showCorrectnessOnNav =
+    reviewing ||
+    (session.feedbackMode === 'IMMEDIATE' && session.items.some((i) => i.correct != null));
+  const canFinish = canFinishInProgressSession(session) && !reviewing;
   const purposeLabel = t(`assessment.purpose.${session.purpose}`);
   const finishLabel =
     session.feedbackMode === 'IMMEDIATE'
@@ -244,6 +298,10 @@ export function SessionPlayerPage(): React.JSX.Element {
 
   return (
     <div className="page-content assessment-page session-player">
+      {toast ? (
+        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
+      ) : null}
+
       <header className="assessment-player-chrome">
         <div className="assessment-player-top">
           <Link to="/app/practice" className="learn-back-link">
@@ -251,19 +309,6 @@ export function SessionPlayerPage(): React.JSX.Element {
             {t('assessment.backToPractice')}
           </Link>
           <span className="assessment-chip is-soft">{purposeLabel}</span>
-        </div>
-        <div
-          className="assessment-progress-track"
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={session.items.length}
-          aria-valuenow={itemIndex + 1}
-          aria-label={t('assessment.session.progressAria', {
-            current: itemIndex + 1,
-            total: session.items.length,
-          })}
-        >
-          <div className="assessment-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
         <p className="assessment-progress-label">
           {t('assessment.session.itemOf', { current: itemIndex + 1, total: session.items.length })}
@@ -276,7 +321,19 @@ export function SessionPlayerPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <article className="assessment-item-card" key={item.itemId}>
+      {reviewing ? (
+        <div className="assessment-review-banner" role="status">
+          <p>{t('assessment.session.reviewBanner')}</p>
+          <button type="button" className="btn-primary" onClick={goToResult}>
+            {t('assessment.session.viewSummary')}
+          </button>
+        </div>
+      ) : null}
+
+      <article
+        className={`assessment-item-card${showFeedback && item.correct === true ? ' is-marked-correct' : ''}${showFeedback && item.correct === false ? ' is-marked-incorrect' : ''}`}
+        key={item.itemId}
+      >
         <div className="assessment-stem">
           <AssessmentBlocks blocks={item.stem} />
         </div>
@@ -286,13 +343,13 @@ export function SessionPlayerPage(): React.JSX.Element {
           name={`item-${item.itemId}`}
           value={selected}
           onChange={setSelected}
-          disabled={locked || busy || session.status !== 'IN_PROGRESS'}
+          disabled={locked || busy || reviewing || session.status !== 'IN_PROGRESS'}
           showCorrectness={showFeedback}
           correctKey={item.feedback?.correctOptionKey ?? null}
           selectedKey={item.selectedOptionKey}
         />
 
-        {session.status === 'IN_PROGRESS' && !locked ? (
+        {session.status === 'IN_PROGRESS' && !locked && !reviewing ? (
           <HintPanel
             item={item}
             purpose={session.purpose}
@@ -306,21 +363,13 @@ export function SessionPlayerPage(): React.JSX.Element {
             feedback={item.feedback}
             subject={session.subject}
             interfaceLanguage={i18n.language}
+            purpose={session.purpose}
+            assistanceUsed={itemUsedAssistance(item)}
           />
         ) : null}
 
         <footer className="assessment-item-actions">
-          <button
-            type="button"
-            className="btn-secondary assessment-nav-btn"
-            onClick={() => goToIndex(itemIndex - 1)}
-            disabled={itemIndex === 0}
-            aria-label={t('assessment.session.previous')}
-          >
-            <ChevronLeft size={18} aria-hidden="true" />
-          </button>
-
-          {session.status === 'IN_PROGRESS' && !locked ? (
+          {session.status === 'IN_PROGRESS' && !locked && !reviewing ? (
             <button
               type="button"
               className="btn-primary"
@@ -331,13 +380,6 @@ export function SessionPlayerPage(): React.JSX.Element {
               {session.feedbackMode === 'IMMEDIATE'
                 ? t('assessment.session.checkAnswer')
                 : t('assessment.session.saveAnswer')}
-            </button>
-          ) : null}
-
-          {locked && itemIndex < session.items.length - 1 ? (
-            <button type="button" className="btn-primary" onClick={() => goToIndex(itemIndex + 1)}>
-              {t('assessment.session.next')}
-              <ChevronRight size={18} aria-hidden="true" />
             </button>
           ) : null}
 
@@ -354,16 +396,19 @@ export function SessionPlayerPage(): React.JSX.Element {
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="btn-secondary assessment-nav-btn"
-            onClick={() => goToIndex(itemIndex + 1)}
-            disabled={itemIndex >= session.items.length - 1}
-            aria-label={t('assessment.session.next')}
-          >
-            <ChevronRight size={18} aria-hidden="true" />
-          </button>
+          {reviewing ? (
+            <button type="button" className="btn-primary" onClick={goToResult}>
+              {t('assessment.session.viewSummary')}
+            </button>
+          ) : null}
         </footer>
+
+        <ItemNavigator
+          items={session.items}
+          currentIndex={itemIndex}
+          onSelect={goToIndex}
+          showCorrectness={showCorrectnessOnNav}
+        />
       </article>
     </div>
   );

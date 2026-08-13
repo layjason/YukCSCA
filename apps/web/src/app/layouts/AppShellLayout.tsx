@@ -10,13 +10,17 @@ import {
   primaryNavRoutes,
 } from '@/app/routes';
 import { useConsumer } from '@/prototype/consumer/state/consumerContext';
+import { NavCollapseIcon, ShellNavIcon, SignOutIcon } from '@/app/layouts/navIcons';
+import { useDesktopNavExpanded } from '@/app/layouts/useDesktopNavExpanded';
+import { useStudentPreferredName } from '@/shared/identity/preferredGivenName';
 
 export function AppShellLayout(): React.JSX.Element {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { state: consumerState, dispatch: consumerDispatch } = useConsumer();
   const location = useLocation();
   const navigate = useNavigate();
+  const { expanded, toggle } = useDesktopNavExpanded();
   const isCredentialPreview =
     consumerState.credentialSession.status === 'active' &&
     consumerState.credentialSession.roleIntent === 'student';
@@ -25,15 +29,35 @@ export function AppShellLayout(): React.JSX.Element {
   const moreRouteIsActive = mobileMoreRoutes.some((route) =>
     isRouteActive(route, location.pathname),
   );
+  const preferredName = useStudentPreferredName();
+  const footerName = isCredentialPreview
+    ? consumerState.credentialSession.displayEmail
+    : preferredName;
+  const signOutLabel = isCredentialPreview ? t('shell.exitPreview') : t('shell.logout');
 
   return (
-    <div className="app-shell">
-      <nav className="app-nav" aria-label={t('shell.navLabel')}>
+    <div className={expanded ? 'app-shell' : 'app-shell app-shell-nav-collapsed'}>
+      <nav
+        className={expanded ? 'app-nav app-nav-expanded' : 'app-nav app-nav-collapsed'}
+        aria-label={t('shell.navLabel')}
+      >
         <div className="app-nav-brand">
           <span className="app-nav-logo" aria-hidden="true">
             Y
           </span>
           <span className="app-nav-name">YukCSCA</span>
+          {expanded ? (
+            <button
+              type="button"
+              className="app-nav-toggle"
+              onClick={toggle}
+              aria-pressed={true}
+              aria-label={t('shell.collapseNav')}
+              title={t('shell.collapseNav')}
+            >
+              <NavCollapseIcon expanded />
+            </button>
+          ) : null}
         </div>
         <ul className="app-nav-list" role="list">
           {primaryNavRoutes.map((route) => (
@@ -44,9 +68,11 @@ export function AppShellLayout(): React.JSX.Element {
                   isRouteActive(route, location.pathname) ? 'nav-item nav-item-active' : 'nav-item'
                 }
                 aria-current={isRouteActive(route, location.pathname) ? 'page' : undefined}
+                aria-label={expanded ? undefined : t(route.labelKey)}
+                title={expanded ? undefined : t(route.labelKey)}
               >
                 <span className="nav-item-icon" aria-hidden="true">
-                  {getNavIcon(route.id)}
+                  <ShellNavIcon id={route.id} />
                 </span>
                 <span className="nav-item-label">{t(route.labelKey)}</span>
               </NavLink>
@@ -54,25 +80,43 @@ export function AppShellLayout(): React.JSX.Element {
           ))}
         </ul>
         <div className="app-nav-footer">
-          <span className="app-nav-user">
-            {isCredentialPreview
-              ? consumerState.credentialSession.displayEmail
-              : (user?.displayName ?? t('shell.fallbackName'))}
-          </span>
-          <button
-            type="button"
-            className="nav-logout-btn"
-            onClick={() => {
-              if (isCredentialPreview) {
-                consumerDispatch({ type: 'PREVIEW_RESTART' });
-                navigate('/');
-                return;
-              }
-              void logout();
-            }}
-          >
-            {isCredentialPreview ? t('shell.exitPreview') : t('shell.logout')}
-          </button>
+          {expanded ? (
+            <>
+              {footerName ? (
+                <span className="app-nav-user" title={footerName}>
+                  {footerName}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                className="nav-logout-btn"
+                onClick={() => {
+                  if (isCredentialPreview) {
+                    consumerDispatch({ type: 'PREVIEW_RESTART' });
+                    navigate('/');
+                    return;
+                  }
+                  void logout();
+                }}
+                aria-label={signOutLabel}
+                title={signOutLabel}
+              >
+                <SignOutIcon />
+                <span className="nav-logout-label">{signOutLabel}</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="app-nav-toggle"
+              onClick={toggle}
+              aria-pressed={false}
+              aria-label={t('shell.expandNav')}
+              title={t('shell.expandNav')}
+            >
+              <NavCollapseIcon expanded={false} />
+            </button>
+          )}
         </div>
       </nav>
 
@@ -104,7 +148,7 @@ export function AppShellLayout(): React.JSX.Element {
             }
           >
             <span className="nav-item-icon" aria-hidden="true">
-              {getNavIcon(route.id)}
+              <ShellNavIcon id={route.id} />
             </span>
             <span className="bottom-nav-label">{t(route.labelKey)}</span>
           </NavLink>
@@ -112,25 +156,4 @@ export function AppShellLayout(): React.JSX.Element {
       </nav>
     </div>
   );
-}
-
-function getNavIcon(id: string): string {
-  switch (id) {
-    case 'today':
-      return '\u25C9';
-    case 'learn':
-      return '\u25A1';
-    case 'practice':
-      return '\u2713';
-    case 'mock-exams':
-      return '\u23F1';
-    case 'progress':
-      return '\u25B3';
-    case 'profile':
-      return '\u25CB';
-    case 'more':
-      return '\u2630';
-    default:
-      return '\u2022';
-  }
 }

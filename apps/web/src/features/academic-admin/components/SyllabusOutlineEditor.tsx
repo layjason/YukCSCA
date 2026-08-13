@@ -13,6 +13,7 @@ import {
   selectionAfterDelete,
   setOutlineParent,
 } from '../outlineTree';
+import { useAdminNotify } from '../adminNotify';
 import type { SyllabusOutlineItem } from '../types';
 
 interface SyllabusOutlineEditorProps {
@@ -25,6 +26,7 @@ export function SyllabusOutlineEditor({
   onChange,
 }: SyllabusOutlineEditorProps): React.JSX.Element {
   const { t } = useTranslation();
+  const notify = useAdminNotify();
   const displayRows = useMemo(() => flattenOutlineForDisplay(items), [items]);
   const modules = useMemo(() => modulesOf(items), [items]);
 
@@ -41,6 +43,10 @@ export function SyllabusOutlineEditor({
     const created = createModule(items);
     onChange([...items, created]);
     setSelectedId(created.id);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.module') }),
+      'success',
+    );
   };
 
   const handleAddTopic = () => {
@@ -57,6 +63,10 @@ export function SyllabusOutlineEditor({
     setActionError(null);
     onChange([...items, created]);
     setSelectedId(created.id);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.topic') }),
+      'success',
+    );
   };
 
   const handleUpdateItem = (updated: SyllabusOutlineItem) => {
@@ -97,6 +107,16 @@ export function SyllabusOutlineEditor({
     if (selectedId === id || selectedItem?.id === id) {
       setSelectedId(nextSelectedId);
     }
+    const target = items.find((item) => item.id === id);
+    notify(
+      t('admin.academic.toasts.removed', {
+        name:
+          target && isRootModule(target)
+            ? t('admin.academic.toasts.names.module')
+            : t('admin.academic.toasts.names.topic'),
+      }),
+      'error',
+    );
   };
 
   return (
@@ -111,7 +131,7 @@ export function SyllabusOutlineEditor({
           </div>
         </div>
 
-        <div className="admin-outline-add-actions">
+        <div className="admin-equal-actions admin-outline-add-actions" data-count="2">
           <button
             type="button"
             className="btn-secondary admin-btn-compact-md"

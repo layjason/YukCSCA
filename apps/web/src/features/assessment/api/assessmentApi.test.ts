@@ -19,6 +19,7 @@ const checkpoint: CheckpointForLesson = {
   lessonContentComplete: true,
   startable: true,
   lockReason: null,
+  checkpointUpdatedSinceLastAttempt: false,
   editions: [
     {
       setId: DEV_IDS.SET_CHECKPOINT,

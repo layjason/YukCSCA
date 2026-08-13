@@ -72,20 +72,57 @@ public final class RemediationResolutionPolicy {
     return false;
   }
 
+  /**
+   * Prefer another question with the same exam language and shared primary objective; if none, fall
+   * back to shared outline (D-16). Reuses the original when no alternate matches.
+   */
   public static UUID preferAlternateQuestion(
       UUID originalQuestionId,
       String examLanguage,
       Set<UUID> objectiveIds,
+      Set<UUID> outlineItemIds,
       List<QuestionCandidate> candidates) {
+    return preferAlternateQuestion(
+        originalQuestionId, examLanguage, objectiveIds, outlineItemIds, candidates, Set.of());
+  }
+
+  /**
+   * Same as {@link #preferAlternateQuestion(UUID, String, Set, Set, List)} but skips questions the
+   * student already answered correctly with a hint (assisted-correct revalidation items).
+   */
+  public static UUID preferAlternateQuestion(
+      UUID originalQuestionId,
+      String examLanguage,
+      Set<UUID> objectiveIds,
+      Set<UUID> outlineItemIds,
+      List<QuestionCandidate> candidates,
+      Set<UUID> excludedQuestionIds) {
     Objects.requireNonNull(originalQuestionId, "originalQuestionId");
+    Set<UUID> excluded = excludedQuestionIds == null ? Set.of() : excludedQuestionIds;
+    UUID outlineMatch = null;
     for (QuestionCandidate candidate : candidates) {
       if (candidate.questionId().equals(originalQuestionId)) continue;
+      if (excluded.contains(candidate.questionId())) continue;
       if (!examLanguage.equals(candidate.examLanguage())) continue;
-      if (!intersects(candidate.objectiveIds(), objectiveIds)) continue;
-      return candidate.questionId();
+      if (intersects(candidate.objectiveIds(), objectiveIds)) {
+        return candidate.questionId();
+      }
+      if (outlineMatch == null && intersects(candidate.outlineItemIds(), outlineItemIds)) {
+        outlineMatch = candidate.questionId();
+      }
     }
+    if (outlineMatch != null) {
+      return outlineMatch;
+    }
+    // D-16 last resort: reuse the original when no unused same-objective/outline alternate
+    // remains. Do not close the mistake on an unrelated same-language item.
     return originalQuestionId;
   }
 
-  public record QuestionCandidate(UUID questionId, String examLanguage, Set<UUID> objectiveIds) {}
+  public record QuestionCandidate(
+      UUID questionId, String examLanguage, Set<UUID> objectiveIds, Set<UUID> outlineItemIds) {
+    public QuestionCandidate(UUID questionId, String examLanguage, Set<UUID> objectiveIds) {
+      this(questionId, examLanguage, objectiveIds, Set.of());
+    }
+  }
 }

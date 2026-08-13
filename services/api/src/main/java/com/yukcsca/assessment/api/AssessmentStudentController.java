@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -154,8 +155,11 @@ public class AssessmentStudentController {
   public Map<String, Object> submitSession(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID sessionId,
+      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       HttpServletResponse response) {
     noStore(response);
+    // Optional Idempotency-Key is accepted at the boundary. Submit is already idempotent
+    // for SUBMITTED sessions; lockById serializes a first concurrent submit.
     return resultBody(assessment.submitSession(actor(jwt), sessionId));
   }
 
@@ -172,11 +176,12 @@ public class AssessmentStudentController {
   public Map<String, Object> listMistakes(
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(required = false) String subject,
+      @RequestParam(required = false) String status,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) Integer limit,
       HttpServletResponse response) {
     noStore(response);
-    MistakeListView page = assessment.listMistakes(actor(jwt), subject, cursor, limit);
+    MistakeListView page = assessment.listMistakes(actor(jwt), subject, status, cursor, limit);
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("items", page.items().stream().map(this::mistakeSummary).toList());
     body.put("nextCursor", page.nextCursor());
@@ -252,6 +257,7 @@ public class AssessmentStudentController {
     body.put("lessonContentComplete", view.lessonContentComplete());
     body.put("startable", view.startable());
     body.put("lockReason", view.lockReason());
+    body.put("checkpointUpdatedSinceLastAttempt", view.checkpointUpdatedSinceLastAttempt());
     body.put(
         "editions",
         view.editions().stream()

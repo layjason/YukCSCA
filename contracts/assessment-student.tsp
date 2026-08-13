@@ -279,6 +279,9 @@ model CheckpointForLesson {
   startable: boolean;
   lockReason: CheckpointLockReason | null;
 
+  @doc("True when the student has a prior submitted CHECKPOINT for this lesson and the published CHECKPOINT set content (including referenced questions) for the lesson differs from the content pinned on that attempt. Soft signal only; does not demote progress or claim mastery. False when there is no prior attempt or the checkpoint material is unchanged.")
+  checkpointUpdatedSinceLastAttempt: boolean;
+
   @maxItems(2)
   editions: CheckpointEdition[];
 }

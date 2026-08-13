@@ -18,6 +18,8 @@ describe('assessment locale parity', () => {
     const zhKeys = new Set(flatten(zh.assessment));
     expect(idKeys).toEqual(enKeys);
     expect(zhKeys).toEqual(enKeys);
+    expect(enKeys.has('mistakes.lead')).toBe(true);
+    expect(enKeys.has('mistakes.filterLabel')).toBe(true);
   });
 
   it('avoids Mastered / Stable Mastery in assessment chrome strings', () => {
@@ -40,5 +42,15 @@ describe('assessment locale parity', () => {
     expect(en.assessment.hints.confirmTitle.toLowerCase()).toMatch(/reveal|answer|stuck/);
     expect(en.assessment.hints.confirmTitle.toLowerCase()).not.toBe('strong');
     expect(en.assessment.hints.revealIfStuck.toLowerCase()).toMatch(/stuck|nudge|hint/);
+  });
+
+  it('labels every disclosed hint as sequential Hint N (including STRONG)', () => {
+    // Disclosed UI uses assessment.hints.tier only — never revealTier / “Full solution”.
+    expect(en.assessment.hints.tier).toBe('Hint {{n}}');
+    expect(id.assessment.hints.tier).toMatch(/\{\{n\}\}/);
+    expect(zh.assessment.hints.tier).toMatch(/\{\{n\}\}/);
+    expect(en.assessment.hints.tier.toLowerCase()).not.toMatch(/full solution|worked path/);
+    expect(id.assessment.hints.tier.toLowerCase()).not.toMatch(/solusi lengkap/);
+    expect(zh.assessment.hints.tier).not.toMatch(/完整解法/);
   });
 });

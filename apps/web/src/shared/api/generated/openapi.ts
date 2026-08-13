@@ -1008,7 +1008,7 @@ export interface components {
       resumeBlockIndex: number | null;
       /** @description Last progress write time. Null when status is NOT_STARTED. */
       updatedAt: string | null;
-      /** @description True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery. */
+      /** @description True when status is CONTENT_COMPLETE and this study resource's student-visible content (title, outline/objective links, language versions, blocks) differs between the package revision recorded when the student last marked complete and the active published revision. Unrelated package changes (edition labels, other lessons, assessment questions) do not set this flag. Soft signal only; never demotes content complete or implies mastery. */
       updatedSinceCompleted: boolean;
     };
     /**
@@ -1304,6 +1304,8 @@ export interface components {
       lessonContentComplete: boolean;
       startable: boolean;
       lockReason: components['schemas']['AssessmentStudent.CheckpointLockReason'] | null;
+      /** @description True when the student has a prior submitted CHECKPOINT for this lesson and the published CHECKPOINT set content (including referenced questions) for the lesson differs from the content pinned on that attempt. Soft signal only; does not demote progress or claim mastery. False when there is no prior attempt or the checkpoint material is unchanged. */
+      checkpointUpdatedSinceLastAttempt: boolean;
       editions: components['schemas']['AssessmentStudent.CheckpointEdition'][];
     };
     /**

@@ -3,6 +3,7 @@ import type {
   AssessmentSessionPurpose,
   HintStrength,
   HintTierMeta,
+  MistakeStatus,
   SessionItemView,
   SessionResult,
 } from './types';
@@ -121,7 +122,8 @@ export function scoreFromItems(items: readonly SessionItemView[]): {
 
 /**
  * Result copy key — never Mastered / Stable Mastery.
- * CHECKPOINT: pass | fail; TOPIC_PRACTICE / REVALIDATION: score only.
+ * CHECKPOINT: pass | fail; TOPIC_PRACTICE: score only;
+ * REVALIDATION: independent pass only when fully correct **and** zero assistance (D-16).
  */
 export type ResultCopyKind =
   | 'checkpoint_pass'
@@ -129,24 +131,90 @@ export type ResultCopyKind =
   | 'topic_score'
   | 'revalidation_pass'
   | 'revalidation_fail'
+  | 'revalidation_assisted'
   | 'score_only';
+
+export type AssistanceUsageInput = {
+  maxTierDisclosed?: number | null;
+  strongUsed?: boolean | null;
+  languageAssistUsed?: boolean | null;
+};
+
+/** True when any logged assistance would block REVALIDATION_PASSED (D-16). */
+export function anyAssistanceUsed(
+  summary: AssistanceUsageInput | null | undefined,
+  strongAssistanceUsed?: boolean | null,
+): boolean {
+  if (strongAssistanceUsed === true) return true;
+  if (!summary) return false;
+  return (
+    (summary.maxTierDisclosed ?? 0) > 0 ||
+    summary.strongUsed === true ||
+    summary.languageAssistUsed === true
+  );
+}
+
+/** True when this item disclosed a hint or recorded strong assistance. */
+export function itemUsedAssistance(
+  item: Pick<
+    SessionItemView,
+    'disclosedTierCount' | 'strongAssistance' | 'disclosedHints' | 'hintLadder'
+  >,
+): boolean {
+  if (item.strongAssistance) return true;
+  if ((item.disclosedTierCount ?? 0) > 0) return true;
+  if (item.disclosedHints.some((hint) => hint.tierIndex >= 0)) return true;
+  return item.hintLadder.some((tier) => tier.disclosed);
+}
+
+export type MistakeNextAction =
+  'continue_revalidation' | 'start_revalidation' | 'study_first' | 'already_passed';
+
+/** Next honest CTA for a mistake. Passed never offers Recheck. */
+export function mistakeNextAction(
+  status: MistakeStatus,
+  revalidationEligible: boolean,
+  hasInProgressRevalidation: boolean,
+): MistakeNextAction {
+  if (hasInProgressRevalidation) return 'continue_revalidation';
+  if (status === 'REVALIDATION_PASSED') return 'already_passed';
+  if (revalidationEligible) return 'start_revalidation';
+  return 'study_first';
+}
 
 export function resultCopyKind(
   purpose: AssessmentSessionPurpose,
   checkpointPassed: boolean | null | undefined,
   correctCount: number,
   total: number,
-  revalidationPassed?: boolean | null,
+  options?: {
+    revalidationPassed?: boolean | null;
+    /** When true, blocks revalidation pass even if every item is correct (D-16). */
+    assistanceUsed?: boolean | null;
+    /** D-10: STRONG assistance blocks checkpoint pass when server flag is absent. */
+    strongAssistanceUsed?: boolean | null;
+  },
 ): ResultCopyKind {
   if (purpose === 'CHECKPOINT') {
     if (checkpointPassed === true) return 'checkpoint_pass';
     if (checkpointPassed === false) return 'checkpoint_fail';
-    // Incomplete projection — still avoid mastery claims
+    // Incomplete projection: apply D-10 STRONG rule client-side, never claim mastery.
+    if (options?.strongAssistanceUsed === true) return 'checkpoint_fail';
     return correctCount === total && total > 0 ? 'checkpoint_pass' : 'checkpoint_fail';
   }
   if (purpose === 'REVALIDATION') {
-    if (revalidationPassed === true) return 'revalidation_pass';
-    if (revalidationPassed === false) return 'revalidation_fail';
+    if (options?.revalidationPassed === true) return 'revalidation_pass';
+    if (options?.revalidationPassed === false) {
+      return options.assistanceUsed === true && correctCount === total && total > 0
+        ? 'revalidation_assisted'
+        : 'revalidation_fail';
+    }
+    // Independent evidence: any assistance (STANDARD or STRONG) blocks pass.
+    // Assisted-correct is not a fail — the student still needs an unassisted recheck.
+    if (options?.assistanceUsed === true && correctCount === total && total > 0) {
+      return 'revalidation_assisted';
+    }
+    if (options?.assistanceUsed === true) return 'revalidation_fail';
     return correctCount === total && total > 0 ? 'revalidation_pass' : 'revalidation_fail';
   }
   return 'topic_score';

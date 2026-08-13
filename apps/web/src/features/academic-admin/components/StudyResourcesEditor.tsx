@@ -9,6 +9,7 @@ import {
 import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import { useAdminNotify } from '../adminNotify';
 import type { LearningObjective, StudyResource, SyllabusOutlineItem } from '../types';
 
 interface StudyResourcesEditorProps {
@@ -41,6 +42,13 @@ function kindLabel(
   }
 }
 
+/** Deep-clone a resource with a fresh id. Content and mappings stay for volume authoring. */
+function duplicateResource(source: StudyResource): StudyResource {
+  const copy = structuredClone(source);
+  copy.id = crypto.randomUUID();
+  return copy;
+}
+
 export function StudyResourcesEditor({
   resources,
   outlineItems,
@@ -49,6 +57,7 @@ export function StudyResourcesEditor({
   disabled = false,
 }: StudyResourcesEditorProps): React.JSX.Element {
   const { t } = useTranslation();
+  const notify = useAdminNotify();
   const [selectedId, setSelectedId] = useState<string | null>(resources[0]?.id || null);
   const selected = resources.find((item) => item.id === selectedId) || resources[0];
 
@@ -79,6 +88,18 @@ export function StudyResourcesEditor({
     };
     onChange([...resources, created]);
     setSelectedId(created.id);
+    notify(t('admin.academic.toasts.added', { name: kindLabel(t, kind) }), 'success');
+  };
+
+  const handleDuplicate = () => {
+    if (!selected || disabled) return;
+    const clone = duplicateResource(selected);
+    const sourceIndex = resources.findIndex((item) => item.id === selected.id);
+    const next = [...resources];
+    next.splice(sourceIndex >= 0 ? sourceIndex + 1 : next.length, 0, clone);
+    onChange(next);
+    setSelectedId(clone.id);
+    notify(t('admin.academic.toasts.duplicated', { name: kindLabel(t, selected.kind) }), 'info');
   };
 
   const handleDelete = (id: string) => {
@@ -87,11 +108,13 @@ export function StudyResourcesEditor({
       resources.map((item) => item.id),
       id,
     );
+    const target = resources.find((item) => item.id === id);
     const next = resources.filter((item) => item.id !== id);
     onChange(next);
     if (selectedId === id || selected?.id === id) {
       setSelectedId(nextSelectedId);
     }
+    notify(t('admin.academic.toasts.removed', { name: kindLabel(t, target?.kind) }), 'error');
   };
 
   const toggleId = (ids: string[], id: string, checked: boolean): string[] => {
@@ -118,12 +141,12 @@ export function StudyResourcesEditor({
   return (
     <div className="admin-split-editor">
       <div className="admin-split-sidebar">
-        <div className="admin-split-sidebar-header admin-stack-sm">
+        <div className="admin-split-sidebar-header admin-split-sidebar-header-stack">
           <h3 className="admin-sidebar-title">
             {t('admin.academic.resources.title')} ({resources.length})
           </h3>
           <p className="admin-hint">{t('admin.academic.resources.requiredKindsHint')}</p>
-          <div className="admin-stack-xs">
+          <div className="admin-equal-actions" data-count="3">
             {RESOURCE_KINDS.map((kind) => (
               <button
                 key={kind}
@@ -169,11 +192,21 @@ export function StudyResourcesEditor({
         <div className="admin-stack-md">
           <div className="admin-row-between">
             <h3 className="admin-detail-title">{t('admin.academic.resources.editTitle')}</h3>
-            <AdminRemoveButton
-              label={t('admin.academic.resources.remove')}
-              onClick={() => handleDelete(selected.id)}
-              disabled={disabled}
-            />
+            <div className="admin-row-wrap">
+              <button
+                type="button"
+                className="btn-secondary admin-btn-compact"
+                onClick={handleDuplicate}
+                disabled={disabled}
+              >
+                {t('admin.academic.resources.duplicate')}
+              </button>
+              <AdminRemoveButton
+                label={t('admin.academic.resources.remove')}
+                onClick={() => handleDelete(selected.id)}
+                disabled={disabled}
+              />
+            </div>
           </div>
 
           <div>

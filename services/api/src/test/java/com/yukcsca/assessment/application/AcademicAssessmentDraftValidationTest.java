@@ -52,6 +52,39 @@ class AcademicAssessmentDraftValidationTest {
   }
 
   @Test
+  void duplicateCheckpointLessonAndExamLanguageFailsPublish() {
+    ObjectNode draft = minimalDraft();
+    UUID lessonId = firstLessonId(draft);
+    UUID questionId = firstQuestionId(draft);
+    for (int i = 0; i < 2; i++) {
+      ObjectNode set = draft.withArray("assessmentSets").addObject();
+      set.put("id", UUID.randomUUID().toString());
+      set.put("purpose", "CHECKPOINT");
+      localized(set.putObject("title"), "CP" + i, "CP" + i, "CP" + i);
+      set.put("examLanguage", "en");
+      set.put("lessonResourceId", lessonId.toString());
+      set.putArray("questionIds").add(questionId.toString());
+      set.put("feedbackMode", "IMMEDIATE");
+      set.put("passPolicy", "ALL_CORRECT_NO_STRONG_ASSISTANCE");
+    }
+
+    assertThatThrownBy(() -> processor.validateForPublication(draft, Set.of()))
+        .isInstanceOf(AcademicValidationException.class)
+        .satisfies(
+            thrown -> {
+              AcademicValidationException exception = (AcademicValidationException) thrown;
+              assertThat(
+                      exception.violations().stream()
+                          .anyMatch(
+                              v ->
+                                  v.path().contains("assessmentSets")
+                                      && v.path().endsWith(".examLanguage")
+                                      && v.code().name().equals("DUPLICATE")))
+                  .isTrue();
+            });
+  }
+
+  @Test
   void unorderedHintTiersFailPublishClosed() {
     ObjectNode draft = minimalDraft();
     ObjectNode question = (ObjectNode) draft.path("questions").get(0);
