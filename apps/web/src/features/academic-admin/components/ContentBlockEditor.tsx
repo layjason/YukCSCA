@@ -4,24 +4,32 @@ import { KaTeXPreview } from './KaTeXPreview';
 import { ImageUploader } from './ImageUploader';
 import { AcademicImageThumb } from './AcademicImageThumb';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import { useAdminNotify } from '../adminNotify';
 import type { ContentBlock, AcademicImage } from '../types';
 
 interface ContentBlockEditorProps {
   blocks: ContentBlock[];
   onChange: (updated: ContentBlock[]) => void;
   label?: string;
+  compact?: boolean;
 }
 
 export function ContentBlockEditor({
   blocks,
   onChange,
   label,
+  compact = false,
 }: ContentBlockEditorProps): React.JSX.Element {
   const { t } = useTranslation();
+  const notify = useAdminNotify();
   const [showImageUploader, setShowImageUploader] = useState(false);
 
   const handleAddText = () => {
     onChange([...blocks, { kind: 'TEXT', text: '' }]);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.textBlock') }),
+      'success',
+    );
   };
 
   const handleAddMath = () => {
@@ -29,6 +37,10 @@ export function ContentBlockEditor({
       ...blocks,
       { kind: 'MATH', latex: 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}', displayMode: true },
     ]);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.mathBlock') }),
+      'success',
+    );
   };
 
   const handleUpdateBlock = (index: number, updated: ContentBlock) => {
@@ -38,7 +50,15 @@ export function ContentBlockEditor({
   };
 
   const handleRemoveBlock = (index: number) => {
+    const target = blocks[index];
     onChange(blocks.filter((_, i) => i !== index));
+    const nameKey =
+      target?.kind === 'MATH'
+        ? 'admin.academic.toasts.names.mathBlock'
+        : target?.kind === 'IMAGE'
+          ? 'admin.academic.toasts.names.imageBlock'
+          : 'admin.academic.toasts.names.textBlock';
+    notify(t('admin.academic.toasts.removed', { name: t(nameKey) }), 'error');
   };
 
   const handleImageUploaded = (image: AcademicImage, altText: string, caption?: string) => {
@@ -52,10 +72,14 @@ export function ContentBlockEditor({
       },
     ]);
     setShowImageUploader(false);
+    notify(
+      t('admin.academic.toasts.added', { name: t('admin.academic.toasts.names.imageBlock') }),
+      'success',
+    );
   };
 
   return (
-    <div className="admin-block-list">
+    <div className={`admin-block-list${compact ? ' admin-block-list-compact' : ''}`}>
       {label ? <h4 className="admin-section-title">{label}</h4> : null}
 
       {blocks.map((block, index) => (
@@ -71,7 +95,7 @@ export function ContentBlockEditor({
           {block.kind === 'TEXT' && (
             <textarea
               className="text-input admin-field-control-resize-only"
-              rows={3}
+              rows={compact ? 2 : 3}
               value={block.text}
               maxLength={12000}
               placeholder={t('admin.academic.blocks.textPlaceholder')}
@@ -180,7 +204,7 @@ export function ContentBlockEditor({
         />
       ) : null}
 
-      <div className="admin-row-wrap admin-block-add-actions">
+      <div className="admin-equal-actions admin-block-add-actions" data-count="3">
         <button
           type="button"
           className="btn-secondary admin-btn-compact-md"

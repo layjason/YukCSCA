@@ -335,11 +335,30 @@ class AcademicStudentHttpIT {
             fixture.lessonId());
     assertThat(completeRevision).isNotNull();
 
-    // Republish same LESSON resource id under a new active package revision.
-    ObjectNode nextDraft = fixture.draft().deepCopy();
-    ((ObjectNode) nextDraft.path("officialSyllabus")).put("editionLabel", "2025-r2");
-    save(fixture.packageId(), 1, nextDraft);
+    // Republish with only package metadata change — lesson body unchanged → no soft-update.
+    ObjectNode metadataOnly = fixture.draft().deepCopy();
+    ((ObjectNode) metadataOnly.path("officialSyllabus")).put("editionLabel", "2025-r2");
+    save(fixture.packageId(), 1, metadataOnly);
     publish(fixture.packageId(), 2);
+
+    mvc.perform(
+            get("/api/v1/academic/packages/MATHEMATICS/lessons/{id}", fixture.lessonId())
+                .param("explanationLanguage", "id")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.contentProgress.status").value("CONTENT_COMPLETE"))
+        .andExpect(jsonPath("$.contentProgress.updatedSinceCompleted").value(false));
+
+    // Change the LESSON body under a new active revision → soft-update for that lesson only.
+    ObjectNode lessonBodyChanged = metadataOnly.deepCopy();
+    for (var resource : lessonBodyChanged.path("resources")) {
+      if (fixture.lessonId().toString().equals(resource.path("id").asText())) {
+        ((ObjectNode) resource.path("title")).put("english", "Lesson revised for student");
+        break;
+      }
+    }
+    save(fixture.packageId(), 2, lessonBodyChanged);
+    publish(fixture.packageId(), 3);
 
     mvc.perform(
             get("/api/v1/academic/packages/MATHEMATICS/lessons/{id}", fixture.lessonId())

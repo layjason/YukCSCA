@@ -4,21 +4,41 @@ import { PreviewBadge } from '@/shared/components/PreviewBadge';
 import { RouteFocusManager } from '@/app/focus/RouteFocusManager';
 import { isRouteActive, parentNavRoutes, parentMobileNavRoutes } from '@/app/routes';
 import { useConsumer } from '@/prototype/consumer/state/consumerContext';
+import { NavCollapseIcon, ShellNavIcon, SignOutIcon } from '@/app/layouts/navIcons';
+import { useDesktopNavExpanded } from '@/app/layouts/useDesktopNavExpanded';
 
 export function ParentShellLayout(): React.JSX.Element {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { state, dispatch } = useConsumer();
+  const { expanded, toggle } = useDesktopNavExpanded();
+  const displayName = state.parentProfile?.name ?? state.credentialSession.displayEmail;
+  const signOutLabel = t('shell.exitPreview');
 
   return (
-    <div className="parent-shell">
-      <nav className="parent-nav" aria-label={t('parent.nav.label')}>
+    <div className={expanded ? 'parent-shell' : 'parent-shell parent-shell-nav-collapsed'}>
+      <nav
+        className={expanded ? 'parent-nav parent-nav-expanded' : 'parent-nav parent-nav-collapsed'}
+        aria-label={t('parent.nav.label')}
+      >
         <div className="parent-nav-brand">
           <span className="parent-nav-logo" aria-hidden="true">
             Y
           </span>
           <span className="parent-nav-name">YukCSCA</span>
+          {expanded ? (
+            <button
+              type="button"
+              className="app-nav-toggle"
+              onClick={toggle}
+              aria-pressed={true}
+              aria-label={t('shell.collapseNav')}
+              title={t('shell.collapseNav')}
+            >
+              <NavCollapseIcon expanded />
+            </button>
+          ) : null}
         </div>
         <ul className="parent-nav-list" role="list">
           {parentNavRoutes.map((route) => (
@@ -31,9 +51,11 @@ export function ParentShellLayout(): React.JSX.Element {
                     : 'parent-nav-item'
                 }
                 aria-current={isRouteActive(route, location.pathname) ? 'page' : undefined}
+                aria-label={expanded ? undefined : t(route.labelKey)}
+                title={expanded ? undefined : t(route.labelKey)}
               >
                 <span className="parent-nav-icon" aria-hidden="true">
-                  {getParentNavIcon(route.id)}
+                  <ShellNavIcon id={route.id} />
                 </span>
                 <span className="parent-nav-item-label">{t(route.labelKey)}</span>
               </NavLink>
@@ -41,19 +63,37 @@ export function ParentShellLayout(): React.JSX.Element {
           ))}
         </ul>
         <div className="app-nav-footer">
-          <span className="app-nav-user">
-            {state.parentProfile?.name ?? state.credentialSession.displayEmail}
-          </span>
-          <button
-            type="button"
-            className="nav-logout-btn"
-            onClick={() => {
-              dispatch({ type: 'PREVIEW_RESTART' });
-              navigate('/');
-            }}
-          >
-            {t('shell.exitPreview')}
-          </button>
+          {expanded ? (
+            <>
+              <span className="app-nav-user" title={displayName}>
+                {displayName}
+              </span>
+              <button
+                type="button"
+                className="nav-logout-btn"
+                onClick={() => {
+                  dispatch({ type: 'PREVIEW_RESTART' });
+                  navigate('/');
+                }}
+                aria-label={signOutLabel}
+                title={signOutLabel}
+              >
+                <SignOutIcon />
+                <span className="nav-logout-label">{signOutLabel}</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="app-nav-toggle"
+              onClick={toggle}
+              aria-pressed={false}
+              aria-label={t('shell.expandNav')}
+              title={t('shell.expandNav')}
+            >
+              <NavCollapseIcon expanded={false} />
+            </button>
+          )}
         </div>
       </nav>
 
@@ -80,7 +120,7 @@ export function ParentShellLayout(): React.JSX.Element {
               aria-current={isActive ? 'page' : undefined}
             >
               <span className="parent-nav-icon" aria-hidden="true">
-                {getParentNavIcon(route.id)}
+                <ShellNavIcon id={route.id} />
               </span>
               <span className="parent-bottom-label">{t(route.labelKey)}</span>
             </NavLink>
@@ -89,21 +129,4 @@ export function ParentShellLayout(): React.JSX.Element {
       </nav>
     </div>
   );
-}
-
-function getParentNavIcon(id: string): string {
-  switch (id) {
-    case 'parent-home':
-      return '\u2302';
-    case 'parent-family':
-      return '\u2661';
-    case 'parent-reports':
-      return '\u2261';
-    case 'parent-purchases':
-      return '\u25C7';
-    case 'parent-account':
-      return '\u25CB';
-    default:
-      return '\u2022';
-  }
 }

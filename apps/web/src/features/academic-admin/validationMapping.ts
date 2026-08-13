@@ -13,7 +13,14 @@ export type OfficialFieldKey =
   | 'permittedUse';
 
 export type ValidationFieldKey =
-  OfficialFieldKey | 'outline' | 'objectives' | 'resources' | 'questions' | 'mock' | 'general';
+  | OfficialFieldKey
+  | 'outline'
+  | 'objectives'
+  | 'resources'
+  | 'questions'
+  | 'assessment'
+  | 'mock'
+  | 'general';
 
 export interface MappedValidation {
   tab: AdminEditorTab;
@@ -109,6 +116,9 @@ export function messageKeyFor(path: string, code: string): string {
     if (normalizedCode === 'OUT_OF_RANGE') return 'mockCount';
     return 'mock';
   }
+  if (lower === 'draft.assessmentsets' || lower === 'assessmentsets') {
+    return 'assessmentSets';
+  }
 
   // --- Math / content blocks (must run before generic resources/questions) ---
   if (leaf === 'latex') {
@@ -192,6 +202,32 @@ export function messageKeyFor(path: string, code: string): string {
     return codeFallback(normalizedCode);
   }
 
+  // --- Assessment sets (before questions — paths share questionIds) ---
+  if (pathIncludes(lower, 'assessmentsets')) {
+    if (leaf === 'questionids' || pathIncludes(lower, 'questionids')) {
+      return 'assessmentSetQuestions';
+    }
+    if (leaf === 'lessonresourceid') return 'assessmentSetLesson';
+    if (leaf === 'examlanguage' && normalizedCode === 'DUPLICATE') {
+      return 'assessmentSetLessonLanguageDuplicate';
+    }
+    if (leaf === 'examlanguage') return 'assessmentSetExamLanguage';
+    if (leaf === 'purpose' || leaf === 'passpolicy' || leaf === 'feedbackmode') {
+      return 'assessmentSets';
+    }
+    if (
+      leaf === 'title' ||
+      leaf === 'english' ||
+      leaf === 'indonesian' ||
+      leaf === 'simplifiedchinese'
+    ) {
+      return 'assessmentSetTitle';
+    }
+    if (leaf === 'estimatedminutes') return 'assessmentSetMinutes';
+    if (leaf === 'remediationresourceids') return 'assessmentSetRemediation';
+    return 'assessmentSets';
+  }
+
   // --- Questions (nested) ---
   if (pathIncludes(lower, 'questions') && !pathIncludes(lower, 'mocks')) {
     if (leaf === 'examlanguage') return 'examLanguage';
@@ -208,6 +244,7 @@ export function messageKeyFor(path: string, code: string): string {
     if (leaf === 'stem') return 'questionStem';
     if (leaf === 'outlineitemids') return 'questionOutlineRefs';
     if (leaf === 'objectiveids') return 'questionObjectiveRefs';
+    if (leaf === 'hinttiers' || pathIncludes(lower, 'hinttiers')) return 'hintTiers';
     if (leaf === 'origin' || leaf === 'provenance' || pathIncludes(lower, 'provenance')) {
       return provenanceMessage(leaf, normalizedCode);
     }
@@ -321,6 +358,7 @@ export function fieldFor(path: string): ValidationFieldKey {
   if (lower.includes('learningobjectives')) return 'objectives';
   // Resource-owned content paths (blocks under resources)
   if (lower.includes('resources')) return 'resources';
+  if (lower.includes('assessmentsets')) return 'assessment';
   // Question stem/options/explanations (not mock.questions)
   if (lower.includes('questions') && !lower.includes('mocks')) return 'questions';
   if (lower.includes('mocks')) return 'mock';
@@ -349,6 +387,8 @@ export function tabFor(field: ValidationFieldKey): AdminEditorTab {
       return 'resources';
     case 'questions':
       return 'questions';
+    case 'assessment':
+      return 'assessment';
     case 'mock':
       return 'mock';
     default:
@@ -356,9 +396,170 @@ export function tabFor(field: ValidationFieldKey): AdminEditorTab {
   }
 }
 
-/** Compact path for admin display (no draft. prefix). */
+/** Compact path for admin display (no draft. prefix). Prefer humanLocationLabel in UI. */
 export function shortValidationPath(path: string): string {
   return pathWithoutDraft(path);
+}
+
+/** 0-based index of assessmentSets[n] in a violation path, or null. */
+export function assessmentSetIndexFromPath(path: string): number | null {
+  const match = path.match(/assessment[Ss]ets\[(\d+)\]/);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isFinite(index) ? index : null;
+}
+
+/** 0-based index of draft.questions[n] (not mock.questions / assessmentSets.questionIds). */
+export function questionIndexFromPath(path: string): number | null {
+  const lower = path.toLowerCase();
+  if (lower.includes('assessmentsets') || lower.includes('mocks')) return null;
+  const match = path.match(/questions\[(\d+)\]/i);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isFinite(index) ? index : null;
+}
+
+/** 0-based outline item index when path points at outlineItems[n]. */
+export function outlineIndexFromPath(path: string): number | null {
+  const match = path.match(/outline[Ii]tems\[(\d+)\]/);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isFinite(index) ? index : null;
+}
+
+export interface ValidationLocationContext {
+  /** Display titles for assessmentSets by index (may be empty). */
+  assessmentSetLabels?: readonly (string | null | undefined)[];
+  /** Display labels for questions by index. */
+  questionLabels?: readonly (string | null | undefined)[];
+  /** Display labels for outline items by index. */
+  outlineLabels?: readonly (string | null | undefined)[];
+}
+
+/**
+ * Human-readable location for admins (no JSON path indices).
+ * Example: "Assessment set 2 · Linked lesson" instead of assessmentSets[1].lessonResourceId.
+ */
+// Loose i18n adapter — callers pass react-i18next `t` without fighting TFunction generics.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LocationTranslate = (key: string, options?: any) => string;
+
+export function humanLocationLabel(
+  path: string,
+  t: LocationTranslate,
+  ctx: ValidationLocationContext = {},
+): string {
+  const leaf = pathLeaf(path);
+  const setIndex = assessmentSetIndexFromPath(path);
+  if (setIndex != null) {
+    const named = ctx.assessmentSetLabels?.[setIndex]?.trim();
+    const setLabel =
+      named && named.length > 0
+        ? named
+        : t('admin.academic.validation.location.assessmentSetN', { n: setIndex + 1 });
+    const part = assessmentFieldPart(leaf, t);
+    return part
+      ? t('admin.academic.validation.location.joined', { place: setLabel, part })
+      : setLabel;
+  }
+
+  const questionIndex = questionIndexFromPath(path);
+  if (questionIndex != null) {
+    const named = ctx.questionLabels?.[questionIndex]?.trim();
+    const qLabel =
+      named && named.length > 0
+        ? named
+        : t('admin.academic.validation.location.questionN', { n: questionIndex + 1 });
+    const part = questionFieldPart(leaf, path, t);
+    return part ? t('admin.academic.validation.location.joined', { place: qLabel, part }) : qLabel;
+  }
+
+  const outlineIndex = outlineIndexFromPath(path);
+  if (outlineIndex != null) {
+    const named = ctx.outlineLabels?.[outlineIndex]?.trim();
+    const oLabel =
+      named && named.length > 0
+        ? named
+        : t('admin.academic.validation.location.outlineN', { n: outlineIndex + 1 });
+    return oLabel;
+  }
+
+  if (pathIncludes(path.toLowerCase(), 'learningobjectives')) {
+    return t('admin.academic.validation.location.objectives');
+  }
+  if (pathIncludes(path.toLowerCase(), 'resources')) {
+    return t('admin.academic.validation.location.resources');
+  }
+  if (pathIncludes(path.toLowerCase(), 'mocks')) {
+    return t('admin.academic.validation.location.mock');
+  }
+  if (
+    pathIncludes(path.toLowerCase(), 'officialsyllabus') ||
+    pathIncludes(path.toLowerCase(), 'sourcelinks')
+  ) {
+    return t('admin.academic.validation.location.source');
+  }
+  if (pathIncludes(path.toLowerCase(), 'outlineitems')) {
+    return t('admin.academic.validation.location.outline');
+  }
+  if (pathIncludes(path.toLowerCase(), 'assessmentsets')) {
+    return t('admin.academic.validation.location.assessment');
+  }
+  if (pathIncludes(path.toLowerCase(), 'questions')) {
+    return t('admin.academic.validation.location.questions');
+  }
+  return t('admin.academic.validation.location.general');
+}
+
+function assessmentFieldPart(leaf: string, t: LocationTranslate): string | null {
+  switch (leaf) {
+    case 'lessonresourceid':
+      return t('admin.academic.validation.location.parts.lesson');
+    case 'questionids':
+      return t('admin.academic.validation.location.parts.questions');
+    case 'examlanguage':
+      return t('admin.academic.validation.location.parts.examLanguage');
+    case 'title':
+    case 'english':
+    case 'indonesian':
+    case 'simplifiedchinese':
+      return t('admin.academic.validation.location.parts.title');
+    case 'purpose':
+      return t('admin.academic.validation.location.parts.purpose');
+    case 'passpolicy':
+      return t('admin.academic.validation.location.parts.passPolicy');
+    case 'feedbackmode':
+      return t('admin.academic.validation.location.parts.feedbackMode');
+    case 'estimatedminutes':
+      return t('admin.academic.validation.location.parts.minutes');
+    case 'remediationresourceids':
+      return t('admin.academic.validation.location.parts.remediation');
+    default:
+      return null;
+  }
+}
+
+function questionFieldPart(leaf: string, path: string, t: LocationTranslate): string | null {
+  if (pathIncludes(path.toLowerCase(), 'hinttiers')) {
+    return t('admin.academic.validation.location.parts.hints');
+  }
+  switch (leaf) {
+    case 'stem':
+      return t('admin.academic.validation.location.parts.stem');
+    case 'options':
+    case 'key':
+      return t('admin.academic.validation.location.parts.options');
+    case 'correctoptionkey':
+      return t('admin.academic.validation.location.parts.correctOption');
+    case 'examlanguage':
+      return t('admin.academic.validation.location.parts.examLanguage');
+    case 'explanations':
+      return t('admin.academic.validation.location.parts.explanations');
+    case 'latex':
+      return t('admin.academic.validation.location.parts.math');
+    default:
+      return null;
+  }
 }
 
 export function mapValidationViolations(
@@ -378,6 +579,26 @@ export function mapValidationViolations(
 
 export function localizeMappedMessage(item: MappedValidation, t: (key: string) => string): string {
   return t(`admin.academic.validation.fields.${item.messageKey}`);
+}
+
+/** Indexes of assessment sets that have at least one mapped violation. */
+export function assessmentSetErrorIndexes(mapped: readonly MappedValidation[]): number[] {
+  const indexes = new Set<number>();
+  for (const item of mapped) {
+    const index = assessmentSetIndexFromPath(item.path);
+    if (index != null) indexes.add(index);
+  }
+  return [...indexes].sort((a, b) => a - b);
+}
+
+/** Indexes of questions that have at least one mapped violation. */
+export function questionErrorIndexes(mapped: readonly MappedValidation[]): number[] {
+  const indexes = new Set<number>();
+  for (const item of mapped) {
+    const index = questionIndexFromPath(item.path);
+    if (index != null) indexes.add(index);
+  }
+  return [...indexes].sort((a, b) => a - b);
 }
 
 /**

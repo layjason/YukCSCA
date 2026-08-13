@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, CalendarDays } from 'lucide-react';
+import { DestPageHero } from '@/shared/components/DestPageHero';
+import { personalDestTitle, usePreferredGivenName } from '@/shared/identity/preferredGivenName';
 import { ApiError } from '@/shared/api/httpClient';
 import { listPublishedPackages } from './api/learnApi';
 import { formatLearnDate } from './formatLearnDate';
@@ -10,6 +12,12 @@ import './learn.css';
 
 export function LearnPackagesPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
+  const preferredName = usePreferredGivenName();
+  const lessonsTitle = personalDestTitle(
+    t('learn.titleYours'),
+    t('learn.titleNamed', { name: preferredName ?? '' }),
+    preferredName,
+  );
   const [packages, setPackages] = useState<PublishedPackageSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +49,7 @@ export function LearnPackagesPage(): React.JSX.Element {
   if (loading) {
     return (
       <div className="page-content learn-page learn-page-fill" aria-busy="true" aria-live="polite">
-        <h1>{t('learn.title')}</h1>
+        <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
         <div className="learn-skeleton learn-skeleton-list">
           <span className="loading-indicator" aria-hidden="true" />
           <p>{t('learn.loading')}</p>
@@ -53,7 +61,7 @@ export function LearnPackagesPage(): React.JSX.Element {
   if (error) {
     return (
       <div className="page-content learn-page learn-page-fill">
-        <h1>{t('learn.title')}</h1>
+        <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
         <section className="state-notice state-notice-error" role="alert">
           <h2>{t('learn.errors.title')}</h2>
           <p>{error}</p>
@@ -68,11 +76,7 @@ export function LearnPackagesPage(): React.JSX.Element {
   if (!packages || packages.length === 0) {
     return (
       <div className="page-content learn-page learn-page-fill">
-        <header className="learn-hub-hero">
-          <p className="learn-hub-eyebrow">{t('learn.packagesEyebrow')}</p>
-          <h1>{t('learn.title')}</h1>
-          <p className="learn-lede">{t('learn.packagesLede')}</p>
-        </header>
+        <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
         <section className="empty-state state-notice state-notice-info" aria-live="polite">
           <h2>{t('learn.emptyPackagesTitle')}</h2>
           <p>{t('learn.emptyPackagesDescription')}</p>
@@ -83,11 +87,7 @@ export function LearnPackagesPage(): React.JSX.Element {
 
   return (
     <div className="page-content learn-page learn-page-fill learn-packages-page">
-      <header className="learn-hub-hero">
-        <p className="learn-hub-eyebrow">{t('learn.packagesEyebrow')}</p>
-        <h1>{t('learn.title')}</h1>
-        <p className="learn-lede">{t('learn.packagesLede')}</p>
-      </header>
+      <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
 
       <ul className="learn-package-list" role="list">
         {packages.map((pkg, index) => {

@@ -11,6 +11,8 @@ export type LearningObjective = components['schemas']['AcademicAdmin.LearningObj
 export type StudyResource = AcademicPackageDraft['resources'][number];
 export type Question = AcademicPackageDraft['questions'][number];
 export type MockPaper = AcademicPackageDraft['mocks'][number];
+export type AssessmentSet = components['schemas']['AcademicAdmin.AssessmentSet'];
+export type HintTier = components['schemas']['AcademicAdmin.HintTier'];
 export type ContentBlock = components['schemas']['AcademicAdmin.ContentBlock'];
 export type TextContentBlock = components['schemas']['AcademicAdmin.TextContentBlock'];
 export type MathContentBlock = components['schemas']['AcademicAdmin.MathContentBlock'];
@@ -26,6 +28,7 @@ export type DraftProvenanceInput = components['schemas']['AcademicAdmin.DraftPro
 export type ContentOrigin = components['schemas']['AcademicAdmin.ContentOrigin'];
 export type ExamLanguage = components['schemas']['AcademicAdmin.ExamLanguage'];
 export type ExplanationLanguage = components['schemas']['AcademicAdmin.ExplanationLanguage'];
+export type QuestionDifficulty = components['schemas']['AcademicAdmin.QuestionDifficulty'];
 
 export type AdminEditorTab =
-  'source' | 'outline' | 'objectives' | 'resources' | 'questions' | 'mock';
+  'source' | 'outline' | 'objectives' | 'resources' | 'questions' | 'assessment' | 'mock';

@@ -6,7 +6,7 @@ import type { AcademicPackage } from '../types';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     i18n: { language: 'en' },
-    t: (key: string, opts?: { date?: string }) => {
+    t: (key: string, opts?: { date?: string; name?: string; index?: number }) => {
       const map: Record<string, string> = {
         'admin.academic.statusDraft': 'Draft',
         'admin.academic.saveDraft': 'Save draft',
@@ -21,6 +21,7 @@ vi.mock('react-i18next', () => ({
         'admin.academic.tabs.objectives': 'Objectives',
         'admin.academic.tabs.resources': 'Resources',
         'admin.academic.tabs.questions': 'Questions',
+        'admin.academic.tabs.assessment': 'Assessment sets',
         'admin.academic.tabs.mock': 'Timed mock',
         'admin.academic.hasUnpublishedChanges': 'Pending changes',
         'admin.academic.noActiveRevision': 'Not published yet',
@@ -28,6 +29,15 @@ vi.mock('react-i18next', () => ({
         'admin.academic.lastUpdated': `Updated ${opts?.date ?? ''}`,
         'admin.academic.toasts.draftSaved': 'Draft saved successfully.',
         'admin.academic.toasts.published': `Published on ${opts?.date ?? ''}`,
+        'admin.academic.toasts.added': `${opts?.name ?? ''} added.`,
+        'admin.academic.toasts.removed': `${opts?.name ?? ''} removed.`,
+        'admin.academic.toasts.duplicated': `${opts?.name ?? ''} duplicated.`,
+        'admin.academic.toasts.names.objective': 'Learning objective',
+        'admin.academic.objectives.title': 'Learning Objectives',
+        'admin.academic.objectives.addObjective': 'Add Objective',
+        'admin.academic.objectives.remove': 'Remove objective',
+        'admin.academic.objectives.empty': 'No learning objectives yet.',
+        'toast.dismiss': 'Dismiss',
       };
       return map[key] ?? key;
     },
@@ -118,5 +128,31 @@ describe('AcademicPackageEditor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /All packages/i }));
     expect(handleBack).toHaveBeenCalled();
+  });
+
+  test('toasts on add and dismisses from the close control', () => {
+    render(<AcademicPackageEditor initialPackage={mockPackage} onBackToList={vi.fn()} />);
+
+    const tablist = screen.getByRole('navigation', {
+      name: 'Academic package configuration sections',
+    });
+    const objectivesTab = Array.from(tablist.querySelectorAll('button')).find((btn) =>
+      /^Objectives/.test(btn.textContent ?? ''),
+    );
+    expect(objectivesTab).toBeTruthy();
+    fireEvent.click(objectivesTab!);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Objective/i }));
+    const added = screen.getByRole('status');
+    expect(added).toHaveTextContent('Learning objective added.');
+    expect(added).toHaveClass('toast-success');
+
+    fireEvent.click(screen.getByRole('button', { name: /Remove objective/i }));
+    const removed = screen.getByRole('status');
+    expect(removed).toHaveTextContent('Learning objective removed.');
+    expect(removed).toHaveClass('toast-error');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

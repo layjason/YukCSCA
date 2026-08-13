@@ -30,11 +30,13 @@ import { PlanReviewPage } from '@/prototype/student/onboarding/PlanReviewPage';
 import LearnPackagesPage from '@/features/learn/LearnPackagesPage';
 import PackageBrowsePage from '@/features/learn/PackageBrowsePage';
 import LessonReaderPage from '@/features/learn/LessonReaderPage';
-import { PracticePage } from '@/prototype/student/practice/PracticePage';
-import { PracticeSessionPage } from '@/prototype/student/practice/PracticeSessionPage';
-import { PracticeResultPage } from '@/prototype/student/practice/PracticeResultPage';
-import { MistakesPage } from '@/prototype/student/practice/MistakesPage';
-import { MistakeDetailPage } from '@/prototype/student/practice/MistakeDetailPage';
+import PracticeHubPage from '@/features/assessment/PracticeHubPage';
+import SessionPlayerPage from '@/features/assessment/SessionPlayerPage';
+import SessionResultPage from '@/features/assessment/SessionResultPage';
+import MistakesPage from '@/features/assessment/MistakesPage';
+import MistakeDetailPage from '@/features/assessment/MistakeDetailPage';
+import CheckpointPage from '@/features/assessment/CheckpointPage';
+import RemediationReaderPage from '@/features/assessment/RemediationReaderPage';
 import { MockExamListPage } from '@/prototype/student/mock-exam/MockExamListPage';
 import { MockInstructionsPage } from '@/prototype/student/mock-exam/MockInstructionsPage';
 import { MockSessionPage } from '@/prototype/student/mock-exam/MockSessionPage';
@@ -181,9 +183,11 @@ const routeElements = {
   learn: <LearnPackagesPage />,
   'learn-subject': <PackageBrowsePage />,
   'learn-lesson': <LessonReaderPage />,
-  practice: <PracticePage />,
-  'practice-session': <PracticeSessionPage />,
-  'practice-result': <PracticeResultPage />,
+  'learn-checkpoint': <CheckpointPage />,
+  'learn-remediation': <RemediationReaderPage />,
+  practice: <PracticeHubPage />,
+  'practice-session': <SessionPlayerPage />,
+  'practice-result': <SessionResultPage />,
   'practice-mistakes': <MistakesPage />,
   'practice-mistake-detail': <MistakeDetailPage />,
   'mock-exams': <MockExamListPage />,

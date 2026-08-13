@@ -6,6 +6,7 @@ import i18n from '@/shared/i18n';
 import { LessonReaderPage } from './LessonReaderPage';
 import * as learnApi from './api/learnApi';
 import * as profileApi from '@/features/profile/studentProfileApi';
+import * as assessmentApi from '@/features/assessment/api/assessmentApi';
 import type { PublishedLessonDetail } from './types';
 
 beforeEach(async () => {
@@ -93,6 +94,29 @@ test('loads lesson with profile default language and seeds in-progress progress'
       baseLesson.resourceId,
       expect.objectContaining({ status: 'IN_PROGRESS' }),
     );
+  });
+});
+
+test('refreshes a linked mistake after lesson study starts', async () => {
+  mockProfile('id');
+  vi.spyOn(learnApi, 'getPublishedLesson').mockResolvedValue(baseLesson);
+  vi.spyOn(learnApi, 'upsertContentProgress').mockResolvedValue({
+    status: 'IN_PROGRESS',
+    resumeBlockIndex: 0,
+    updatedAt: '2026-08-07T00:00:00Z',
+    updatedSinceCompleted: false,
+  });
+  const getMistake = vi.spyOn(assessmentApi, 'getMistake').mockResolvedValue({
+    mistakeId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    status: 'REMEDIATION_IN_PROGRESS',
+  } as never);
+
+  renderReader(
+    `/app/learn/MATHEMATICS/lessons/${baseLesson.resourceId}?mistakeId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`,
+  );
+
+  await waitFor(() => {
+    expect(getMistake).toHaveBeenCalledWith('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   });
 });
 
@@ -207,10 +231,80 @@ test('shows soft update banner and review action when content republished after 
     updatedAt: '2026-08-08T00:00:00Z',
     updatedSinceCompleted: false,
   });
+  // Lesson soft-update must keep checkpoint handoff (last result / retry / practice) visible.
+  vi.spyOn(assessmentApi, 'getCheckpointForLesson').mockResolvedValue({
+    subject: 'MATHEMATICS',
+    packageId: baseLesson.packageId,
+    packageRevisionId: '99999999-9999-4999-8999-999999999999',
+    lessonResourceId: baseLesson.resourceId,
+    lessonContentComplete: true,
+    startable: true,
+    lockReason: null,
+    checkpointUpdatedSinceLastAttempt: false,
+    editions: [
+      {
+        setId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        examLanguage: 'en',
+        title: { english: 'Checkpoint', indonesian: 'Checkpoint', simplifiedChinese: '检查点' },
+        questionCount: 3,
+        estimatedMinutes: 10,
+        feedbackMode: 'IMMEDIATE',
+        passPolicy: 'ALL_CORRECT_NO_STRONG_ASSISTANCE',
+      },
+    ],
+  });
+  vi.spyOn(assessmentApi, 'listAssessmentSessions').mockResolvedValue([
+    {
+      sessionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      purpose: 'CHECKPOINT',
+      subject: 'MATHEMATICS',
+      status: 'SUBMITTED',
+      packageId: baseLesson.packageId,
+      packageRevisionId: baseLesson.packageRevisionId,
+      setId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      mistakeId: null,
+      title: { english: 'Checkpoint', indonesian: 'Checkpoint', simplifiedChinese: '检查点' },
+      examLanguage: 'en',
+      questionCount: 3,
+      answeredItemCount: 3,
+      lockedItemCount: 3,
+      feedbackMode: 'IMMEDIATE',
+      lessonResourceId: baseLesson.resourceId,
+      updatedAt: '2026-08-06T00:00:00Z',
+    },
+  ]);
+  vi.spyOn(assessmentApi, 'getAssessmentSession').mockResolvedValue({
+    sessionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    purpose: 'CHECKPOINT',
+    subject: 'MATHEMATICS',
+    status: 'SUBMITTED',
+    feedbackMode: 'IMMEDIATE',
+    examLanguage: 'en',
+    packageId: baseLesson.packageId,
+    packageRevisionId: baseLesson.packageRevisionId,
+    setId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    items: [],
+    context: {
+      packageId: baseLesson.packageId,
+      packageRevisionId: baseLesson.packageRevisionId,
+      setId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lessonResourceId: baseLesson.resourceId,
+      checkpointPassed: true,
+    },
+    assistanceSummary: {
+      totalHintsDisclosed: 0,
+      strongAssistanceUsed: false,
+    },
+  } as never);
 
   renderReader();
   expect(await screen.findByText(/Updated lesson body/i)).toBeInTheDocument();
   expect(screen.getByText(/updated since you last finished/i)).toBeInTheDocument();
+  expect(
+    await screen.findByText(/Lesson reading was updated, but this checkpoint is still the same/i),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /View last result/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Retry checkpoint/i })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Mark as reviewed/i }));
   await waitFor(() => {
     expect(screen.queryByText(/updated since you last finished/i)).not.toBeInTheDocument();

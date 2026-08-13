@@ -263,7 +263,163 @@ paths:
   /api/v1/academic/packages/{subject}/lessons/{resourceId}/progress:
     put:
       operationId: AcademicStudentApi_upsertContentProgress
-      description: Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery, checkpoint unlock, or practice evidence.
+      description: Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.ContentProgressValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.UpsertContentProgressRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/remediation/{resourceId}:
+    get:
+      operationId: AcademicStudentApi_getPublishedRemediation
+      description: Returns one published REMEDIATION resource with ordered TEXT/MATH/IMAGE blocks for the requested explanation language, or an explicit language-unavailable body. Missing language is never silently substituted.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: explanationLanguage
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.PublishedRemediationDetail'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/remediation/{resourceId}/progress:
+    put:
+      operationId: AcademicStudentApi_upsertRemediationContentProgress
+      description: Creates or replaces the authenticated student's content progress for one REMEDIATION resource. Same status model as LESSON; content complete is corrective study evidence for revalidation eligibility, never mastery.
       parameters:
         - name: subject
           in: path
@@ -884,6 +1040,945 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AcademicAdmin.PublishAcademicPackageRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/mistakes:
+    get:
+      operationId: AssessmentStudentApi_listMistakes
+      description: Lists the authenticated student's mistakes. Owner-only; private notes are student-only.
+      parameters:
+        - name: subject
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+          explode: false
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AssessmentStudent.MistakeStatus'
+          explode: false
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.MistakeListResponseBody'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/mistakes/{mistakeId}:
+    get:
+      operationId: AssessmentStudentApi_getMistake
+      description: Returns one owner mistake with remediation candidates and revalidation eligibility.
+      parameters:
+        - name: mistakeId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.MistakeDetail'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    patch:
+      operationId: AssessmentStudentApi_updateMistakeAnnotation
+      description: Updates optional error cause and/or private note. Blank cause/note remain allowed.
+      parameters:
+        - name: mistakeId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.MistakeDetail'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentStudent.UpdateMistakeAnnotationRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/mistakes/{mistakeId}/revalidation:
+    post:
+      operationId: AssessmentStudentApi_startRevalidation
+      description: Starts a REVALIDATION session for an eligible mistake. Prefers an alternate question with the same objective and exam language; falls back to the original. STRONG hints are disabled.
+      parameters:
+        - name: mistakeId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentSession'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/packages/{subject}/lessons/{resourceId}/checkpoint:
+    get:
+      operationId: AssessmentStudentApi_getCheckpointForLesson
+      description: 'Returns checkpoint availability for one LESSON: startable flag, lock reason when not startable, and exam-language editions. Does not start a session and never claims mastery.'
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.CheckpointForLesson'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/packages/{subject}/sets:
+    get:
+      operationId: AssessmentStudentApi_listAssessmentSets
+      description: Lists published assessment sets for the active package of a subject. Filters are optional; empty list is a valid honest empty Practice state.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: purpose
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AssessmentSetPurpose'
+          explode: false
+        - name: outlineItemId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/uuid'
+          explode: false
+        - name: objectiveId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/uuid'
+          explode: false
+        - name: difficulty
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.QuestionDifficulty'
+          explode: false
+        - name: examLanguage
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssessmentStudent.AssessmentSetSummary'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/sessions:
+    get:
+      operationId: AssessmentStudentApi_listAssessmentSessions
+      description: Lists the authenticated student's own assessment sessions for Practice Continue. Defaults to IN_PROGRESS when status is omitted. Empty list is an honest no-Continue state. Does not return stems, keys, or hint bodies.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionStatus'
+          explode: false
+        - name: subject
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionResumeSummary'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    post:
+      operationId: AssessmentStudentApi_startAssessmentSession
+      description: Starts a CHECKPOINT or TOPIC_PRACTICE session for a published set. Pins package revision and materializes ordered item projections. CHECKPOINT requires LESSON content-complete.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentSession'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AssessmentStudent.AssessmentValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AssessmentStudent.CheckpointLockedProblem'
+                  - $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentStudent.StartAssessmentSessionRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/sessions/{sessionId}:
+    get:
+      operationId: AssessmentStudentApi_getAssessmentSession
+      description: Returns an owner session for resume or post-submit review. CANCELLED sessions return 409 SESSION_NOT_RESUMABLE.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentSession'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/sessions/{sessionId}/cancel:
+    post:
+      operationId: AssessmentStudentApi_cancelSession
+      description: Soft-cancels an IN_PROGRESS session. No score; session is not resumable.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentSession'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/sessions/{sessionId}/items/{itemId}/answer:
+    put:
+      operationId: AssessmentStudentApi_submitItemAnswer
+      description: Records or locks an item answer. IMMEDIATE locks and returns feedback; SET_END records selection and keeps the item changeable until session submit.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.ItemAnswerResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentStudent.SubmitItemAnswerRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/sessions/{sessionId}/items/{itemId}/hints:
+    post:
+      operationId: AssessmentStudentApi_discloseHint
+      description: Discloses the next mathematical hint tier for an OPEN or answered-but-unlocked item. STRONG is blocked on REVALIDATION sessions. Duplicate disclose of the same next tier is idempotent.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.DiscloseHintResult'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/assessment/sessions/{sessionId}/submit:
+    post:
+      operationId: AssessmentStudentApi_submitSession
+      description: 'Submits the session: scores remaining items, upserts mistakes, writes checkpoint evidence when applicable. Idempotent for already-submitted owner sessions when the result is returned.'
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.SessionResult'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
   /api/v1/auth/credential-registrations:
@@ -1632,6 +2727,24 @@ components:
                 type: array
                 items:
                   $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+              hintTiers:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.HintTier'
+                maxItems: 8
+                description: Ordered mathematical hint ladder. Empty when no hints are authored. Chinese language-assist tiers are out of VS-009.
+              commonMistakeNotes:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+                maxItems: 6
+                description: Optional short common-mistake notes shown after item feedback. Not a full remediation resource.
+              relatedResourceIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+                maxItems: 8
+                description: Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.
               outlineItemIds:
                 type: array
                 items:
@@ -1642,6 +2755,12 @@ components:
                   $ref: '#/components/schemas/uuid'
               provenance:
                 $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceRecord'
+        assessmentSets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.AssessmentSet'
+          maxItems: 64
+          description: Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.
         mocks:
           type: array
           items:
@@ -1734,6 +2853,24 @@ components:
                 type: array
                 items:
                   $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+              hintTiers:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.HintTier'
+                maxItems: 8
+                description: Ordered mathematical hint ladder. Empty when no hints are authored. Chinese language-assist tiers are out of VS-009.
+              commonMistakeNotes:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+                maxItems: 6
+                description: Optional short common-mistake notes shown after item feedback. Not a full remediation resource.
+              relatedResourceIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+                maxItems: 8
+                description: Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.
               outlineItemIds:
                 type: array
                 items:
@@ -1744,6 +2881,12 @@ components:
                   $ref: '#/components/schemas/uuid'
               provenance:
                 $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+        assessmentSets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.AssessmentSet'
+          maxItems: 64
+          description: Assessment sets (checkpoint and topic practice). Empty array when none authored.
         mocks:
           type: array
           items:
@@ -1843,6 +2986,91 @@ components:
           type: string
           minLength: 1
           maxLength: 500
+    AcademicAdmin.AssessmentFeedbackMode:
+      type: string
+      enum:
+        - IMMEDIATE
+        - SET_END
+      description: When item correctness and solution content become visible to the student.
+    AcademicAdmin.AssessmentSet:
+      type: object
+      required:
+        - id
+        - purpose
+        - title
+        - examLanguage
+        - questionIds
+        - outlineItemIds
+        - objectiveIds
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        purpose:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentSetPurpose'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        difficulty:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.QuestionDifficulty'
+            - type: 'null'
+          description: Optional difficulty filter tag for TOPIC_PRACTICE catalog queries.
+        questionIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          minItems: 1
+          maxItems: 12
+          description: Ordered question ids. Hard max 12; CHECKPOINT recommended max 5 is soft admin guidance.
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        lessonResourceId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: 'Required when purpose is CHECKPOINT: the LESSON resource that must be content-complete before start.'
+        estimatedMinutes:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 1
+          maximum: 180
+        feedbackMode:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentFeedbackMode'
+          description: Defaults to IMMEDIATE when omitted on save.
+        passPolicy:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.CheckpointPassPolicy'
+            - type: 'null'
+          description: Required for CHECKPOINT at publish. TOPIC_PRACTICE may omit.
+        remediationResourceIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 8
+          description: Preferred published REMEDIATION resource ids for the fail path. Empty means resolve by shared objective/outline.
+      description: Admin-authored assessment set bound to one exam language and an ordered question list. Materialized for students only after package publish.
+    AcademicAdmin.AssessmentSetPurpose:
+      type: string
+      enum:
+        - CHECKPOINT
+        - TOPIC_PRACTICE
+      description: Published assessment-set purpose. CHECKPOINT is lesson-gated formative; TOPIC_PRACTICE is free practice. Mock papers remain a separate package object.
+    AcademicAdmin.CheckpointPassPolicy:
+      type: string
+      enum:
+        - ALL_CORRECT_NO_STRONG_ASSISTANCE
+      description: Checkpoint pass policy. Pilot uses all-correct with no strong assistance; enum is extensible for later thresholds.
     AcademicAdmin.ContentBlock:
       anyOf:
         - $ref: '#/components/schemas/AcademicAdmin.TextContentBlock'
@@ -1940,6 +3168,27 @@ components:
         - id
         - en
         - zh-CN
+    AcademicAdmin.HintStrength:
+      type: string
+      enum:
+        - STANDARD
+        - STRONG
+      description: Strength of a mathematical hint tier. STRONG is a full or near-full solution and counts as strong assistance for checkpoint pass and revalidation evidence rules.
+    AcademicAdmin.HintTier:
+      type: object
+      required:
+        - strength
+        - blocks
+      properties:
+        strength:
+          $ref: '#/components/schemas/AcademicAdmin.HintStrength'
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+          minItems: 1
+          maxItems: 20
+      description: One ordered mathematical hint tier. Tiers must be strictly ordered; any STRONG disclosure counts as strong assistance.
     AcademicAdmin.ImageContentBlock:
       type: object
       required:
@@ -2343,7 +3592,7 @@ components:
           description: Last progress write time. Null when status is NOT_STARTED.
         updatedSinceCompleted:
           type: boolean
-          description: True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery.
+          description: True when status is CONTENT_COMPLETE and this study resource's student-visible content (title, outline/objective links, language versions, blocks) differs between the package revision recorded when the student last marked complete and the active published revision. Unrelated package changes (edition labels, other lessons, assessment questions) do not set this flag. Soft signal only; never demotes content complete or implies mastery.
       description: Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED.
     AcademicStudent.ContentProgressStatus:
       type: string
@@ -2479,7 +3728,7 @@ components:
         - FULLY_COVERED
         - PARTIALLY_COVERED
         - NOT_COVERED
-      description: Product coverage of an outline item from LESSON presence only. Practice/mock/checkpoint availability is out of VS-008.
+      description: Product coverage of an outline item from LESSON presence only. Checkpoint and practice availability are separate assessment catalog projections (VS-009).
     AcademicStudent.PublishedLessonDetail:
       type: object
       required:
@@ -2560,6 +3809,55 @@ components:
           maxItems: 2
           description: Exam languages declared on the published syllabus structure. Not used to split LESSON catalogs in VS-008.
       description: One published package the activated student may browse under pilot open-access.
+    AcademicStudent.PublishedRemediationDetail:
+      type: object
+      required:
+        - packageId
+        - packageRevisionId
+        - subject
+        - resourceId
+        - title
+        - availableExplanationLanguages
+        - requestedExplanationLanguage
+        - body
+        - contentProgress
+        - outlineItemIds
+        - objectiveIds
+      properties:
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        availableExplanationLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          minItems: 0
+          maxItems: 3
+        requestedExplanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          description: Language requested by the client (or the language the server evaluated).
+        body:
+          $ref: '#/components/schemas/AcademicStudent.LessonBody'
+        contentProgress:
+          $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+      description: Student REMEDIATION read projection for the active published revision. Same block model as LESSON; kind is always REMEDIATION.
     AcademicStudent.StudentPublishedRevisionSummary:
       type: object
       required:
@@ -2631,6 +3929,1091 @@ components:
         - IN_PROGRESS
         - CONTENT_COMPLETE
       description: Writable content-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
+    AssessmentStudent.AssessmentConflictProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - CHECKPOINT_LOCKED
+            - SESSION_ALREADY_SUBMITTED
+            - SESSION_NOT_RESUMABLE
+            - REVALIDATION_NOT_ELIGIBLE
+            - STRONG_HINT_BLOCKED
+            - HINT_EXHAUSTED
+            - ITEM_ALREADY_LOCKED
+            - SET_NOT_AVAILABLE
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: Conflict problem for assessment lifecycle. code is one of AssessmentProblemCode string values.
+    AssessmentStudent.AssessmentContextSummary:
+      type: object
+      required:
+        - subject
+        - packageId
+        - packageRevisionId
+        - sessionId
+        - sessionPurpose
+        - examLanguage
+        - setId
+        - lessonResourceId
+        - mistakeId
+        - outlineItemIds
+        - objectiveIds
+        - assistanceSummary
+        - checkpointPassed
+      properties:
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+        sessionPurpose:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionPurpose'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        setId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        lessonResourceId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        mistakeId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        assistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+        checkpointPassed:
+          anyOf:
+            - type: boolean
+            - type: 'null'
+      description: Stable context envelope fields for future agent tools (VS-011). Not a separate public resource.
+    AssessmentStudent.AssessmentProblemCode:
+      type: string
+      enum:
+        - CHECKPOINT_LOCKED
+        - SESSION_ALREADY_SUBMITTED
+        - SESSION_NOT_RESUMABLE
+        - REVALIDATION_NOT_ELIGIBLE
+        - STRONG_HINT_BLOCKED
+        - HINT_EXHAUSTED
+        - ASSESSMENT_VALIDATION_FAILED
+        - ITEM_ALREADY_LOCKED
+        - SET_NOT_AVAILABLE
+      description: Stable assessment problem codes returned in application/problem+json.
+    AssessmentStudent.AssessmentSession:
+      type: object
+      required:
+        - sessionId
+        - status
+        - purpose
+        - subject
+        - packageId
+        - packageRevisionId
+        - setId
+        - mistakeId
+        - lessonResourceId
+        - examLanguage
+        - feedbackMode
+        - planTaskId
+        - questionCount
+        - assistanceSummary
+        - items
+        - context
+        - createdAt
+        - updatedAt
+        - submittedAt
+      properties:
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+        status:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionStatus'
+        purpose:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionPurpose'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        setId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        mistakeId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        lessonResourceId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        feedbackMode:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentFeedbackMode'
+        planTaskId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        questionCount:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        assistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.SessionItemView'
+        context:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentContextSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        submittedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+    AssessmentStudent.AssessmentSessionPurpose:
+      type: string
+      enum:
+        - CHECKPOINT
+        - TOPIC_PRACTICE
+        - REVALIDATION
+      description: Why a student assessment session exists. REVALIDATION is started only from a mistake.
+    AssessmentStudent.AssessmentSessionResumeSummary:
+      type: object
+      required:
+        - sessionId
+        - status
+        - purpose
+        - subject
+        - packageId
+        - packageRevisionId
+        - setId
+        - mistakeId
+        - lessonResourceId
+        - title
+        - examLanguage
+        - feedbackMode
+        - questionCount
+        - answeredItemCount
+        - lockedItemCount
+        - updatedAt
+      properties:
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+        status:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionStatus'
+        purpose:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionPurpose'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        setId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        mistakeId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        lessonResourceId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        title:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+            - type: 'null'
+          description: Localized set title when the session was started from a published set; null for revalidation when no set title applies.
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        feedbackMode:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentFeedbackMode'
+        questionCount:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        answeredItemCount:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 12
+          description: Count of items with a selected answer (OPEN with selection or LOCKED).
+        lockedItemCount:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 12
+          description: Count of items in LOCKED status.
+        updatedAt:
+          type: string
+          format: date-time
+      description: Owner-safe summary for Practice Continue. No stems, options, keys, or hint bodies.
+    AssessmentStudent.AssessmentSessionStatus:
+      type: string
+      enum:
+        - IN_PROGRESS
+        - SUBMITTED
+        - CANCELLED
+      description: Lifecycle of a student-owned assessment session.
+    AssessmentStudent.AssessmentSetSummary:
+      type: object
+      required:
+        - setId
+        - packageId
+        - packageRevisionId
+        - purpose
+        - title
+        - examLanguage
+        - difficulty
+        - questionCount
+        - estimatedMinutes
+        - feedbackMode
+        - passPolicy
+        - outlineItemIds
+        - objectiveIds
+        - lessonResourceId
+      properties:
+        setId:
+          $ref: '#/components/schemas/uuid'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        purpose:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentSetPurpose'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        difficulty:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.QuestionDifficulty'
+            - type: 'null'
+        questionCount:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        estimatedMinutes:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+        feedbackMode:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentFeedbackMode'
+        passPolicy:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.CheckpointPassPolicy'
+            - type: 'null'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        lessonResourceId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+      description: Published assessment set summary for Practice hub filters. No question stems or keys.
+    AssessmentStudent.AssessmentValidationProblem:
+      type: object
+      required:
+        - code
+        - violations
+      properties:
+        code:
+          type: string
+          enum:
+            - ASSESSMENT_VALIDATION_FAILED
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.AssessmentValidationViolation'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AssessmentStudent.AssessmentValidationViolation:
+      type: object
+      required:
+        - path
+        - code
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 200
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+    AssessmentStudent.AssistanceSummary:
+      type: object
+      required:
+        - maxTierDisclosed
+        - strongUsed
+        - languageAssistUsed
+      properties:
+        maxTierDisclosed:
+          type: integer
+          format: int32
+          minimum: 0
+        strongUsed:
+          type: boolean
+        languageAssistUsed:
+          type: boolean
+          description: Always false in VS-009; reserved for VS-010 language-assist.
+      description: Assistance summary safe for UI and future agent context. Never includes hint bodies.
+    AssessmentStudent.CheckpointEdition:
+      type: object
+      required:
+        - setId
+        - examLanguage
+        - title
+        - questionCount
+        - estimatedMinutes
+        - feedbackMode
+        - passPolicy
+      properties:
+        setId:
+          $ref: '#/components/schemas/uuid'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        questionCount:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+        estimatedMinutes:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+        feedbackMode:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentFeedbackMode'
+        passPolicy:
+          $ref: '#/components/schemas/AcademicAdmin.CheckpointPassPolicy'
+      description: One exam-language edition of a lesson-linked checkpoint.
+    AssessmentStudent.CheckpointForLesson:
+      type: object
+      required:
+        - subject
+        - packageId
+        - packageRevisionId
+        - lessonResourceId
+        - lessonContentComplete
+        - startable
+        - lockReason
+        - checkpointUpdatedSinceLastAttempt
+        - editions
+      properties:
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        lessonResourceId:
+          $ref: '#/components/schemas/uuid'
+        lessonContentComplete:
+          type: boolean
+        startable:
+          type: boolean
+        lockReason:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.CheckpointLockReason'
+            - type: 'null'
+        checkpointUpdatedSinceLastAttempt:
+          type: boolean
+          description: True when the student has a prior submitted CHECKPOINT for this lesson and the published CHECKPOINT set content (including referenced questions) for the lesson differs from the content pinned on that attempt. Soft signal only; does not demote progress or claim mastery. False when there is no prior attempt or the checkpoint material is unchanged.
+        editions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.CheckpointEdition'
+          maxItems: 2
+      description: Checkpoint availability for one LESSON. Never claims mastery.
+    AssessmentStudent.CheckpointLockReason:
+      type: string
+      enum:
+        - LESSON_NOT_CONTENT_COMPLETE
+        - NO_CHECKPOINT_PUBLISHED
+        - NO_EXAM_LANGUAGE_EDITION
+      description: Why a lesson checkpoint is not startable.
+    AssessmentStudent.CheckpointLockedProblem:
+      type: object
+      required:
+        - code
+        - lockReason
+      properties:
+        code:
+          type: string
+          enum:
+            - CHECKPOINT_LOCKED
+        lockReason:
+          $ref: '#/components/schemas/AssessmentStudent.CheckpointLockReason'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AssessmentStudent.DiscloseHintResult:
+      type: object
+      required:
+        - item
+        - disclosed
+        - sessionAssistanceSummary
+      properties:
+        item:
+          $ref: '#/components/schemas/AssessmentStudent.SessionItemView'
+        disclosed:
+          $ref: '#/components/schemas/AssessmentStudent.DisclosedHintTier'
+        sessionAssistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+      description: Result of disclosing the next mathematical hint tier.
+    AssessmentStudent.DisclosedHintTier:
+      type: object
+      required:
+        - tierIndex
+        - strength
+        - blocks
+      properties:
+        tierIndex:
+          type: integer
+          format: int32
+          minimum: 0
+        strength:
+          $ref: '#/components/schemas/AcademicAdmin.HintStrength'
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+      description: One disclosed mathematical hint tier. Bodies appear only after the student discloses that tier.
+    AssessmentStudent.ErrorCause:
+      type: string
+      enum:
+        - CONCEPTUAL_GAP
+        - PREREQUISITE_GAP
+        - TERMINOLOGY_MISUNDERSTANDING
+        - CARELESSNESS
+        - TIME_MANAGEMENT
+      description: Optional student-selected error cause. Blank is allowed.
+    AssessmentStudent.HintTierMeta:
+      type: object
+      required:
+        - tierIndex
+        - strength
+        - disclosed
+      properties:
+        tierIndex:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 7
+        strength:
+          $ref: '#/components/schemas/AcademicAdmin.HintStrength'
+        disclosed:
+          type: boolean
+          description: True when this tier's body is present in disclosedHints for the current session.
+      description: Ordered hint-ladder metadata without bodies. Safe before disclosure so the client can warn on STRONG and pre-disable STRONG on REVALIDATION.
+    AssessmentStudent.ItemAnswerResult:
+      type: object
+      required:
+        - item
+        - sessionAssistanceSummary
+      properties:
+        item:
+          $ref: '#/components/schemas/AssessmentStudent.SessionItemView'
+        sessionAssistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+      description: Result of locking or recording an item answer. Feedback is null under SET_END until session submit.
+    AssessmentStudent.ItemAttemptStatus:
+      type: string
+      enum:
+        - OPEN
+        - LOCKED
+      description: Per-item attempt state within a session. SET_END may keep items OPEN with a selected answer until set submit.
+    AssessmentStudent.ItemFeedback:
+      type: object
+      required:
+        - correct
+        - correctOptionKey
+        - explanations
+        - commonMistakeNotes
+        - relatedResources
+      properties:
+        correct:
+          type: boolean
+        correctOptionKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+        explanations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
+        commonMistakeNotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+          maxItems: 6
+        relatedResources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.RelatedResourceRef'
+          maxItems: 8
+          description: Navigable related LESSON/REMEDIATION links with kind and title. Empty when none authored or none resolve in the active/pinned revision.
+      description: Post-lock or post-set-submit feedback. Includes correct key only after the item is locked for feedback.
+    AssessmentStudent.LearningEvidenceSignal:
+      type: string
+      enum:
+        - CHECKPOINT_PASSED
+      description: Bounded objective evidence signal written only on checkpoint pass in VS-009.
+    AssessmentStudent.LearningEvidenceSnapshot:
+      type: object
+      required:
+        - objectiveId
+        - signal
+        - sourceSessionId
+        - at
+      properties:
+        objectiveId:
+          $ref: '#/components/schemas/uuid'
+        signal:
+          $ref: '#/components/schemas/AssessmentStudent.LearningEvidenceSignal'
+        sourceSessionId:
+          $ref: '#/components/schemas/uuid'
+        at:
+          type: string
+          format: date-time
+      description: Append-only objective evidence written on checkpoint pass. Not a Mastered UI claim.
+    AssessmentStudent.MistakeAttemptQuestion:
+      type: object
+      required:
+        - questionId
+        - examLanguage
+        - stem
+        - options
+        - outlineItemIds
+        - objectiveIds
+      properties:
+        questionId:
+          $ref: '#/components/schemas/uuid'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        stem:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.SessionItemOption'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+      description: Immutable student-safe attempt question copy for the mistake notebook. Survives republish/edit of live catalog content.
+    AssessmentStudent.MistakeDetail:
+      type: object
+      required:
+        - mistakeId
+        - status
+        - subject
+        - packageId
+        - packageRevisionId
+        - questionId
+        - examLanguage
+        - errorCause
+        - privateNote
+        - errorCount
+        - assistanceSummary
+        - revalidationEligible
+        - lastAttemptId
+        - lastSessionId
+        - sourceSetId
+        - outlineItemIds
+        - objectiveIds
+        - attemptQuestion
+        - latestResponse
+        - remediationCandidates
+        - nextDueAt
+        - createdAt
+        - updatedAt
+      properties:
+        mistakeId:
+          $ref: '#/components/schemas/uuid'
+        status:
+          $ref: '#/components/schemas/AssessmentStudent.MistakeStatus'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        questionId:
+          $ref: '#/components/schemas/uuid'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        errorCause:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.ErrorCause'
+            - type: 'null'
+        privateNote:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 2000
+          description: Student-private note. Never exposed to parents in this slice.
+        errorCount:
+          type: integer
+          format: int32
+          minimum: 1
+        assistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+        revalidationEligible:
+          type: boolean
+        lastAttemptId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        lastSessionId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        sourceSetId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        attemptQuestion:
+          $ref: '#/components/schemas/AssessmentStudent.MistakeAttemptQuestion'
+          description: Exact original attempt question copy (not live catalog).
+        latestResponse:
+          $ref: '#/components/schemas/AssessmentStudent.MistakeLatestResponse'
+          description: Latest incorrect response that updated this mistake, with feedback when it was revealed.
+        remediationCandidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.RemediationCandidate'
+        nextDueAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: Reserved multi-day spaced schedule; unused in VS-009 (immediate eligibility).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AssessmentStudent.MistakeLatestResponse:
+      type: object
+      required:
+        - selectedOptionKey
+        - correct
+        - correctOptionKey
+        - feedback
+        - lastSessionId
+        - lastAttemptId
+        - respondedAt
+      properties:
+        selectedOptionKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+        correct:
+          type: boolean
+          description: Correctness of the response that last updated this mistake. Notebook upserts are from incorrect attempts, so this is false for those events.
+        correctOptionKey:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Revealed when item feedback was available on the attempt; otherwise null.
+        feedback:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.ItemFeedback'
+            - type: 'null'
+          description: Full post-submit feedback when it was revealed on the attempt; otherwise null.
+        lastSessionId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        lastAttemptId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        respondedAt:
+          type: string
+          format: date-time
+      description: Latest scored incorrect response that updated this mistake. Feedback fields present only when that attempt had revealed solution content.
+    AssessmentStudent.MistakeListResponseBody:
+      type: object
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.MistakeSummary'
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Opaque cursor for the next page; null when no further items.
+    AssessmentStudent.MistakeStatus:
+      type: string
+      enum:
+        - OPEN
+        - REMEDIATION_IN_PROGRESS
+        - AWAITING_REVALIDATION
+        - REVALIDATION_PASSED
+      description: Mistake notebook lifecycle for one student + package + question.
+    AssessmentStudent.MistakeSummary:
+      type: object
+      required:
+        - mistakeId
+        - status
+        - subject
+        - packageId
+        - questionId
+        - examLanguage
+        - errorCause
+        - stemPreview
+        - errorCount
+        - assistanceSummary
+        - revalidationEligible
+        - lastSessionId
+        - updatedAt
+      properties:
+        mistakeId:
+          $ref: '#/components/schemas/uuid'
+        status:
+          $ref: '#/components/schemas/AssessmentStudent.MistakeStatus'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        questionId:
+          $ref: '#/components/schemas/uuid'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        errorCause:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.ErrorCause'
+            - type: 'null'
+        stemPreview:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+          maxItems: 3
+          description: Prefix of the immutable attempt stem for list identification (server may truncate block count). Exact full stem is on MistakeDetail.attemptQuestion.
+        errorCount:
+          type: integer
+          format: int32
+          minimum: 1
+        assistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+        revalidationEligible:
+          type: boolean
+        lastSessionId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        updatedAt:
+          type: string
+          format: date-time
+      description: Mistake list row. Includes list-safe stem preview from the attempt copy; omits private note.
+    AssessmentStudent.RelatedResourceRef:
+      type: object
+      required:
+        - resourceId
+        - kind
+        - title
+      properties:
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+        kind:
+          type: string
+          enum:
+            - LESSON
+            - REMEDIATION
+          description: Student-openable kinds only. TERMINOLOGY is omitted from this projection in VS-009.
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+      description: Navigable published study resource reference for post-submit solution links (LESSON or REMEDIATION). Resolved from admin relatedResourceIds.
+    AssessmentStudent.RemediationCandidate:
+      type: object
+      required:
+        - resourceId
+        - kind
+        - title
+        - preferred
+      properties:
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+        kind:
+          $ref: '#/components/schemas/AcademicAdmin.StudyResourceKind'
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        preferred:
+          type: boolean
+      description: Published remediation or lesson candidate for a mistake fail path.
+    AssessmentStudent.SessionItemOption:
+      type: object
+      required:
+        - key
+        - blocks
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 40
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+          minItems: 1
+      description: Student-safe option projection (no correctness flag).
+    AssessmentStudent.SessionItemView:
+      type: object
+      required:
+        - itemId
+        - order
+        - questionId
+        - status
+        - stem
+        - options
+        - hintTierCount
+        - disclosedTierCount
+        - hintLadder
+        - disclosedHints
+        - strongAssistance
+        - selectedOptionKey
+        - correct
+        - feedback
+        - outlineItemIds
+        - objectiveIds
+      properties:
+        itemId:
+          $ref: '#/components/schemas/uuid'
+        order:
+          type: integer
+          format: int32
+          minimum: 0
+        questionId:
+          $ref: '#/components/schemas/uuid'
+        status:
+          $ref: '#/components/schemas/AssessmentStudent.ItemAttemptStatus'
+        stem:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.SessionItemOption'
+        hintTierCount:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 8
+        disclosedTierCount:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 8
+        hintLadder:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.HintTierMeta'
+          maxItems: 8
+          description: Full ordered ladder metadata (strength + disclosed flag) without bodies. Length equals hintTierCount.
+        disclosedHints:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.DisclosedHintTier'
+          description: Bodies only for tiers already disclosed in this session.
+        strongAssistance:
+          type: boolean
+        selectedOptionKey:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Selected option when the student has answered. Null when not yet answered.
+        correct:
+          anyOf:
+            - type: boolean
+            - type: 'null'
+          description: Present only when the item is locked and feedback mode allows revelation (IMMEDIATE after lock, or after SET_END submit).
+        feedback:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.ItemFeedback'
+            - type: 'null'
+          description: Present only when feedback is revealed for this item.
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        objectiveIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+      description: One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only.
+    AssessmentStudent.SessionResult:
+      type: object
+      required:
+        - sessionId
+        - status
+        - purpose
+        - correctCount
+        - total
+        - strongAssistanceUsed
+        - checkpointPassed
+        - mistakeIds
+        - evidenceWritten
+        - items
+        - context
+        - submittedAt
+      properties:
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+        status:
+          type: string
+          enum:
+            - SUBMITTED
+        purpose:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentSessionPurpose'
+        correctCount:
+          type: integer
+          format: int32
+          minimum: 0
+        total:
+          type: integer
+          format: int32
+          minimum: 1
+        strongAssistanceUsed:
+          type: boolean
+        checkpointPassed:
+          anyOf:
+            - type: boolean
+            - type: 'null'
+        mistakeIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 12
+        evidenceWritten:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.LearningEvidenceSnapshot'
+          description: Objective evidence written on this submit when checkpoint passed; empty otherwise.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.SessionItemView'
+        context:
+          $ref: '#/components/schemas/AssessmentStudent.AssessmentContextSummary'
+        submittedAt:
+          type: string
+          format: date-time
+      description: Final scored session result. checkpointPassed is non-null only for CHECKPOINT purpose.
+    AssessmentStudent.StartAssessmentSessionRequest:
+      type: object
+      required:
+        - purpose
+        - subject
+        - setId
+        - examLanguage
+      properties:
+        purpose:
+          $ref: '#/components/schemas/AcademicAdmin.AssessmentSetPurpose'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        setId:
+          $ref: '#/components/schemas/uuid'
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+        planTaskId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: Reserved for plan-assigned practice (VS-017). Must be null or omitted in VS-009.
+      description: Start CHECKPOINT or TOPIC_PRACTICE. REVALIDATION uses startRevalidation.
+    AssessmentStudent.SubmitItemAnswerRequest:
+      type: object
+      required:
+        - selectedOptionKey
+      properties:
+        selectedOptionKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+    AssessmentStudent.UpdateMistakeAnnotationRequest:
+      type: object
+      properties:
+        errorCause:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.ErrorCause'
+            - type: 'null'
+          description: Omit to leave unchanged; null clears.
+        privateNote:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 2000
+          description: Omit to leave unchanged; null clears.
     Auth.AuthResponse:
       type: object
       required:

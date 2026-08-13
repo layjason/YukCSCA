@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
+import { AdminNotifyContext } from '../adminNotify';
 import { OfficialSourcePanel } from './OfficialSourcePanel';
 import { SyllabusOutlineEditor } from './SyllabusOutlineEditor';
 import { LearningObjectivesEditor } from './LearningObjectivesEditor';
 import { StudyResourcesEditor } from './StudyResourcesEditor';
 import { QuestionEditor } from './QuestionEditor';
+import { AssessmentSetsEditor } from './AssessmentSetsEditor';
 import { MockPaperEditor } from './MockPaperEditor';
 import { ArchiveModal } from './ArchiveModal';
 import {
@@ -22,11 +24,13 @@ import { toDraftProvenanceInput, toEditableProvenance } from '../provenanceDraft
 import { formatAdminDate } from '../formatAdminDate';
 import { ensureExamStructure } from '../subjectProfile';
 import {
+  assessmentSetErrorIndexes,
+  assessmentSetIndexFromPath,
   fieldErrorsFromMapped,
   firstTabFromMapped,
+  humanLocationLabel,
   localizeMappedMessage,
   mapValidationViolations,
-  shortValidationPath,
   type OfficialFieldKey,
   type ValidationFieldKey,
 } from '../validationMapping';
@@ -100,7 +104,11 @@ export function AcademicPackageEditor({
   const [isArchiving, setIsArchiving] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
 
-  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    tone: ToastTone;
+    durationMs: number;
+  } | null>(null);
   const [validationViolations, setValidationViolations] = useState<
     AcademicValidationViolation[] | null
   >(null);
@@ -141,9 +149,51 @@ export function AcademicPackageEditor({
     return out;
   }, [fieldErrors]);
 
-  const showToast = (message: string, tone: ToastTone = 'success') => {
-    setToast({ message, tone });
+  const locationContext = useMemo(() => {
+    const assessmentSetLabels = (draft.assessmentSets ?? []).map((set) => {
+      return set.title.english || set.title.indonesian || set.title.simplifiedChinese || null;
+    });
+    const questionLabels = draft.questions.map((q) => {
+      const text = q.stem.find((b) => b.kind === 'TEXT');
+      if (text && 'text' in text && text.text) return text.text.slice(0, 48);
+      const math = q.stem.find((b) => b.kind === 'MATH');
+      if (math && 'latex' in math && math.latex) return math.latex.slice(0, 48);
+      return null;
+    });
+    const outlineLabels = draft.outlineItems.map((item) => {
+      return (
+        item.summary.english || item.summary.indonesian || item.summary.simplifiedChinese || null
+      );
+    });
+    return { assessmentSetLabels, questionLabels, outlineLabels };
+  }, [draft.assessmentSets, draft.questions, draft.outlineItems]);
+
+  const assessmentErrorIndexes = useMemo(
+    () => assessmentSetErrorIndexes(mappedViolations),
+    [mappedViolations],
+  );
+
+  /** Messages for the assessment tab overall (collection-level or any set). */
+  const assessmentTabMessages = useMemo(
+    () => fieldErrors.assessment ?? [],
+    [fieldErrors.assessment],
+  );
+
+  const tabsWithErrors = useMemo(() => {
+    const set = new Set<AdminEditorTab>();
+    for (const item of mappedViolations) {
+      set.add(item.tab);
+    }
+    return set;
+  }, [mappedViolations]);
+
+  const showToast = (message: string, tone: ToastTone = 'success', durationMs = 4000) => {
+    setToast({ message, tone, durationMs });
   };
+
+  const notifyAction = useCallback((message: string, tone: ToastTone = 'success') => {
+    setToast({ message, tone, durationMs: 2000 });
+  }, []);
 
   const dismissToast = useCallback(() => {
     setToast(null);
@@ -213,6 +263,11 @@ export function AcademicPackageEditor({
         explanations: pruneEmptyLocalizedVersions(q.explanations ?? []),
         outlineItemIds: q.outlineItemIds,
         objectiveIds: q.objectiveIds,
+        // VS-009: round-trip assessment metadata even before dedicated admin editors ship.
+        // Omitting these fields silently drops authored hints / solution links on save.
+        ...(q.hintTiers != null ? { hintTiers: q.hintTiers } : {}),
+        ...(q.commonMistakeNotes != null ? { commonMistakeNotes: q.commonMistakeNotes } : {}),
+        ...(q.relatedResourceIds != null ? { relatedResourceIds: q.relatedResourceIds } : {}),
         provenance: toDraftProvenanceInput(toEditableProvenance(q.provenance)),
       })),
       mocks: mocks.map((m) => ({
@@ -226,6 +281,8 @@ export function AcademicPackageEditor({
         questions: m.questions,
         provenance: toDraftProvenanceInput(toEditableProvenance(m.provenance)),
       })),
+      // Backend treats omit as empty array — always send so AssessmentSets are not wiped.
+      assessmentSets: draft.assessmentSets ?? [],
     };
   };
 
@@ -361,251 +418,326 @@ export function AcademicPackageEditor({
       count: draft.questions.length,
     },
     {
+      id: 'assessment',
+      label: t('admin.academic.tabs.assessment'),
+      count: draft.assessmentSets?.length ?? 0,
+    },
+    {
       id: 'mock',
       label: t('admin.academic.tabs.mock'),
     },
   ];
 
   return (
-    <div className="admin-editor">
-      {toast ? <Toast message={toast.message} tone={toast.tone} onDismiss={dismissToast} /> : null}
+    <AdminNotifyContext.Provider value={notifyAction}>
+      <div className="admin-editor">
+        {toast ? (
+          <Toast
+            message={toast.message}
+            tone={toast.tone}
+            durationMs={toast.durationMs}
+            onDismiss={dismissToast}
+          />
+        ) : null}
 
-      <header className="admin-editor-header">
-        <div className="admin-editor-identity">
-          <button type="button" className="admin-back-link" onClick={onBackToList}>
-            {t('admin.academic.backToList')}
-          </button>
+        <header className="admin-editor-header">
+          <div className="admin-editor-identity">
+            <button type="button" className="admin-back-link" onClick={onBackToList}>
+              {t('admin.academic.backToList')}
+            </button>
 
-          <div className="admin-editor-title-block">
-            <p className="admin-eyebrow">{t('admin.academic.subjectTag')}</p>
-            <div className="admin-editor-title-row">
-              <h1 className="admin-editor-title">{t('admin.academic.packageHeading')}</h1>
-              <div className="admin-editor-badges">
-                <span className={statusClass}>{statusLabel}</span>
-                {pkg.hasUnpublishedChanges && (
-                  <span className="badge-unpublished-changes">
-                    {isCorrectionDraft
-                      ? t('admin.academic.resumeCorrection')
-                      : t('admin.academic.hasUnpublishedChanges')}
+            <div className="admin-editor-title-block">
+              <p className="admin-eyebrow">{t('admin.academic.subjectTag')}</p>
+              <div className="admin-editor-title-row">
+                <h1 className="admin-editor-title">{t('admin.academic.packageHeading')}</h1>
+                <div className="admin-editor-badges">
+                  <span className={statusClass}>{statusLabel}</span>
+                  {pkg.hasUnpublishedChanges && (
+                    <span className="badge-unpublished-changes">
+                      {isCorrectionDraft
+                        ? t('admin.academic.resumeCorrection')
+                        : t('admin.academic.hasUnpublishedChanges')}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="admin-editor-meta">
+                {pkg.activeRevision
+                  ? t('admin.academic.activeRevision', {
+                      date: formatAdminDate(pkg.activeRevision.publishedAt, i18n.language),
+                    })
+                  : t('admin.academic.noActiveRevision')}
+                {' · '}
+                {t('admin.academic.lastUpdated', {
+                  date: formatAdminDate(pkg.updatedAt, i18n.language),
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="admin-editor-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleSaveDraft}
+              disabled={busy || isArchived}
+            >
+              {isSaving ? t('admin.academic.saving') : t('admin.academic.saveDraft')}
+            </button>
+
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handlePublish}
+              disabled={busy || isArchived}
+            >
+              {isPublishing ? t('admin.academic.publishing') : t('admin.academic.publish')}
+            </button>
+
+            {pkg.status === 'PUBLISHED' && (
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={() => setShowArchiveModal(true)}
+                disabled={busy}
+              >
+                {t('admin.academic.archive')}
+              </button>
+            )}
+          </div>
+        </header>
+
+        <nav className="admin-tabs" aria-label={t('admin.academic.tabsLabel')}>
+          {tabs.map((tab) => {
+            const hasErrors = tabsWithErrors.has(tab.id);
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`admin-tab-btn${activeTab === tab.id ? ' admin-tab-btn-active' : ''}${hasErrors ? ' admin-tab-btn-error' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+              >
+                <span>{tab.label}</span>
+                {hasErrors ? (
+                  <span
+                    className="admin-tab-error-dot"
+                    aria-label={t('admin.academic.validation.tabHasIssues')}
+                  >
+                    !
+                  </span>
+                ) : null}
+                {typeof tab.count === 'number' && (
+                  <span className="admin-tab-count" aria-hidden="true">
+                    {tab.count}
                   </span>
                 )}
-              </div>
+              </button>
+            );
+          })}
+        </nav>
+
+        {mappedViolations.length > 0 ? (
+          <div className="admin-validation-banner feedback-danger" role="alert">
+            <div className="admin-validation-banner-header">
+              <p className="admin-validation-banner-title">
+                {t('admin.academic.validation.bannerTitle', { count: mappedViolations.length })}
+              </p>
+              <button
+                type="button"
+                className="btn-secondary admin-btn-compact-md"
+                onClick={() => setValidationViolations(null)}
+              >
+                {t('admin.academic.validation.dismiss')}
+              </button>
             </div>
-            <p className="admin-editor-meta">
-              {pkg.activeRevision
-                ? t('admin.academic.activeRevision', {
-                    date: formatAdminDate(pkg.activeRevision.publishedAt, i18n.language),
-                  })
-                : t('admin.academic.noActiveRevision')}
-              {' · '}
-              {t('admin.academic.lastUpdated', {
-                date: formatAdminDate(pkg.updatedAt, i18n.language),
+            <p className="admin-validation-banner-body">
+              {t('admin.academic.validation.bannerBody')}
+            </p>
+            <ul className="admin-validation-issue-list">
+              {mappedViolations.map((item, index) => {
+                const location = humanLocationLabel(item.path, t, locationContext);
+                return (
+                  <li key={`${item.path}:${item.code}:${index}`} className="admin-validation-issue">
+                    <div className="admin-validation-issue-main">
+                      <p className="admin-validation-issue-message">
+                        {localizeMappedMessage(item, t)}
+                      </p>
+                      <p className="admin-validation-issue-meta">
+                        {t('admin.academic.validation.whereLabel', { place: location })}
+                        {' · '}
+                        {tabLabel(item.tab)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-secondary admin-btn-compact"
+                      onClick={() => setActiveTab(item.tab)}
+                    >
+                      {t('admin.academic.validation.goToTab', { tab: tabLabel(item.tab) })}
+                    </button>
+                  </li>
+                );
               })}
-            </p>
+            </ul>
           </div>
-        </div>
+        ) : null}
 
-        <div className="admin-editor-actions">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleSaveDraft}
-            disabled={busy || isArchived}
-          >
-            {isSaving ? t('admin.academic.saving') : t('admin.academic.saveDraft')}
-          </button>
-
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handlePublish}
-            disabled={busy || isArchived}
-          >
-            {isPublishing ? t('admin.academic.publishing') : t('admin.academic.publish')}
-          </button>
-
-          {pkg.status === 'PUBLISHED' && (
-            <button
-              type="button"
-              className="btn-danger"
-              onClick={() => setShowArchiveModal(true)}
-              disabled={busy}
-            >
-              {t('admin.academic.archive')}
-            </button>
-          )}
-        </div>
-      </header>
-
-      <nav className="admin-tabs" aria-label={t('admin.academic.tabsLabel')}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`admin-tab-btn ${activeTab === tab.id ? 'admin-tab-btn-active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-            aria-current={activeTab === tab.id ? 'page' : undefined}
-          >
-            <span>{tab.label}</span>
-            {typeof tab.count === 'number' && (
-              <span className="admin-tab-count" aria-hidden="true">
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
-
-      {mappedViolations.length > 0 ? (
-        <div className="admin-validation-banner feedback-danger" role="alert">
-          <div className="admin-validation-banner-header">
-            <p className="admin-validation-banner-title">
-              {t('admin.academic.validation.bannerTitle', { count: mappedViolations.length })}
-            </p>
-            <button
-              type="button"
-              className="btn-secondary admin-btn-compact-md"
-              onClick={() => setValidationViolations(null)}
-            >
-              {t('admin.academic.validation.dismiss')}
-            </button>
-          </div>
-          <p className="admin-validation-banner-body">
-            {t('admin.academic.validation.bannerBody')}
-          </p>
-          <ul className="admin-validation-issue-list">
-            {mappedViolations.map((item, index) => (
-              <li key={`${item.path}:${item.code}:${index}`} className="admin-validation-issue">
-                <div className="admin-validation-issue-main">
-                  <p className="admin-validation-issue-message">{localizeMappedMessage(item, t)}</p>
-                  <p className="admin-validation-issue-meta">
-                    {t('admin.academic.validation.pathLabel', {
-                      path: shortValidationPath(item.path),
-                    })}
-                    {' · '}
-                    {item.code}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="btn-secondary admin-btn-compact"
-                  onClick={() => setActiveTab(item.tab)}
-                >
-                  {t('admin.academic.validation.goToTab', { tab: tabLabel(item.tab) })}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div className="admin-editor-pane">
-        {activeTab === 'source' && (
-          <div className="admin-stack-xl">
-            <OfficialSourcePanel
-              syllabus={draft.officialSyllabus}
-              isPublished={pkg.status === 'PUBLISHED'}
-              fieldErrors={officialFieldErrors}
-              onChange={(updatedSyllabus) =>
-                applyPackageUpdate({
-                  ...pkg,
-                  draft: { ...draft, officialSyllabus: updatedSyllabus },
-                })
-              }
-            />
-
-            <div className="admin-section-with-errors">
-              <FieldErrorList messages={fieldErrors.outline} />
-              <SyllabusOutlineEditor
-                items={draft.outlineItems}
-                onChange={(updatedItems) =>
+        <div className="admin-editor-pane">
+          {activeTab === 'source' && (
+            <div className="admin-stack-xl">
+              <OfficialSourcePanel
+                syllabus={draft.officialSyllabus}
+                isPublished={pkg.status === 'PUBLISHED'}
+                fieldErrors={officialFieldErrors}
+                onChange={(updatedSyllabus) =>
                   applyPackageUpdate({
                     ...pkg,
-                    draft: { ...draft, outlineItems: updatedItems },
+                    draft: { ...draft, officialSyllabus: updatedSyllabus },
+                  })
+                }
+              />
+
+              <div className="admin-section-with-errors">
+                <FieldErrorList messages={fieldErrors.outline} />
+                <SyllabusOutlineEditor
+                  items={draft.outlineItems}
+                  onChange={(updatedItems) =>
+                    applyPackageUpdate({
+                      ...pkg,
+                      draft: { ...draft, outlineItems: updatedItems },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'objectives' && (
+            <div className="admin-section-with-errors">
+              <FieldErrorList messages={fieldErrors.objectives} />
+              <LearningObjectivesEditor
+                objectives={draft.learningObjectives}
+                outlineItems={draft.outlineItems}
+                onChange={(updated) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, learningObjectives: updated },
                   })
                 }
               />
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'objectives' && (
-          <div className="admin-section-with-errors">
-            <FieldErrorList messages={fieldErrors.objectives} />
-            <LearningObjectivesEditor
-              objectives={draft.learningObjectives}
-              outlineItems={draft.outlineItems}
-              onChange={(updated) =>
-                applyPackageUpdate({
-                  ...pkg,
-                  draft: { ...draft, learningObjectives: updated },
-                })
-              }
-            />
-          </div>
-        )}
+          {activeTab === 'resources' && (
+            <div className="admin-section-with-errors">
+              <FieldErrorList messages={fieldErrors.resources} />
+              <StudyResourcesEditor
+                resources={draft.resources}
+                outlineItems={draft.outlineItems}
+                objectives={draft.learningObjectives}
+                disabled={isArchived}
+                onChange={(updated) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, resources: updated },
+                  })
+                }
+              />
+            </div>
+          )}
 
-        {activeTab === 'resources' && (
-          <div className="admin-section-with-errors">
-            <FieldErrorList messages={fieldErrors.resources} />
-            <StudyResourcesEditor
-              resources={draft.resources}
-              outlineItems={draft.outlineItems}
-              objectives={draft.learningObjectives}
-              disabled={isArchived}
-              onChange={(updated) =>
-                applyPackageUpdate({
-                  ...pkg,
-                  draft: { ...draft, resources: updated },
-                })
-              }
-            />
-          </div>
-        )}
+          {activeTab === 'questions' && (
+            <div className="admin-section-with-errors">
+              <FieldErrorList messages={fieldErrors.questions} />
+              <QuestionEditor
+                questions={draft.questions}
+                outlineItems={draft.outlineItems}
+                objectives={draft.learningObjectives}
+                resources={draft.resources}
+                disabled={isArchived}
+                onChange={(updatedQuestions) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, questions: updatedQuestions },
+                  })
+                }
+              />
+            </div>
+          )}
 
-        {activeTab === 'questions' && (
-          <div className="admin-section-with-errors">
-            <FieldErrorList messages={fieldErrors.questions} />
-            <QuestionEditor
-              questions={draft.questions}
-              outlineItems={draft.outlineItems}
-              objectives={draft.learningObjectives}
-              disabled={isArchived}
-              onChange={(updatedQuestions) =>
-                applyPackageUpdate({
-                  ...pkg,
-                  draft: { ...draft, questions: updatedQuestions },
-                })
-              }
-            />
-          </div>
-        )}
+          {activeTab === 'assessment' && (
+            <div className="admin-section-with-errors">
+              <FieldErrorList
+                messages={
+                  // Collection-level only at tab top; per-set detail uses selectedSetMessages.
+                  assessmentTabMessages.filter((msg) =>
+                    mappedViolations.some(
+                      (v) =>
+                        localizeMappedMessage(v, t) === msg &&
+                        assessmentSetIndexFromPath(v.path) == null,
+                    ),
+                  )
+                }
+              />
+              <AssessmentSetsEditor
+                assessmentSets={draft.assessmentSets ?? []}
+                questions={draft.questions}
+                resources={draft.resources}
+                outlineItems={draft.outlineItems}
+                objectives={draft.learningObjectives}
+                disabled={isArchived}
+                errorIndexes={assessmentErrorIndexes}
+                selectedSetMessages={assessmentTabMessages}
+                messagesForSetIndex={(setIndex) => {
+                  const keys = new Set<string>();
+                  const out: string[] = [];
+                  for (const v of mappedViolations) {
+                    if (assessmentSetIndexFromPath(v.path) !== setIndex) continue;
+                    const msg = localizeMappedMessage(v, t);
+                    if (!keys.has(msg)) {
+                      keys.add(msg);
+                      out.push(msg);
+                    }
+                  }
+                  return out;
+                }}
+                onChange={(updatedSets) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, assessmentSets: updatedSets },
+                  })
+                }
+              />
+            </div>
+          )}
 
-        {activeTab === 'mock' && (
-          <div className="admin-section-with-errors">
-            <FieldErrorList messages={fieldErrors.mock} />
-            <MockPaperEditor
-              mocks={draft.mocks}
-              availableQuestions={draft.questions}
-              disabled={isArchived}
-              onChange={(updatedMocks) =>
-                applyPackageUpdate({
-                  ...pkg,
-                  draft: { ...draft, mocks: updatedMocks },
-                })
-              }
-            />
-          </div>
+          {activeTab === 'mock' && (
+            <div className="admin-section-with-errors">
+              <FieldErrorList messages={fieldErrors.mock} />
+              <MockPaperEditor
+                mocks={draft.mocks}
+                availableQuestions={draft.questions}
+                disabled={isArchived}
+                onChange={(updatedMocks) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, mocks: updatedMocks },
+                  })
+                }
+              />
+            </div>
+          )}
+        </div>
+
+        {showArchiveModal && (
+          <ArchiveModal
+            isArchiving={isArchiving}
+            onConfirm={handleArchiveConfirm}
+            onClose={() => setShowArchiveModal(false)}
+          />
         )}
       </div>
-
-      {showArchiveModal && (
-        <ArchiveModal
-          isArchiving={isArchiving}
-          onConfirm={handleArchiveConfirm}
-          onClose={() => setShowArchiveModal(false)}
-        />
-      )}
-    </div>
+    </AdminNotifyContext.Provider>
   );
 }

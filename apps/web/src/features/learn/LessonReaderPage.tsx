@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
@@ -23,6 +23,8 @@ import {
   type ExplanationLanguage,
   type PublishedLessonDetail,
 } from './types';
+import { getMistake } from '@/features/assessment/api/assessmentApi';
+import { CheckpointCta } from '@/features/assessment/components/CheckpointCta';
 import './learn.css';
 
 export function LessonReaderPage(): React.JSX.Element {
@@ -31,7 +33,14 @@ export function LessonReaderPage(): React.JSX.Element {
     subject: string;
     resourceId: string;
   }>();
+  const [searchParams] = useSearchParams();
+  const linkedMistakeId = searchParams.get('mistakeId');
   const subject = isAcademicSubject(subjectParam) ? subjectParam : null;
+
+  const refreshLinkedMistake = useCallback(async () => {
+    if (!linkedMistakeId) return;
+    await getMistake(linkedMistakeId).catch(() => undefined);
+  }, [linkedMistakeId]);
 
   const [explanationLanguage, setExplanationLanguage] = useState<ExplanationLanguage | null>(null);
   const [profileLanguageReady, setProfileLanguageReady] = useState(false);
@@ -183,6 +192,7 @@ export function LessonReaderPage(): React.JSX.Element {
           setProgress(next);
           lastSavedIndexRef.current = next.resumeBlockIndex;
           resumeCoalescerRef.current?.setLastSaved(next.resumeBlockIndex);
+          return refreshLinkedMistake();
         })
         .catch(() => {
           // Non-blocking: student can still read; complete may retry.
@@ -190,8 +200,9 @@ export function LessonReaderPage(): React.JSX.Element {
         });
     } else {
       progressSeededRef.current = true;
+      void refreshLinkedMistake();
     }
-  }, [lesson, subject, resourceId, progress]);
+  }, [lesson, subject, resourceId, progress, refreshLinkedMistake]);
 
   // One-time resume scroll + highlight — only on first open of a lesson, never on language switch.
   useEffect(() => {
@@ -314,6 +325,7 @@ export function LessonReaderPage(): React.JSX.Element {
         expectedPackageRevisionId: lesson.packageRevisionId,
       });
       setProgress(next);
+      await refreshLinkedMistake();
       setToast({
         message: needsReview ? t('learn.lesson.reviewedAck') : t('learn.lesson.contentCompleteAck'),
         tone: 'success',
@@ -441,30 +453,6 @@ export function LessonReaderPage(): React.JSX.Element {
             {t('learn.lesson.updatedSinceComplete')}
           </p>
         ) : null}
-        {blocks.length > 0 ? (
-          <div
-            className="learn-progress-track"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={blocks.length}
-            aria-valuenow={Math.min(
-              (lastSavedIndexRef.current ?? progress?.resumeBlockIndex ?? 0) + 1,
-              blocks.length,
-            )}
-            aria-label={t('learn.lesson.progressAria')}
-          >
-            <div
-              className="learn-progress-track-fill"
-              style={{
-                width: `${Math.round(
-                  (((lastSavedIndexRef.current ?? progress?.resumeBlockIndex ?? 0) + 1) /
-                    blocks.length) *
-                    100,
-                )}%`,
-              }}
-            />
-          </div>
-        ) : null}
       </header>
 
       {loading && !isAvailable && blocks.length === 0 ? (
@@ -534,6 +522,16 @@ export function LessonReaderPage(): React.JSX.Element {
                   : t('learn.lesson.markContentComplete')}
             </button>
           )}
+          {/* Keep checkpoint handoff while lesson soft-update is pending review so last result /
+              retry / practice stay available with honest lesson-updated copy. */}
+          {progress?.status === 'CONTENT_COMPLETE' && subject && resourceId ? (
+            <CheckpointCta
+              subject={subject}
+              resourceId={resourceId}
+              enabled
+              lessonContentUpdated={needsReview}
+            />
+          ) : null}
         </footer>
       ) : null}
 

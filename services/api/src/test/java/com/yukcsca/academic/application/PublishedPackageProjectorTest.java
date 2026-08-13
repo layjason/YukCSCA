@@ -58,7 +58,7 @@ class PublishedPackageProjectorTest {
     UUID activeRevisionId = UUID.randomUUID();
     List<PublishedPackageProjector.LessonResourceProjection> lessons = projector.lessons(content);
     List<PublishedPackageProjector.OutlineNodeProjection> nodes =
-        projector.outline(content, lessons, Map.of(), activeRevisionId);
+        projector.outline(content, lessons, Map.of(), activeRevisionId, Map.of());
 
     assertThat(nodes).hasSize(3);
     assertThat(find(nodes, childCovered).productCoverage()).isEqualTo("FULLY_COVERED");
@@ -91,7 +91,7 @@ class PublishedPackageProjectorTest {
   }
 
   @Test
-  void contentProgressFlagsUpdatedSinceCompletedWhenActiveRevisionDiffers() {
+  void contentProgressFlagsUpdatedSinceCompletedWhenActiveRevisionDiffersWithoutContentContext() {
     UUID completedRevision = UUID.randomUUID();
     UUID activeRevision = UUID.randomUUID();
     StudentContentProgress progress =
@@ -107,10 +107,75 @@ class PublishedPackageProjectorTest {
 
     assertThat(projector.contentProgress(progress, null, completedRevision).updatedSinceCompleted())
         .isFalse();
+    // Without resource content, revision id mismatch soft-signals (legacy callers).
     assertThat(projector.contentProgress(progress, null, activeRevision).updatedSinceCompleted())
         .isTrue();
     assertThat(projector.contentProgress(progress, null, activeRevision).status())
         .isEqualTo("CONTENT_COMPLETE");
+  }
+
+  @Test
+  void contentProgressUsesResourceFingerprintWhenHistoricalContentProvided() {
+    UUID lessonId = UUID.randomUUID();
+    UUID otherLessonId = UUID.randomUUID();
+    UUID completedRevision = UUID.randomUUID();
+    UUID activeRevision = UUID.randomUUID();
+
+    ObjectNode previous = json.createObjectNode();
+    var prevResources = previous.putArray("resources");
+    ObjectNode prevLesson = prevResources.addObject();
+    prevLesson.put("id", lessonId.toString());
+    prevLesson.put("kind", "LESSON");
+    prevLesson.putObject("title").put("english", "Lesson A");
+    prevLesson.putArray("outlineItemIds");
+    prevLesson.putArray("versions").addObject().put("language", "id").putArray("blocks");
+
+    ObjectNode activeUnchanged = previous.deepCopy();
+    ObjectNode activeOtherLessonOnly = previous.deepCopy();
+    ObjectNode other =
+        ((tools.jackson.databind.node.ArrayNode) activeOtherLessonOnly.path("resources"))
+            .addObject();
+    other.put("id", otherLessonId.toString());
+    other.put("kind", "LESSON");
+    other.putObject("title").put("english", "Other");
+    other.putArray("outlineItemIds");
+    other.putArray("versions").addObject().put("language", "id").putArray("blocks");
+
+    ObjectNode activeLessonChanged = previous.deepCopy();
+    ((ObjectNode) activeLessonChanged.path("resources").get(0).path("title"))
+        .put("english", "Lesson A revised");
+
+    StudentContentProgress progress =
+        new StudentContentProgress(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            "MATHEMATICS",
+            lessonId,
+            StudentContentProgressStatus.CONTENT_COMPLETE,
+            0,
+            completedRevision,
+            Instant.parse("2026-08-01T00:00:00Z"));
+
+    Map<UUID, tools.jackson.databind.JsonNode> historical = Map.of(completedRevision, previous);
+
+    assertThat(
+            projector
+                .contentProgress(
+                    progress, null, activeRevision, lessonId, activeUnchanged, historical)
+                .updatedSinceCompleted())
+        .isFalse();
+    assertThat(
+            projector
+                .contentProgress(
+                    progress, null, activeRevision, lessonId, activeOtherLessonOnly, historical)
+                .updatedSinceCompleted())
+        .isFalse();
+    assertThat(
+            projector
+                .contentProgress(
+                    progress, null, activeRevision, lessonId, activeLessonChanged, historical)
+                .updatedSinceCompleted())
+        .isTrue();
   }
 
   @Test

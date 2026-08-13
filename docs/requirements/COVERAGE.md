@@ -39,11 +39,11 @@ during shaping.
 | 4.3 | Focused Learning-Unit Content | `US-COURSE-02`, `US-COURSE-04` | Owners: delivered `VS-005` (admin LESSON/TEXT/MATH/IMAGE); delivered `VS-008` (student LESSON reader + content progress; video/`US-COURSE-04` media deferred). |
 | 4.4 | Explanation-Language and Exam-Language Bridging | `US-LANG-03`, `US-COURSE-02` | Owners: delivered `VS-004`; delivered `VS-008` (lesson explanation-language toggle; no exam-track lesson split); proposed `VS-014`. |
 | 4.5 | Chinese Mathematics Terminology Preview and In-Question Support | `US-TERM-01`, `US-TERM-02`, `US-TERM-03` | Owner: proposed `VS-010`. |
-| 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: delivered `VS-005` (admin questions/mock definition); proposed `VS-009`. |
-| 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: proposed `VS-009`; plan-independent. |
+| 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: delivered `VS-005` (admin questions/mock definition); delivered `VS-009` (student CHECKPOINT sessions + bounded objective evidence; accepted TypeSpec `VS-009-R8-accepted`; product-owner journeys 2026-08-14). |
+| 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: delivered `VS-009` (plan-independent TOPIC_PRACTICE on shared assessment substrate; accepted TypeSpec `VS-009-R8-accepted`; product-owner journeys 2026-08-14). |
 | 5.2 | Plan-Assigned Practice | `US-PRACTICE-02` | Owner: proposed `VS-017`; explicitly requires an active plan. |
-| 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01` | Owners: proposed `VS-009`, `VS-010`. |
-| 5.4 | Mistake Notebook and Immediate Remediation | `US-MISTAKE-01`, `US-MISTAKE-02`, `US-MISTAKE-03` | Owner: proposed `VS-009`; immediate remediation is plan-independent. |
+| 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01` | Owners: delivered `VS-009` mathematical tiered hints + post-submit solutions (`VS-009-R8-accepted`); proposed `VS-010` (Chinese language-assist + terminology). |
+| 5.4 | Mistake Notebook and Immediate Remediation | `US-MISTAKE-01`, `US-MISTAKE-02`, `US-MISTAKE-03` | Owner: delivered `VS-009` (mistake notebook, published REMEDIATION + revalidation; product-owner journeys 2026-08-14). |
 | 6.1 | Daily Task Entry Point | `US-AGENT-01`, `US-AGENT-02` | Owner: proposed `VS-017`; requires an active plan. |
 | 6.2 | Guided Learning Sessions | `US-AGENT-03` | Owner: proposed `VS-018`; follows plan creation because it records a plan effect. |
 | 6.3 | Contextual Questions and Answers | `US-AGENT-04` | Owners: proposed `VS-011`, `VS-013`; `VS-011` owns lesson/item/mistake/remediation Q&A; `VS-013` adds mock-report Q&A context. |

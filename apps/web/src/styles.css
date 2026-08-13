@@ -168,6 +168,61 @@ button {
   text-transform: uppercase;
 }
 
+.dest-hero {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-xl);
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.dest-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+}
+
+.dest-hero-sky .dest-hero-icon {
+  background: var(--color-block-sky);
+}
+
+.dest-hero-lilac .dest-hero-icon {
+  background: var(--color-block-lilac);
+}
+
+.dest-hero-cream .dest-hero-icon {
+  background: var(--color-block-cream);
+}
+
+.dest-hero-mint .dest-hero-icon {
+  background: var(--color-block-mint);
+}
+
+.dest-hero-coral .dest-hero-icon {
+  background: var(--color-block-coral);
+}
+
+.dest-hero-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.dest-hero h1,
+.page-content .dest-hero h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 2.15rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
 /* Generic access boundary (role cannot use destination) */
 .unsupported-shell {
   min-height: 100vh;
@@ -480,12 +535,22 @@ button {
   background: var(--color-app-background);
 }
 
+.app-shell-nav-collapsed {
+  grid-template-columns: 4.75rem 1fr;
+}
+
 .app-nav {
   display: flex;
   flex-direction: column;
   padding: var(--space-lg) var(--space-md);
   border-right: 1px solid var(--color-border);
   background: var(--color-canvas);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .app-nav-brand {
@@ -493,6 +558,7 @@ button {
   align-items: center;
   gap: var(--space-xs);
   margin-bottom: var(--space-xl);
+  flex-shrink: 0;
 }
 
 .app-nav-logo {
@@ -520,7 +586,34 @@ button {
   display: flex;
   flex-direction: column;
   gap: var(--space-xxs);
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.app-nav-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.app-nav-toggle:hover {
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+}
+
+.app-nav-toggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .nav-item {
@@ -556,19 +649,32 @@ button {
   box-shadow: var(--focus-ring);
 }
 
-.nav-item-icon {
-  font-size: 1rem;
-  width: 1.25em;
-  text-align: center;
+.nav-item-icon,
+.parent-nav-icon,
+.admin-shell-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
 }
 
-.app-nav-footer {
+.nav-item-icon svg,
+.parent-nav-icon svg,
+.admin-shell-nav-icon svg {
+  display: block;
+}
+
+.app-nav-footer,
+.admin-shell-footer {
   margin-top: auto;
   padding-top: var(--space-lg);
   border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  flex-shrink: 0;
 }
 
 .app-nav-user {
@@ -578,7 +684,7 @@ button {
 }
 
 .nav-logout-btn {
-  align-self: flex-start;
+  align-self: stretch;
   border: 0;
   background: none;
   color: var(--color-ink-muted);
@@ -588,6 +694,7 @@ button {
   min-height: 44px;
   display: flex;
   align-items: center;
+  gap: var(--space-sm);
 }
 
 .nav-logout-btn:hover {
@@ -626,6 +733,57 @@ button {
 
 .app-bottom-nav {
   display: none;
+}
+
+.app-nav-collapsed .app-nav-name,
+.app-nav-collapsed .nav-item-label,
+.app-nav-collapsed .app-nav-user,
+.app-nav-collapsed .nav-logout-label,
+.parent-nav-collapsed .parent-nav-name,
+.parent-nav-collapsed .parent-nav-item-label,
+.parent-nav-collapsed .app-nav-user,
+.parent-nav-collapsed .nav-logout-label,
+.admin-shell-nav-collapsed .admin-shell-brand-text,
+.admin-shell-nav-collapsed .admin-shell-nav-label,
+.admin-shell-nav-collapsed .admin-shell-user-block,
+.admin-shell-nav-collapsed .nav-logout-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-nav-collapsed .app-nav-brand,
+.parent-nav-collapsed .parent-nav-brand,
+.admin-shell-nav-collapsed .admin-shell-brand {
+  justify-content: center;
+}
+
+.app-nav-collapsed .app-nav-toggle,
+.parent-nav-collapsed .app-nav-toggle,
+.admin-shell-nav-collapsed .app-nav-toggle {
+  margin-left: 0;
+}
+
+.app-nav-collapsed .nav-item,
+.parent-nav-collapsed .parent-nav-item,
+.admin-shell-nav-collapsed .admin-shell-nav-item,
+.app-nav-collapsed .nav-logout-btn,
+.parent-nav-collapsed .nav-logout-btn,
+.admin-shell-nav-collapsed .nav-logout-btn {
+  justify-content: center;
+  padding-inline: var(--space-sm);
+}
+
+.app-nav-collapsed .app-nav-footer,
+.parent-nav-collapsed .app-nav-footer,
+.admin-shell-nav-collapsed .admin-shell-footer {
+  align-items: center;
 }
 
 /* ─── Preview Badge ─────────────────────────────────────────────────────── */
@@ -3440,6 +3598,10 @@ a.credential-full-link.btn-primary {
   background: var(--color-app-background);
 }
 
+.parent-shell-nav-collapsed {
+  grid-template-columns: 4.75rem 1fr;
+}
+
 .parent-sidebar,
 .parent-nav {
   background: var(--color-canvas);
@@ -3448,15 +3610,31 @@ a.credential-full-link.btn-primary {
   display: flex;
   flex-direction: column;
   gap: var(--space-xxs);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .parent-sidebar-brand,
 .parent-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-weight: 700;
   font-size: 18px;
   color: var(--color-primary);
   padding: var(--space-xs) var(--space-sm);
   margin-bottom: var(--space-md);
+  flex-shrink: 0;
+}
+
+.parent-nav-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-ink);
 }
 
 .parent-nav-list {
@@ -3465,6 +3643,9 @@ a.credential-full-link.btn-primary {
   margin: 0;
   padding: 0;
   list-style: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .parent-nav-link,
@@ -4911,6 +5092,10 @@ a.credential-full-link.btn-primary {
   background: var(--color-app-background);
 }
 
+.admin-shell-nav-collapsed {
+  grid-template-columns: 4.75rem 1fr;
+}
+
 .admin-shell-nav {
   display: flex;
   flex-direction: column;
@@ -4919,8 +5104,10 @@ a.credential-full-link.btn-primary {
   background: var(--color-canvas);
   position: sticky;
   top: 0;
+  align-self: start;
   height: 100vh;
-  overflow-y: auto;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .admin-shell-brand {
@@ -4972,7 +5159,9 @@ a.credential-full-link.btn-primary {
   display: flex;
   flex-direction: column;
   gap: var(--space-xxs);
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .admin-shell-nav-item {
@@ -5008,9 +5197,6 @@ a.credential-full-link.btn-primary {
 }
 
 .admin-shell-nav-icon {
-  font-size: 0.95rem;
-  width: 1.25em;
-  text-align: center;
   flex-shrink: 0;
 }
 
@@ -5027,6 +5213,7 @@ a.credential-full-link.btn-primary {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  flex-shrink: 0;
 }
 
 .admin-shell-user-block {
@@ -5195,19 +5382,44 @@ a.credential-full-link.btn-primary {
   }
 }
 
+.toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.toast-icon svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 .toast-success {
   background: var(--color-success-soft);
   color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 28%, var(--color-border));
 }
 
 .toast-info {
   background: var(--color-info-soft);
   color: var(--color-info);
+  border-color: color-mix(in srgb, var(--color-info) 28%, var(--color-border));
+}
+
+.toast-warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 28%, var(--color-border));
 }
 
 .toast-error {
   background: var(--color-danger-soft);
   color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
 }
 
 .toast-message {

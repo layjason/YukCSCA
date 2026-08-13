@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
+  assessmentSetErrorIndexes,
   fieldErrorsFromMapped,
   firstTabFromMapped,
+  humanLocationLabel,
   mapValidationViolations,
   messageKeyFor,
   shortValidationPath,
@@ -17,6 +19,15 @@ describe('messageKeyFor', () => {
     expect(messageKeyFor('draft.mocks', 'OUT_OF_RANGE')).toBe('mockCount');
     expect(messageKeyFor('draft.officialSyllabus.permittedUse', 'INCOMPATIBLE')).toBe(
       'permittedUse',
+    );
+  });
+
+  test('maps assessment set lesson language duplicate', () => {
+    expect(messageKeyFor('draft.assessmentSets[2].examLanguage', 'DUPLICATE')).toBe(
+      'assessmentSetLessonLanguageDuplicate',
+    );
+    expect(messageKeyFor('draft.assessmentSets[1].lessonResourceId', 'REQUIRED')).toBe(
+      'assessmentSetLesson',
     );
   });
 
@@ -131,5 +142,26 @@ describe('mapValidationViolations', () => {
       'admin.academic.validation.fields.latexUnsafe',
     ]);
     expect(errors.publishedOn).toEqual(['admin.academic.validation.fields.officialDateStatus']);
+  });
+
+  test('humanLocationLabel uses set titles instead of raw JSON paths', () => {
+    const t = (key: string, options?: Record<string, unknown>) => {
+      if (key.endsWith('joined')) return `${options?.place} · ${options?.part}`;
+      if (key.endsWith('assessmentSetN')) return `Assessment set ${options?.n}`;
+      if (key.endsWith('parts.lesson')) return 'Linked lesson';
+      return key;
+    };
+    expect(
+      humanLocationLabel('draft.assessmentSets[2].lessonResourceId', t, {
+        assessmentSetLabels: ['A', 'B', 'Midpoint check'],
+      }),
+    ).toBe('Midpoint check · Linked lesson');
+    expect(
+      assessmentSetErrorIndexes(
+        mapValidationViolations([
+          { path: 'draft.assessmentSets[2].lessonResourceId', code: 'REQUIRED' },
+        ]),
+      ),
+    ).toEqual([2]);
   });
 });

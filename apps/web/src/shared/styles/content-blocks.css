@@ -1,0 +1,88 @@
+/* Shared TEXT / MATH / IMAGE chrome used by Learn and Assessment. */
+
+.learn-content-block {
+  margin-bottom: var(--space-lg);
+  scroll-margin-top: 8rem;
+}
+
+.learn-content-block-resume {
+  outline: 2px solid color-mix(in srgb, var(--color-block-mint) 80%, var(--color-focus));
+  outline-offset: 6px;
+  border-radius: var(--radius-sm);
+  animation: learn-resume-pulse 1.4s ease-out 1;
+}
+
+.learn-text-block {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.learn-math {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.learn-math-display {
+  display: block;
+  padding: var(--space-md);
+  margin: var(--space-sm) 0;
+  border-radius: var(--radius-md);
+  background: var(--color-block-cream);
+  text-align: center;
+}
+
+.learn-math-error {
+  color: var(--color-danger);
+  padding: var(--space-sm);
+  background: var(--color-danger-soft);
+  border-radius: var(--radius-sm);
+}
+
+.learn-image {
+  margin: var(--space-sm) 0;
+}
+
+.learn-image-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+}
+
+.learn-image figcaption {
+  margin-top: var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+
+.learn-image-placeholder {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-surface-soft);
+  color: var(--color-ink-muted);
+  padding: var(--space-md);
+  text-align: center;
+}
+
+@keyframes learn-resume-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-block-mint) 50%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-block-mint) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-content-block-resume {
+    animation: none;
+  }
+}

@@ -207,10 +207,6 @@ export function ProfilePage(): React.JSX.Element {
         <h2 id="account-identity-heading">{t('profile.accountTitle')}</h2>
         <dl>
           <div>
-            <dt>{t('profile.name')}</dt>
-            <dd>{user?.displayName ?? t('shell.fallbackName')}</dd>
-          </div>
-          <div>
             <dt>{t('profile.email')}</dt>
             <dd>{user?.email ?? ''}</dd>
           </div>

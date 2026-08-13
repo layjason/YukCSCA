@@ -80,8 +80,42 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** @description Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery, checkpoint unlock, or practice evidence. */
+    /** @description Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint. */
     put: operations['AcademicStudentApi_upsertContentProgress'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/remediation/{resourceId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one published REMEDIATION resource with ordered TEXT/MATH/IMAGE blocks for the requested explanation language, or an explicit language-unavailable body. Missing language is never silently substituted. */
+    get: operations['AcademicStudentApi_getPublishedRemediation'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/remediation/{resourceId}/progress': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Creates or replaces the authenticated student's content progress for one REMEDIATION resource. Same status model as LESSON; content complete is corrective study evidence for revalidation eligibility, never mastery. */
+    put: operations['AcademicStudentApi_upsertRemediationContentProgress'];
     post?: never;
     delete?: never;
     options?: never;
@@ -203,6 +237,195 @@ export interface paths {
     put?: never;
     /** @description Validates and atomically publishes the current package draft as a new immutable active revision. */
     post: operations['AcademicAdminApi_publishAcademicPackage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/mistakes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists the authenticated student's mistakes. Owner-only; private notes are student-only. */
+    get: operations['AssessmentStudentApi_listMistakes'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/mistakes/{mistakeId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one owner mistake with remediation candidates and revalidation eligibility. */
+    get: operations['AssessmentStudentApi_getMistake'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** @description Updates optional error cause and/or private note. Blank cause/note remain allowed. */
+    patch: operations['AssessmentStudentApi_updateMistakeAnnotation'];
+    trace?: never;
+  };
+  '/api/v1/assessment/mistakes/{mistakeId}/revalidation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Starts a REVALIDATION session for an eligible mistake. Prefers an alternate question with the same objective and exam language; falls back to the original. STRONG hints are disabled. */
+    post: operations['AssessmentStudentApi_startRevalidation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/packages/{subject}/lessons/{resourceId}/checkpoint': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns checkpoint availability for one LESSON: startable flag, lock reason when not startable, and exam-language editions. Does not start a session and never claims mastery. */
+    get: operations['AssessmentStudentApi_getCheckpointForLesson'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/packages/{subject}/sets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists published assessment sets for the active package of a subject. Filters are optional; empty list is a valid honest empty Practice state. */
+    get: operations['AssessmentStudentApi_listAssessmentSets'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists the authenticated student's own assessment sessions for Practice Continue. Defaults to IN_PROGRESS when status is omitted. Empty list is an honest no-Continue state. Does not return stems, keys, or hint bodies. */
+    get: operations['AssessmentStudentApi_listAssessmentSessions'];
+    put?: never;
+    /** @description Starts a CHECKPOINT or TOPIC_PRACTICE session for a published set. Pins package revision and materializes ordered item projections. CHECKPOINT requires LESSON content-complete. */
+    post: operations['AssessmentStudentApi_startAssessmentSession'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/sessions/{sessionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns an owner session for resume or post-submit review. CANCELLED sessions return 409 SESSION_NOT_RESUMABLE. */
+    get: operations['AssessmentStudentApi_getAssessmentSession'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/sessions/{sessionId}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Soft-cancels an IN_PROGRESS session. No score; session is not resumable. */
+    post: operations['AssessmentStudentApi_cancelSession'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/sessions/{sessionId}/items/{itemId}/answer': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Records or locks an item answer. IMMEDIATE locks and returns feedback; SET_END records selection and keeps the item changeable until session submit. */
+    put: operations['AssessmentStudentApi_submitItemAnswer'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/sessions/{sessionId}/items/{itemId}/hints': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Discloses the next mathematical hint tier for an OPEN or answered-but-unlocked item. STRONG is blocked on REVALIDATION sessions. Duplicate disclose of the same next tier is idempotent. */
+    post: operations['AssessmentStudentApi_discloseHint'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assessment/sessions/{sessionId}/submit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Submits the session: scores remaining items, upserts mistakes, writes checkpoint evidence when applicable. Idempotent for already-submitted owner sessions when the result is returned. */
+    post: operations['AssessmentStudentApi_submitSession'];
     delete?: never;
     options?: never;
     head?: never;
@@ -465,10 +688,18 @@ export interface components {
         options: components['schemas']['AcademicAdmin.QuestionOption'][];
         correctOptionKey?: string;
         explanations: components['schemas']['AcademicAdmin.LocalizedContent'][];
+        /** @description Ordered mathematical hint ladder. Empty when no hints are authored. Chinese language-assist tiers are out of VS-009. */
+        hintTiers?: components['schemas']['AcademicAdmin.HintTier'][];
+        /** @description Optional short common-mistake notes shown after item feedback. Not a full remediation resource. */
+        commonMistakeNotes?: components['schemas']['AcademicAdmin.LocalizedText'][];
+        /** @description Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI. */
+        relatedResourceIds?: components['schemas']['uuid'][];
         outlineItemIds: components['schemas']['uuid'][];
         objectiveIds: components['schemas']['uuid'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
       }[];
+      /** @description Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty. */
+      assessmentSets?: components['schemas']['AcademicAdmin.AssessmentSet'][];
       mocks: components['schemas']['AcademicAdmin.MockPaperRecord'][];
     };
     'AcademicAdmin.AcademicPackageDraftInput': {
@@ -492,10 +723,18 @@ export interface components {
         options: components['schemas']['AcademicAdmin.QuestionOption'][];
         correctOptionKey?: string;
         explanations: components['schemas']['AcademicAdmin.LocalizedContent'][];
+        /** @description Ordered mathematical hint ladder. Empty when no hints are authored. Chinese language-assist tiers are out of VS-009. */
+        hintTiers?: components['schemas']['AcademicAdmin.HintTier'][];
+        /** @description Optional short common-mistake notes shown after item feedback. Not a full remediation resource. */
+        commonMistakeNotes?: components['schemas']['AcademicAdmin.LocalizedText'][];
+        /** @description Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI. */
+        relatedResourceIds?: components['schemas']['uuid'][];
         outlineItemIds: components['schemas']['uuid'][];
         objectiveIds: components['schemas']['uuid'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
       }[];
+      /** @description Assessment sets (checkpoint and topic practice). Empty array when none authored. */
+      assessmentSets?: components['schemas']['AcademicAdmin.AssessmentSet'][];
       mocks: components['schemas']['AcademicAdmin.MockPaper'][];
     };
     /** @enum {string} */
@@ -541,6 +780,43 @@ export interface components {
       expectedDraftRevision: number;
       reason: string;
     };
+    /**
+     * @description When item correctness and solution content become visible to the student.
+     * @enum {string}
+     */
+    'AcademicAdmin.AssessmentFeedbackMode': 'IMMEDIATE' | 'SET_END';
+    /** @description Admin-authored assessment set bound to one exam language and an ordered question list. Materialized for students only after package publish. */
+    'AcademicAdmin.AssessmentSet': {
+      id: components['schemas']['uuid'];
+      purpose: components['schemas']['AcademicAdmin.AssessmentSetPurpose'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      /** @description Optional difficulty filter tag for TOPIC_PRACTICE catalog queries. */
+      difficulty?: components['schemas']['AcademicAdmin.QuestionDifficulty'] | null;
+      /** @description Ordered question ids. Hard max 12; CHECKPOINT recommended max 5 is soft admin guidance. */
+      questionIds: components['schemas']['uuid'][];
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
+      /** @description Required when purpose is CHECKPOINT: the LESSON resource that must be content-complete before start. */
+      lessonResourceId?: components['schemas']['uuid'] | null;
+      estimatedMinutes?: number | null;
+      /** @description Defaults to IMMEDIATE when omitted on save. */
+      feedbackMode?: components['schemas']['AcademicAdmin.AssessmentFeedbackMode'];
+      /** @description Required for CHECKPOINT at publish. TOPIC_PRACTICE may omit. */
+      passPolicy?: components['schemas']['AcademicAdmin.CheckpointPassPolicy'] | null;
+      /** @description Preferred published REMEDIATION resource ids for the fail path. Empty means resolve by shared objective/outline. */
+      remediationResourceIds?: components['schemas']['uuid'][];
+    };
+    /**
+     * @description Published assessment-set purpose. CHECKPOINT is lesson-gated formative; TOPIC_PRACTICE is free practice. Mock papers remain a separate package object.
+     * @enum {string}
+     */
+    'AcademicAdmin.AssessmentSetPurpose': 'CHECKPOINT' | 'TOPIC_PRACTICE';
+    /**
+     * @description Checkpoint pass policy. Pilot uses all-correct with no strong assistance; enum is extensible for later thresholds.
+     * @enum {string}
+     */
+    'AcademicAdmin.CheckpointPassPolicy': 'ALL_CORRECT_NO_STRONG_ASSISTANCE';
     'AcademicAdmin.ContentBlock':
       | components['schemas']['AcademicAdmin.TextContentBlock']
       | components['schemas']['AcademicAdmin.MathContentBlock']
@@ -577,6 +853,16 @@ export interface components {
     };
     /** @enum {string} */
     'AcademicAdmin.ExplanationLanguage': 'id' | 'en' | 'zh-CN';
+    /**
+     * @description Strength of a mathematical hint tier. STRONG is a full or near-full solution and counts as strong assistance for checkpoint pass and revalidation evidence rules.
+     * @enum {string}
+     */
+    'AcademicAdmin.HintStrength': 'STANDARD' | 'STRONG';
+    /** @description One ordered mathematical hint tier. Tiers must be strictly ordered; any STRONG disclosure counts as strong assistance. */
+    'AcademicAdmin.HintTier': {
+      strength: components['schemas']['AcademicAdmin.HintStrength'];
+      blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
+    };
     'AcademicAdmin.ImageContentBlock': {
       /** @enum {string} */
       kind: 'IMAGE';
@@ -722,7 +1008,7 @@ export interface components {
       resumeBlockIndex: number | null;
       /** @description Last progress write time. Null when status is NOT_STARTED. */
       updatedAt: string | null;
-      /** @description True when status is CONTENT_COMPLETE and the active published package revision differs from the revision recorded when the student last marked complete. Soft signal only; never demotes content complete or implies mastery. */
+      /** @description True when status is CONTENT_COMPLETE and this study resource's student-visible content (title, outline/objective links, language versions, blocks) differs between the package revision recorded when the student last marked complete and the active published revision. Unrelated package changes (edition labels, other lessons, assessment questions) do not set this flag. Soft signal only; never demotes content complete or implies mastery. */
       updatedSinceCompleted: boolean;
     };
     /**
@@ -776,7 +1062,7 @@ export interface components {
       permittedUse: components['schemas']['AcademicAdmin.PermittedUse'];
     };
     /**
-     * @description Product coverage of an outline item from LESSON presence only. Practice/mock/checkpoint availability is out of VS-008.
+     * @description Product coverage of an outline item from LESSON presence only. Checkpoint and practice availability are separate assessment catalog projections (VS-009).
      * @enum {string}
      */
     'AcademicStudent.ProductCoverage': 'FULLY_COVERED' | 'PARTIALLY_COVERED' | 'NOT_COVERED';
@@ -808,6 +1094,21 @@ export interface components {
       activeRevision: components['schemas']['AcademicStudent.StudentPublishedRevisionSummary'];
       /** @description Exam languages declared on the published syllabus structure. Not used to split LESSON catalogs in VS-008. */
       examLanguages: components['schemas']['AcademicAdmin.ExamLanguage'][];
+    };
+    /** @description Student REMEDIATION read projection for the active published revision. Same block model as LESSON; kind is always REMEDIATION. */
+    'AcademicStudent.PublishedRemediationDetail': {
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      resourceId: components['schemas']['uuid'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      availableExplanationLanguages: components['schemas']['AcademicAdmin.ExplanationLanguage'][];
+      /** @description Language requested by the client (or the language the server evaluated). */
+      requestedExplanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      body: components['schemas']['AcademicStudent.LessonBody'];
+      contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
     };
     /** @description Active published revision identity visible to students (no publisher user id). */
     'AcademicStudent.StudentPublishedRevisionSummary': {
@@ -841,6 +1142,418 @@ export interface components {
      * @enum {string}
      */
     'AcademicStudent.WritableContentProgressStatus': 'IN_PROGRESS' | 'CONTENT_COMPLETE';
+    /** @description Conflict problem for assessment lifecycle. code is one of AssessmentProblemCode string values. */
+    'AssessmentStudent.AssessmentConflictProblem': {
+      /** @enum {string} */
+      code:
+        | 'CHECKPOINT_LOCKED'
+        | 'SESSION_ALREADY_SUBMITTED'
+        | 'SESSION_NOT_RESUMABLE'
+        | 'REVALIDATION_NOT_ELIGIBLE'
+        | 'STRONG_HINT_BLOCKED'
+        | 'HINT_EXHAUSTED'
+        | 'ITEM_ALREADY_LOCKED'
+        | 'SET_NOT_AVAILABLE';
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /** @description Stable context envelope fields for future agent tools (VS-011). Not a separate public resource. */
+    'AssessmentStudent.AssessmentContextSummary': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      sessionId: components['schemas']['uuid'];
+      sessionPurpose: components['schemas']['AssessmentStudent.AssessmentSessionPurpose'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      setId: components['schemas']['uuid'] | null;
+      lessonResourceId: components['schemas']['uuid'] | null;
+      mistakeId: components['schemas']['uuid'] | null;
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
+      assistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+      checkpointPassed: boolean | null;
+    };
+    /**
+     * @description Stable assessment problem codes returned in application/problem+json.
+     * @enum {string}
+     */
+    'AssessmentStudent.AssessmentProblemCode':
+      | 'CHECKPOINT_LOCKED'
+      | 'SESSION_ALREADY_SUBMITTED'
+      | 'SESSION_NOT_RESUMABLE'
+      | 'REVALIDATION_NOT_ELIGIBLE'
+      | 'STRONG_HINT_BLOCKED'
+      | 'HINT_EXHAUSTED'
+      | 'ASSESSMENT_VALIDATION_FAILED'
+      | 'ITEM_ALREADY_LOCKED'
+      | 'SET_NOT_AVAILABLE';
+    'AssessmentStudent.AssessmentSession': {
+      sessionId: components['schemas']['uuid'];
+      status: components['schemas']['AssessmentStudent.AssessmentSessionStatus'];
+      purpose: components['schemas']['AssessmentStudent.AssessmentSessionPurpose'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      setId: components['schemas']['uuid'] | null;
+      mistakeId: components['schemas']['uuid'] | null;
+      lessonResourceId: components['schemas']['uuid'] | null;
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      feedbackMode: components['schemas']['AcademicAdmin.AssessmentFeedbackMode'];
+      planTaskId: components['schemas']['uuid'] | null;
+      /** Format: int32 */
+      questionCount: number;
+      assistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+      items: components['schemas']['AssessmentStudent.SessionItemView'][];
+      context: components['schemas']['AssessmentStudent.AssessmentContextSummary'];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      submittedAt: string | null;
+    };
+    /**
+     * @description Why a student assessment session exists. REVALIDATION is started only from a mistake.
+     * @enum {string}
+     */
+    'AssessmentStudent.AssessmentSessionPurpose': 'CHECKPOINT' | 'TOPIC_PRACTICE' | 'REVALIDATION';
+    /** @description Owner-safe summary for Practice Continue. No stems, options, keys, or hint bodies. */
+    'AssessmentStudent.AssessmentSessionResumeSummary': {
+      sessionId: components['schemas']['uuid'];
+      status: components['schemas']['AssessmentStudent.AssessmentSessionStatus'];
+      purpose: components['schemas']['AssessmentStudent.AssessmentSessionPurpose'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      setId: components['schemas']['uuid'] | null;
+      mistakeId: components['schemas']['uuid'] | null;
+      lessonResourceId: components['schemas']['uuid'] | null;
+      /** @description Localized set title when the session was started from a published set; null for revalidation when no set title applies. */
+      title: components['schemas']['AcademicAdmin.LocalizedText'] | null;
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      feedbackMode: components['schemas']['AcademicAdmin.AssessmentFeedbackMode'];
+      /** Format: int32 */
+      questionCount: number;
+      /**
+       * Format: int32
+       * @description Count of items with a selected answer (OPEN with selection or LOCKED).
+       */
+      answeredItemCount: number;
+      /**
+       * Format: int32
+       * @description Count of items in LOCKED status.
+       */
+      lockedItemCount: number;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /**
+     * @description Lifecycle of a student-owned assessment session.
+     * @enum {string}
+     */
+    'AssessmentStudent.AssessmentSessionStatus': 'IN_PROGRESS' | 'SUBMITTED' | 'CANCELLED';
+    /** @description Published assessment set summary for Practice hub filters. No question stems or keys. */
+    'AssessmentStudent.AssessmentSetSummary': {
+      setId: components['schemas']['uuid'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      purpose: components['schemas']['AcademicAdmin.AssessmentSetPurpose'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      difficulty: components['schemas']['AcademicAdmin.QuestionDifficulty'] | null;
+      /** Format: int32 */
+      questionCount: number;
+      estimatedMinutes: number | null;
+      feedbackMode: components['schemas']['AcademicAdmin.AssessmentFeedbackMode'];
+      passPolicy: components['schemas']['AcademicAdmin.CheckpointPassPolicy'] | null;
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
+      lessonResourceId: components['schemas']['uuid'] | null;
+    };
+    'AssessmentStudent.AssessmentValidationProblem': {
+      /** @enum {string} */
+      code: 'ASSESSMENT_VALIDATION_FAILED';
+      violations: components['schemas']['AssessmentStudent.AssessmentValidationViolation'][];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    'AssessmentStudent.AssessmentValidationViolation': {
+      path: string;
+      code: string;
+    };
+    /** @description Assistance summary safe for UI and future agent context. Never includes hint bodies. */
+    'AssessmentStudent.AssistanceSummary': {
+      /** Format: int32 */
+      maxTierDisclosed: number;
+      strongUsed: boolean;
+      /** @description Always false in VS-009; reserved for VS-010 language-assist. */
+      languageAssistUsed: boolean;
+    };
+    /** @description One exam-language edition of a lesson-linked checkpoint. */
+    'AssessmentStudent.CheckpointEdition': {
+      setId: components['schemas']['uuid'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      /** Format: int32 */
+      questionCount: number;
+      estimatedMinutes: number | null;
+      feedbackMode: components['schemas']['AcademicAdmin.AssessmentFeedbackMode'];
+      passPolicy: components['schemas']['AcademicAdmin.CheckpointPassPolicy'];
+    };
+    /** @description Checkpoint availability for one LESSON. Never claims mastery. */
+    'AssessmentStudent.CheckpointForLesson': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      lessonResourceId: components['schemas']['uuid'];
+      lessonContentComplete: boolean;
+      startable: boolean;
+      lockReason: components['schemas']['AssessmentStudent.CheckpointLockReason'] | null;
+      /** @description True when the student has a prior submitted CHECKPOINT for this lesson and the published CHECKPOINT set content (including referenced questions) for the lesson differs from the content pinned on that attempt. Soft signal only; does not demote progress or claim mastery. False when there is no prior attempt or the checkpoint material is unchanged. */
+      checkpointUpdatedSinceLastAttempt: boolean;
+      editions: components['schemas']['AssessmentStudent.CheckpointEdition'][];
+    };
+    /**
+     * @description Why a lesson checkpoint is not startable.
+     * @enum {string}
+     */
+    'AssessmentStudent.CheckpointLockReason':
+      'LESSON_NOT_CONTENT_COMPLETE' | 'NO_CHECKPOINT_PUBLISHED' | 'NO_EXAM_LANGUAGE_EDITION';
+    'AssessmentStudent.CheckpointLockedProblem': {
+      /** @enum {string} */
+      code: 'CHECKPOINT_LOCKED';
+      lockReason: components['schemas']['AssessmentStudent.CheckpointLockReason'];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /** @description Result of disclosing the next mathematical hint tier. */
+    'AssessmentStudent.DiscloseHintResult': {
+      item: components['schemas']['AssessmentStudent.SessionItemView'];
+      disclosed: components['schemas']['AssessmentStudent.DisclosedHintTier'];
+      sessionAssistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+    };
+    /** @description One disclosed mathematical hint tier. Bodies appear only after the student discloses that tier. */
+    'AssessmentStudent.DisclosedHintTier': {
+      /** Format: int32 */
+      tierIndex: number;
+      strength: components['schemas']['AcademicAdmin.HintStrength'];
+      blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
+    };
+    /**
+     * @description Optional student-selected error cause. Blank is allowed.
+     * @enum {string}
+     */
+    'AssessmentStudent.ErrorCause':
+      | 'CONCEPTUAL_GAP'
+      | 'PREREQUISITE_GAP'
+      | 'TERMINOLOGY_MISUNDERSTANDING'
+      | 'CARELESSNESS'
+      | 'TIME_MANAGEMENT';
+    /** @description Ordered hint-ladder metadata without bodies. Safe before disclosure so the client can warn on STRONG and pre-disable STRONG on REVALIDATION. */
+    'AssessmentStudent.HintTierMeta': {
+      /** Format: int32 */
+      tierIndex: number;
+      strength: components['schemas']['AcademicAdmin.HintStrength'];
+      /** @description True when this tier's body is present in disclosedHints for the current session. */
+      disclosed: boolean;
+    };
+    /** @description Result of locking or recording an item answer. Feedback is null under SET_END until session submit. */
+    'AssessmentStudent.ItemAnswerResult': {
+      item: components['schemas']['AssessmentStudent.SessionItemView'];
+      sessionAssistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+    };
+    /**
+     * @description Per-item attempt state within a session. SET_END may keep items OPEN with a selected answer until set submit.
+     * @enum {string}
+     */
+    'AssessmentStudent.ItemAttemptStatus': 'OPEN' | 'LOCKED';
+    /** @description Post-lock or post-set-submit feedback. Includes correct key only after the item is locked for feedback. */
+    'AssessmentStudent.ItemFeedback': {
+      correct: boolean;
+      correctOptionKey: string;
+      explanations: components['schemas']['AcademicAdmin.LocalizedContent'][];
+      commonMistakeNotes: components['schemas']['AcademicAdmin.LocalizedText'][];
+      /** @description Navigable related LESSON/REMEDIATION links with kind and title. Empty when none authored or none resolve in the active/pinned revision. */
+      relatedResources: components['schemas']['AssessmentStudent.RelatedResourceRef'][];
+    };
+    /**
+     * @description Bounded objective evidence signal written only on checkpoint pass in VS-009.
+     * @enum {string}
+     */
+    'AssessmentStudent.LearningEvidenceSignal': 'CHECKPOINT_PASSED';
+    /** @description Append-only objective evidence written on checkpoint pass. Not a Mastered UI claim. */
+    'AssessmentStudent.LearningEvidenceSnapshot': {
+      objectiveId: components['schemas']['uuid'];
+      signal: components['schemas']['AssessmentStudent.LearningEvidenceSignal'];
+      sourceSessionId: components['schemas']['uuid'];
+      /** Format: date-time */
+      at: string;
+    };
+    /** @description Immutable student-safe attempt question copy for the mistake notebook. Survives republish/edit of live catalog content. */
+    'AssessmentStudent.MistakeAttemptQuestion': {
+      questionId: components['schemas']['uuid'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      stem: components['schemas']['AcademicAdmin.ContentBlock'][];
+      options: components['schemas']['AssessmentStudent.SessionItemOption'][];
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
+    };
+    'AssessmentStudent.MistakeDetail': {
+      mistakeId: components['schemas']['uuid'];
+      status: components['schemas']['AssessmentStudent.MistakeStatus'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      questionId: components['schemas']['uuid'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      errorCause: components['schemas']['AssessmentStudent.ErrorCause'] | null;
+      /** @description Student-private note. Never exposed to parents in this slice. */
+      privateNote: string | null;
+      /** Format: int32 */
+      errorCount: number;
+      assistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+      revalidationEligible: boolean;
+      lastAttemptId: components['schemas']['uuid'] | null;
+      lastSessionId: components['schemas']['uuid'] | null;
+      sourceSetId: components['schemas']['uuid'] | null;
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
+      /** @description Exact original attempt question copy (not live catalog). */
+      attemptQuestion: components['schemas']['AssessmentStudent.MistakeAttemptQuestion'];
+      /** @description Latest incorrect response that updated this mistake, with feedback when it was revealed. */
+      latestResponse: components['schemas']['AssessmentStudent.MistakeLatestResponse'];
+      remediationCandidates: components['schemas']['AssessmentStudent.RemediationCandidate'][];
+      /** @description Reserved multi-day spaced schedule; unused in VS-009 (immediate eligibility). */
+      nextDueAt: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @description Latest scored incorrect response that updated this mistake. Feedback fields present only when that attempt had revealed solution content. */
+    'AssessmentStudent.MistakeLatestResponse': {
+      selectedOptionKey: string;
+      /** @description Correctness of the response that last updated this mistake. Notebook upserts are from incorrect attempts, so this is false for those events. */
+      correct: boolean;
+      /** @description Revealed when item feedback was available on the attempt; otherwise null. */
+      correctOptionKey: string | null;
+      /** @description Full post-submit feedback when it was revealed on the attempt; otherwise null. */
+      feedback: components['schemas']['AssessmentStudent.ItemFeedback'] | null;
+      lastSessionId: components['schemas']['uuid'] | null;
+      lastAttemptId: components['schemas']['uuid'] | null;
+      /** Format: date-time */
+      respondedAt: string;
+    };
+    'AssessmentStudent.MistakeListResponseBody': {
+      items: components['schemas']['AssessmentStudent.MistakeSummary'][];
+      /** @description Opaque cursor for the next page; null when no further items. */
+      nextCursor: string | null;
+    };
+    /**
+     * @description Mistake notebook lifecycle for one student + package + question.
+     * @enum {string}
+     */
+    'AssessmentStudent.MistakeStatus':
+      'OPEN' | 'REMEDIATION_IN_PROGRESS' | 'AWAITING_REVALIDATION' | 'REVALIDATION_PASSED';
+    /** @description Mistake list row. Includes list-safe stem preview from the attempt copy; omits private note. */
+    'AssessmentStudent.MistakeSummary': {
+      mistakeId: components['schemas']['uuid'];
+      status: components['schemas']['AssessmentStudent.MistakeStatus'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      questionId: components['schemas']['uuid'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      errorCause: components['schemas']['AssessmentStudent.ErrorCause'] | null;
+      /** @description Prefix of the immutable attempt stem for list identification (server may truncate block count). Exact full stem is on MistakeDetail.attemptQuestion. */
+      stemPreview: components['schemas']['AcademicAdmin.ContentBlock'][];
+      /** Format: int32 */
+      errorCount: number;
+      assistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+      revalidationEligible: boolean;
+      lastSessionId: components['schemas']['uuid'] | null;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @description Navigable published study resource reference for post-submit solution links (LESSON or REMEDIATION). Resolved from admin relatedResourceIds. */
+    'AssessmentStudent.RelatedResourceRef': {
+      resourceId: components['schemas']['uuid'];
+      /**
+       * @description Student-openable kinds only. TERMINOLOGY is omitted from this projection in VS-009.
+       * @enum {string}
+       */
+      kind: 'LESSON' | 'REMEDIATION';
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+    };
+    /** @description Published remediation or lesson candidate for a mistake fail path. */
+    'AssessmentStudent.RemediationCandidate': {
+      resourceId: components['schemas']['uuid'];
+      kind: components['schemas']['AcademicAdmin.StudyResourceKind'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      preferred: boolean;
+    };
+    /** @description Student-safe option projection (no correctness flag). */
+    'AssessmentStudent.SessionItemOption': {
+      key: string;
+      blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
+    };
+    /** @description One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only. */
+    'AssessmentStudent.SessionItemView': {
+      itemId: components['schemas']['uuid'];
+      /** Format: int32 */
+      order: number;
+      questionId: components['schemas']['uuid'];
+      status: components['schemas']['AssessmentStudent.ItemAttemptStatus'];
+      stem: components['schemas']['AcademicAdmin.ContentBlock'][];
+      options: components['schemas']['AssessmentStudent.SessionItemOption'][];
+      /** Format: int32 */
+      hintTierCount: number;
+      /** Format: int32 */
+      disclosedTierCount: number;
+      /** @description Full ordered ladder metadata (strength + disclosed flag) without bodies. Length equals hintTierCount. */
+      hintLadder: components['schemas']['AssessmentStudent.HintTierMeta'][];
+      /** @description Bodies only for tiers already disclosed in this session. */
+      disclosedHints: components['schemas']['AssessmentStudent.DisclosedHintTier'][];
+      strongAssistance: boolean;
+      /** @description Selected option when the student has answered. Null when not yet answered. */
+      selectedOptionKey: string | null;
+      /** @description Present only when the item is locked and feedback mode allows revelation (IMMEDIATE after lock, or after SET_END submit). */
+      correct: boolean | null;
+      /** @description Present only when feedback is revealed for this item. */
+      feedback: components['schemas']['AssessmentStudent.ItemFeedback'] | null;
+      outlineItemIds: components['schemas']['uuid'][];
+      objectiveIds: components['schemas']['uuid'][];
+    };
+    /** @description Final scored session result. checkpointPassed is non-null only for CHECKPOINT purpose. */
+    'AssessmentStudent.SessionResult': {
+      sessionId: components['schemas']['uuid'];
+      /** @enum {string} */
+      status: 'SUBMITTED';
+      purpose: components['schemas']['AssessmentStudent.AssessmentSessionPurpose'];
+      /** Format: int32 */
+      correctCount: number;
+      /** Format: int32 */
+      total: number;
+      strongAssistanceUsed: boolean;
+      checkpointPassed: boolean | null;
+      mistakeIds: components['schemas']['uuid'][];
+      /** @description Objective evidence written on this submit when checkpoint passed; empty otherwise. */
+      evidenceWritten: components['schemas']['AssessmentStudent.LearningEvidenceSnapshot'][];
+      items: components['schemas']['AssessmentStudent.SessionItemView'][];
+      context: components['schemas']['AssessmentStudent.AssessmentContextSummary'];
+      /** Format: date-time */
+      submittedAt: string;
+    };
+    /** @description Start CHECKPOINT or TOPIC_PRACTICE. REVALIDATION uses startRevalidation. */
+    'AssessmentStudent.StartAssessmentSessionRequest': {
+      purpose: components['schemas']['AcademicAdmin.AssessmentSetPurpose'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      setId: components['schemas']['uuid'];
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      /** @description Reserved for plan-assigned practice (VS-017). Must be null or omitted in VS-009. */
+      planTaskId?: components['schemas']['uuid'] | null;
+    };
+    'AssessmentStudent.SubmitItemAnswerRequest': {
+      selectedOptionKey: string;
+    };
+    'AssessmentStudent.UpdateMistakeAnnotationRequest': {
+      /** @description Omit to leave unchanged; null clears. */
+      errorCause?: components['schemas']['AssessmentStudent.ErrorCause'] | null;
+      /** @description Omit to leave unchanged; null clears. */
+      privateNote?: string | null;
+    };
     'Auth.AuthResponse': {
       accessToken: string;
       /** @enum {string} */
@@ -1226,6 +1939,154 @@ export interface operations {
     };
   };
   AcademicStudentApi_upsertContentProgress: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.UpsertContentProgressRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.ContentProgress'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.ContentProgressValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_getPublishedRemediation: {
+    parameters: {
+      query: {
+        explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      };
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.PublishedRemediationDetail'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_upsertRemediationContentProgress: {
     parameters: {
       query?: never;
       header?: never;
@@ -1844,6 +2705,900 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_listMistakes: {
+    parameters: {
+      query?: {
+        subject?: components['schemas']['AcademicAdmin.AcademicSubject'];
+        status?: components['schemas']['AssessmentStudent.MistakeStatus'];
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.MistakeListResponseBody'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_getMistake: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        mistakeId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.MistakeDetail'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_updateMistakeAnnotation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        mistakeId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentStudent.UpdateMistakeAnnotationRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.MistakeDetail'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_startRevalidation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        mistakeId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.AssessmentSession'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_getCheckpointForLesson: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.CheckpointForLesson'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_listAssessmentSets: {
+    parameters: {
+      query?: {
+        purpose?: components['schemas']['AcademicAdmin.AssessmentSetPurpose'];
+        outlineItemId?: components['schemas']['uuid'];
+        objectiveId?: components['schemas']['uuid'];
+        difficulty?: components['schemas']['AcademicAdmin.QuestionDifficulty'];
+        examLanguage?: components['schemas']['AcademicAdmin.ExamLanguage'];
+      };
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.AssessmentSetSummary'][];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_listAssessmentSessions: {
+    parameters: {
+      query?: {
+        status?: components['schemas']['AssessmentStudent.AssessmentSessionStatus'];
+        subject?: components['schemas']['AcademicAdmin.AcademicSubject'];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.AssessmentSessionResumeSummary'][];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_startAssessmentSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentStudent.StartAssessmentSessionRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.AssessmentSession'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AssessmentStudent.AssessmentValidationProblem']
+            | components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AssessmentStudent.CheckpointLockedProblem']
+            | components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_getAssessmentSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.AssessmentSession'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_cancelSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.AssessmentSession'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_submitItemAnswer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: components['schemas']['uuid'];
+        itemId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentStudent.SubmitItemAnswerRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.ItemAnswerResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_discloseHint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: components['schemas']['uuid'];
+        itemId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.DiscloseHintResult'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_submitSession: {
+    parameters: {
+      query?: never;
+      header?: {
+        'Idempotency-Key'?: string;
+      };
+      path: {
+        sessionId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.SessionResult'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
         };
       };
       /** @description Server error */
