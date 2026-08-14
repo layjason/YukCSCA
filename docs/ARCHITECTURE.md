@@ -210,8 +210,9 @@ privacy, prototype isolation, and product-owner journey evidence. VS-009 is `DON
 Practice/Mistakes/checkpoint/remediation UI (`features/assessment`),
 security/privacy, prototype isolation, and product-owner journey evidence
 (2026-08-14). KaTeX is used for admin formula preview and student LESSON MATH
-rendering. Multi-subject content seeding and mock student flows remain later
-slices.
+rendering. Short video, object storage, and any scene-render worker remain
+unimplemented (`VS-010B` is proposed only). Multi-subject content seeding and
+mock student flows remain later slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
 for the authenticated owning `STUDENT`. The application validates the complete

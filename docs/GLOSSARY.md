@@ -17,6 +17,8 @@ When two words could describe the same concept, choose one canonical term and ad
 - **Topic mapping:** Relationship between a syllabus outline item and one or more YukCSCA learning objectives.
 - **Academic content:** Reusable data such as a learning objective, lesson, terminology entry, remediation unit, question, or mock paper. It must not contain frontend routes or page-layout state.
 - **Content language version:** English, Chinese, Indonesian, accessibility, or media form of the same academic content.
+- **Reviewed short video:** A human-reviewed, Published lesson or remediation video with captions or transcript for one explanation-language version. Watching it is not mastery. It is optional when a complete text, formula, and image alternative exists. **Avoid:** calling a Draft render or an agent clip a reviewed short video.
+- **Derived explanation video:** An optional later clip produced from authorised Q&A context after the text answer. It is labelled as a derived explanation, is not official, and is not automatically a course resource.
 - **Attempt question copy:** Server-side snapshot of the exact question text, choices, answer, and scoring data saved when a student starts an assessment attempt. Correct answers and scoring keys remain server-side until the allowed feedback point. Later edits do not change that attempt.
 - **Practice or diagnostic set:** A named group of published questions with its purpose, subject, exam language, and optional timing or scoring settings.
 - **Mock paper:** A timed assessment created by selecting published questions and setting its duration and scoring.

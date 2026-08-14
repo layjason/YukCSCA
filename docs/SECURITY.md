@@ -151,7 +151,8 @@ These controls must ship with the first feature that needs them:
 - Deterministic services own grading, mastery, plans, permissions, entitlements, publication, and money.
 - Model, prompt, retrieval, rubric, evaluator, cost, and latency versions are traceable without retaining unnecessary private content.
 - Budgets, timeouts, retry limits, maximum steps, golden evaluations, and human escalation exist before release.
-- A model may not both generate and approve high-impact academic content.
+- A model may not both generate and approve high-impact academic content, including a narrated explanation video.
+- Uploaded scene/scripts and produced renders are untrusted until the playable result is human-reviewed; students receive only Published video.
 
 ## Google login configuration
 

@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.3.3
-**Updated:** 2026-08-07
+**Backlog version:** 0.3.4
+**Updated:** 2026-08-14
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.
@@ -1087,12 +1087,13 @@ The student can consume the lesson through supported media controls and return t
 
 **Acceptance Criteria**
 
-- Given a supported video lesson, then playback speed, subtitles, and a text summary are available according to the published content.
+- Given a Published reviewed short video, then playback speed, subtitles or transcript, and a text summary are available according to the published content.
+- Given the video is still Draft, failed, or unpublished, then the student does not receive a playable video control.
 - Given saved lesson progress, when the student returns, then the last valid position is restored without marking the checkpoint complete.
 - Given low bandwidth or media failure, then a meaningful text alternative and retry state are available.
 - Given the student marks viewing complete, then the lesson-view state changes but mastery still requires assessment evidence.
 
-**Not included in this story:** The lesson checkpoint and offline service-worker caching.
+**Not included in this story:** The lesson checkpoint, offline service-worker caching, admin video production (`US-ADM-08`), or an agent-generated video answer (`US-AGENT-06`).
 
 ### US-TERM-01 — Use Chinese terminology assistance
 
@@ -1486,7 +1487,7 @@ The student receives a traceable answer, an explicit insufficiency response, or 
 - Given insufficient or conflicting evidence, then the agent says so and offers feedback or human review instead of guessing.
 - Given formal timed mock mode, then contextual answer tools are unavailable until submission.
 
-**Not included in this story:** Guided-session orchestration or plan reprioritization.
+**Not included in this story:** Guided-session orchestration, plan reprioritization, or a narrated video answer (`US-AGENT-06`).
 
 ### US-AGENT-05 — Approve a major plan reprioritization
 
@@ -1517,6 +1518,36 @@ A proposed high-impact change is explained, accepted or rejected, and recorded i
 - Given rejection, then the previous plan remains active and the risk or unresolved weakness remains visible.
 
 **Not included in this story:** Minor automatic ordering changes within already confirmed priorities.
+
+### US-AGENT-06 — Receive a derived narrated video after a text answer
+
+- **Priority:** P0
+- **Actor:** Student
+- **Requirement reference:** 6.3
+
+**User story**
+
+> As a student, I want an optional narrated video of my current learning context after the text answer so that I can see the explanation animated without waiting for video before I can read.
+
+**Closed-loop outcome**
+
+After a text answer, the student may watch a derived narrated video, see that it is in review or unavailable, or report it. The clip is never labelled as reviewed course content and is not auto-published into the catalog.
+
+**Main flow**
+
+1. Receive the grounded text answer from the current lesson, item, mistake, or remediation context.
+2. Request or accept an optional video explanation of that same authorised context.
+3. Watch the derived video if it is ready, or see an explicit in-review or unavailable state.
+4. Report the clip when needed.
+
+**Acceptance Criteria**
+
+- Given a contextual question, then the text answer is returned without waiting for video production.
+- Given a derived video is shown, then it is labelled as a derived explanation and is not presented as official or reviewed-source course content.
+- Given the clip would become a shared course resource, then it follows the same Draft → human review → Published path as `US-ADM-08` and is not auto-published.
+- Given formal timed mock mode, then video-answer tools are unavailable until submission.
+
+**Not included in this story:** The first grounded text Q&A (`US-AGENT-04`), admin course-video production (`US-ADM-08`), or mock-exam execution (`US-MOCK-01`–`03`).
 
 ## Epic F — Mock Exams and Revalidation
 ### US-MOCK-01 — Choose an appropriate mock exam
@@ -2363,10 +2394,11 @@ YukCSCA learning objectives and topic mappings are defined, and valid content mo
 - Given new content, then it has a stable ID and can be reused by different YukCSCA clients without storing frontend routes or page-layout fields.
 - Given missing required information or broken links, then publication is blocked with clear errors.
 - Given valid content, when it is published, then students can read it through the learning experience and track coverage against the syllabus version.
+- Given a complete text, formula, and image unit, then missing or failed optional video does not block publication.
 - Given publication fails, then the draft remains unpublished and existing published content remains available.
 - Given published content is later corrected, then completed attempts and reports continue to use the content the student originally received.
 
-**Not included in this story:** Multiple reviewer roles, complex release management, or a general-purpose CMS.
+**Not included in this story:** Multiple reviewer roles, complex release management, a general-purpose CMS, or producing and reviewing a short video (`US-ADM-08`).
 
 ### US-ADM-03 — Add an official CSCA syllabus version
 
@@ -2442,7 +2474,7 @@ Published questions are selected for one valid mock paper, and each student atte
 
 **Closed-loop outcome**
 
-Each publishable syllabus source, lesson, question, explanation, remediation item, or file has enough source and permission information, or publication remains blocked.
+Each publishable syllabus source, lesson, question, explanation, remediation item, uploaded file, or produced media asset has enough source and permission information, or publication remains blocked.
 
 **Main flow**
 
@@ -2458,8 +2490,9 @@ Each publishable syllabus source, lesson, question, explanation, remediation ite
 - Given an official website is used as a factual source, then citation of facts is kept separate from permission to copy protected pages, databases, or questions.
 - Given an official syllabus source, then the admin can maintain its validated link and students receive a compact source action rather than copied protected wording.
 - Given content is replaced, then the replacement records its own source and permission information.
+- Given an uploaded or produced video is replaced, then the replacement records its own source and permission information.
 
-**Not included in this story:** Separate rights-review roles or complex licence-expiry management.
+**Not included in this story:** Separate rights-review roles, complex licence-expiry management, or the video production and review loop (`US-ADM-08`).
 
 ### US-ADM-06 — Review AI answer quality
 
@@ -2520,6 +2553,37 @@ The platform admin can view aggregated funnel, learning, commerce, and service m
 - Given externally published learning-effectiveness claims, then sample, time period, and calculation method must be disclosed.
 
 **Not included in this story:** Unvalidated causal claims about score improvement.
+
+### US-ADM-08 — Publish a reviewed short video on a learning unit
+
+- **Priority:** P0
+- **Actor:** First platform admin
+- **Requirement reference:** 4.3, 14.4, 14.6
+
+**User story**
+
+> As the first platform admin, I want to attach a finished short video or a scene/script that produces a narrated video so that students can watch an optional reviewed explanation without blocking a complete text unit.
+
+**Closed-loop outcome**
+
+A reviewed short video is Published on a lesson or remediation unit and students can play it, or the video remains Draft and students keep the existing text, formula, and image path.
+
+**Main flow**
+
+1. Open a draft lesson or remediation unit.
+2. Upload a finished video, or upload a scene/script that produces synchronized narration.
+3. Review the playable result, captions or transcript, explanation language, and source record when production finishes.
+4. Publish the unit when the complete text alternative still exists, or leave the video in Draft.
+
+**Acceptance Criteria**
+
+- Given a finished video with captions or transcript and required provenance, then it can be attached as Draft and published after human review.
+- Given a scene/script, then any produced video stays Draft until a human reviews the playable result.
+- Given a complete text, formula, and image alternative, then missing or failed video does not block publication.
+- Given unpublished, failed, or still-rendering video, then students do not see a playable control.
+- Given a published video is later replaced, then the replacement records its own source and permission information.
+
+**Not included in this story:** Live agent-generated video (`US-AGENT-06`), choosing a specific render engine or TTS vendor, or a general-purpose media CMS.
 
 ### US-FINOPS-01 — Reconcile a payment exception
 
