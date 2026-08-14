@@ -78,7 +78,7 @@ slice does **not** split LESSON catalogs by exam language.
   presence, LESSON body with explanation-language toggle, content progress
   states, student image read for published references.
 - Deferred and independently valuable: checkpoint/practice (`VS-009`),
-  terminology (`VS-010`), mock execution (`VS-012`), goal/exam-language
+  terminology (`VS-010A`), reviewed video (`VS-010B`), mock execution (`VS-012`), goal/exam-language
   confirmation (`VS-014`), trial/entitlement (`VS-030`/`VS-031`), parent
   syllabus (`VS-025`+).
 - Additive evolution:
@@ -126,8 +126,8 @@ slice does **not** split LESSON catalogs by exam language.
 - Checkpoint questions, scoring, remediation routing, mastery, revalidation
   (`VS-009` / `US-COURSE-03`).
 - Topic practice, hints, mistake notebook (`VS-009`).
-- Opening TERMINOLOGY or REMEDIATION resources as study units (`VS-010` / later).
-- Video, audio, captions, playback speed, offline cache (`US-COURSE-04` media).
+- Opening TERMINOLOGY resources as study units (`VS-010A`).
+- Video, audio, captions, playback speed, offline cache (`US-COURSE-04` / `VS-010B`).
 - Exam-language track filtering or dual LESSON catalogs (Math EN vs Math CN as
   separate lesson trees). Assessment exam language remains on questions/mocks
   for later slices.

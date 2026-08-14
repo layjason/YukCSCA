@@ -123,7 +123,7 @@ but the pilot does not expose a complex workflow:
   syllabus outline; topic mappings; content blocks; server-owned answers; one
   active revision.
 - Deferred consumers: `VS-008` reads syllabus/resources, `VS-009` creates
-  practice and mistake evidence, `VS-010` uses terminology, `VS-012` executes
+  practice and mistake evidence, `VS-010A` uses terminology, `VS-010B` adds reviewed video, `VS-012` executes
   timed mocks, and `VS-013` interprets results.
 - Additive path: stable UUIDs, immutable revision IDs, explicit exam language,
   `TEXT | MATH | IMAGE` blocks, and outline-item references allow later consumers and

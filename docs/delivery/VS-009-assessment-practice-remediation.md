@@ -76,7 +76,7 @@ Product owner direction (grill-me 2026-08-11): **prefer one coherent assessment 
 
 Still out of this slice (independently valuable later):
 
-- Chinese **language-assist** tiers and terminology notebook (`VS-010`)
+- Chinese **language-assist** tiers and terminology notebook (`VS-010A`)
 - Plan-assigned practice and daily orchestration (`VS-017` / 5.2)
 - Timed mock execution (`VS-012`) and post-mock recommendations (`VS-013`)
 - Contextual agent Q&A and guided sessions (`VS-011`, `VS-018`)
@@ -134,7 +134,7 @@ Used to stress-test product shape; **paired requirements remain normative**. Sou
 
 - **Owning lifecycle:** student assessment sessions for published `AssessmentSet`s; scored attempts; tiered math hints; mistake notebook; immediate deterministic remediation via published `REMEDIATION` resources; revalidation sessions; bounded objective evidence.
 - **Closely related but not fully accepted:**
-  - Full `US-HINT-01` Chinese language-assist tiers and terminology notebook → `VS-010`.
+  - Full `US-HINT-01` Chinese language-assist tiers and terminology notebook → `VS-010A`.
   - `US-COURSE-03` Chinese Math dual evidence (math + terminology stem) → supported only as **authored questions** in zh-CN sets; automatic terminology notebook out.
   - `US-PRACTICE-02` plan-assigned practice → `VS-017` (`planTaskId` nullable extension on session start).
   - Full calibrated mastery / Stable Mastery algorithm → later evidence slices.
@@ -203,7 +203,7 @@ Used to stress-test product shape; **paired requirements remain normative**. Sou
 
 ## Out of scope
 
-- Chinese language-assist tiers, pinyin segmentation UI, terminology notebook (`VS-010`).
+- Chinese language-assist tiers, pinyin segmentation UI, terminology notebook (`VS-010A`).
 - Plan-assigned practice, plan version reconciliation (`VS-017` / 5.2).
 - Timed mock papers, exactly-once mock submit (`VS-012`).
 - Agent chat, RAG tutor, LLM-generated scored questions, hints, or remediation bodies (`VS-011+`).
@@ -384,7 +384,7 @@ ItemAttempt:
   attemptQuestionCopy (immutable JSON)
 
 AssistanceEvent:
-  kind: MATH_HINT   // LANGUAGE_ASSIST reserved for VS-010
+  kind: MATH_HINT   // LANGUAGE_ASSIST reserved for VS-010A
   tierIndex, strength, at
 
 Mistake (unique per account + packageId + questionId):
