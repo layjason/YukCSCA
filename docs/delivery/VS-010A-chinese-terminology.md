@@ -2,23 +2,24 @@
 
 ## Metadata
 
-| Field                        | Value                                                                                                                                                              |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Status                       | `SHAPING`                                                                                                                                                          |
-| Human gate                   | `APPROVED`                                                                                                                                                         |
-| Plan revision                | 7                                                                                                                                                                  |
-| Updated                      | 2026-08-15                                                                                                                                                         |
-| Primary actor                | Activated `STUDENT` on a published package that has Chinese (`zh-CN`) exam-language terms. First platform admin authors the term bank. First content: Mathematics. |
-| Story IDs                    | `US-TERM-01`, `US-TERM-02`, `US-TERM-03`; partial `US-HINT-01` (record language help, do not treat word/phrase as independent mastery); partial `US-ADM-02`        |
-| Requirement sections         | English: 4.4 (canonical term identity), 4.5, 4.7 (P0 notebook clause), 5.3 (Chinese language assistance); Chinese: the matching clauses                            |
-| Depends on                   | [`VS-005`](VS-005-academic-foundation.md), [`VS-008`](VS-008-student-learn-content.md), [`VS-009`](VS-009-assessment-practice-remediation.md)                      |
-| Related ADRs                 | [`ADR-0001`](../decisions/ADR-0001-azure-speech-term-pronunciation.md) — Azure Speech for pre-rendered term audio                                                  |
-| TypeSpec source              | Additive `contracts/academic-admin.tsp`, `contracts/academic-student.tsp`, `contracts/assessment-student.tsp` (not initialized)                                    |
-| API operations               | Not initialized                                                                                                                                                    |
-| Backend/slice owner          | Backend vertical-slice worker. `academic` owns the term bank, preview, notebook, and lookup. `assessment` owns `LANGUAGE_ASSIST` events.                           |
-| Frontend owner               | Frontend consumer worker. Production Learn owns preview, lesson rail, and notebook. Assessment owns in-item Language help.                                         |
-| Initial contract checkpoint  | Not yet established                                                                                                                                                |
-| Accepted contract checkpoint | Not yet established                                                                                                                                                |
+| Field                        | Value                                                                                                                                                                                                                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status                       | `CONTRACT_READY`                                                                                                                                                                                                                                                                                            |
+| Human gate                   | `APPROVED`                                                                                                                                                                                                                                                                                                  |
+| Plan revision                | 12                                                                                                                                                                                                                                                                                                          |
+| Updated                      | 2026-08-15                                                                                                                                                                                                                                                                                                  |
+| Primary actor                | Activated `STUDENT` on a published package that has Chinese (`zh-CN`) exam-language terms. First platform admin authors the term bank. First content: Mathematics.                                                                                                                                          |
+| Story IDs                    | `US-TERM-01`, `US-TERM-02`, `US-TERM-03`; partial `US-HINT-01` (record language help, do not treat word/phrase as independent mastery); partial `US-ADM-02`                                                                                                                                                 |
+| Requirement sections         | English: 4.4 (canonical term identity), 4.5, 4.7 (P0 notebook clause), 5.3 (Chinese language assistance); Chinese: the matching clauses                                                                                                                                                                     |
+| Depends on                   | [`VS-005`](VS-005-academic-foundation.md), [`VS-008`](VS-008-student-learn-content.md), [`VS-009`](VS-009-assessment-practice-remediation.md)                                                                                                                                                               |
+| Related ADRs                 | [`ADR-0001`](../decisions/ADR-0001-azure-speech-term-pronunciation.md) — Azure Speech for pre-rendered term audio                                                                                                                                                                                           |
+| TypeSpec source              | Additive `contracts/academic-admin.tsp`, `contracts/academic-student.tsp`, `contracts/assessment-student.tsp`, `contracts/common.tsp`                                                                                                                                                                       |
+| API operations               | Admin draft: `terms[]`, `requiredTermIds`, `authoredTermAttachments` (no new admin routes). **9** new student ops: 8 academic terminology + 1 assessment Language help. Additive optional fields on lesson browse/read and `AssistanceSummary`. Required `SessionItemView.languageHelpAvailable` (`CR-01`). |
+| Backend/slice owner          | Backend vertical-slice worker. `academic` owns the term bank, preview, notebook, and lookup. `assessment` owns `LANGUAGE_ASSIST` events.                                                                                                                                                                    |
+| Frontend owner               | Frontend consumer worker. Production Learn owns preview, lesson rail, and notebook. Assessment owns in-item Language help.                                                                                                                                                                                  |
+| Initial contract checkpoint  | `VS-010A-R8-initial` — TypeSpec compiled; hashes in verification evidence                                                                                                                                                                                                                                   |
+| CR-applied checkpoint        | `VS-010A-R10-cr-applied` — `CR-01` accepted; hashes in verification evidence                                                                                                                                                                                                                                |
+| Accepted contract checkpoint | `VS-010A-R10-accepted` — identical hashes to `VS-010A-R10-cr-applied`. Backend and frontend may implement from this boundary.                                                                                                                                                                               |
 
 ## User-observable outcome
 
@@ -88,6 +89,7 @@ TermContext {
   - `US-MOCK-05A` post-mock terminology practice → `VS-013`
   - `US-ADM-08` video → `VS-010B`
 - Included now: Term entity, preview unit, reveal-on-request Language help, one notebook, publish-time pronunciation clips, `LANGUAGE_ASSIST` events that do not set `languageAssistUsed`.
+- Deferred from TypeSpec (do not advertise): `SENTENCE` / Translate tiers; `RelatedResourceRef.TERMINOLOGY`; Physics/Chemistry on `AcademicSubject`; live formal-mock session APIs; student-authored vocab; jieba/dictionary.
 - Deferred: live formal-mock lock UI, named spaced-repetition algorithm, agent write path, Translate.
 - Additive evolution:
   - Existing `StudyResourceKind.TERMINOLOGY` becomes the **preview unit** (a list of required term ids), not the term identity.
@@ -270,29 +272,29 @@ Clean Chinese stem
 
 Complete this before contract work. `GAP` or `CONFLICT` that changes material behavior needs a decision ID.
 
-| Review area                                                   | Evidence inspected                             | Status  | Gap or decision ID                                                 |
-| ------------------------------------------------------------- | ---------------------------------------------- | ------- | ------------------------------------------------------------------ |
-| End-to-end actor flow and adjacent handoffs                   | `US-TERM-01`–`03`; VS-008; VS-009              | `CLEAR` | Preview → lesson → on-request item help → notebook. Mock reserved. |
-| Experience flow, screen states, recovery, and navigation      | Learn and Practice routes; `D-06`              | `CLEAR` | Clean stem; Language help on request; matching pairs not a gate.   |
-| Requirement/story coverage and exclusions                     | EN/CN 4.5, 4.7, 5.3; stories 0.3.5             | `CLEAR` | Word/phrase now; 4.5 Translate / sentence help remain later.       |
-| Domain terms, states, invariants, and ownership               | Glossary; VS-005 `TERMINOLOGY` page            | `CLEAR` | Term identity ≠ preview resource.                                  |
-| Authorization, privacy, minors, consent, and retention        | Pilot academic access; assessment notes        | `CLEAR` | Reviewed cards; do not log unmatched selected text.                |
-| Failure, retry, idempotency, stale state, and recovery        | VS-008 progress; VS-009 attempts               | `CLEAR` | Idempotent notebook; historical attempts keep their copy.          |
-| Contract, migration, external side effects, and compatibility | Student academic APIs omit `TERMINOLOGY` today | `CLEAR` | Gate approved. TypeSpec may be initialized.                        |
-| Technology/dependency need, alternatives, and ADR threshold   | PLAN dependency table; `ADR-0001`              | `CLEAR` | Azure Speech at publish only. Tests mock the port.                 |
-| Frontend ownership, prototype promotion, and design impact    | `features/learn`, `features/assessment`        | `CLEAR` | Preview, rail, notebook, Language help, Play beside pinyin.        |
-| Acceptance evidence and observability                         | VS-009 event style                             | `CLEAR` | Value-free events: term id, class, source, tier.                   |
+| Review area                                                   | Evidence inspected                             | Status  | Gap or decision ID                                                                                    |
+| ------------------------------------------------------------- | ---------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| End-to-end actor flow and adjacent handoffs                   | `US-TERM-01`–`03`; VS-008; VS-009              | `CLEAR` | Preview → lesson → on-request item help → notebook. Mock reserved.                                    |
+| Experience flow, screen states, recovery, and navigation      | Learn and Practice routes; `D-06`              | `CLEAR` | Clean stem; Language help on request; matching pairs not a gate.                                      |
+| Requirement/story coverage and exclusions                     | EN/CN 4.5, 4.7, 5.3; stories 0.3.5             | `CLEAR` | Word/phrase now; 4.5 Translate / sentence help remain later.                                          |
+| Domain terms, states, invariants, and ownership               | Glossary; VS-005 `TERMINOLOGY` page            | `CLEAR` | Term identity ≠ preview resource.                                                                     |
+| Authorization, privacy, minors, consent, and retention        | Pilot academic access; assessment notes        | `CLEAR` | Reviewed cards; do not log unmatched selected text.                                                   |
+| Failure, retry, idempotency, stale state, and recovery        | VS-008 progress; VS-009 attempts               | `CLEAR` | Idempotent notebook; historical attempts keep their copy.                                             |
+| Contract, migration, external side effects, and compatibility | Student academic APIs omit `TERMINOLOGY` today | `CLEAR` | Gate approved. Initial TypeSpec is `VS-010A-R8-initial`. `CR-01` applied as `VS-010A-R10-cr-applied`. |
+| Technology/dependency need, alternatives, and ADR threshold   | PLAN dependency table; `ADR-0001`              | `CLEAR` | Azure Speech at publish only. Tests mock the port.                                                    |
+| Frontend ownership, prototype promotion, and design impact    | `features/learn`, `features/assessment`        | `CLEAR` | Rev 9: routes, shared term card, PX-001 isolation. Rev 10: `CR-01` accepted.                          |
+| Acceptance evidence and observability                         | VS-009 event style                             | `CLEAR` | Value-free events: term id, class, source, tier.                                                      |
 
 ## Human decision gate
 
 Follow [`HUMAN_REVIEW.md`](HUMAN_REVIEW.md). `APPROVED` applies only to the recorded decisions.
 
-| Field             | Value                                                                                          |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| Gate status       | `APPROVED`                                                                                     |
-| Decision owner    | Product owner                                                                                  |
-| Approval scope    | `D-01`–`D-08` as recorded. TypeSpec may start. Implementation waits `CONTRACT_READY`.          |
-| Approval evidence | Product-owner chat 2026-08-14, including “do not show language help up front” on scored items. |
+| Field             | Value                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Gate status       | `APPROVED`                                                                                                                       |
+| Decision owner    | Product owner                                                                                                                    |
+| Approval scope    | `D-01`–`D-08` as recorded. Accepted TypeSpec is `VS-010A-R10-accepted`. Backend and frontend may implement from this checkpoint. |
+| Approval evidence | Product-owner chat 2026-08-14, including “do not show language help up front” on scored items.                                   |
 
 | ID     | Question                                                        | Resolution                                                                                                                                                                                              | Owner         | Status     | Artifacts                                                                                           |
 | ------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------- | --------------------------------------------------------------------------------------------------- |
@@ -348,40 +350,51 @@ AssistanceEvent.kind
 
 ## TypeSpec contract plan
 
-Public HTTP changes require TypeSpec that compiles before implementation. The human gate is approved. TypeSpec is **not yet initialized**.
+Public HTTP is initialized as checkpoint `VS-010A-R8-initial`. `CR-01` is applied as `VS-010A-R10-cr-applied`. Accepted checkpoint is `VS-010A-R10-accepted` (identical hashes). Status is `CONTRACT_READY`.
 
 ### Operations
 
-Proposed student surface (indicative, not accepted):
+Initialized student surface:
 
-| Operation               | Method and route                                                   | Auth      | Success                                                        | Required failures                                  |
-| ----------------------- | ------------------------------------------------------------------ | --------- | -------------------------------------------------------------- | -------------------------------------------------- |
-| Get topic preview       | `GET /api/v1/academic/packages/{subject}/terminology/{resourceId}` | `STUDENT` | Preview + required terms                                       | 401 / 403 / 404; `LANGUAGE_UNAVAILABLE`            |
-| Upsert preview progress | `PUT .../terminology/{resourceId}/progress`                        | `STUDENT` | Progress                                                       | 401 / 403 / 404                                    |
-| Resolve lookup          | `POST /api/v1/academic/term-lookups`                               | `STUDENT` | Card or `NOT_IN_BANK`                                          | 401 / 403; formal-mock 403                         |
-| List notebook           | `GET /api/v1/academic/terminology-notebook`                        | `STUDENT` | Entries (`dueOnly`, `q`, optional `classGroup`)                | 401 / 403                                          |
-| Get notebook entry      | `GET /api/v1/academic/terminology-notebook/{termId}`               | `STUDENT` | Entry + card                                                   | 401 / 403 / 404                                    |
-| Submit review           | `POST /api/v1/academic/terminology-notebook/{termId}/reviews`      | `STUDENT` | Updated familiarity                                            | 401 / 403 / 404; formal-mock 403                   |
-| Disclose language help  | Additive on the existing assessment item                           | `STUDENT` | Updated `AssistanceSummary` (`languageAssistUsed` still false) | Same as hint disclose + `LANGUAGE_ASSIST_DISABLED` |
-| Get pronunciation       | `GET /api/v1/academic/terms/{termId}/audio`                        | `STUDENT` | Bounded audio                                                  | 401 / 403 / 404                                    |
+| Operation               | Method and route                                                            | Auth      | Success                                                                                                               | Required failures                                                               |
+| ----------------------- | --------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Get topic preview       | `GET /api/v1/academic/packages/{subject}/terminology/{resourceId}`          | `STUDENT` | Preview + required cards + optional match targets                                                                     | 401 / 403 / 404 / 400                                                           |
+| Upsert preview progress | `PUT .../terminology/{resourceId}/progress`                                 | `STUDENT` | Progress; `IN_PROGRESS` / `PREVIEW_COMPLETE` collect required terms                                                   | 401 / 403 / 404; `FORMAL_ASSISTANCE_DISABLED`; `TERMINOLOGY_VALIDATION_FAILED`  |
+| Submit preview check    | `POST .../terminology/{resourceId}/checks`                                  | `STUDENT` | Pair scores; not mastery                                                                                              | 401 / 403 / 404; `FORMAL_ASSISTANCE_DISABLED`; validation                       |
+| Resolve lookup          | `POST /api/v1/academic/term-lookups`                                        | `STUDENT` | `MATCHED` card + notebook row, or `NOT_IN_BANK`                                                                       | 401 / 403 / 404; `FORMAL_ASSISTANCE_DISABLED`; validation                       |
+| List notebook           | `GET /api/v1/academic/terminology-notebook`                                 | `STUDENT` | Entries (`dueOnly`, `q`, `classGroup`, optional `subject`)                                                            | 401 / 403 / 400                                                                 |
+| Get notebook entry      | `GET /api/v1/academic/terminology-notebook/{termId}`                        | `STUDENT` | Entry + card                                                                                                          | 401 / 403 / 404 / 400                                                           |
+| Submit review           | `POST /api/v1/academic/terminology-notebook/{termId}/reviews`               | `STUDENT` | Familiarity + due from the result                                                                                     | 401 / 403 / 404; `FORMAL_ASSISTANCE_DISABLED`; validation                       |
+| Get pronunciation       | `GET /api/v1/academic/terms/{termId}/audio`                                 | `STUDENT` | `audio/mpeg` bytes                                                                                                    | 401 / 403 / 404                                                                 |
+| Disclose language help  | `POST /api/v1/assessment/sessions/{sessionId}/items/{itemId}/language-help` | `STUDENT` | Spans on the item; `languageAssistUsed` stays false. First-paint chrome uses `languageHelpAvailable`, not this probe. | 409 `LANGUAGE_ASSIST_DISABLED`; 403 `FORMAL_ASSISTANCE_DISABLED`; same as hints |
 
-Admin: term-bank array on the package draft; `TERMINOLOGY` resource lists `requiredTermIds`; publish validates required glosses.
+Admin: no new routes. `AcademicPackageDraft.terms[]`; `StudyResource.requiredTermIds` when kind is `TERMINOLOGY`; `Question.authoredTermAttachments`. Publish validation (implementation) requires Chinese surface, pinyin, and domain meaning; `TOPIC_TERM` should have at least one outline id.
+
+Additive on existing student reads: `LessonSummary.terminologyPreview`, `PublishedLessonDetail.terminology` (rail + spans). Both omitted when the package has no Chinese exam-language terms.
 
 ### Models and validation
 
-| Model                | Important fields                                                                                                                                                                                                              | Validation                                                                                                                                                                                    | Ownership                 |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `Term`               | `id`, `class` (`EXAM_INSTRUCTION` \| `LOGICAL_EXPRESSION` \| `TOPIC_TERM`), `surfaceForms[]`, `pinyin`, definitions by explanation language, `englishEquivalent`, `domainMeaning`, optional symbols/example, `outlineItemIds` | Class required. At least one zh-CN surface form; pinyin and domain meaning required; missing explanation-language gloss allowed and flagged. Topic class should have at least one outline id. | Academic package revision |
-| `TerminologyPreview` | Existing `StudyResource` + `requiredTermIds[]` + optional check items                                                                                                                                                         | Required ids must exist in the same draft                                                                                                                                                     | Academic                  |
-| `NotebookEntry`      | `termId`, `sources[]`, `familiarity`, `due`, `lastReviewAt`, latest “Met in …”                                                                                                                                                | One per account + term                                                                                                                                                                        | Academic                  |
-| `AssistanceSummary`  | Existing fields. `languageAssistUsed` stays false for word/phrase                                                                                                                                                             | Unchanged wire shape                                                                                                                                                                          | Assessment                |
+| Model                | Important fields                                                                                                                                     | Validation                                                                                                                                                                     | Ownership                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| `TermDraft`          | `id`, `termClass`, `surfaceForms[]` (text + pinyin), `definitions`, `englishEquivalent`, `domainMeaning`, optional symbols/example, `outlineItemIds` | Class required. ≥1 surface form; pinyin and domain meaning required; missing explanation-language gloss allowed and flagged. Topic class should have ≥1 outline id at publish. | Academic package revision |
+| `TerminologyPreview` | Existing `TERMINOLOGY` resource + `requiredTermIds[]` + student cards + `lessonResourceIds` + optional match targets                                 | Required ids must exist in the same draft                                                                                                                                      | Academic                  |
+| `TermCard`           | `termId`, `subject`, `termClass`, surfaces, `definition` union (`AVAILABLE` \| `LANGUAGE_UNAVAILABLE`), `englishEquivalent`, `domainMeaning`         | No silent language substitute                                                                                                                                                  | Academic                  |
+| `NotebookEntry`      | `termId`, `subject`, `sources[]`, `familiarity`, `due`, `metIn`, `pendingReview` when due                                                            | One per account + term                                                                                                                                                         | Academic                  |
+| `TermLookupResult`   | `MATCHED` or `NOT_IN_BANK` (HTTP 200)                                                                                                                | Exactly one of `termId` or `selectedText`; ITEM requires session + item                                                                                                        | Academic                  |
+| `AssistanceSummary`  | Existing fields unchanged. Additive optional `maxLanguageTier`, `languageHelpDisclosed`. `languageAssistUsed` stays false for word/phrase            | Additive optional; VS-009 clients keep compiling                                                                                                                               | Assessment                |
+| `SessionItemView`    | Existing VS-009 fields. Required `languageHelpAvailable`. Optional `languageHelp` after disclose                                                     | First-paint chrome uses the flag only (`CR-01`). True when disclose is allowed; false for English-only items, packages with no published terms, and reserved formal-mock.      | Assessment                |
+| `LanguageHelpView`   | `trigger`, `spans[]` (term id, surface, UTF-16 offsets, `alreadyInNotebook`)                                                                         | Present only after disclose                                                                                                                                                    | Assessment                |
 
 ### Contract decisions
 
 - Cookies: existing bearer + refresh cookie. No new cookies.
-- Errors: reuse academic/assessment problem types. Add `NOT_IN_BANK`, `LANGUAGE_ASSIST_DISABLED`, `FORMAL_ASSISTANCE_DISABLED`.
-- Notebook filter: `dueOnly`, `q`, and optional `classGroup=examWording|topicTerm`.
-- Compatibility: additive. VS-009 clients that ignore new fields keep working.
+- Errors: `NOT_IN_BANK` is a 200 outcome, not a problem. `LANGUAGE_ASSIST_DISABLED` is 409 on disclose when the item has no Chinese term bank. `FORMAL_ASSISTANCE_DISABLED` is 403 on lookup, preview writes, review, and disclose. `TERMINOLOGY_VALIDATION_FAILED` is 400 with path/code violations. Missing explanation-language gloss is a per-card `LANGUAGE_UNAVAILABLE` body, not an HTTP error.
+- Notebook filter: required `explanationLanguage`; `dueOnly`, `q`, optional `classGroup` (`EXAM_WORDING` \| `TOPIC_TERM`), optional `subject` (so later Chinese Physics/Chemistry do not reopen this resource), cursor/limit.
+- Compatibility: additive optional fields on VS-008/VS-009 models, except required `SessionItemView.languageHelpAvailable` (`CR-01`) — same metadata-before-action pattern as `hintLadder`. Existing VS-009 constructors set `false`. No new Maven module and no `terminology.tsp`. The live VS-009 backend emits this field in VS-010A implementation, not in this contract step.
+- Collection: GET preview is side-effect free. `PUT` progress to `IN_PROGRESS` or `PREVIEW_COMPLETE` upserts required terms (`REQUIRED_COURSE`).
+- Review: one due item uses `CONTEXT_CLOZE` or `MATCH_PAIRS` with `selectedOptionKey`. Preview matching pairs is a separate `POST .../checks` over the required set.
+- Audio: publish-time `audio/mpeg` only. Student GET never calls Azure. Optional `surfaceForm` selects a non-primary clip.
+- Not advertised: `RelatedResourceRef` still omits `TERMINOLOGY`; no `SENTENCE` / Translate tier; `AcademicSubject` remains `MATHEMATICS` until a later slice seeds another package.
 
 ## Contract collaboration
 
@@ -389,19 +402,125 @@ The backend agent owns this slice and TypeSpec. Contract ownership is not produc
 
 ### Readiness reviews
 
-| Review                                                     | Owner               | Status    | Evidence               |
-| ---------------------------------------------------------- | ------------------- | --------- | ---------------------- |
-| Slice drafted and human gate resolved                      | Backend/slice owner | `DONE`    | `D-01`–`D-08` approved |
-| Initial TypeSpec compiles and generated output is reviewed | Backend/slice owner | `PENDING` |                        |
-| Frontend consumer review                                   | Frontend owner      | `PENDING` |                        |
-| Contract requests resolved                                 | Backend/slice owner | `PENDING` |                        |
-| Accepted contract checkpoint recorded                      | Backend/slice owner | `PENDING` |                        |
+| Review                                                     | Owner               | Status     | Evidence                                                                                            |
+| ---------------------------------------------------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| Slice drafted and human gate resolved                      | Backend/slice owner | `DONE`     | `D-01`–`D-08` approved                                                                              |
+| Initial TypeSpec compiles and generated output is reviewed | Backend/slice owner | `DONE`     | `VS-010A-R8-initial`; `pnpm generate` + `pnpm typecheck:web`                                        |
+| Frontend consumer review                                   | Frontend owner      | `COMPLETE` | Revision 9 review of `VS-010A-R8-initial`; filed `CR-01`                                            |
+| Contract requests resolved                                 | Backend/slice owner | `COMPLETE` | `CR-01` **ACCEPTED** and applied as `VS-010A-R10-cr-applied`                                        |
+| Frontend consumer re-review                                | Frontend owner      | `COMPLETE` | Revision 11 re-review of `VS-010A-R10-cr-applied`; `CR-01` satisfied; zero further `CR-NN`          |
+| Accepted contract checkpoint recorded                      | Backend + frontend  | `COMPLETE` | `VS-010A-R10-accepted` — identical hashes to `VS-010A-R10-cr-applied`; backend confirmed 2026-08-15 |
 
 ### Contract change requests
 
-| ID  | Consumer scenario or constraint | Proposed change | Backend decision and reason | Human decision ID | Status | Applied/review evidence |
-| --- | ------------------------------- | --------------- | --------------------------- | ----------------- | ------ | ----------------------- |
-| —   | No requests recorded.           | —               | —                           | —                 | —      | —                       |
+| ID      | Consumer scenario or constraint                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Proposed change                                                                                                                                                                                                                                                                                                                                                                                              | Backend decision and reason                                                                                                                                                                                                                                                                       | Human decision ID | Status     | Applied/review evidence                                                                                                                                                                        |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CR-01` | Scored-item first paint must be a **clean Chinese stem** plus a **quiet Language help** control only when the item/package actually has a Chinese term bank (`D-06`, AC-10, AC-12). Inferring from `examLanguage === zh-CN` would show chrome on a Chinese package with no published terms. Probing `discloseLanguageHelp` to learn availability would flash a control, then hide it on `409 LANGUAGE_ASSIST_DISABLED`. `AssistanceSummary.languageHelpDisclosed` is session-level _after_ a disclose, so it cannot decide first paint. | Add required `languageHelpAvailable: boolean` on `SessionItemView`. True when disclose is allowed (zh-CN item, published term bank on the package, not formal-disabled). False for English-only items, packages with no published terms, and reserved formal-mock. First paint uses this flag only; chips stay in `languageHelp` after disclose. Same metadata-before-action pattern as VS-009 `hintLadder`. | **ACCEPT.** Implements already-approved `D-06` / AC-10 / AC-12. Optional flag would recreate probe-or-infer. Session-level `languageHelpDisclosed` cannot decide per-item first paint. Required boolean matches `hintLadder`. No product-meaning, privacy, or scored-state change; no new `D-NN`. | —                 | `RESOLVED` | Applied on `SessionItemView`; regenerated OpenAPI/web; `VS-010A-R10-cr-applied`. FE re-review rev 11 confirmed required `languageHelpAvailable` on TypeSpec, OpenAPI, and generated web types. |
+
+### Frontend consumer review (`VS-010A-R8-initial`)
+
+Reviewed **2026-08-15** as frontend-worker against:
+
+- slice revision 8 contract + this revision 9 review record;
+- student loop preview → lesson rail → on-request Language help → one notebook; admin term-bank authoring on the existing package draft;
+- AC-01–AC-12; decisions `D-01`–`D-08`;
+- requirements EN/CN 4.4, 4.5, 4.7 (P0 notebook clause), 5.3 (word/phrase only);
+- stories `US-TERM-01`–`03`, partial `US-HINT-01`, partial `US-ADM-02`;
+- TypeSpec hashes matching `VS-010A-R8-initial` (`git hash-object` re-verified this review);
+- generated `contracts/generated/openapi.yaml` and `apps/web/src/shared/api/generated/openapi.ts`;
+- production Learn / Practice / admin editor, route manifest, `RootDecisionPage`, `StudentExperienceGuard`, PX-001 fixture terminology list.
+
+**Verdict:** The student academic surface is a strong closed loop (one `TermCard`, side-effect-free preview GET, progress/collection on PUT, lookup `MATCHED` / `NOT_IN_BANK`, notebook filters, cloze-or-pairs review, authorized audio). Admin can author the bank without new routes. **Not consumer-ready** until `CR-01` is resolved: the player cannot honor AC-10 / `D-06` first paint without probing disclose or inferring from exam language.
+
+**Backend disposition (revision 10):** `CR-01` **ACCEPTED** and applied as `VS-010A-R10-cr-applied`. Status stays `SHAPING`. No feature implementation.
+
+### Frontend consumer re-review (`VS-010A-R10-cr-applied`)
+
+Reviewed **2026-08-15** as frontend-worker against the R10 wire (hashes re-verified with `git hash-object`).
+
+**Verdict:** **Consumer-ready.** `CR-01` is satisfied. Zero further contract requests. Frontend accepts this wire as `VS-010A-R10-accepted` (identical hashes to `VS-010A-R10-cr-applied`). No TypeSpec edits and no production UI in this step.
+
+**Backend confirmation (revision 12):** Hashes re-verified; zero open `CR-NN` / `D-NN`. Status **`CONTRACT_READY`**. Backend and frontend may implement from `VS-010A-R10-accepted`.
+
+| Request | Consumer need                                                                 | Applied wire                                                                                                                                                                                                      | Re-review     |
+| ------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `CR-01` | First-paint Language help without probing disclose or inferring exam language | Required `SessionItemView.languageHelpAvailable: boolean` on TypeSpec, OpenAPI (`required` array), and generated `openapi.ts`. Disclose docs say clients must not probe. Chips remain in optional `languageHelp`. | **Satisfied** |
+
+Re-checked the revision 9 sufficiency matrix. Rows that were “Resolved in R10 — FE must re-verify” are now **Satisfied**. All other rows remain **Sufficient**. Non-requests from revision 9 still hold. Assessment feature types re-export the generated `SessionItemView`; no handwritten competing DTO is required.
+
+Jia can still get a clean Chinese stem: the quiet control appears only when `languageHelpAvailable` is true. Sari’s admin draft shape is unchanged.
+
+The preflight, sufficiency matrix, journey matrix, and non-requests below remain the revision 9 implementation binding, with the `CR-01` rows updated to **Satisfied**.
+
+#### Preflight facts (implementation binding)
+
+| Fact                                     | Value                                                                                                                                                                                                                                                |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slice revision / checkpoint under review | Plan rev 11 re-review of **`VS-010A-R10-cr-applied`**; accepted checkpoint **`VS-010A-R10-accepted`** (identical hashes)                                                                                                                             |
+| Actor                                    | Activated production `STUDENT` on a published zh-CN package. Unique pilot `ADMIN` authors `draft.terms[]`.                                                                                                                                           |
+| Canonical entry                          | Learn browse / continue → preview `/app/learn/:subject/terminology/:resourceId` when unfinished → lesson. Notebook `/app/learn/terms`. Language help on `/app/practice/sessions/:sessionId`. Admin: existing package editor.                         |
+| Restored-session `/`                     | Unchanged: production `STUDENT` → `/app/learn`. Prototype Today / parent preview / credential-session must not override a production account.                                                                                                        |
+| Direct URL / reload                      | Preview, notebook, notebook entry, lesson, session, result reload from server ids. Lesson URL with `previewResourceId` GETs preview before showing the body (or redirects). Session GET must return disclosed `languageHelp` after a prior disclose. |
+| Prototype adjacent                       | PX-001 `prototype/student/learning/LessonPage` fixture cards stay isolated. Production must not import them. Learn/Practice already production-gated.                                                                                                |
+| Data authority                           | Preview/notebook/lookup/audio = academic student API. Disclose / `languageAssistUsed` / mistake cause = assessment API. Explanation language = profile + session toggle. Exam language = package/session. Interface = i18n.                          |
+| Regression neighbors                     | VS-008 lesson reader + explanation toggle + resume + checkpoint CTA. VS-009 hints, pass rules, mistakes, revalidation. Admin draft full-replace PUT. App-shell Learn/Practice active states.                                                         |
+
+#### Contract sufficiency matrix
+
+| Consumer need                                                                                       | Contract support                                                                                       | Verdict                                                                  |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Topic preview before LESSON; resume unfinished                                                      | `LessonSummary.terminologyPreview` + `GET .../terminology/{id}` + progress                             | **Sufficient** (direct lesson URL uses extra preview GET — accepted)     |
+| Cards: characters, pinyin, explanation definition, English equivalent, domain meaning; one `termId` | `TermCard` + `TermDefinition` union                                                                    | **Sufficient** (AC-01, AC-09)                                            |
+| GET preview does not collect; open/complete does                                                    | Side-effect-free GET; `PUT .../progress` `IN_PROGRESS` / `PREVIEW_COMPLETE` upserts `REQUIRED_COURSE`  | **Sufficient** (AC-02)                                                   |
+| Matching pairs optional; never locks Continue; not mastery                                          | `matchingPairsAvailable` + `POST .../checks`; `lessonResourceIds`; no `CHECKPOINT_PASSED`              | **Sufficient** (pair-level UI from `matchTargets`; server counts)        |
+| Soft notice when required set changed after complete                                                | `PreviewProgress.requiredSetUpdatedSinceCompleted`                                                     | **Sufficient**                                                           |
+| Lesson rail + tappable required/instruction forms                                                   | `LessonTerminology.rail` + `spans` (UTF-16, TEXT blocks)                                               | **Sufficient** (AC-03)                                                   |
+| Scored item first paint clean; quiet Language help only when terms exist                            | Required `SessionItemView.languageHelpAvailable`; `languageHelp` only after disclose                   | **Satisfied** (AC-10, AC-12, `D-06`)                                     |
+| Chips = admin-preset ∪ auto-match; tap → same card; stem stays Chinese                              | `LanguageHelpView.spans`; lookup by `termId` / `selectedText`                                          | **Sufficient** (AC-03, AC-04)                                            |
+| Already saved + “Met in …”                                                                          | `alreadyInNotebook` + `NotebookEntry.metIn` on lookup and spans                                        | **Sufficient** (AC-06)                                                   |
+| Not in bank; no invented definition; no notebook write                                              | `NOT_IN_BANK` HTTP 200                                                                                 | **Sufficient**                                                           |
+| Word/phrase recorded; `languageAssistUsed` stays false; pass not blocked                            | `LANGUAGE_ASSIST` + `AssistanceSummary.languageAssistUsed`; disclose does not set the strong flag      | **Sufficient** (AC-05)                                                   |
+| “Was the wording hard?” opens the same help, not Translate                                          | `LanguageHelpTrigger.WORDING_HARD`; `ErrorCause.TERMINOLOGY_MISUNDERSTANDING` already on mistake PATCH | **Sufficient** (FE may PATCH cause after submit — see non-requests)      |
+| One notebook; Due + search; Exam wording / Topic terms                                              | `dueOnly`, `q`, `classGroup`; `pendingReview` on due rows                                              | **Sufficient** (AC-06, AC-07)                                            |
+| Cloze when snippet exists; else pairs; result updates familiarity/due                               | `TermReviewPrompt` union; `POST .../reviews` → `TermReviewResult`                                      | **Sufficient** (AC-07)                                                   |
+| Play when clip exists; pinyin always visible                                                        | `audioAvailable` + `GET /terms/{termId}/audio`; 404                                                    | **Sufficient** (AC-11)                                                   |
+| Empty / English package: no terminology chrome                                                      | Omit `terminology` / `terminologyPreview`; `languageHelpAvailable=false`; disclose 409                 | **Satisfied**                                                            |
+| Formal-mock reserved deny                                                                           | `403 FORMAL_ASSISTANCE_DISABLED` on writes/disclose                                                    | **Sufficient** for policy unit (AC-08 UI in `VS-012`)                    |
+| Admin term bank, required set, optional question attachments                                        | `draft.terms[]`; `StudyResource.requiredTermIds`; `Question.authoredTermAttachments`                   | **Sufficient** (no new admin routes; publish rules implementation-owned) |
+| Independent interface / explanation / exam languages                                                | Explanation on academic queries; exam on package/session; no cross-write                               | **Sufficient**                                                           |
+| AuthZ / no-store / audio cache                                                                      | Bearer; 401/403/404/400; preview/notebook `no-store`; audio `private, immutable`                       | **Sufficient** (audio republish cache noted as implementation risk)      |
+
+#### Journey / state matrix (implementation binding)
+
+| Concern    | Required cases                                                                                                           | Contract + routing notes                                                                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry      | Browse/continue; direct preview/lesson/notebook/session URLs; restored `/`                                               | Intercept unfinished preview from `LessonSummary` or lesson+preview GET. `/` stays `/app/learn`.                                                                                             |
+| Identity   | Signed out; `STUDENT`; wrong role; expired session                                                                       | 401/403; never fill cards from PX-001 fixtures on failure.                                                                                                                                   |
+| Navigation | Learn active on preview/notebook; Practice active on player; back preview→browse or lesson; sign-out                     | New routes production. Practice overlay opens `/app/learn/terms`, not a second notebook.                                                                                                     |
+| Reload     | Preview mid-study; after progress PUT; after check; lesson after rail tap; session after disclose; notebook after review | GET by id. Disclosed chips must survive session GET. Review prompt comes from `pendingReview` / entry GET.                                                                                   |
+| Prototype  | Preview persona absent/present; production never imports fixture terms                                                   | PX-001 lesson list remains prototype-only.                                                                                                                                                   |
+| Data       | All states in the frontend plan table                                                                                    | Map `TERMINOLOGY_VALIDATION_FAILED` to fields; `NOT_IN_BANK` is success; `LANGUAGE_ASSIST_DISABLED` / formal 403 are honest failures; DEV fallback only offline/`401`/`404`; never mock 5xx. |
+| Layout     | 390 / 1280; long `id`/`zh-CN`; keyboard; reduced motion; 44px; `lang="zh"`                                               | Experience plan. No `DESIGN.md` token change expected.                                                                                                                                       |
+
+#### Explicit non-requests (accepted assumptions until contradicted)
+
+- **Lesson preview progress:** `LessonTerminology` omits `PreviewProgress`. FE will `GET` preview when `previewResourceId` is present rather than require a duplicate field. Reopen only if that extra GET cannot express resume or the required-set notice.
+- **Preview pair grading UI:** `matchTargets` includes `matchKey`. FE may shuffle display and show per-pair correctness locally; `correctCount` / `totalCount` remain the recorded result. Not a scored `AssessmentSet`.
+- **Next due after review:** `TermReviewResult.entry` is the reviewed row. FE re-lists `dueOnly` for the next prompt. No `nextDueTermId` field required.
+- **WORDING_HARD vs idempotent disclose:** If Language help was already opened with `STUDENT_REQUEST`, FE records the student’s “wording was hard” answer locally and `PATCH`es the mistake `errorCause` after the mistake exists (session submit). Do not depend on disclose to upgrade the trigger.
+- **Language help on mistake detail:** Out of this player. Mistake detail keeps VS-009 attempt copy + cause; collection already happened on the session. A notebook link is enough.
+- **Formal-mock chrome:** No mock session type ships here. FE does not invent a lock UI. `403` mapping is enough for AC-08 now.
+- **`TERMINOLOGY.versions`:** Existing VS-005 publish still requires resource versions. Student preview ignores that body. Admin keeps a minimal version until backend implementation relaxes it. Not a new student field.
+- **TermCard `outlineItemIds`:** Bare UUIDs. Notebook “Met in …” uses `metIn.topicTitle`. FE will not render outline UUIDs as labels.
+- **Audio cache:** `Cache-Control: private, immutable` on `/terms/{termId}/audio` can stale after republish. FE fetches with the session bearer (blob URL, same as images). Backend should consider a weak validator or surface-specific cache key at implementation; not a student field request.
+- **Translate / Ask agent / `RelatedResourceRef.TERMINOLOGY` / Physics-Chemistry `AcademicSubject`:** Correctly unadvertised. Production UI must not show those controls.
+
+#### Generated TypeScript consumption check
+
+- Ops present: `AcademicStudentApi_getTerminologyPreview`, `upsertPreviewProgress`, `submitPreviewCheck`, `resolveTermLookup`, `listTerminologyNotebook`, `getTerminologyNotebookEntry`, `submitTermReview`, `getTermPronunciation`; `AssessmentStudentApi_discloseLanguageHelp`.
+- Additive optional fields present: `LessonSummary.terminologyPreview`, `PublishedLessonDetail.terminology`, `AssistanceSummary.maxLanguageTier` / `languageHelpDisclosed`, `SessionItemView.languageHelp`, admin `TermDraft` / `requiredTermIds` / `authoredTermAttachments`.
+- Shared models usable without handwritten wire DTOs: `TermCard`, `TermDefinition` union, `NotebookEntry`, `TermLookupResult` union, `LanguageHelpView`, `PreviewProgress`.
+- `SessionItemView.languageHelpAvailable` is required on generated declarations. No competing DTO.
 
 ## Backend plan
 
@@ -414,32 +533,99 @@ The backend agent owns this slice and TypeSpec. Contract ownership is not produc
 
 ## Frontend plan
 
-- Affected routes: `/app/learn/:subject`, lesson, checkpoint, `/app/practice/sessions/:sessionId`, mistake detail.
-- New routes (exact path at frontend review):
-  - Preview: `/app/learn/:subject/terminology/:resourceId` (preferred) or a topic-scoped equivalent.
-  - Notebook: `/app/learn/terms` (Learn is the language-bridge home). Practice uses an overlay, not a second notebook.
-- Folders: `features/learn` owns preview, rail, notebook, and the term card. `features/assessment` owns Language help and posting assistance. Do not add `features/terminology` unless those folders cannot hold the first use. A presentational card may live in `shared` only if it imports neither feature API.
-- Prototype: PX-001 fixture cards are field evidence only. Do not promote fixture strings. Keep prototype isolated.
-- API: real fetch first; generated mocks only in `DEV` when the backend is down.
-- Authority: preview progress and notebook state are server-authoritative. The client highlights from a server span list. It does not send whole stems on every tap.
-- States: empty bank; language unavailable; not in bank; already saved; formal disabled; empty due (success); soft notice if the required set changed after preview complete (do not wipe the notebook).
-- Access: 44px targets; term-card focus trap; `lang="zh"` on characters; pinyin is not the only name; chrome in `id` / `en` / `zh-CN`; chips must not rely on color alone.
+Completed at revision 9 against `VS-010A-R8-initial`. Re-review at revision 11 accepts `VS-010A-R10-accepted`. Implementation may proceed from this checkpoint.
+
+### Routes and navigation
+
+| Route id (planned)  | Path                                           | Access             | Role                                                                                          |
+| ------------------- | ---------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| `learn-terminology` | `/app/learn/:subject/terminology/:resourceId`  | `student-settings` | Topic preview. Production. Not `prototypeOnly`.                                               |
+| `learn-terms`       | `/app/learn/terms`                             | `student-settings` | One notebook. Learn is the language-bridge home.                                              |
+| `learn-term-detail` | `/app/learn/terms/:termId`                     | `student-settings` | Reload-safe card + due review.                                                                |
+| Existing            | `/app/learn/:subject`, lesson, checkpoint      | already production | Browse intercepts unfinished preview; lesson rail; checkpoint CTA unchanged.                  |
+| Existing            | `/app/practice/sessions/:sessionId` (+ result) | already production | Quiet Language help; “Was the wording hard?” after a miss.                                    |
+| Existing            | `/app/practice/mistakes/:mistakeId`            | already production | No second Language-help player. Link to notebook; cause `TERMINOLOGY_MISUNDERSTANDING` stays. |
+| Existing            | `/admin/academic-packages/:id`                 | already production | Term bank + required set + optional question attachments. No new admin HTTP.                  |
+
+- Register the three new routes as production in `apps/web/src/app/routes.ts` (`availability: implemented`, `access: student-settings`, `audience: student`). Learn `activePaths` already covers `/app/learn`.
+- Do not add a primary-nav item. Notebook entry: Learn package/browse secondary link (“Terms”), preview/lesson/player “Notebook”, and a Practice overlay that routes to `/app/learn/terms` (same list, not a second store).
+- Browse `Continue` / outline lesson links today go to `/app/learn/:subject/lessons/:resourceId`. When `LessonSummary.terminologyPreview` exists and progress is `NOT_STARTED` or `IN_PROGRESS`, navigate to the preview route instead (replace). Direct lesson URL / reload: if `PublishedLessonDetail.terminology.previewResourceId` is set, `GET` that preview (side-effect free) and redirect unless `PREVIEW_COMPLETE`. `requiredSetUpdatedSinceCompleted` is a soft notice with a link back to preview; never wipe the notebook.
+- Restored-session `/` is unchanged: production `STUDENT` → `/app/learn`. Prototype Today / PX-001 lesson fixtures must not override that.
+- Sign-out, wrong role, and signed-out: existing `StudentExperienceGuard` / `AuthGuard` / `AdminGuard`. Student APIs 401/403. Admin draft stays on the package editor.
+
+### Ownership
+
+- `features/learn` — preview page, lesson rail, notebook list/detail/review, browse intercept.
+- `features/assessment` — quiet Language help, chip layer on the stem, “Was the wording hard?”, disclose + existing mistake cause PATCH.
+- `features/academic-admin` — term-bank editor tab; `requiredTermIds` picker on `TERMINOLOGY` resources; optional `authoredTermAttachments` on questions. Treat omitted `terms[]` as empty on load; **always send `terms` on draft save** (full-replace PUT).
+- `shared/components` (or `shared/terminology`) — presentational term card + Play. **No feature API imports.** `lang="zh"` on characters; pinyin is not the accessible name.
+- `shared/api/terminologyStudentApi.ts` — student academic terminology adapters (preview, progress, check, lookup, notebook, review, audio). Learn and assessment both consume this so features do not import each other. Assessment keeps `discloseLanguageHelp` in `assessmentApi`.
+- Do **not** add `features/terminology`. Do **not** import `prototype/student` fixtures or `fixture.terms.*` keys into production.
+
+### Data authority
+
+| Visible value                                     | Authority                                                                  |
+| ------------------------------------------------- | -------------------------------------------------------------------------- |
+| Preview cards, match targets, lesson rail, spans  | Canonical production GET (preview / lesson)                                |
+| Preview progress, notebook rows, familiarity, due | Canonical PUT/POST response, then replace local state                      |
+| Language-help chips                               | `discloseLanguageHelp` result; persist via session GET after disclose      |
+| Term card after a tap                             | `resolveTermLookup` (`MATCHED` card + `alreadyInNotebook` + `entry.metIn`) |
+| “Not in the reviewed term bank”                   | `NOT_IN_BANK` (HTTP 200) + the student’s local selected text               |
+| Missing gloss                                     | `definition.availability === LANGUAGE_UNAVAILABLE` — never swap language   |
+| Play enabled                                      | `audioAvailable` on that surface form; 404 hides Play, pinyin stays        |
+| Language help visible                             | **`CR-01` `languageHelpAvailable`** — not `examLanguage`, not a probe      |
+| Interface language                                | i18n only                                                                  |
+| Explanation language                              | Profile default + in-session toggle; query param on academic GETs          |
+| Exam language                                     | Package / session; never copied into explanation or interface              |
+| PX-001 fixture cards                              | Prototype only; never shown as account data                                |
+
+After a failed save, keep the student’s pairs / selected option / search query. After success, replace with the authoritative body. Do not treat a 5xx as DEV fallback success.
+
+### UI states (implement before polish)
+
+| Surface         | States                                                                                                                                                                                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Preview         | Profile-language pending; loading; ready cards; `LANGUAGE_UNAVAILABLE` on a card; matching-pairs (optional); check submitting; check result (local pair feedback from `matchTargets`, counts from server); progress PUT failure + retry; Continue enabled even when pairs are skipped; required-set-changed notice |
+| Lesson          | Existing lesson states + rail loading-with-lesson; hide rail when `terminology` omitted; tappable TEXT spans only; card overlay; lookup failure; already-saved                                                                                                                                                     |
+| Language help   | First paint clean (`CR-01` false → no control); quiet control; disclose loading; chips; empty chips + select-to-lookup still allowed when available; `NOT_IN_BANK`; formal/409 honest failure; already-saved                                                                                                       |
+| After a miss    | Existing feedback + “Was the wording hard?” (only when `languageHelpAvailable` and item incorrect). Opens the same disclose with `WORDING_HARD`. Never Translate.                                                                                                                                                  |
+| Notebook        | Loading; empty notebook (valid); empty due (success, “you’re caught up”); list; search; class filter; entry load; review submitting; review result; next due via re-list `dueOnly`; 403 formal-disabled                                                                                                            |
+| Admin term bank | Empty bank; editor validation (surface, pinyin, domain meaning, class, topic bindings); publish violations mapped to fields; do not require the admin to mark every question character                                                                                                                             |
+
+### Localization, accessibility, interaction
+
+- Every chrome string (headings, Due/search/filters, Language help, “Was the wording hard?”, already-saved, not-in-bank, Play, Continue, Practice these terms, empty/error/retry, toasts, `aria-label`) lives in `en` / `id` / `zh-CN` resources. Verify long Indonesian and Chinese strings, not key presence only.
+- Characters use `lang="zh"`. Accessible name is characters + explanation-language definition (or the unavailable phrase), not pinyin alone.
+- Term-card dialog: focus trap, Escape closes, restore focus to the chip/rail control. 44px targets. Chips use text + underline, not color alone.
+- Keyboard: preview cards, matching targets, rail, Language help, chips, review options are native buttons/radios. No card-flip. Reduced motion: static chip underline; no celebration animation.
+- Do not announce unmatched selected text to logs or analytics (slice privacy rule).
+
+### Prototype promotion / deletion
+
+- `prototype/student/learning/LessonPage.tsx` inline `lesson.terminology` list and `prototype/student/fixtures` `公因式` / `因式分解` rows stay on the isolated PX-001 lesson. Do not promote those strings, definitions, or the inline list.
+- Production Learn replaces that pattern with the preview route + lesson rail. Leave the prototype lesson working for remaining PX-001 journeys.
+- Production Practice/Learn routes stay off the preview-workspace gate (already true after VS-008/VS-009). Do not re-gate terminology behind prototype onboarding.
+
+### Adjacent regression
+
+- VS-008 lesson reader: explanation-language toggle, resume, content progress, checkpoint CTA. Preview intercept must not mark lesson `CONTENT_COMPLETE` or skip the CTA.
+- VS-009 player: math hints, STRONG warn, revalidation STRONG-off, feedback, mistakes. Language help is a separate pastel (cream/sky) from hint treatment. Word/phrase must not flip `languageAssistUsed` or block pass copy.
+- Admin package editor: existing tabs keep saving; new `terms[]` / `requiredTermIds` / `authoredTermAttachments` must round-trip. Current publish still expects `TERMINOLOGY.versions` (VS-005). Admin may keep a minimal title version until backend relaxes that in implementation; student preview ignores that body.
 
 ## Experience and interaction plan
 
 Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../design/README.md).
 
-- Existing roles are enough: lesson sections, player overlays, list/detail (mistakes). The term card is a restrained context surface, not a flashcard deck.
-- No `DESIGN.md` token change expected. If a term-chip token is needed, add it in `DESIGN.md` first.
-- Feature-owned chip and card styles; shared buttons and focus.
-- Goal: language should not hide the subject. Forgotten terms come back on a due schedule.
-- Exits: preview → LESSON; dismiss card → back to the stem; notebook review → next due or empty due.
-- Primary actions: preview → Continue to lesson; card → close / back to item; notebook → review due. Secondary: Language help, Practice these terms, search.
-- Language help uses a different pastel context from math hints (cream/sky vs existing hint treatment).
-- Short confirmation on preview complete and review result. No mastery badge.
-- No card-flip animation. Reduced motion: static underline on chips.
-- PX-001 inline lesson list is replaced by the rail and preview route.
-- Visual review before `DONE`: mobile and desktop; Indonesian, English, and Chinese chrome.
+- Existing roles are enough: Dest page hero + lesson sections (preview), lesson rail, player overlay (Language help / term card), list/detail (notebook, same rhythm as mistakes). The term card is a restrained context surface, not a flashcard deck and not a dictionary page.
+- No `DESIGN.md` token change expected. Reuse `block-cream` / `block-sky` for Language help (distinct from existing hint treatment). If a dedicated term-chip token is later needed, add it in `DESIGN.md` first.
+- Feature-owned chip/card/rail CSS; shared buttons, focus, toast, Dest hero.
+- **Student goal:** Chinese exam wording must not hide the subject. Jia opens a topic, sees a short required list (characters, always-visible pinyin, optional Play, her explanation-language definition, English equivalent, domain meaning), may skip the pairs game, then studies the lesson with a rail if she forgets. On a checkpoint the stem stays a real exam stem. She asks for help. The original Chinese does not disappear. The notebook is one list she can trust — Due first, not four homes.
+- **Admin goal:** Sari authors one identity per meaning, binds a small required set to a topic, and optionally pins a few hard spans on a question. She does not highlighter-mark every character. Exam-wording terms (`求`, `若…则…`) are authored once and reused.
+- Exits: preview → LESSON (never locked); dismiss card → back to stem/lesson; notebook review → next due or empty-due success.
+- Primary actions: preview **Continue to lesson**; card **Close**; notebook **Review due**. Secondary: Language help, Practice these terms, search, Play, class filter.
+- Short confirmation on preview complete and review result. **No mastery badge, no “term mastered”, no `CHECKPOINT_PASSED` copy.**
+- No card-flip. Reduced motion: static underline on chips.
+- Visual review before `DONE`: 390px and 1280px; `id` / `en` / `zh-CN` chrome; keyboard order; reduced motion. Screenshots under `output/playwright/VS-010A/`.
 
 ## Authorization, privacy, and safety
 
@@ -485,25 +671,26 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 
 ## Implementation sequence
 
-1. Backend agent drafted this slice and closed the human gate (`D-01`–`D-06`).
-2. Backend agent initializes TypeSpec, generates artifacts, and records the initial checkpoint. Status stays `SHAPING`.
-3. Frontend agent reviews the slice and contract, then completes frontend, experience, accessibility, localization, and prototype promotion or deletion plans.
-4. Frontend records any `CR-NN`. Backend accepts, declines, or escalates, regenerates, and obtains re-review.
-5. Backend records the accepted checkpoint and moves the slice to `CONTRACT_READY` only when nothing remains open.
-6. Backend and frontend implement from that same revision and checkpoint. Change `DESIGN.md` before CSS if a shared visual rule changes.
-7. Integrate the real HTTP flow early. Add contract, backend, frontend, and journey evidence.
-8. Slice owner advances lifecycle only after both sides record evidence.
-9. Verify privacy, failure recovery, mobile/desktop, reduced motion, and localization before `DONE`.
+1. Backend agent drafted this slice and closed the human gate (`D-01`–`D-08`).
+2. ~~Backend agent initializes TypeSpec, generates artifacts, and records the initial checkpoint. Status stays `SHAPING`.~~ **Done** — `VS-010A-R8-initial` (revision 8).
+3. ~~Frontend agent reviews the slice and contract, then completes frontend, experience, accessibility, localization, and prototype promotion or deletion plans.~~ **Done** — revision 9 consumer review of `VS-010A-R8-initial`; filed `CR-01`.
+4. ~~Frontend records any `CR-NN`. Backend accepts, declines, or escalates, regenerates, and obtains re-review.~~ **`CR-01` ACCEPTED** and applied as `VS-010A-R10-cr-applied`.
+5. ~~Frontend re-review.~~ **Done (rev 11)** — `CR-01` satisfied; zero further `CR-NN`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes).
+6. ~~Backend records `CONTRACT_READY`.~~ **Done (rev 12)** — status `CONTRACT_READY`.
+7. Backend and frontend implement from `VS-010A-R10-accepted`. Change `DESIGN.md` before CSS if a shared visual rule changes.
+8. Integrate the real HTTP flow early. Add contract, backend, frontend, and journey evidence.
+9. Slice owner advances lifecycle only after both sides record evidence.
+10. Verify privacy, failure recovery, mobile/desktop, reduced motion, and localization before `DONE`.
 
 ## Definition of done
 
-- [ ] Requirement and story references remain correct.
-- [ ] Documentation sufficiency review is complete; material gaps are resolved or explicitly out of scope.
-- [ ] Human gate is `APPROVED`; scope and artifacts are recorded.
+- [x] Requirement and story references remain correct.
+- [x] Documentation sufficiency review is complete; material gaps are resolved or explicitly out of scope.
+- [x] Human gate is `APPROVED`; scope and artifacts are recorded.
 - [ ] Delivered flow matches in-scope and out-of-scope lists.
-- [ ] Stack change (`ADR-0001`) records first use, alternatives, impact, rollback, and owner.
-- [ ] TypeSpec compiles; generated artifacts match the accepted contract.
-- [ ] Initial and accepted contract checkpoints are recorded; frontend review is complete; every `CR-NN` is resolved.
+- [x] Stack change (`ADR-0001`) records first use, alternatives, impact, rollback, and owner.
+- [x] TypeSpec compiles; generated artifacts match the accepted contract.
+- [x] Initial and accepted contract checkpoints are recorded; frontend review is complete; every `CR-NN` is resolved.
 - [ ] Backend, frontend, migration, and tests implement the same states and errors.
 - [ ] Every acceptance criterion has named evidence.
 - [ ] Authorization, privacy, minor safety, and audit were reviewed.
@@ -517,17 +704,50 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 
 ## Verification evidence
 
-| Evidence                     | Result          |
-| ---------------------------- | --------------- |
-| Contract build               | Not run         |
-| Initial contract checkpoint  | Not established |
-| Frontend contract review     | Not run         |
-| Accepted contract checkpoint | Not established |
-| Technology/ADR review        | Not run         |
-| Backend tests                | Not run         |
-| Frontend tests               | Not run         |
-| Frontend visual review       | Not run         |
-| End-to-end/manual flow       | Not run         |
+| Evidence                     | Result                                                                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract build               | `pnpm generate` passed after `CR-01` (TypeSpec 1.14 compile + OpenAPI + frontend declarations).                                                                         |
+| Initial contract checkpoint  | `VS-010A-R8-initial` established (hashes below).                                                                                                                        |
+| Frontend contract review     | Revision 9 review of `VS-010A-R8-initial` complete. Filed `CR-01`.                                                                                                      |
+| CR disposition               | `CR-01` **ACCEPTED** and applied; checkpoint `VS-010A-R10-cr-applied`. Zero open `CR-NN`.                                                                               |
+| Frontend re-review           | Revision 11 re-review of `VS-010A-R10-cr-applied` complete. `CR-01` **Satisfied**. Zero further `CR-NN`.                                                                |
+| Accepted contract checkpoint | **`VS-010A-R10-accepted`** — identical hashes to `VS-010A-R10-cr-applied` (table below). Backend confirmed 2026-08-15. Status **`CONTRACT_READY`**.                     |
+| Web typecheck                | `pnpm typecheck:web` passed after regeneration. Existing VS-009 `SessionItemView` constructors include `languageHelpAvailable: false`.                                  |
+| Technology/ADR review        | Not run (implementation).                                                                                                                                               |
+| Backend tests                | Not run — no backend implementation in this step. Live VS-009 mapper does not emit the new field until VS-010A implementation.                                          |
+| Frontend tests               | `pnpm --filter @yukcsca/web test` — 54 files / 264 tests passed after adding `languageHelpAvailable: false` to existing VS-009 constructors. No Language-help UI added. |
+| Frontend visual review       | Not run                                                                                                                                                                 |
+| End-to-end/manual flow       | Not run                                                                                                                                                                 |
+
+### `VS-010A-R8-initial` artifact hashes (`git hash-object`)
+
+| Artifact                                       | Hash                                                   |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| `contracts/academic-admin.tsp`                 | `9b94951485bcaee130e88cbf855aaccbf15d94f3`             |
+| `contracts/academic-student.tsp`               | `b2573fedd35482e194ebeef22c17c7f5d858c4c2`             |
+| `contracts/assessment-student.tsp`             | `eded6a58bb4e698305456a567bbe6c08b7179920`             |
+| `contracts/common.tsp`                         | `1266e37d4df60f07efb59f73d2429f2aebea210a`             |
+| `contracts/main.tsp`                           | `ea6d742258f200e86d29cd62b4868271498ae9cf` (unchanged) |
+| `contracts/generated/openapi.yaml`             | `ab5962632b68d92b4f7f1b13402757a06ddf7ecf`             |
+| `apps/web/src/shared/api/generated/openapi.ts` | `c292e473abbce5328eec4f33d8763f86f4558bed`             |
+
+**Operation inventory (9 new student ops):** `AcademicStudentApi_getTerminologyPreview`, `upsertPreviewProgress`, `submitPreviewCheck`, `resolveTermLookup`, `listTerminologyNotebook`, `getTerminologyNotebookEntry`, `submitTermReview`, `getTermPronunciation`; `AssessmentStudentApi_discloseLanguageHelp`. Admin draft models extended (no new admin HTTP routes). Additive optional fields on `LessonSummary`, `PublishedLessonDetail`, and `AssistanceSummary`. Required `SessionItemView.languageHelpAvailable` (`CR-01`).
+
+### `VS-010A-R10-cr-applied` artifact hashes (`git hash-object`)
+
+| Artifact                                       | Hash                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| `contracts/academic-admin.tsp`                 | `9b94951485bcaee130e88cbf855aaccbf15d94f3` (unchanged vs R8) |
+| `contracts/academic-student.tsp`               | `b2573fedd35482e194ebeef22c17c7f5d858c4c2` (unchanged vs R8) |
+| `contracts/assessment-student.tsp`             | `d6c93bd805a4b26bd227d06ca9d0035664987808`                   |
+| `contracts/common.tsp`                         | `1266e37d4df60f07efb59f73d2429f2aebea210a` (unchanged vs R8) |
+| `contracts/main.tsp`                           | `ea6d742258f200e86d29cd62b4868271498ae9cf` (unchanged)       |
+| `contracts/generated/openapi.yaml`             | `2624f91a85be3827796e786ca256b2a6be643bce`                   |
+| `apps/web/src/shared/api/generated/openapi.ts` | `2f5b10f3ae20fc4294d06ce201f0591c8b995616`                   |
+
+Accepted checkpoint `VS-010A-R10-accepted` uses the same hashes.
+
+**Intentionally not run:** `make verify`, backend `./mvnw verify`, Playwright, Compose — lifecycle status only; no domain or production UI implementation in this step. PLAN bumped to `0.5.37` for the `CONTRACT_READY` delivery-index change.
 
 ## Later candidates (not this slice)
 
@@ -543,12 +763,17 @@ Do not add: LLM definitions, a runtime dictionary, student-owned decks, HSK or s
 
 ## Revision history
 
-| Revision | Date       | Change                                                                                                                                                                                                                                                 |
-| -------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 7        | 2026-08-15 | `D-08`: first content is Chinese Mathematics; model and APIs are Chinese exam-language on any subject. Physics/Chemistry reuse later; not seeded here. Domain meaning, not math-only field name. PLAN not bumped.                                      |
-| 6        | 2026-08-15 | Due review prefers contextual cloze from a published “Met in …” snippet; matching pairs remain the fallback. Term class is `EXAM_INSTRUCTION` / `LOGICAL_EXPRESSION` / `TOPIC_TERM` (exam-language role, not syllabus topic). `D-07`. PLAN not bumped. |
-| 5        | 2026-08-15 | Wording pass. Product behavior stated once in plain language. Removed leftover Due/This topic/Weak/All and “strong language help in this slice” contradictions.                                                                                        |
-| 4        | 2026-08-14 | `D-06`: Language help on request; matching pairs do not lock the lesson; one notebook; honest already-saved. Human gate `APPROVED`.                                                                                                                    |
-| 3        | 2026-08-14 | `D-04`: word/phrase only; Translate and Ask agent later.                                                                                                                                                                                               |
-| 2        | 2026-08-14 | `D-03` pronunciation; `D-05` lightweight check; `ADR-0001`.                                                                                                                                                                                            |
-| 1        | 2026-08-14 | Initial shaping. `D-01`, `D-02`.                                                                                                                                                                                                                       |
+| Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                       |
+| -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 12       | 2026-08-15 | Backend confirmed `VS-010A-R10-accepted` hashes; zero open `CR-NN` / `D-NN`; moved slice to **`CONTRACT_READY`**. PLAN `0.5.37`. Implementation unstarted.                                                                                                                                                                                   |
+| 11       | 2026-08-15 | Frontend re-review of `VS-010A-R10-cr-applied`: `CR-01` confirmed on TypeSpec, OpenAPI, and generated web types; zero further `CR-NN`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes). Status remains `SHAPING`. Backend should mark `CONTRACT_READY`. No TypeSpec edits by frontend. PLAN not bumped.                        |
+| 10       | 2026-08-15 | Backend **ACCEPTED** `CR-01`: required `SessionItemView.languageHelpAvailable`. Regenerated OpenAPI/web; recorded `VS-010A-R10-cr-applied`. Existing VS-009 constructors set `false`. Status remains `SHAPING` pending frontend re-review. Not `CONTRACT_READY`. PLAN not bumped.                                                            |
+| 9        | 2026-08-15 | Frontend consumer review of `VS-010A-R8-initial`: journey/AC/requirement matrix recorded; frontend, experience, UI-state, accessibility, localization, and prototype isolation plans completed; filed open `CR-01` (`languageHelpAvailable` on `SessionItemView`). Status remains `SHAPING`. No TypeSpec edits by frontend. PLAN not bumped. |
+| 8        | 2026-08-15 | Initial TypeSpec `VS-010A-R8-initial`: subject-agnostic term bank on the package draft; student preview/progress/check/lookup/notebook/review/audio; assessment Language-help disclose. Status remains `SHAPING`. PLAN not bumped.                                                                                                           |
+| 7        | 2026-08-15 | `D-08`: first content is Chinese Mathematics; model and APIs are Chinese exam-language on any subject. Physics/Chemistry reuse later; not seeded here. Domain meaning, not math-only field name. PLAN not bumped.                                                                                                                            |
+| 6        | 2026-08-15 | Due review prefers contextual cloze from a published “Met in …” snippet; matching pairs remain the fallback. Term class is `EXAM_INSTRUCTION` / `LOGICAL_EXPRESSION` / `TOPIC_TERM` (exam-language role, not syllabus topic). `D-07`. PLAN not bumped.                                                                                       |
+| 5        | 2026-08-15 | Wording pass. Product behavior stated once in plain language. Removed leftover Due/This topic/Weak/All and “strong language help in this slice” contradictions.                                                                                                                                                                              |
+| 4        | 2026-08-14 | `D-06`: Language help on request; matching pairs do not lock the lesson; one notebook; honest already-saved. Human gate `APPROVED`.                                                                                                                                                                                                          |
+| 3        | 2026-08-14 | `D-04`: word/phrase only; Translate and Ask agent later.                                                                                                                                                                                                                                                                                     |
+| 2        | 2026-08-14 | `D-03` pronunciation; `D-05` lightweight check; `ADR-0001`.                                                                                                                                                                                                                                                                                  |
+| 1        | 2026-08-14 | Initial shaping. `D-01`, `D-02`.                                                                                                                                                                                                                                                                                                             |

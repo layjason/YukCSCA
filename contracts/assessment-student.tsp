@@ -71,6 +71,19 @@ enum AssessmentProblemCode {
   ASSESSMENT_VALIDATION_FAILED,
   ITEM_ALREADY_LOCKED,
   SET_NOT_AVAILABLE,
+  LANGUAGE_ASSIST_DISABLED,
+}
+
+@doc("Word/phrase language-assist tier recorded on an item. SENTENCE and full Translate remain later slices.")
+enum LanguageAssistTier {
+  WORD,
+  PHRASE,
+}
+
+@doc("Why Language help was opened. WORDING_HARD may set TERMINOLOGY_MISUNDERSTANDING; it does not open Translate.")
+enum LanguageHelpTrigger {
+  STUDENT_REQUEST,
+  WORDING_HARD,
 }
 
 // ---------------------------------------------------------------------------
@@ -84,8 +97,14 @@ model AssistanceSummary {
 
   strongUsed: boolean;
 
-  @doc("Always false in VS-009; reserved for VS-010 language-assist.")
+  @doc("Always false for WORD/PHRASE in VS-010A. Reserved for a later Translate/full-meaning control.")
   languageAssistUsed: boolean;
+
+  @doc("Highest word or phrase language-assist tier recorded in this session. Null or omitted when none. Does not set languageAssistUsed.")
+  maxLanguageTier?: LanguageAssistTier | null;
+
+  @doc("True after Language help has been disclosed on at least one item in this session.")
+  languageHelpDisclosed?: boolean;
 }
 
 @doc("Ordered hint-ladder metadata without bodies. Safe before disclosure so the client can warn on STRONG and pre-disable STRONG on REVALIDATION.")
@@ -137,6 +156,35 @@ model ItemFeedback {
   relatedResources: RelatedResourceRef[];
 }
 
+@doc("One admin-preset or auto-matched word/phrase span revealed after Language help is opened.")
+model LanguageHelpSpan {
+  termId: YukCSCA.uuid;
+
+  @minLength(1)
+  @maxLength(40)
+  surfaceForm: string;
+
+  @minValue(0)
+  blockIndex: int32;
+
+  @minValue(0)
+  startOffset: int32;
+
+  @minValue(0)
+  endOffset: int32;
+
+  alreadyInNotebook: boolean;
+}
+
+@doc("Language-help chip list. Never includes a full-question translation.")
+model LanguageHelpView {
+  disclosed: true;
+  trigger: LanguageHelpTrigger;
+
+  @maxItems(64)
+  spans: LanguageHelpSpan[];
+}
+
 @doc("Student-safe option projection (no correctness flag).")
 model SessionItemOption {
   @minLength(1)
@@ -147,7 +195,7 @@ model SessionItemOption {
   blocks: AcademicAdmin.ContentBlock[];
 }
 
-@doc("One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only.")
+@doc("One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only; languageHelpAvailable is first-paint Language-help chrome metadata.")
 model SessionItemView {
   itemId: YukCSCA.uuid;
 
@@ -190,6 +238,12 @@ model SessionItemView {
 
   @maxItems(32)
   objectiveIds: YukCSCA.uuid[];
+
+  @doc("True when Language help may be disclosed on this item: zh-CN exam-language item, published term bank on the package, and the session is not formal-disabled. False for English-only items, packages with no published terms, and reserved formal-mock. First paint uses this flag only; do not infer from examLanguage and do not probe disclose. Chips stay in languageHelp after disclose.")
+  languageHelpAvailable: boolean;
+
+  @doc("Present only after the student discloses Language help on this item. Null or omitted on first paint so the stem stays clean.")
+  languageHelp?: LanguageHelpView | null;
 }
 
 @doc("Append-only objective evidence written on checkpoint pass. Not a Mastered UI claim.")
@@ -343,6 +397,17 @@ model ItemAnswerResult {
 model DiscloseHintResult {
   item: SessionItemView;
   disclosed: DisclosedHintTier;
+  sessionAssistanceSummary: AssistanceSummary;
+}
+
+model DiscloseLanguageHelpRequest {
+  trigger: LanguageHelpTrigger;
+}
+
+@doc("Result of opening Language help. languageAssistUsed stays false for WORD/PHRASE.")
+model DiscloseLanguageHelpResult {
+  item: SessionItemView;
+  languageHelp: LanguageHelpView;
   sessionAssistanceSummary: AssistanceSummary;
 }
 
@@ -572,7 +637,8 @@ model AssessmentConflictProblem extends YukCSCA.Problem {
     | "STRONG_HINT_BLOCKED"
     | "HINT_EXHAUSTED"
     | "ITEM_ALREADY_LOCKED"
-    | "SET_NOT_AVAILABLE";
+    | "SET_NOT_AVAILABLE"
+    | "LANGUAGE_ASSIST_DISABLED";
 }
 
 @error
@@ -645,6 +711,13 @@ model DiscloseHintResponse {
   @header("Cache-Control") cacheControl: "no-store";
   @header("Pragma") pragma: "no-cache";
   @body body: DiscloseHintResult;
+}
+
+model DiscloseLanguageHelpResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "no-store";
+  @header("Pragma") pragma: "no-cache";
+  @body body: DiscloseLanguageHelpResult;
 }
 
 model SessionResultResponse {
@@ -758,6 +831,24 @@ interface AssessmentStudentApi {
     | AssessmentConflictResponse
     | YukCSCA.UnauthorizedResponse
     | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Opens Language help on a scored item: returns admin-preset and auto-matched word/phrase spans. Clients decide first-paint chrome from SessionItemView.languageHelpAvailable; do not infer from examLanguage and do not probe this operation. First paint stays a clean Chinese stem. WORD/PHRASE does not set languageAssistUsed. English-only items and packages with no term bank return 409 LANGUAGE_ASSIST_DISABLED. Formal-mock sessions return 403 FORMAL_ASSISTANCE_DISABLED. Duplicate disclose is idempotent.")
+  @post
+  @route("/sessions/{sessionId}/items/{itemId}/language-help")
+  @useAuth(BearerAuth)
+  discloseLanguageHelp(
+    @path sessionId: YukCSCA.uuid,
+    @path itemId: YukCSCA.uuid,
+    @body request: DiscloseLanguageHelpRequest,
+  ):
+    | DiscloseLanguageHelpResponse
+    | AssessmentValidationResponse
+    | AssessmentConflictResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.FormalAssistanceDisabledResponse
     | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 

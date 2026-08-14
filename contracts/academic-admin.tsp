@@ -39,6 +39,13 @@ enum StudyResourceKind {
   REMEDIATION,
 }
 
+@doc("Exam-language role of a reviewed term. Not a syllabus topic and not a subject. Algebra/calculus/physics live on outline bindings and the package subject.")
+enum TermClass {
+  EXAM_INSTRUCTION,
+  LOGICAL_EXPRESSION,
+  TOPIC_TERM,
+}
+
 enum QuestionDifficulty {
   FOUNDATION,
   STANDARD,
@@ -260,6 +267,59 @@ model ProvenanceRecord extends ProvenanceInput {
   reviewedAt: utcDateTime | null;
 }
 
+@doc("One Chinese surface form of a reviewed term. Audio is rendered at publish, not authored here.")
+model TermSurfaceFormInput {
+  @minLength(1)
+  @maxLength(40)
+  text: string;
+
+  @minLength(1)
+  @maxLength(80)
+  pinyin: string;
+}
+
+@doc("Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package. One id per domain meaning.")
+model TermDraft {
+  id: YukCSCA.uuid;
+  termClass: TermClass;
+
+  @minItems(1)
+  @maxItems(8)
+  surfaceForms: TermSurfaceFormInput[];
+
+  @doc("Explanation-language glosses. Missing languages are allowed and must be flagged to students; they do not fork identity.")
+  definitions: LocalizedText;
+
+  @minLength(1)
+  @maxLength(200)
+  englishEquivalent: string;
+
+  @doc("Canonical scientific or mathematical sense. Not a subject lock.")
+  @minLength(1)
+  @maxLength(500)
+  domainMeaning: string;
+
+  @maxLength(80)
+  symbols?: string | null;
+
+  @maxLength(500)
+  example?: string | null;
+
+  @doc("TOPIC_TERM should bind at least one outline item at publish. Exam-wording classes may be empty and reused across topics.")
+  @maxItems(32)
+  outlineItemIds: YukCSCA.uuid[];
+}
+
+@doc("Optional admin-preset attachment of a reviewed term to a question. The platform still auto-matches required and instruction/logic surface forms.")
+model AuthoredTermAttachment {
+  termId: YukCSCA.uuid;
+
+  @doc("Optional exact surface form when the term has aliases. Omit to allow every published surface form.")
+  @minLength(1)
+  @maxLength(40)
+  surfaceForm?: string | null;
+}
+
 model StudyResource<Provenance> {
   id: YukCSCA.uuid;
   kind?: StudyResourceKind;
@@ -268,6 +328,10 @@ model StudyResource<Provenance> {
   objectiveIds: YukCSCA.uuid[];
   versions: LocalizedContent[];
   provenance: Provenance;
+
+  @doc("Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION.")
+  @maxItems(64)
+  requiredTermIds?: YukCSCA.uuid[];
 }
 
 model QuestionOption {
@@ -312,6 +376,10 @@ model Question<Provenance> {
   @doc("Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.")
   @maxItems(8)
   relatedResourceIds?: YukCSCA.uuid[];
+
+  @doc("Optional admin-preset term attachments. Auto-match of required and instruction/logic surface forms still applies. Do not mark every character.")
+  @maxItems(32)
+  authoredTermAttachments?: AuthoredTermAttachment[];
 
   outlineItemIds: YukCSCA.uuid[];
   objectiveIds: YukCSCA.uuid[];
@@ -408,6 +476,10 @@ model AcademicPackageDraftInput {
   @maxItems(64)
   assessmentSets?: AssessmentSet[];
 
+  @doc("Reviewed Chinese exam-language term bank for this package. Subject-agnostic; first published use is Chinese Mathematics. Omitted or empty when none authored.")
+  @maxItems(500)
+  terms?: TermDraft[];
+
   @maxItems(1)
   mocks: MockPaper[];
 }
@@ -422,6 +494,10 @@ model AcademicPackageDraft {
   @doc("Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.")
   @maxItems(64)
   assessmentSets?: AssessmentSet[];
+
+  @doc("Reviewed Chinese exam-language term bank saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.")
+  @maxItems(500)
+  terms?: TermDraft[];
 
   @maxItems(1)
   mocks: MockPaperRecord[];

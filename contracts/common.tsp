@@ -36,6 +36,18 @@ model ForbiddenResponse {
   @body body: Problem;
 }
 
+@doc("Reserved deny when a formal timed mock is active. Language help and notebook writes stay off.")
+model FormalAssistanceDisabledProblem extends Problem {
+  code: "FORMAL_ASSISTANCE_DISABLED";
+}
+
+@error
+model FormalAssistanceDisabledResponse {
+  @statusCode statusCode: 403;
+  @header contentType: "application/problem+json";
+  @body body: FormalAssistanceDisabledProblem;
+}
+
 @error
 model NotFoundResponse {
   @statusCode statusCode: 404;

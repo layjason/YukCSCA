@@ -37,6 +37,7 @@ function lockedItem(id: string, order: number): SessionItemView {
     },
     outlineItemIds: [],
     objectiveIds: [],
+    languageHelpAvailable: false,
   };
 }
 

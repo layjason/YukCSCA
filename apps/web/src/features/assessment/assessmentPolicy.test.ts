@@ -38,6 +38,7 @@ function item(
     feedback: null,
     outlineItemIds: [],
     objectiveIds: [],
+    languageHelpAvailable: false,
     ...partial,
   };
 }

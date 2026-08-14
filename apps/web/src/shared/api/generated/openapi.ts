@@ -123,6 +123,142 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/academic/packages/{subject}/terminology/{resourceId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one published TERMINOLOGY preview: ordered required term cards for the requested explanation language. Missing glosses are explicit. Opening the preview does not collect terms; PUT progress does. Not mastery. */
+    get: operations['AcademicStudentApi_getTerminologyPreview'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/terminology/{resourceId}/checks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Records the optional preview matching-pairs check. Does not lock Continue to lesson and never writes CHECKPOINT_PASSED. */
+    post: operations['AcademicStudentApi_submitPreviewCheck'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/terminology/{resourceId}/progress': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** @description Creates or replaces preview progress. IN_PROGRESS or PREVIEW_COMPLETE upserts required terms into the notebook as REQUIRED_COURSE. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403. */
+    put: operations['AcademicStudentApi_upsertPreviewProgress'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/term-lookups': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Matched terms upsert the notebook. Unmatched text is not logged. Formal-mock sessions receive 403. */
+    post: operations['AcademicStudentApi_resolveTermLookup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/terminology-notebook': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists the authenticated student's terminology notebook. One list; Due and class group are filters, not separate homes. Optional subject filter keeps later Chinese Physics/Chemistry on the same resource. */
+    get: operations['AcademicStudentApi_listTerminologyNotebook'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/terminology-notebook/{termId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one owner notebook entry and its term card. */
+    get: operations['AcademicStudentApi_getTerminologyNotebookEntry'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/terminology-notebook/{termId}/reviews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Submits one due recognition or contextual-use review. Familiarity and next due follow the result. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403. */
+    post: operations['AcademicStudentApi_submitTermReview'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/terms/{termId}/audio': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the pre-rendered pronunciation clip for one published surface form. Never calls Azure. 404 when no clip exists. */
+    get: operations['AcademicStudentApi_getTermPronunciation'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/academic-images': {
     parameters: {
       query?: never;
@@ -415,6 +551,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/assessment/sessions/{sessionId}/items/{itemId}/language-help': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Opens Language help on a scored item: returns admin-preset and auto-matched word/phrase spans. Clients decide first-paint chrome from SessionItemView.languageHelpAvailable; do not infer from examLanguage and do not probe this operation. First paint stays a clean Chinese stem. WORD/PHRASE does not set languageAssistUsed. English-only items and packages with no term bank return 409 LANGUAGE_ASSIST_DISABLED. Formal-mock sessions return 403 FORMAL_ASSISTANCE_DISABLED. Duplicate disclose is idempotent. */
+    post: operations['AssessmentStudentApi_discloseLanguageHelp'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/assessment/sessions/{sessionId}/submit': {
     parameters: {
       query?: never;
@@ -679,6 +832,8 @@ export interface components {
         objectiveIds: components['schemas']['uuid'][];
         versions: components['schemas']['AcademicAdmin.LocalizedContent'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
+        /** @description Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION. */
+        requiredTermIds?: components['schemas']['uuid'][];
       }[];
       questions: {
         id: components['schemas']['uuid'];
@@ -694,12 +849,16 @@ export interface components {
         commonMistakeNotes?: components['schemas']['AcademicAdmin.LocalizedText'][];
         /** @description Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI. */
         relatedResourceIds?: components['schemas']['uuid'][];
+        /** @description Optional admin-preset term attachments. Auto-match of required and instruction/logic surface forms still applies. Do not mark every character. */
+        authoredTermAttachments?: components['schemas']['AcademicAdmin.AuthoredTermAttachment'][];
         outlineItemIds: components['schemas']['uuid'][];
         objectiveIds: components['schemas']['uuid'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
       }[];
       /** @description Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty. */
       assessmentSets?: components['schemas']['AcademicAdmin.AssessmentSet'][];
+      /** @description Reviewed Chinese exam-language term bank saved on the draft. Omitted or empty when none authored; clients should treat omit as empty. */
+      terms?: components['schemas']['AcademicAdmin.TermDraft'][];
       mocks: components['schemas']['AcademicAdmin.MockPaperRecord'][];
     };
     'AcademicAdmin.AcademicPackageDraftInput': {
@@ -714,6 +873,8 @@ export interface components {
         objectiveIds: components['schemas']['uuid'][];
         versions: components['schemas']['AcademicAdmin.LocalizedContent'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
+        /** @description Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION. */
+        requiredTermIds?: components['schemas']['uuid'][];
       }[];
       questions: {
         id: components['schemas']['uuid'];
@@ -729,12 +890,16 @@ export interface components {
         commonMistakeNotes?: components['schemas']['AcademicAdmin.LocalizedText'][];
         /** @description Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI. */
         relatedResourceIds?: components['schemas']['uuid'][];
+        /** @description Optional admin-preset term attachments. Auto-match of required and instruction/logic surface forms still applies. Do not mark every character. */
+        authoredTermAttachments?: components['schemas']['AcademicAdmin.AuthoredTermAttachment'][];
         outlineItemIds: components['schemas']['uuid'][];
         objectiveIds: components['schemas']['uuid'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
       }[];
       /** @description Assessment sets (checkpoint and topic practice). Empty array when none authored. */
       assessmentSets?: components['schemas']['AcademicAdmin.AssessmentSet'][];
+      /** @description Reviewed Chinese exam-language term bank for this package. Subject-agnostic; first published use is Chinese Mathematics. Omitted or empty when none authored. */
+      terms?: components['schemas']['AcademicAdmin.TermDraft'][];
       mocks: components['schemas']['AcademicAdmin.MockPaper'][];
     };
     /** @enum {string} */
@@ -812,6 +977,12 @@ export interface components {
      * @enum {string}
      */
     'AcademicAdmin.AssessmentSetPurpose': 'CHECKPOINT' | 'TOPIC_PRACTICE';
+    /** @description Optional admin-preset attachment of a reviewed term to a question. The platform still auto-matches required and instruction/logic surface forms. */
+    'AcademicAdmin.AuthoredTermAttachment': {
+      termId: components['schemas']['uuid'];
+      /** @description Optional exact surface form when the term has aliases. Omit to allow every published surface form. */
+      surfaceForm?: string | null;
+    };
     /**
      * @description Checkpoint pass policy. Pilot uses all-correct with no strong assistance; enum is extensible for later thresholds.
      * @enum {string}
@@ -988,6 +1159,31 @@ export interface components {
       sourcePosition?: components['schemas']['AcademicAdmin.SourcePosition'];
       summary: components['schemas']['AcademicAdmin.LocalizedText'];
     };
+    /**
+     * @description Exam-language role of a reviewed term. Not a syllabus topic and not a subject. Algebra/calculus/physics live on outline bindings and the package subject.
+     * @enum {string}
+     */
+    'AcademicAdmin.TermClass': 'EXAM_INSTRUCTION' | 'LOGICAL_EXPRESSION' | 'TOPIC_TERM';
+    /** @description Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package. One id per domain meaning. */
+    'AcademicAdmin.TermDraft': {
+      id: components['schemas']['uuid'];
+      termClass: components['schemas']['AcademicAdmin.TermClass'];
+      surfaceForms: components['schemas']['AcademicAdmin.TermSurfaceFormInput'][];
+      /** @description Explanation-language glosses. Missing languages are allowed and must be flagged to students; they do not fork identity. */
+      definitions: components['schemas']['AcademicAdmin.LocalizedText'];
+      englishEquivalent: string;
+      /** @description Canonical scientific or mathematical sense. Not a subject lock. */
+      domainMeaning: string;
+      symbols?: string | null;
+      example?: string | null;
+      /** @description TOPIC_TERM should bind at least one outline item at publish. Exam-wording classes may be empty and reused across topics. */
+      outlineItemIds: components['schemas']['uuid'][];
+    };
+    /** @description One Chinese surface form of a reviewed term. Audio is rendered at publish, not authored here. */
+    'AcademicAdmin.TermSurfaceFormInput': {
+      text: string;
+      pinyin: string;
+    };
     'AcademicAdmin.TextContentBlock': {
       /** @enum {string} */
       kind: 'TEXT';
@@ -1000,6 +1196,13 @@ export interface components {
     'AcademicAdmin.UploadAcademicImageRequest': {
       file: unknown;
       provenance: components['schemas']['AcademicAdmin.ProvenanceInput'];
+    };
+    'AcademicStudent.ClozeReviewPrompt': {
+      /** @enum {string} */
+      kind: 'CONTEXT_CLOZE';
+      /** @description Short published fragment with the target replaced by a placeholder. Never a full item, answer key, or student response. */
+      snippet: string;
+      options: components['schemas']['AcademicStudent.ReviewOption'][];
     };
     /** @description Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED. */
     'AcademicStudent.ContentProgress': {
@@ -1046,7 +1249,52 @@ export interface components {
       title: components['schemas']['AcademicAdmin.LocalizedText'];
       outlineItemIds: components['schemas']['uuid'][];
       contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
+      /** @description Bound TERMINOLOGY preview for this topic when the published package has Chinese exam-language terms. Null or omitted when none. Lets the client offer preview before the LESSON. */
+      terminologyPreview?: components['schemas']['AcademicStudent.TerminologyPreviewRef'] | null;
     };
+    /** @description Lesson rail and tappable spans. Absent from the lesson when the package has no published Chinese terms. */
+    'AcademicStudent.LessonTerminology': {
+      previewResourceId: components['schemas']['uuid'] | null;
+      /** @description Required terms for this topic, in preview order. */
+      rail: components['schemas']['AcademicStudent.TermCard'][];
+      /** @description Required and instruction/logic surface forms that occur in TEXT blocks of the requested lesson body. */
+      spans: components['schemas']['AcademicStudent.TermSpan'][];
+    };
+    'AcademicStudent.MatchPairsReviewPrompt': {
+      /** @enum {string} */
+      kind: 'MATCH_PAIRS';
+      promptSurface: string;
+      options: components['schemas']['AcademicStudent.ReviewOption'][];
+    };
+    /** @description One notebook row. Viewing or collecting a term is not topic mastery. */
+    'AcademicStudent.NotebookEntry': {
+      termId: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      termClass: components['schemas']['AcademicAdmin.TermClass'];
+      primarySurface: components['schemas']['AcademicStudent.TermSurfaceForm'];
+      familiarity: components['schemas']['AcademicStudent.TermFamiliarity'];
+      due: boolean;
+      lastReviewAt: string | null;
+      sources: components['schemas']['AcademicStudent.NotebookSource'][];
+      metIn: components['schemas']['AcademicStudent.TermMetIn'];
+      /** @description Present when due so the client can start review without a second fetch. Null when not due. */
+      pendingReview: components['schemas']['AcademicStudent.TermReviewPrompt'] | null;
+    };
+    'AcademicStudent.NotebookEntryDetail': {
+      entry: components['schemas']['AcademicStudent.NotebookEntry'];
+      card: components['schemas']['AcademicStudent.TermCard'];
+    };
+    'AcademicStudent.NotebookListResponseBody': {
+      items: components['schemas']['AcademicStudent.NotebookEntry'][];
+      /** @description Opaque cursor for the next page; null when no further items. */
+      nextCursor: string | null;
+    };
+    /**
+     * @description How a notebook row was collected. One row per account and term; sources accumulate.
+     * @enum {string}
+     */
+    'AcademicStudent.NotebookSource': 'REQUIRED_COURSE' | 'CLICKED' | 'LANGUAGE_MISTAKE';
     /** @description Student-safe official CSCA source panel: open actions per configured language edition only. */
     'AcademicStudent.OfficialSourcePanel': {
       subject: components['schemas']['AcademicAdmin.AcademicSubject'];
@@ -1061,6 +1309,37 @@ export interface components {
       updatedOn?: components['schemas']['AcademicAdmin.OfficialDate'];
       permittedUse: components['schemas']['AcademicAdmin.PermittedUse'];
     };
+    'AcademicStudent.PreviewCheckPair': {
+      termId: components['schemas']['uuid'];
+      selectedMatchKey: string;
+    };
+    'AcademicStudent.PreviewCheckResult': {
+      /** @enum {string} */
+      kind: 'MATCH_PAIRS';
+      /** Format: int32 */
+      correctCount: number;
+      /** Format: int32 */
+      totalCount: number;
+      previewProgress: components['schemas']['AcademicStudent.PreviewProgress'];
+    };
+    'AcademicStudent.PreviewMatchTarget': {
+      termId: components['schemas']['uuid'];
+      matchKey: string;
+      promptSurface: string;
+      matchLabel: string;
+    };
+    'AcademicStudent.PreviewProgress': {
+      status: components['schemas']['AcademicStudent.PreviewProgressStatus'];
+      /** @description Last progress write time. Null when status is NOT_STARTED. */
+      updatedAt: string | null;
+      /** @description True when PREVIEW_COMPLETE and the published required set differs from the set recorded at last completion. Soft signal only; never wipes the notebook or implies mastery. */
+      requiredSetUpdatedSinceCompleted: boolean;
+    };
+    /**
+     * @description Persisted preview progress. Not content-complete and never mastery.
+     * @enum {string}
+     */
+    'AcademicStudent.PreviewProgressStatus': 'NOT_STARTED' | 'IN_PROGRESS' | 'PREVIEW_COMPLETE';
     /**
      * @description Product coverage of an outline item from LESSON presence only. Checkpoint and practice availability are separate assessment catalog projections (VS-009).
      * @enum {string}
@@ -1078,6 +1357,8 @@ export interface components {
       requestedExplanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
       body: components['schemas']['AcademicStudent.LessonBody'];
       contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
+      /** @description Null or omitted when this lesson has no published Chinese exam-language terms. Clients must hide terminology chrome when absent. */
+      terminology?: components['schemas']['AcademicStudent.LessonTerminology'] | null;
     };
     /** @description Browse projection for one published package by subject. */
     'AcademicStudent.PublishedPackageBrowse': {
@@ -1110,6 +1391,10 @@ export interface components {
       outlineItemIds: components['schemas']['uuid'][];
       objectiveIds: components['schemas']['uuid'][];
     };
+    'AcademicStudent.ReviewOption': {
+      key: string;
+      label: string;
+    };
     /** @description Active published revision identity visible to students (no publisher user id). */
     'AcademicStudent.StudentPublishedRevisionSummary': {
       id: components['schemas']['uuid'];
@@ -1117,6 +1402,14 @@ export interface components {
       revisionNumber: number;
       /** Format: date-time */
       publishedAt: string;
+    };
+    /** @description Records the optional preview matching-pairs check. Viewing and check results are not mastery and never write CHECKPOINT_PASSED. */
+    'AcademicStudent.SubmitPreviewCheckRequest': {
+      pairs: components['schemas']['AcademicStudent.PreviewCheckPair'][];
+    };
+    'AcademicStudent.SubmitTermReviewRequest': {
+      kind: components['schemas']['AcademicStudent.TermReviewKind'];
+      selectedOptionKey: string;
     };
     /** @description Outline node with product coverage and linked LESSON summaries for the active published revision. */
     'AcademicStudent.SyllabusOutlineNode': {
@@ -1129,6 +1422,158 @@ export interface components {
       /** @description LESSON resources that reference this outline item in the active published revision. */
       lessons: components['schemas']['AcademicStudent.LessonSummary'][];
     };
+    /** @description Student-safe reviewed term card. Identity is termId; missing explanation-language gloss is explicit. */
+    'AcademicStudent.TermCard': {
+      termId: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      termClass: components['schemas']['AcademicAdmin.TermClass'];
+      primarySurface: components['schemas']['AcademicStudent.TermSurfaceForm'];
+      aliases: components['schemas']['AcademicStudent.TermSurfaceForm'][];
+      definition: components['schemas']['AcademicStudent.TermDefinition'];
+      englishEquivalent: string;
+      domainMeaning: string;
+      symbols: string | null;
+      example: string | null;
+      outlineItemIds: components['schemas']['uuid'][];
+    };
+    /**
+     * @description Optional notebook secondary filter. Exam wording groups EXAM_INSTRUCTION and LOGICAL_EXPRESSION.
+     * @enum {string}
+     */
+    'AcademicStudent.TermClassGroup': 'EXAM_WORDING' | 'TOPIC_TERM';
+    'AcademicStudent.TermDefinition':
+      | components['schemas']['AcademicStudent.TermDefinitionAvailable']
+      | components['schemas']['AcademicStudent.TermDefinitionUnavailable'];
+    'AcademicStudent.TermDefinitionAvailable': {
+      /** @enum {string} */
+      availability: 'AVAILABLE';
+      language: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      text: string;
+    };
+    'AcademicStudent.TermDefinitionUnavailable': {
+      /** @enum {string} */
+      availability: 'LANGUAGE_UNAVAILABLE';
+      requestedLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+    };
+    /**
+     * @description Latest student-visible place the term was met.
+     * @enum {string}
+     */
+    'AcademicStudent.TermEncounterPlace':
+      'PREVIEW' | 'LESSON' | 'CHECKPOINT' | 'PRACTICE' | 'NOTEBOOK';
+    /**
+     * @description Evidence-backed review state for one student and one term. Not topic mastery.
+     * @enum {string}
+     */
+    'AcademicStudent.TermFamiliarity': 'NEW' | 'LEARNING' | 'FAMILIAR';
+    'AcademicStudent.TermLookupMatched': {
+      /** @enum {string} */
+      outcome: 'MATCHED';
+      card: components['schemas']['AcademicStudent.TermCard'];
+      alreadyInNotebook: boolean;
+      entry: components['schemas']['AcademicStudent.NotebookEntry'];
+    };
+    /** @description Selected text is not in the reviewed term bank. No invented definition and no notebook write. */
+    'AcademicStudent.TermLookupNotInBank': {
+      /** @enum {string} */
+      outcome: 'NOT_IN_BANK';
+    };
+    'AcademicStudent.TermLookupRequest': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      source: components['schemas']['AcademicStudent.TermLookupSource'];
+      /** @description Known chip or rail tap. Provide exactly one of termId or selectedText. */
+      termId?: components['schemas']['uuid'];
+      /** @description Student-selected text after Language help is open, or a tappable lesson form. Max phrase length; not a sentence. */
+      selectedText?: string;
+      /** @description Required when source is LESSON or PREVIEW. */
+      resourceId?: components['schemas']['uuid'];
+      /** @description Required when source is ITEM. */
+      sessionId?: components['schemas']['uuid'];
+      /** @description Required when source is ITEM. */
+      itemId?: components['schemas']['uuid'];
+    };
+    'AcademicStudent.TermLookupResult':
+      | components['schemas']['AcademicStudent.TermLookupMatched']
+      | components['schemas']['AcademicStudent.TermLookupNotInBank'];
+    /**
+     * @description Where a term lookup originated. Formal-mock sessions deny lookup.
+     * @enum {string}
+     */
+    'AcademicStudent.TermLookupSource':
+      'PREVIEW' | 'LESSON' | 'ITEM' | 'NOTEBOOK' | 'LANGUAGE_MISTAKE';
+    'AcademicStudent.TermMetIn': {
+      source: components['schemas']['AcademicStudent.NotebookSource'];
+      place: components['schemas']['AcademicStudent.TermEncounterPlace'];
+      topicTitle: components['schemas']['AcademicAdmin.LocalizedText'] | null;
+      outlineItemId: components['schemas']['uuid'] | null;
+      /** Format: date-time */
+      at: string;
+    };
+    /**
+     * @description Due-review activity. Contextual cloze is preferred when a published snippet exists; otherwise matching pairs.
+     * @enum {string}
+     */
+    'AcademicStudent.TermReviewKind': 'CONTEXT_CLOZE' | 'MATCH_PAIRS';
+    'AcademicStudent.TermReviewPrompt':
+      | components['schemas']['AcademicStudent.ClozeReviewPrompt']
+      | components['schemas']['AcademicStudent.MatchPairsReviewPrompt'];
+    'AcademicStudent.TermReviewResult': {
+      termId: components['schemas']['uuid'];
+      kind: components['schemas']['AcademicStudent.TermReviewKind'];
+      correct: boolean;
+      correctOptionKey: string;
+      familiarity: components['schemas']['AcademicStudent.TermFamiliarity'];
+      due: boolean;
+      entry: components['schemas']['AcademicStudent.NotebookEntry'];
+    };
+    /** @description Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's text. */
+    'AcademicStudent.TermSpan': {
+      termId: components['schemas']['uuid'];
+      surfaceForm: string;
+      /** Format: int32 */
+      blockIndex: number;
+      /** Format: int32 */
+      startOffset: number;
+      /** Format: int32 */
+      endOffset: number;
+    };
+    'AcademicStudent.TermSurfaceForm': {
+      text: string;
+      pinyin: string;
+      audioAvailable: boolean;
+    };
+    /** @description Published TERMINOLOGY preview unit: ordered required cards plus optional matching-pairs material. Not an AssessmentSet. */
+    'AcademicStudent.TerminologyPreview': {
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      resourceId: components['schemas']['uuid'];
+      title: components['schemas']['AcademicAdmin.LocalizedText'];
+      outlineItemIds: components['schemas']['uuid'][];
+      /** @description LESSON resources bound to the same topic in the active revision. Continue-to-lesson uses these; the preview never locks them. */
+      lessonResourceIds: components['schemas']['uuid'][];
+      requestedExplanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      terms: components['schemas']['AcademicStudent.TermCard'][];
+      matchingPairsAvailable: boolean;
+      /** @description Match targets for the optional preview pairs activity. Empty when matchingPairsAvailable is false. */
+      matchTargets: components['schemas']['AcademicStudent.PreviewMatchTarget'][];
+      previewProgress: components['schemas']['AcademicStudent.PreviewProgress'];
+    };
+    'AcademicStudent.TerminologyPreviewRef': {
+      resourceId: components['schemas']['uuid'];
+      progress: components['schemas']['AcademicStudent.PreviewProgress'];
+    };
+    'AcademicStudent.TerminologyValidationProblem': {
+      /** @enum {string} */
+      code: 'TERMINOLOGY_VALIDATION_FAILED';
+      violations: components['schemas']['AcademicStudent.TerminologyValidationViolation'][];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    'AcademicStudent.TerminologyValidationViolation': {
+      path: string;
+      code: string;
+    };
     /** @description Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource). */
     'AcademicStudent.UpsertContentProgressRequest': {
       status: components['schemas']['AcademicStudent.WritableContentProgressStatus'];
@@ -1137,11 +1582,21 @@ export interface components {
       /** @description Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field. */
       expectedPackageRevisionId?: components['schemas']['uuid'];
     };
+    'AcademicStudent.UpsertPreviewProgressRequest': {
+      status: components['schemas']['AcademicStudent.WritablePreviewProgressStatus'];
+      /** @description Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches. */
+      expectedPackageRevisionId?: components['schemas']['uuid'];
+    };
     /**
      * @description Writable content-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
      * @enum {string}
      */
     'AcademicStudent.WritableContentProgressStatus': 'IN_PROGRESS' | 'CONTENT_COMPLETE';
+    /**
+     * @description Writable preview-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
+     * @enum {string}
+     */
+    'AcademicStudent.WritablePreviewProgressStatus': 'IN_PROGRESS' | 'PREVIEW_COMPLETE';
     /** @description Conflict problem for assessment lifecycle. code is one of AssessmentProblemCode string values. */
     'AssessmentStudent.AssessmentConflictProblem': {
       /** @enum {string} */
@@ -1153,7 +1608,8 @@ export interface components {
         | 'STRONG_HINT_BLOCKED'
         | 'HINT_EXHAUSTED'
         | 'ITEM_ALREADY_LOCKED'
-        | 'SET_NOT_AVAILABLE';
+        | 'SET_NOT_AVAILABLE'
+        | 'LANGUAGE_ASSIST_DISABLED';
     } & WithRequired<components['schemas']['Problem'], 'code'>;
     /** @description Stable context envelope fields for future agent tools (VS-011). Not a separate public resource. */
     'AssessmentStudent.AssessmentContextSummary': {
@@ -1184,7 +1640,8 @@ export interface components {
       | 'HINT_EXHAUSTED'
       | 'ASSESSMENT_VALIDATION_FAILED'
       | 'ITEM_ALREADY_LOCKED'
-      | 'SET_NOT_AVAILABLE';
+      | 'SET_NOT_AVAILABLE'
+      | 'LANGUAGE_ASSIST_DISABLED';
     'AssessmentStudent.AssessmentSession': {
       sessionId: components['schemas']['uuid'];
       status: components['schemas']['AssessmentStudent.AssessmentSessionStatus'];
@@ -1281,8 +1738,12 @@ export interface components {
       /** Format: int32 */
       maxTierDisclosed: number;
       strongUsed: boolean;
-      /** @description Always false in VS-009; reserved for VS-010 language-assist. */
+      /** @description Always false for WORD/PHRASE in VS-010A. Reserved for a later Translate/full-meaning control. */
       languageAssistUsed: boolean;
+      /** @description Highest word or phrase language-assist tier recorded in this session. Null or omitted when none. Does not set languageAssistUsed. */
+      maxLanguageTier?: components['schemas']['AssessmentStudent.LanguageAssistTier'] | null;
+      /** @description True after Language help has been disclosed on at least one item in this session. */
+      languageHelpDisclosed?: boolean;
     };
     /** @description One exam-language edition of a lesson-linked checkpoint. */
     'AssessmentStudent.CheckpointEdition': {
@@ -1323,6 +1784,15 @@ export interface components {
     'AssessmentStudent.DiscloseHintResult': {
       item: components['schemas']['AssessmentStudent.SessionItemView'];
       disclosed: components['schemas']['AssessmentStudent.DisclosedHintTier'];
+      sessionAssistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
+    };
+    'AssessmentStudent.DiscloseLanguageHelpRequest': {
+      trigger: components['schemas']['AssessmentStudent.LanguageHelpTrigger'];
+    };
+    /** @description Result of opening Language help. languageAssistUsed stays false for WORD/PHRASE. */
+    'AssessmentStudent.DiscloseLanguageHelpResult': {
+      item: components['schemas']['AssessmentStudent.SessionItemView'];
+      languageHelp: components['schemas']['AssessmentStudent.LanguageHelpView'];
       sessionAssistanceSummary: components['schemas']['AssessmentStudent.AssistanceSummary'];
     };
     /** @description One disclosed mathematical hint tier. Bodies appear only after the student discloses that tier. */
@@ -1368,6 +1838,35 @@ export interface components {
       commonMistakeNotes: components['schemas']['AcademicAdmin.LocalizedText'][];
       /** @description Navigable related LESSON/REMEDIATION links with kind and title. Empty when none authored or none resolve in the active/pinned revision. */
       relatedResources: components['schemas']['AssessmentStudent.RelatedResourceRef'][];
+    };
+    /**
+     * @description Word/phrase language-assist tier recorded on an item. SENTENCE and full Translate remain later slices.
+     * @enum {string}
+     */
+    'AssessmentStudent.LanguageAssistTier': 'WORD' | 'PHRASE';
+    /** @description One admin-preset or auto-matched word/phrase span revealed after Language help is opened. */
+    'AssessmentStudent.LanguageHelpSpan': {
+      termId: components['schemas']['uuid'];
+      surfaceForm: string;
+      /** Format: int32 */
+      blockIndex: number;
+      /** Format: int32 */
+      startOffset: number;
+      /** Format: int32 */
+      endOffset: number;
+      alreadyInNotebook: boolean;
+    };
+    /**
+     * @description Why Language help was opened. WORDING_HARD may set TERMINOLOGY_MISUNDERSTANDING; it does not open Translate.
+     * @enum {string}
+     */
+    'AssessmentStudent.LanguageHelpTrigger': 'STUDENT_REQUEST' | 'WORDING_HARD';
+    /** @description Language-help chip list. Never includes a full-question translation. */
+    'AssessmentStudent.LanguageHelpView': {
+      /** @enum {boolean} */
+      disclosed: true;
+      trigger: components['schemas']['AssessmentStudent.LanguageHelpTrigger'];
+      spans: components['schemas']['AssessmentStudent.LanguageHelpSpan'][];
     };
     /**
      * @description Bounded objective evidence signal written only on checkpoint pass in VS-009.
@@ -1489,7 +1988,7 @@ export interface components {
       key: string;
       blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
     };
-    /** @description One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only. */
+    /** @description One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only; languageHelpAvailable is first-paint Language-help chrome metadata. */
     'AssessmentStudent.SessionItemView': {
       itemId: components['schemas']['uuid'];
       /** Format: int32 */
@@ -1515,6 +2014,10 @@ export interface components {
       feedback: components['schemas']['AssessmentStudent.ItemFeedback'] | null;
       outlineItemIds: components['schemas']['uuid'][];
       objectiveIds: components['schemas']['uuid'][];
+      /** @description True when Language help may be disclosed on this item: zh-CN exam-language item, published term bank on the package, and the session is not formal-disabled. False for English-only items, packages with no published terms, and reserved formal-mock. First paint uses this flag only; do not infer from examLanguage and do not probe disclose. Chips stay in languageHelp after disclose. */
+      languageHelpAvailable: boolean;
+      /** @description Present only after the student discloses Language help on this item. Null or omitted on first paint so the stem stays clean. */
+      languageHelp?: components['schemas']['AssessmentStudent.LanguageHelpView'] | null;
     };
     /** @description Final scored session result. checkpointPassed is non-null only for CHECKPOINT purpose. */
     'AssessmentStudent.SessionResult': {
@@ -1612,6 +2115,11 @@ export interface components {
     };
     /** @enum {string} */
     'Auth.UserRole': 'UNASSIGNED' | 'STUDENT' | 'PARENT' | 'TUTOR' | 'ADMIN';
+    /** @description Reserved deny when a formal timed mock is active. Language help and notebook writes stay off. */
+    FormalAssistanceDisabledProblem: {
+      /** @enum {string} */
+      code: 'FORMAL_ASSISTANCE_DISABLED';
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
     Problem: {
       /** Format: int32 */
       status: number;
@@ -2120,6 +2628,585 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['AcademicStudent.ContentProgressValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_getTerminologyPreview: {
+    parameters: {
+      query: {
+        explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      };
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.TerminologyPreview'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_submitPreviewCheck: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.SubmitPreviewCheckRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.PreviewCheckResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.TerminologyValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_upsertPreviewProgress: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.UpsertPreviewProgressRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.PreviewProgress'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.TerminologyValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_resolveTermLookup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.TermLookupRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.TermLookupResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.TerminologyValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_listTerminologyNotebook: {
+    parameters: {
+      query: {
+        explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+        dueOnly?: boolean;
+        q?: string;
+        classGroup?: components['schemas']['AcademicStudent.TermClassGroup'];
+        subject?: components['schemas']['AcademicAdmin.AcademicSubject'];
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.NotebookListResponseBody'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_getTerminologyNotebookEntry: {
+    parameters: {
+      query: {
+        explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      };
+      header?: never;
+      path: {
+        termId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.NotebookEntryDetail'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_submitTermReview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        termId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.SubmitTermReviewRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.TermReviewResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.TerminologyValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_getTermPronunciation: {
+    parameters: {
+      query?: {
+        surfaceForm?: string;
+      };
+      header?: never;
+      path: {
+        termId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'private, max-age=31536000, immutable';
+          'X-Content-Type-Options': 'nosniff';
+          [name: string]: unknown;
+        };
+        content: {
+          'audio/mpeg': unknown;
         };
       };
       /** @description Access is unauthorized. */
@@ -3509,6 +4596,92 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AssessmentStudentApi_discloseLanguageHelp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: components['schemas']['uuid'];
+        itemId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentStudent.DiscloseLanguageHelpRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssessmentStudent.DiscloseLanguageHelpResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AssessmentStudent.AssessmentValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
         };
       };
       /** @description The server cannot find the requested resource. */

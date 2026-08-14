@@ -79,6 +79,7 @@ function makeItem(
     feedback: null,
     outlineItemIds: [],
     objectiveIds: [],
+    languageHelpAvailable: false,
   };
 }
 

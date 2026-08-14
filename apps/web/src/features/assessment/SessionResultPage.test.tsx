@@ -74,6 +74,7 @@ function reviewItem(overrides: Partial<SessionItemView> = {}): SessionItemView {
     },
     outlineItemIds: [],
     objectiveIds: [],
+    languageHelpAvailable: false,
     ...overrides,
   };
 }
