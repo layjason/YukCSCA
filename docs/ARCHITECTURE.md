@@ -228,7 +228,7 @@ admin frontend (`/admin/academic-packages` under `features/academic-admin`),
 security/privacy, subject-profile extensibility, and product-owner journey
 evidence. VS-008 is `DONE` after contract (`academic-student.tsp` / R3), V8,
 backend student APIs, production Learn frontend
-(`features/learn`: `/app/learn`, subject browse, LESSON reader), security/
+(`features/learn`: `/app/learn`, subject browse, LESSON reader; terminology preview and notebook added by VS-010A), security/
 privacy, prototype isolation, and product-owner journey evidence. VS-009 is `DONE` after contract (`assessment-student.tsp` /
 `VS-009-R8-accepted`), V9+ assessment tables, backend student APIs, production
 Practice/Mistakes/checkpoint/remediation UI (`features/assessment`),
@@ -255,8 +255,9 @@ production profile/default-language settings frontend are `DONE` after contract,
 PostgreSQL/Flyway, backend, frontend, route-boundary, security/privacy,
 code-surface, and product-owner journey evidence. Production student surfaces
 now include `/app/profile`, `/app/profile/languages`, Learn
-(`/app/learn`, subject browse, LESSON reader under `features/learn`), and
-assessment (`/app/practice`, sessions, mistakes, Learn checkpoint CTA,
+(`/app/learn`, subject browse, LESSON reader, terminology preview, notebook
+under `features/learn`), and
+assessment (`/app/practice`, sessions, Language help, mistakes, Learn checkpoint CTA,
 remediation reader under `features/assessment`); post-setup home routes
 activated students to `/app/learn`, and mobile More exposes production-safe
 destinations without re-entering the preview-workspace gate for those routes.
@@ -268,10 +269,14 @@ student consumer of published LESSON content with content progress only.
 VS-009 student assessment APIs are implemented under `/api/v1/assessment/**`
 from checkpoint `VS-009-R8-accepted` and are `DONE` after product-owner
 acceptance of the checkpoint, topic-practice, and mistake→remediation→revalidation
-journeys. VS-010A backend student terminology and Language-help APIs are
-implemented from accepted checkpoint `VS-010A-R10-accepted`. The production
-frontend for that slice is not claimed here; the slice remains
-`CONTRACT_READY` until both sides record completion evidence.
+journeys. VS-010A backend student terminology and Language-help APIs and the
+production Learn/Practice/admin terminology UI are implemented from accepted
+checkpoint `VS-010A-R10-accepted`. The slice remains `CONTRACT_READY` until
+product-owner journey acceptance; it is not claimed `DONE` here. Admin
+authoring of `draft.terms[]`, `requiredTermIds`, and `authoredTermAttachments`
+is on the existing package editor (`features/academic-admin`). Shared
+presentational term-card chrome lives in `shared/terminology` and does not
+import feature APIs. PX-001 fixture terminology was not promoted.
 
 ## Prototype boundaries
 

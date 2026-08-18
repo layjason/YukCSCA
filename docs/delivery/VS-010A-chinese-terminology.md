@@ -6,7 +6,7 @@
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Status                       | `CONTRACT_READY`                                                                                                                                                                                                                                                                                            |
 | Human gate                   | `APPROVED`                                                                                                                                                                                                                                                                                                  |
-| Plan revision                | 13                                                                                                                                                                                                                                                                                                          |
+| Plan revision                | 14                                                                                                                                                                                                                                                                                                          |
 | Updated                      | 2026-08-18                                                                                                                                                                                                                                                                                                  |
 | Primary actor                | Activated `STUDENT` on a published package that has Chinese (`zh-CN`) exam-language terms. First platform admin authors the term bank. First content: Mathematics.                                                                                                                                          |
 | Story IDs                    | `US-TERM-01`, `US-TERM-02`, `US-TERM-03`; partial `US-HINT-01` (record language help, do not treat word/phrase as independent mastery); partial `US-ADM-02`                                                                                                                                                 |
@@ -677,9 +677,9 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 4. ~~Frontend records any `CR-NN`. Backend accepts, declines, or escalates, regenerates, and obtains re-review.~~ **`CR-01` ACCEPTED** and applied as `VS-010A-R10-cr-applied`.
 5. ~~Frontend re-review.~~ **Done (rev 11)** — `CR-01` satisfied; zero further `CR-NN`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes).
 6. ~~Backend records `CONTRACT_READY`.~~ **Done (rev 12)** — status `CONTRACT_READY`.
-7. Backend and frontend implement from `VS-010A-R10-accepted`. Change `DESIGN.md` before CSS if a shared visual rule changes. **Backend complete** for this checkpoint (V12, student terminology APIs, publish-time speech port, assessment Language help). Frontend implementation is separate.
-8. Integrate the real HTTP flow early. Add contract, backend, frontend, and journey evidence.
-9. Slice owner advances lifecycle only after both sides record evidence.
+7. ~~Backend and frontend implement from `VS-010A-R10-accepted`.~~ **Done** — backend (V12, student terminology APIs, publish-time speech port, assessment Language help) and production frontend (preview, rail, Language help, notebook, admin term bank) are both in this tree after the 2026-08-18 merge. No `DESIGN.md` token change.
+8. Integrate the real HTTP flow. Contract, backend, and frontend automated evidence are recorded. Product-owner journeys remain.
+9. Slice owner advances lifecycle only after both sides record evidence **and** the actor completes the real flow.
 10. Verify privacy, failure recovery, mobile/desktop, reduced motion, and localization before `DONE`.
 
 ## Definition of done
@@ -691,16 +691,16 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 - [x] Stack change (`ADR-0001`) records first use, alternatives, impact, rollback, and owner.
 - [x] TypeSpec compiles; generated artifacts match the accepted contract.
 - [x] Initial and accepted contract checkpoints are recorded; frontend review is complete; every `CR-NN` is resolved.
-- [ ] Backend, frontend, migration, and tests implement the same states and errors.
+- [x] Backend, frontend, migration, and tests implement the same states and errors.
 - [ ] Every acceptance criterion has named evidence.
 - [ ] Authorization, privacy, minor safety, and audit were reviewed.
 - [ ] Mobile, accessibility, localization, low-bandwidth, reduced-motion, and failure states were verified where they apply.
-- [ ] Routes, components, and prototype reuse or deletion are recorded.
+- [x] Routes, components, and prototype reuse or deletion are recorded.
 - [ ] UI follows `DESIGN.md`. Any shared token change was made there first.
 - [ ] Journey handoffs are coherent. Prototype-only behavior stays isolated.
-- [ ] Observability contains no private content that does not belong.
-- [ ] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, and `docs/requirements/COVERAGE.md` reflect the result.
-- [ ] Exact verification commands and results are recorded.
+- [x] Observability contains no private content that does not belong.
+- [x] `docs/ARCHITECTURE.md`, `docs/PLAN.md`, and `docs/requirements/COVERAGE.md` reflect the result.
+- [x] Exact verification commands and results are recorded.
 
 ## Verification evidence
 
@@ -715,9 +715,9 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 | Web typecheck                | `pnpm typecheck:web` passed after regeneration. Existing VS-009 `SessionItemView` constructors include `languageHelpAvailable: false`.                                                                                     |
 | Technology/ADR review        | Azure Speech only at publish behind `SpeechSynthesisPort`; tests use `TestSpeechSynthesisPort`. CI does not contact Azure.                                                                                                 |
 | Backend tests                | Focused unit + HTTP ITs **passed** 2026-08-18 (73 tests after reviewer repair). Commands and classes recorded below. TypeSpec hashes unchanged (`VS-010A-R10-accepted`). Independent reviewer verdict `PASS_WITH_REPAIRS`. |
-| Frontend tests               | Focused web tests for terminology, Learn, Practice, admin, routes, and i18n parity passed. See revision 13 notes.                                   |
+| Frontend tests               | After merge (2026-08-18): `pnpm typecheck:web` pass; `pnpm lint:web` pass; `pnpm --filter @yukcsca/web test` — 62 files / 288 tests passed. See frontend implementation notes.                                             |
 | Frontend visual review       | Not run                                                                                                                                                                                                                    |
-| End-to-end/manual flow       | Not run                                                                                                                                                                                                                                                                                                                             |
+| End-to-end/manual flow       | Not run — product-owner journeys remain before `DONE`.                                                                                                                                                                     |
 
 ### `VS-010A-R8-initial` artifact hashes (`git hash-object`)
 
@@ -756,14 +756,13 @@ cd services/api && ./mvnw --batch-mode -Dtest=AcademicDraftProcessorTest,Publish
 
 Named coverage: `AcademicDraftProcessorTest` (omit terms; missing surface/pinyin/domainMeaning; TOPIC_TERM outline; unknown requiredTermIds/attachments), `TerminologyProjectorTest` (UTF-16/alias; no extra TOPIC_TERM auto-match; admin-preset can add a non-required `TOPIC_TERM`), `StudentTerminologyNotebookTest` (idempotent upsert + familiarity/due), `FormalAssistancePolicyTest`, `CheckpointPassEvaluatorTest` (language assist is not a pass input), `AcademicTerminologyHttpIT` (preview GET/PUT/check, lookup MATCHED/NOT_IN_BANK, notebook/review, audio 200/404, English omit chrome, formal 403), `AssessmentLanguageHelpHttpIT` (English `languageHelpAvailable=false` + disclose 409; zh-CN disclose spans only required + exam-wording; `languageAssistUsed=false`; checkpoint pass; revalidation pass with only LANGUAGE_ASSIST; formal 403). Existing `AcademicStudentHttpIT` / `AssessmentStudentHttpIT` / `AcademicAdminHttpIT` still pass without `terms[]`.
 
-Independent backend review (2026-08-18): `PASS_WITH_REPAIRS`. One in-scope defect repaired: scored-item auto-match no longer chips non-required `TOPIC_TERM` that only share outline ids. Residual items are low (LearningEvidencePort not extended, republish re-synthesizes clips, unique-key races accepted at pilot). 
+Independent backend review (2026-08-18): `PASS_WITH_REPAIRS`. One in-scope defect repaired: scored-item auto-match no longer chips non-required `TOPIC_TERM` that only share outline ids. Residual items are low (LearningEvidencePort not extended, republish re-synthesizes clips, unique-key races accepted at pilot).
 
-**Intentionally not run:** `make verify`, full `./mvnw verify`, Playwright, Compose, frontend suites — frontend UI is not in this change; contract artifacts were not edited. PLAN not bumped (`CONTRACT_READY` until both sides complete).
-**Intentionally not run:** `make verify`, backend `./mvnw verify`, Playwright, Compose — frontend-only implementation against `VS-010A-R10-accepted`. Backend HTTP/persistence is still required before product-owner journeys.
+**Intentionally not run after merge:** `make verify`, full `./mvnw verify`, Playwright, Compose. Backend focused ITs (73) and web typecheck/lint/Vitest (62/288) were recorded separately. Product-owner journeys and visual review remain.
 
-### Frontend implementation (revision 13)
+### Frontend implementation (revisions 13–14)
 
-Implemented from `VS-010A-R10-accepted` on `feat/vs-010A-chinese-terminology-frontend`. Lifecycle stays `CONTRACT_READY`. No TypeSpec edits.
+Implemented from `VS-010A-R10-accepted` on `feat/vs-010A-chinese-terminology-frontend` (revision 13) and merged into the backend tree on 2026-08-18 (revision 14). Lifecycle stays `CONTRACT_READY` until product-owner journeys. No TypeSpec edits.
 
 Student:
 
@@ -781,11 +780,11 @@ Admin:
 
 Evidence:
 
-- `pnpm typecheck:web` — pass
-- `pnpm lint:web` — pass
-- Focused Vitest including i18n parity, routes, TermCard, preview, notebook, Language help, Learn/Practice/admin neighbors — pass
+- `pnpm typecheck:web` — pass (re-run 2026-08-18 after merge)
+- `pnpm lint:web` — pass (re-run 2026-08-18 after merge)
+- `pnpm --filter @yukcsca/web test` — 62 files / 288 tests passed (2026-08-18 after merge), including routes, TermCard, preview, notebook, Language help, Learn/Practice/admin neighbors, and i18n parity
 - DEV fallback remains offline/`401` only; `5xx` stays an honest error
-- Independent reviewer-worker: first pass `PASS_WITH_REPAIRS` (SET_END wording PATCH, `?dueOnly=1`, Play-on-404, dialog focus trap); after symbols/example authoring, second pass **`PASS`**. Not product-owner acceptance.
+- Independent frontend reviewer-worker: first pass `PASS_WITH_REPAIRS` (SET_END wording PATCH, `?dueOnly=1`, Play-on-404, dialog focus trap); after symbols/example authoring, second pass **`PASS`**. Not product-owner acceptance.
 
 PX-001 fixture terminology was not promoted.
 
@@ -805,6 +804,7 @@ Do not add: LLM definitions, a runtime dictionary, student-owned decks, HSK or s
 
 | Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                       |
 | -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 14       | 2026-08-18 | Merged frontend implementation into the backend tree. Both sides now implement `VS-010A-R10-accepted`. Re-recorded web typecheck/lint/Vitest (62/288). PLAN `0.5.38`. Status remains `CONTRACT_READY` pending product-owner journeys. Not `DONE`.                                                                                            |
 | 13       | 2026-08-18 | Frontend implementation from `VS-010A-R10-accepted`: preview, lesson rail, Language help (`CR-01`), notebook, admin term bank, production routes, en/id/zh-CN. Status remains `CONTRACT_READY`. No TypeSpec edits. Backend HTTP and product-owner journeys remain.                                                                           |
 | 12       | 2026-08-15 | Backend confirmed `VS-010A-R10-accepted` hashes; zero open `CR-NN` / `D-NN`; moved slice to **`CONTRACT_READY`**. PLAN `0.5.37`. Implementation unstarted.                                                                                                                                                                                   |
 | 11       | 2026-08-15 | Frontend re-review of `VS-010A-R10-cr-applied`: `CR-01` confirmed on TypeSpec, OpenAPI, and generated web types; zero further `CR-NN`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes). Status remains `SHAPING`. Backend should mark `CONTRACT_READY`. No TypeSpec edits by frontend. PLAN not bumped.                        |
