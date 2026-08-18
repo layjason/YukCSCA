@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '@/shared/i18n';
 import { ApiError } from '@/shared/api/httpClient';
 import * as api from './api/assessmentApi';
+import * as profileApi from '@/features/profile/studentProfileApi';
 import SessionPlayerPage from './SessionPlayerPage';
 import type { AssessmentSession, SessionItemView, SessionResult } from './types';
 
@@ -98,6 +99,16 @@ function renderPlayer() {
 }
 
 beforeEach(async () => {
+  vi.spyOn(profileApi, 'getMyStudentProfile').mockResolvedValue({
+    id: '00000000-0000-0000-0000-000000000002',
+    preferredName: 'Jia',
+    birthYear: 2009,
+    currentGrade: 'GRADE_11',
+    city: 'Jakarta',
+    defaultExplanationLanguage: 'en',
+    createdAt: '2026-08-11T00:00:00Z',
+    updatedAt: '2026-08-11T00:00:00Z',
+  });
   await i18n.changeLanguage('en');
 });
 
@@ -195,4 +206,91 @@ test('cancelled session 409 shows a specific recovery path', async () => {
     'href',
     '/app/practice',
   );
+});
+
+test('SET_END wording-hard after submit patches TERMINOLOGY_MISUNDERSTANDING', async () => {
+  const incorrect: SessionItemView = {
+    ...lockedItem('item-1', 0),
+    status: 'OPEN',
+    questionId: 'q-wording',
+    selectedOptionKey: 'B',
+    correct: null,
+    feedback: null,
+    languageHelpAvailable: true,
+  };
+  const other: SessionItemView = {
+    ...lockedItem('item-2', 1),
+    status: 'OPEN',
+    selectedOptionKey: 'A',
+    correct: null,
+    feedback: null,
+    languageHelpAvailable: true,
+  };
+  const session = baseSession({
+    feedbackMode: 'SET_END',
+    items: [incorrect, other],
+  });
+  const submittedItems: SessionItemView[] = [
+    {
+      ...incorrect,
+      status: 'LOCKED',
+      correct: false,
+      feedback: {
+        correct: false,
+        correctOptionKey: 'A',
+        explanations: [],
+        commonMistakeNotes: [],
+        relatedResources: [],
+      },
+    },
+    {
+      ...other,
+      status: 'LOCKED',
+      correct: true,
+      feedback: {
+        correct: true,
+        correctOptionKey: 'A',
+        explanations: [],
+        commonMistakeNotes: [],
+        relatedResources: [],
+      },
+    },
+  ];
+
+  vi.spyOn(api, 'getAssessmentSession').mockResolvedValue(session);
+  vi.spyOn(api, 'submitSession').mockResolvedValue({
+    sessionId: SESSION_ID,
+    status: 'SUBMITTED',
+    purpose: 'CHECKPOINT',
+    correctCount: 1,
+    total: 2,
+    strongAssistanceUsed: false,
+    checkpointPassed: false,
+    mistakeIds: ['mistake-1'],
+    evidenceWritten: [],
+    items: submittedItems,
+    context: { ...session.context, checkpointPassed: false },
+    submittedAt: '2026-08-11T00:01:00Z',
+  } satisfies SessionResult);
+  vi.spyOn(api, 'getMistake').mockResolvedValue({
+    mistakeId: 'mistake-1',
+    questionId: 'q-wording',
+  } as Awaited<ReturnType<typeof api.getMistake>>);
+  const annotate = vi
+    .spyOn(api, 'updateMistakeAnnotation')
+    .mockResolvedValue({} as Awaited<ReturnType<typeof api.updateMistakeAnnotation>>);
+  const disclose = vi.spyOn(api, 'discloseLanguageHelp');
+
+  renderPlayer();
+
+  fireEvent.click(await screen.findByRole('button', { name: /submit set|kirim set|提交本套/i }));
+  expect(await screen.findByText(/was the wording hard/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /yes, the wording was hard/i }));
+
+  await waitFor(() => {
+    expect(annotate).toHaveBeenCalledWith('mistake-1', {
+      errorCause: 'TERMINOLOGY_MISUNDERSTANDING',
+    });
+  });
+  expect(disclose).not.toHaveBeenCalled();
 });

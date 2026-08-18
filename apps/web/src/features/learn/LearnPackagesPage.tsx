@@ -88,6 +88,11 @@ export function LearnPackagesPage(): React.JSX.Element {
   return (
     <div className="page-content learn-page learn-page-fill learn-packages-page">
       <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
+      <p>
+        <Link to="/app/learn/terms" className="learn-back-link">
+          {t('learn.termsLink')}
+        </Link>
+      </p>
 
       <ul className="learn-package-list" role="list">
         {packages.map((pkg, index) => {

@@ -1795,3 +1795,25 @@ a.mistakes-row:focus-visible {
     padding: var(--space-xl);
   }
 }
+
+.language-help-panel,
+.language-help-wording {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-block-cream);
+  border: 1px solid color-mix(in srgb, var(--color-block-cream) 35%, var(--color-border));
+}
+
+.language-help-open,
+.language-help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.language-help-hint {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-ink-muted);
+}

@@ -4,11 +4,15 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
+import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import {
   discloseHint,
+  discloseLanguageHelp,
   getAssessmentSession,
+  getMistake,
   submitItemAnswer,
   submitSession,
+  updateMistakeAnnotation,
 } from './api/assessmentApi';
 import {
   applySessionResult,
@@ -23,9 +27,17 @@ import {
 import { AssessmentBlocks } from './components/AssessmentBlocks';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { HintPanel } from './components/HintPanel';
+import { LanguageHelpPanel } from './components/LanguageHelpPanel';
 import { ItemNavigator } from './components/ItemNavigator';
 import { OptionRadiogroup } from './components/OptionRadiogroup';
-import type { AssessmentSession, SessionItemView, SessionResult } from './types';
+import {
+  isExplanationLanguage,
+  type AssessmentSession,
+  type ExplanationLanguage,
+  type LanguageHelpTrigger,
+  type SessionItemView,
+  type SessionResult,
+} from './types';
 import './assessment.css';
 
 export function SessionPlayerPage(): React.JSX.Element {
@@ -44,6 +56,9 @@ export function SessionPlayerPage(): React.JSX.Element {
   /** After SET_END submit, stay briefly on player with right/wrong colors before summary. */
   const [postSubmitReview, setPostSubmitReview] = useState(false);
   const [submittedResult, setSubmittedResult] = useState<SessionResult | null>(null);
+  const [explanationLanguage, setExplanationLanguage] = useState<ExplanationLanguage>('id');
+  const [wordingHardQuestionIds, setWordingHardQuestionIds] = useState<Set<string>>(new Set());
+  const [wordingPromptDismissed, setWordingPromptDismissed] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!sessionId) return;
@@ -87,6 +102,25 @@ export function SessionPlayerPage(): React.JSX.Element {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    void getMyStudentProfile()
+      .then((profile) => {
+        if (!active) return;
+        setExplanationLanguage(
+          isExplanationLanguage(profile.defaultExplanationLanguage)
+            ? profile.defaultExplanationLanguage
+            : 'id',
+        );
+      })
+      .catch(() => {
+        if (active) setExplanationLanguage('id');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const item: SessionItemView | null = useMemo(() => {
     if (!session) return null;
@@ -141,6 +175,7 @@ export function SessionPlayerPage(): React.JSX.Element {
       try {
         const submitted = await submitSession(session.sessionId);
         setSession(applySessionResult(nextSession, submitted));
+        await recordWordingHardAfterSubmit(submitted);
         void navigate(`/app/practice/sessions/${session.sessionId}/result`, {
           state: { result: submitted },
         });
@@ -154,6 +189,62 @@ export function SessionPlayerPage(): React.JSX.Element {
     }
 
     setBusy(false);
+  }
+
+  async function handleLanguageDisclose(trigger: LanguageHelpTrigger): Promise<void> {
+    if (!session || !item || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await discloseLanguageHelp(session.sessionId, item.itemId, trigger);
+      setSession(mergeItemIntoSession(session, result.item, result.sessionAssistanceSummary));
+      if (trigger === 'WORDING_HARD') {
+        setWordingHardQuestionIds((current) => new Set(current).add(item.questionId));
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'LANGUAGE_ASSIST_DISABLED') {
+        setError(t('assessment.languageHelp.disabled'));
+      } else if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setError(t('terminology.formalDisabled'));
+      } else {
+        setError(t('assessment.languageHelp.discloseFailed'));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function recordWordingHardAfterSubmit(
+    result: SessionResult,
+    questionIds: ReadonlySet<string> = wordingHardQuestionIds,
+  ): Promise<void> {
+    if (questionIds.size === 0 || result.mistakeIds.length === 0) return;
+    for (const mistakeId of result.mistakeIds) {
+      try {
+        const detail = await getMistake(mistakeId);
+        if (questionIds.has(detail.questionId)) {
+          await updateMistakeAnnotation(mistakeId, {
+            errorCause: 'TERMINOLOGY_MISUNDERSTANDING',
+          });
+        }
+      } catch {
+        // Annotation is best-effort; the student can still set the cause on the mistake page.
+      }
+    }
+  }
+
+  function markWordingHard(): void {
+    if (!item) return;
+    const nextIds = new Set(wordingHardQuestionIds).add(item.questionId);
+    setWordingHardQuestionIds(nextIds);
+    setWordingPromptDismissed((current) => new Set(current).add(item.itemId));
+    // SET_END shows this prompt only after submit; disclose is IN_PROGRESS-only.
+    if (!item.languageHelp?.disclosed && session?.status === 'IN_PROGRESS') {
+      void handleLanguageDisclose('WORDING_HARD');
+    }
+    if ((postSubmitReview || session?.status === 'SUBMITTED') && submittedResult) {
+      void recordWordingHardAfterSubmit(submittedResult, nextIds);
+    }
   }
 
   async function handleDisclose(): Promise<void> {
@@ -186,6 +277,7 @@ export function SessionPlayerPage(): React.JSX.Element {
       const next = applySessionResult(session, result);
       setSession(next);
       setSubmittedResult(result);
+      await recordWordingHardAfterSubmit(result);
       // SET_END: show right/wrong on the player first, then student opens summary.
       if (session.feedbackMode === 'SET_END') {
         setPostSubmitReview(true);
@@ -308,6 +400,9 @@ export function SessionPlayerPage(): React.JSX.Element {
             <ArrowLeft size={18} aria-hidden="true" />
             {t('assessment.backToPractice')}
           </Link>
+          <Link to="/app/learn/terms" className="learn-back-link">
+            {t('assessment.languageHelp.openNotebook')}
+          </Link>
           <span className="assessment-chip is-soft">{purposeLabel}</span>
         </div>
         <p className="assessment-progress-label">
@@ -335,7 +430,15 @@ export function SessionPlayerPage(): React.JSX.Element {
         key={item.itemId}
       >
         <div className="assessment-stem">
-          <AssessmentBlocks blocks={item.stem} />
+          {item.languageHelp?.disclosed ? null : <AssessmentBlocks blocks={item.stem} />}
+          <LanguageHelpPanel
+            item={item}
+            subject={session.subject}
+            sessionId={session.sessionId}
+            explanationLanguage={explanationLanguage}
+            busy={busy}
+            onDisclose={handleLanguageDisclose}
+          />
         </div>
 
         <OptionRadiogroup
@@ -366,6 +469,38 @@ export function SessionPlayerPage(): React.JSX.Element {
             purpose={session.purpose}
             assistanceUsed={itemUsedAssistance(item)}
           />
+        ) : null}
+
+        {showFeedback &&
+        item.correct === false &&
+        item.languageHelpAvailable &&
+        !wordingPromptDismissed.has(item.itemId) ? (
+          <div
+            className="language-help-wording"
+            role="group"
+            aria-label={t('assessment.languageHelp.wordingHard')}
+          >
+            <p>{t('assessment.languageHelp.wordingHard')}</p>
+            <div className="language-help-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={busy}
+                onClick={markWordingHard}
+              >
+                {t('assessment.languageHelp.wordingHardYes')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() =>
+                  setWordingPromptDismissed((current) => new Set(current).add(item.itemId))
+                }
+              >
+                {t('assessment.languageHelp.wordingHardNo')}
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <footer className="assessment-item-actions">

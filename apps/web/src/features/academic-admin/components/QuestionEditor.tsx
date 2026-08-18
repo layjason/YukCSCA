@@ -20,6 +20,7 @@ import type {
   MathContentBlock,
   StudyResource,
   HintTier,
+  TermDraft,
 } from '../types';
 
 interface QuestionEditorProps {
@@ -27,6 +28,7 @@ interface QuestionEditorProps {
   outlineItems: SyllabusOutlineItem[];
   objectives: LearningObjective[];
   resources?: StudyResource[];
+  terms?: TermDraft[];
   onChange: (updated: Question[]) => void;
   disabled?: boolean;
 }
@@ -76,6 +78,7 @@ export function QuestionEditor({
   outlineItems,
   objectives,
   resources = [],
+  terms = [],
   onChange,
   disabled = false,
 }: QuestionEditorProps): React.JSX.Element {
@@ -558,6 +561,42 @@ export function QuestionEditor({
                       </label>
                     );
                   })}
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="admin-fieldset" disabled={disabled}>
+            <legend className="admin-fieldset-legend">
+              {t('admin.academic.terms.questionAttachments')}
+            </legend>
+            <p className="admin-hint">{t('admin.academic.terms.questionAttachmentsHint')}</p>
+            {terms.length === 0 ? (
+              <p className="admin-muted">{t('admin.academic.terms.empty')}</p>
+            ) : (
+              <div className="admin-check-list">
+                {terms.map((term) => {
+                  const selectedIds = (selectedQuestion.authoredTermAttachments ?? []).map(
+                    (attachment) => attachment.termId,
+                  );
+                  return (
+                    <label key={term.id} className="admin-check-row">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(term.id)}
+                        onChange={(e) => {
+                          const current = selectedQuestion.authoredTermAttachments ?? [];
+                          handleUpdateQuestion({
+                            ...selectedQuestion,
+                            authoredTermAttachments: e.target.checked
+                              ? [...current, { termId: term.id }]
+                              : current.filter((attachment) => attachment.termId !== term.id),
+                          });
+                        }}
+                      />
+                      <span>{term.surfaceForms[0]?.text || term.englishEquivalent || term.id}</span>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </fieldset>

@@ -22,6 +22,9 @@ export type SessionItemOption = components['schemas']['AssessmentStudent.Session
 export type SessionResult = components['schemas']['AssessmentStudent.SessionResult'];
 export type ItemAnswerResult = components['schemas']['AssessmentStudent.ItemAnswerResult'];
 export type DiscloseHintResult = components['schemas']['AssessmentStudent.DiscloseHintResult'];
+export type DiscloseLanguageHelpResult =
+  components['schemas']['AssessmentStudent.DiscloseLanguageHelpResult'];
+export type LanguageHelpTrigger = components['schemas']['AssessmentStudent.LanguageHelpTrigger'];
 export type HintTierMeta = components['schemas']['AssessmentStudent.HintTierMeta'];
 export type DisclosedHintTier = components['schemas']['AssessmentStudent.DisclosedHintTier'];
 export type ItemFeedback = components['schemas']['AssessmentStudent.ItemFeedback'];

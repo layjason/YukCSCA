@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { resolveLocalizedText } from '../localizedText';
 import { coverageLabelKey } from '../progressHelpers';
 import type { AcademicSubject, SyllabusOutlineNode } from '../types';
+import { lessonEntryHref } from '../previewNavigation';
 import { ContentProgressFrom } from './ContentProgressChip';
 
 interface OutlineLessonListProps {
@@ -91,7 +92,7 @@ function OutlineNodeItem({
             return (
               <li key={lesson.resourceId} className="learn-lesson-row">
                 <Link
-                  to={`/app/learn/${subject}/lessons/${lesson.resourceId}`}
+                  to={lessonEntryHref(subject, lesson)}
                   className={`learn-lesson-link${isNext && progress.status !== 'CONTENT_COMPLETE' ? ' learn-lesson-link-next' : ''}${progress.updatedSinceCompleted ? ' learn-lesson-link-updated' : ''}`}
                 >
                   <span className="learn-lesson-link-text">

@@ -8,6 +8,8 @@ import type {
   AssessmentSetSummary,
   CheckpointForLesson,
   DiscloseHintResult,
+  DiscloseLanguageHelpResult,
+  LanguageHelpTrigger,
   ExamLanguage,
   ExplanationLanguage,
   ItemAnswerResult,
@@ -25,6 +27,7 @@ import type {
 import {
   devCancelSession,
   devDiscloseHint,
+  devDiscloseLanguageHelp,
   devGetAssessmentSession,
   devGetCheckpointForLesson,
   devGetMistake,
@@ -311,6 +314,41 @@ export async function discloseHint(sessionId: string, itemId: string): Promise<D
   } catch (err) {
     if (shouldUseAssessmentDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       const mock = devDiscloseHint(sessionId, itemId);
+      if (mock) return mock;
+    }
+    throw err;
+  }
+}
+
+export async function discloseLanguageHelp(
+  sessionId: string,
+  itemId: string,
+  trigger: LanguageHelpTrigger,
+): Promise<DiscloseLanguageHelpResult> {
+  try {
+    const response = await fetch(
+      `${ASSESSMENT_BASE}/sessions/${encodeURIComponent(sessionId)}/items/${encodeURIComponent(itemId)}/language-help`,
+      {
+        method: 'POST',
+        headers: authorizationHeaders(true),
+        body: JSON.stringify({ trigger }),
+      },
+    );
+    if (isDevFallback() && response.status === 401) {
+      const mock = devDiscloseLanguageHelp(sessionId, itemId, trigger);
+      if (mock) return mock;
+    }
+    const data = await parseJsonResponse<unknown>(response);
+    if (!data || typeof data !== 'object' || !('item' in data) || !('languageHelp' in data)) {
+      throw new ApiError(500, {
+        title: 'Invalid language-help response',
+        code: 'CONTRACT_MISMATCH',
+      });
+    }
+    return data as DiscloseLanguageHelpResult;
+  } catch (err) {
+    if (shouldUseAssessmentDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      const mock = devDiscloseLanguageHelp(sessionId, itemId, trigger);
       if (mock) return mock;
     }
     throw err;
