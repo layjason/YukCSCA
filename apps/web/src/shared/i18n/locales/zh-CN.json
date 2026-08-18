@@ -79,7 +79,10 @@
     "backToDashboard": "返回仪表板",
     "backToProfile": "返回个人资料",
     "checkpoint": "关卡",
-    "remediation": "复习"
+    "remediation": "复习",
+    "terminologyPreview": "术语预习",
+    "termsNotebook": "术语",
+    "termDetail": "术语"
   },
   "shell": {
     "navLabel": "主导航",
@@ -330,6 +333,88 @@
       "invalidSubjectDescription": "学习中不支持该科目。",
       "invalidLessonTitle": "无效的课时链接",
       "invalidLessonDescription": "课时地址不完整或格式错误。"
+    },
+    "termsLink": "术语",
+    "openNotebook": "打开笔记本"
+  },
+  "terminology": {
+    "notebookTitle": "术语笔记本",
+    "previewTitle": "必学术语",
+    "previewLead": "先看这些中文试卷用语，再进入课文。查看不等于掌握。",
+    "continueToLesson": "继续学习课文",
+    "practicePairs": "练习这些术语",
+    "skipPairs": "跳过配对并继续",
+    "pairsTitle": "把中文术语与含义配对",
+    "pairsSubmit": "检查配对",
+    "pairsResult": "{{correct}} / {{total}} 配对正确。这是语言核对，不是关卡。",
+    "pairsPrompt": "配对",
+    "previewComplete": "必学术语已记入笔记本。",
+    "requiredSetUpdated": "本主题必学术语已更新。有空可以再看预习——笔记本不会被清空。",
+    "openUpdatedPreview": "查看更新后的术语",
+    "railTitle": "主题术语",
+    "railEmpty": "本课没有必学术语。",
+    "due": "待复习",
+    "dueOnly": "只看待复习",
+    "search": "搜索术语",
+    "searchPlaceholder": "搜索汉字",
+    "classFilter": "术语分组",
+    "classFilterAll": "全部",
+    "emptyNotebookTitle": "还没有收集术语",
+    "emptyNotebookDescription": "打开主题预习，或在练习中查阅词语。同一术语只会留下一行。",
+    "emptyDueTitle": "待复习已完成",
+    "emptyDueDescription": "现在没有需要复习的术语。",
+    "reviewDue": "复习到期项",
+    "reviewTitle": "复习这个术语",
+    "reviewSubmit": "检查",
+    "reviewCorrect": "配对正确。",
+    "reviewIncorrect": "这次不对。该术语仍待复习。",
+    "nextDue": "复习下一项",
+    "alreadyInNotebook": "已在笔记本中。",
+    "notInBank": "该词不在已审核术语库中。",
+    "play": "播放",
+    "playSurface": "播放 {{text}}",
+    "playAria": "播放 {{text}} 的读音",
+    "playUnavailable": "暂无音频。拼音仍然可见。",
+    "close": "关闭",
+    "englishEquivalent": "英语对应",
+    "domainMeaning": "学科含义",
+    "symbols": "符号",
+    "example": "例子",
+    "definitionUnavailable": "该讲解语言暂无释义",
+    "definitionUnavailableDetail": "{{language}} 暂无释义。",
+    "metIn": "见于{{place}}{{topic}}",
+    "metInTopic": " · {{topic}}",
+    "loadFailed": "术语无法加载。请检查网络后重试。",
+    "saveFailed": "未能保存。你的答案还在，请重试。",
+    "lookupFailed": "无法打开该术语，请重试。",
+    "formalDisabled": "此模式下不能使用语言帮助或写入笔记本。",
+    "notFoundTitle": "未找到术语",
+    "notFoundDescription": "该预习或笔记本条目不在已发布的资料包中。",
+    "entryNotFoundTitle": "未找到术语",
+    "entryNotFoundDescription": "该笔记本行已不存在，或链接已过期。",
+    "chooseMatch": "选择对应项",
+    "lookUpSelection": "查阅选中内容",
+    "selectHint": "选中一个词或短语后再查阅。",
+    "class": {
+      "EXAM_INSTRUCTION": "试卷用语",
+      "LOGICAL_EXPRESSION": "试卷用语",
+      "TOPIC_TERM": "主题术语"
+    },
+    "classGroup": {
+      "EXAM_WORDING": "试卷用语",
+      "TOPIC_TERM": "主题术语"
+    },
+    "place": {
+      "PREVIEW": "预习",
+      "LESSON": "课文",
+      "CHECKPOINT": "关卡",
+      "PRACTICE": "练习",
+      "NOTEBOOK": "笔记本"
+    },
+    "familiarity": {
+      "NEW": "新",
+      "LEARNING": "学习中",
+      "FAMILIAR": "熟悉"
     }
   },
   "syllabus": {
@@ -1564,7 +1649,34 @@
         "resources": "学习资源",
         "questions": "题目",
         "mock": "限时模拟",
-        "assessment": "测评集"
+        "assessment": "测评集",
+        "terms": "术语"
+      },
+      "terms": {
+        "title": "术语库",
+        "item": "术语",
+        "add": "添加术语",
+        "empty": "还没有已审核术语。一个含义对应一个身份。",
+        "untitled": "未命名术语 {{index}}",
+        "editTitle": "编辑术语",
+        "remove": "删除术语",
+        "termClass": "试卷语言角色",
+        "class": {
+          "TOPIC_TERM": "主题术语",
+          "EXAM_INSTRUCTION": "试题指令",
+          "LOGICAL_EXPRESSION": "逻辑用语"
+        },
+        "surface": "中文表面形式",
+        "pinyin": "拼音",
+        "addSurface": "添加别名",
+        "englishEquivalent": "英语对应",
+        "domainMeaning": "学科含义",
+        "symbols": "符号",
+        "example": "例子",
+        "outlineRefs": "主题绑定",
+        "requiredSet": "本预习的必学术语",
+        "questionAttachments": "可选术语标注",
+        "questionAttachmentsHint": "只需标出难词或短语。平台仍会自动匹配必学和指令用语。不必标出每一个字。"
       },
       "statusDraft": "草稿",
       "statusPublished": "已发布",
@@ -1834,6 +1946,7 @@
           "source": "官方来源",
           "outline": "教学大纲",
           "assessment": "测评集",
+          "terms": "术语",
           "questions": "题目",
           "general": "内容包",
           "parts": {
@@ -1861,7 +1974,8 @@
           "resources": "学习资源",
           "questions": "题目",
           "mock": "模拟卷",
-          "assessment": "测评集"
+          "assessment": "测评集",
+          "terms": "术语"
         },
         "fields": {
           "officialDateStatus": "请选择“未说明”，或选择“已声明”并填写日期。",
@@ -2121,6 +2235,18 @@
         "correct": "正确",
         "incorrect": "错误"
       }
+    },
+    "languageHelp": {
+      "open": "语言帮助",
+      "opening": "正在打开语言帮助…",
+      "regionLabel": "语言帮助",
+      "wordingHard": "是不是措辞难懂？",
+      "wordingHardYes": "是，措辞不好懂",
+      "wordingHardNo": "不是，是数学部分",
+      "wordingHardRecorded": "我们会把这记成措辞问题。",
+      "discloseFailed": "无法打开语言帮助。",
+      "disabled": "本题没有语言帮助。",
+      "openNotebook": "打开术语笔记本"
     },
     "hints": {
       "regionLabel": "提示",

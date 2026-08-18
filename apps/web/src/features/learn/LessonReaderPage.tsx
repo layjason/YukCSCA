@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
+import { getTerminologyPreview, resolveTermLookup } from '@/shared/api/terminologyStudentApi';
+import { TermCardDialog } from '@/shared/terminology/TermCardDialog';
+import { useTermAudio } from '@/shared/terminology/useTermAudio';
+import type { TappableSpan } from '@/shared/terminology/TappableText';
+import type { TermCard } from '@/shared/terminology/types';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { getPublishedLesson, upsertContentProgress } from './api/learnApi';
 import { ContentBlockView } from './components/ContentBlockView';
 import { ContentProgressFrom } from './components/ContentProgressChip';
 import { LanguageToggle } from './components/LanguageToggle';
+import { LessonTermRail } from './components/LessonTermRail';
 import { resolveLocalizedTextForExplanation } from './localizedText';
+import { formatMetInLine } from './termMetIn';
+import { previewHref } from './previewNavigation';
 import {
   clampResumeBlockIndex,
   createResumeProgressCoalescer,
@@ -29,6 +37,7 @@ import './learn.css';
 
 export function LessonReaderPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { subject: subjectParam, resourceId } = useParams<{
     subject: string;
     resourceId: string;
@@ -53,6 +62,12 @@ export function LessonReaderPage(): React.JSX.Element {
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [resumeHighlightIndex, setResumeHighlightIndex] = useState<number | null>(null);
   const [contentVisible, setContentVisible] = useState(false);
+  const [requiredSetNotice, setRequiredSetNotice] = useState(false);
+  const [openCard, setOpenCard] = useState<TermCard | null>(null);
+  const [alreadySaved, setAlreadySaved] = useState(false);
+  const [metInLine, setMetInLine] = useState<string | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const audio = useTermAudio(openCard?.termId ?? null);
 
   const resumeAppliedRef = useRef(false);
   const progressSeededRef = useRef(false);
@@ -176,6 +191,61 @@ export function LessonReaderPage(): React.JSX.Element {
 
     void loadLesson();
   }, [profileLanguageReady, explanationLanguage, lessonKey, loadLesson]);
+
+  useEffect(() => {
+    if (!lesson || !subject || !resourceId || !explanationLanguage) return;
+    const previewId = lesson.terminology?.previewResourceId;
+    if (!previewId) {
+      setRequiredSetNotice(false);
+      return;
+    }
+    let active = true;
+    void getTerminologyPreview(subject, previewId, explanationLanguage)
+      .then((preview) => {
+        if (!active) return;
+        if (
+          preview.previewProgress.status === 'NOT_STARTED' ||
+          preview.previewProgress.status === 'IN_PROGRESS'
+        ) {
+          void navigate(previewHref(subject, previewId, resourceId), { replace: true });
+          return;
+        }
+        setRequiredSetNotice(preview.previewProgress.requiredSetUpdatedSinceCompleted);
+      })
+      .catch(() => {
+        if (active) setRequiredSetNotice(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [explanationLanguage, lesson, navigate, resourceId, subject]);
+
+  async function handleTermActivate(span: TappableSpan): Promise<void> {
+    if (!subject || !resourceId || !explanationLanguage) return;
+    setLookupError(null);
+    try {
+      const result = await resolveTermLookup({
+        subject,
+        explanationLanguage,
+        source: 'LESSON',
+        termId: span.termId,
+        resourceId,
+      });
+      if (result.outcome === 'MATCHED') {
+        setOpenCard(result.card);
+        setAlreadySaved(result.alreadyInNotebook);
+        setMetInLine(formatMetInLine(result.entry.metIn, i18n.language, t));
+      } else {
+        setLookupError(t('terminology.notInBank'));
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setLookupError(t('terminology.formalDisabled'));
+      } else {
+        setLookupError(t('terminology.lookupFailed'));
+      }
+    }
+  }
 
   // Seed IN_PROGRESS on first open when not started.
   useEffect(() => {
@@ -453,6 +523,14 @@ export function LessonReaderPage(): React.JSX.Element {
             {t('learn.lesson.updatedSinceComplete')}
           </p>
         ) : null}
+        {requiredSetNotice && lesson.terminology?.previewResourceId ? (
+          <p className="learn-update-banner" role="status">
+            {t('terminology.requiredSetUpdated')}{' '}
+            <Link to={previewHref(subject, lesson.terminology.previewResourceId, resourceId)}>
+              {t('terminology.openUpdatedPreview')}
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       {loading && !isAvailable && blocks.length === 0 ? (
@@ -480,24 +558,65 @@ export function LessonReaderPage(): React.JSX.Element {
       ) : null}
 
       {isAvailable ? (
-        <article
-          className={`learn-reader-body${contentVisible ? ' is-visible' : ''}${loading ? ' is-reloading' : ''}`}
-          aria-label={title || t('learn.lesson.title')}
-          aria-busy={loading || undefined}
-        >
-          {blocks.map((block, index) => (
-            <ContentBlockView
-              key={`${lesson.resourceId}-${explanationLanguage}-${index}`}
-              block={block}
-              index={index}
-              highlighted={resumeHighlightIndex === index}
-              blockRef={(el) => {
-                if (el) blockElsRef.current.set(index, el);
-                else blockElsRef.current.delete(index);
-              }}
+        <div className="learn-reader-with-rail">
+          <article
+            className={`learn-reader-body${contentVisible ? ' is-visible' : ''}${loading ? ' is-reloading' : ''}`}
+            aria-label={title || t('learn.lesson.title')}
+            aria-busy={loading || undefined}
+          >
+            {blocks.map((block, index) => (
+              <ContentBlockView
+                key={`${lesson.resourceId}-${explanationLanguage}-${index}`}
+                block={block}
+                index={index}
+                highlighted={resumeHighlightIndex === index}
+                termSpans={
+                  block.kind === 'TEXT'
+                    ? (lesson.terminology?.spans ?? [])
+                        .filter((span) => span.blockIndex === index)
+                        .map((span) => ({
+                          termId: span.termId,
+                          surfaceForm: span.surfaceForm,
+                          startOffset: span.startOffset,
+                          endOffset: span.endOffset,
+                        }))
+                    : undefined
+                }
+                onTermActivate={lesson.terminology ? handleTermActivate : undefined}
+                blockRef={(el) => {
+                  if (el) blockElsRef.current.set(index, el);
+                  else blockElsRef.current.delete(index);
+                }}
+              />
+            ))}
+          </article>
+          {lesson.terminology ? (
+            <LessonTermRail
+              subject={subject}
+              resourceId={resourceId}
+              explanationLanguage={explanationLanguage}
+              rail={lesson.terminology.rail}
             />
-          ))}
-        </article>
+          ) : null}
+        </div>
+      ) : null}
+      {lookupError ? <p role="alert">{lookupError}</p> : null}
+      {openCard ? (
+        <TermCardDialog
+          card={openCard}
+          alreadyInNotebook={alreadySaved}
+          metInLine={metInLine}
+          onClose={() => setOpenCard(null)}
+          onPlay={
+            openCard.primarySurface.audioAvailable && !audio.playFailed
+              ? (surface) => {
+                  void audio.play(surface);
+                }
+              : undefined
+          }
+          playingSurface={audio.playingSurface}
+          playFailed={audio.playFailed}
+        />
       ) : null}
 
       {isAvailable ? (

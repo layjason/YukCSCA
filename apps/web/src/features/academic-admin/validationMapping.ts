@@ -20,6 +20,7 @@ export type ValidationFieldKey =
   | 'questions'
   | 'assessment'
   | 'mock'
+  | 'terms'
   | 'general';
 
 export interface MappedValidation {
@@ -356,6 +357,7 @@ export function fieldFor(path: string): ValidationFieldKey {
   if (lower.includes('permitteduse')) return 'permittedUse';
   if (lower.includes('outlineitems')) return 'outline';
   if (lower.includes('learningobjectives')) return 'objectives';
+  if (pathIncludes(lower, 'draft.terms') || /(^|\.)terms(\[|\.|$)/.test(lower)) return 'terms';
   // Resource-owned content paths (blocks under resources)
   if (lower.includes('resources')) return 'resources';
   if (lower.includes('assessmentsets')) return 'assessment';
@@ -385,6 +387,8 @@ export function tabFor(field: ValidationFieldKey): AdminEditorTab {
       return 'objectives';
     case 'resources':
       return 'resources';
+    case 'terms':
+      return 'terms';
     case 'questions':
       return 'questions';
     case 'assessment':

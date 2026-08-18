@@ -6,6 +6,8 @@ import type {
   AssessmentSetSummary,
   CheckpointForLesson,
   DiscloseHintResult,
+  DiscloseLanguageHelpResult,
+  LanguageHelpTrigger,
   ExplanationLanguage,
   ItemAnswerResult,
   MistakeDetail,
@@ -378,6 +380,48 @@ export function devDiscloseHint(sessionId: string, itemId: string): DiscloseHint
   };
   sessions.set(sessionId, nextSession);
   return { item: updated, disclosed, sessionAssistanceSummary: assistance };
+}
+
+export function devDiscloseLanguageHelp(
+  sessionId: string,
+  itemId: string,
+  trigger: LanguageHelpTrigger,
+): DiscloseLanguageHelpResult | null {
+  const session = sessions.get(sessionId);
+  if (!session || session.status !== 'IN_PROGRESS') return null;
+  const item = session.items.find((row) => row.itemId === itemId);
+  if (!item || !item.languageHelpAvailable) return null;
+  const firstText = item.stem.find((block) => block.kind === 'TEXT');
+  const surface = firstText && firstText.kind === 'TEXT' ? firstText.text.slice(0, 2) : '求';
+  const languageHelp = {
+    disclosed: true as const,
+    trigger,
+    spans: [
+      {
+        termId: '00000000-0000-4000-8000-0000000000t3',
+        surfaceForm: surface || '求',
+        blockIndex: 0,
+        startOffset: 0,
+        endOffset: Math.max(1, surface.length),
+        alreadyInNotebook: false,
+      },
+    ],
+  };
+  const updated: SessionItemView = { ...item, languageHelp };
+  const assistance = {
+    ...session.assistanceSummary,
+    languageAssistUsed: false,
+    languageHelpDisclosed: true,
+    maxLanguageTier: 'WORD' as const,
+  };
+  sessions.set(sessionId, {
+    ...session,
+    assistanceSummary: assistance,
+    items: session.items.map((row) => (row.itemId === itemId ? updated : row)),
+    updatedAt: now(),
+    context: { ...session.context, assistanceSummary: assistance },
+  });
+  return { item: updated, languageHelp, sessionAssistanceSummary: assistance };
 }
 
 export function devSubmitItemAnswer(

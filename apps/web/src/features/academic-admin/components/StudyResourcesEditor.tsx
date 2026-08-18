@@ -10,12 +10,13 @@ import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import { useAdminNotify } from '../adminNotify';
-import type { LearningObjective, StudyResource, SyllabusOutlineItem } from '../types';
+import type { LearningObjective, StudyResource, SyllabusOutlineItem, TermDraft } from '../types';
 
 interface StudyResourcesEditorProps {
   resources: StudyResource[];
   outlineItems: SyllabusOutlineItem[];
   objectives: LearningObjective[];
+  terms?: TermDraft[];
   onChange: (updated: StudyResource[]) => void;
   disabled?: boolean;
 }
@@ -53,6 +54,7 @@ export function StudyResourcesEditor({
   resources,
   outlineItems,
   objectives,
+  terms = [],
   onChange,
   disabled = false,
 }: StudyResourcesEditorProps): React.JSX.Element {
@@ -336,6 +338,39 @@ export function StudyResourcesEditor({
               </div>
             )}
           </fieldset>
+
+          {selected.kind === 'TERMINOLOGY' ? (
+            <fieldset className="admin-fieldset" disabled={disabled}>
+              <legend className="admin-fieldset-legend">
+                {t('admin.academic.terms.requiredSet')}
+              </legend>
+              {terms.length === 0 ? (
+                <p className="admin-muted">{t('admin.academic.terms.empty')}</p>
+              ) : (
+                <div className="admin-check-list">
+                  {terms.map((term) => (
+                    <label key={term.id} className="admin-check-row">
+                      <input
+                        type="checkbox"
+                        checked={(selected.requiredTermIds ?? []).includes(term.id)}
+                        onChange={(e) =>
+                          update({
+                            ...selected,
+                            requiredTermIds: toggleId(
+                              selected.requiredTermIds ?? [],
+                              term.id,
+                              e.target.checked,
+                            ),
+                          })
+                        }
+                      />
+                      <span>{term.surfaceForms[0]?.text || term.englishEquivalent || term.id}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+          ) : null}
 
           <ProvenanceEditor
             idPrefix={`resource-prov-${selected.id}`}
