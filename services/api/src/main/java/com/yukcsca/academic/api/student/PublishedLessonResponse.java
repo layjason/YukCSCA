@@ -1,5 +1,6 @@
 package com.yukcsca.academic.api.student;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.yukcsca.academic.application.AcademicStudentService.PublishedLessonResult;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,8 @@ public record PublishedLessonResponse(
     List<String> availableExplanationLanguages,
     String requestedExplanationLanguage,
     Map<String, Object> body,
-    ContentProgressResponse contentProgress) {
+    ContentProgressResponse contentProgress,
+    @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> terminology) {
   static PublishedLessonResponse from(PublishedLessonResult value) {
     return new PublishedLessonResponse(
         value.packageId(),
@@ -25,7 +27,8 @@ public record PublishedLessonResponse(
         value.availableExplanationLanguages(),
         value.requestedExplanationLanguage(),
         body(value),
-        ContentProgressResponse.from(value.contentProgress()));
+        ContentProgressResponse.from(value.contentProgress()),
+        TerminologyResponses.lessonTerminology(value.terminology()));
   }
 
   private static Map<String, Object> body(PublishedLessonResult value) {

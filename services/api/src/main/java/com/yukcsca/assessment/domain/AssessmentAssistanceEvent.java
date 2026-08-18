@@ -42,11 +42,22 @@ public class AssessmentAssistanceEvent {
       int tierIndex,
       String strength,
       Instant now) {
+    this(sessionId, itemAttemptId, accountId, "MATH_HINT", tierIndex, strength, now);
+  }
+
+  public AssessmentAssistanceEvent(
+      UUID sessionId,
+      UUID itemAttemptId,
+      UUID accountId,
+      String kind,
+      int tierIndex,
+      String strength,
+      Instant now) {
     this.id = UUID.randomUUID();
     this.sessionId = sessionId;
     this.itemAttemptId = itemAttemptId;
     this.accountId = accountId;
-    this.kind = "MATH_HINT";
+    this.kind = kind;
     this.tierIndex = tierIndex;
     this.strength = strength;
     this.occurredAt = now;

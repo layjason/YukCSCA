@@ -4,16 +4,16 @@
 
 ## Plan metadata
 
-| Field                        | Value                                                                                                       |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Plan ID                      | `YUK-P0-DELIVERY`                                                                                           |
-| Plan version                 | `0.5.37`                                                                                                    |
-| Updated                      | 2026-08-15                                                                                                  |
-| Current baseline             | [`VS-009`](delivery/VS-009-assessment-practice-remediation.md) assessment practice and remediation — `DONE` |
-| Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE`        |
-| Current production slice     | [`VS-010A`](delivery/VS-010A-chinese-terminology.md) Chinese exam-language terminology — `CONTRACT_READY`   |
-| Requirement baseline         | English/Chinese V1.6, 2026-08-14                                                                            |
-| Story baseline               | `USER_STORIES.md` version 0.3.5                                                                             |
+| Field                        | Value                                                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan ID                      | `YUK-P0-DELIVERY`                                                                                                                                                         |
+| Plan version                 | `0.5.38`                                                                                                                                                                  |
+| Updated                      | 2026-08-18                                                                                                                                                                |
+| Current baseline             | [`VS-009`](delivery/VS-009-assessment-practice-remediation.md) assessment practice and remediation — `DONE`                                                               |
+| Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE`                                                                      |
+| Current production slice     | [`VS-010A`](delivery/VS-010A-chinese-terminology.md) Chinese exam-language terminology — `CONTRACT_READY` (backend + frontend implemented; product-owner journeys remain) |
+| Requirement baseline         | English/Chinese V1.6, 2026-08-14                                                                                                                                          |
+| Story baseline               | `USER_STORIES.md` version 0.3.5                                                                                                                                           |
 
 Plan versions are review markers for delivery-document changes. They are not npm/Maven package versions and are not TypeSpec API versions. This repository does not add pnpm checks solely to validate plan metadata; Git review, slice revision history, and acceptance evidence provide traceability.
 
@@ -190,6 +190,7 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 | Version | Date | Change |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | |
+| 0.5.38 | 2026-08-18 | Merged VS-010A frontend into the backend tree and resolved docs conflicts. Both sides implement `VS-010A-R10-accepted` (preview, lesson rail, Language help, notebook, admin term bank + V12/APIs). Slice revision 14. Status remains **`CONTRACT_READY`**; not product-owner `DONE`. |
 | 0.5.37 | 2026-08-15 | Frontend re-review of VS-010A `VS-010A-R10-cr-applied` confirmed `CR-01`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes); zero open `CR-NN`. Moved VS-010A to **`CONTRACT_READY`**. Slice revision 12. Backend and frontend implementation remain unstarted. |
 | 0.5.36 | 2026-08-14 | `VS-010A` `D-06` approved: in-item language help is reveal-on-request; matching pairs do not lock the lesson. Human gate `APPROVED`. Stories 0.3.5 (`US-TERM-02` check optional). Slice revision 4. |
 | 0.5.35 | 2026-08-14 | `VS-010A` `D-04`: word/phrase only in this slice; full-question Translate and Ask agent deferred. Slice revision 3. Recognition-check timing is `D-06`. |

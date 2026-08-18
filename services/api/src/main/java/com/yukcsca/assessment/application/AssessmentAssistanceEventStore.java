@@ -13,5 +13,10 @@ public interface AssessmentAssistanceEventStore {
   Optional<AssessmentAssistanceEvent> findByItemAttemptIdAndTierIndex(
       UUID itemAttemptId, int tierIndex);
 
+  Optional<AssessmentAssistanceEvent> findByItemAttemptIdAndKindAndTierIndex(
+      UUID itemAttemptId, String kind, int tierIndex);
+
   long countBySessionId(UUID sessionId);
+
+  long countBySessionIdAndKind(UUID sessionId, String kind);
 }

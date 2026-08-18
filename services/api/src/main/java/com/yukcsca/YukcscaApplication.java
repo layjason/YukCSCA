@@ -1,5 +1,6 @@
 package com.yukcsca;
 
+import com.yukcsca.academic.infrastructure.SpeechSynthesisProperties;
 import com.yukcsca.identity.infrastructure.security.AuthProperties;
 import com.yukcsca.identity.infrastructure.security.AuthRateLimitProperties;
 import com.yukcsca.identity.infrastructure.security.CredentialAuthProperties;
@@ -17,7 +18,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
   AuthRateLimitProperties.class,
   CredentialAuthProperties.class,
   FirstAdminProperties.class,
-  SessionMaintenanceProperties.class
+  SessionMaintenanceProperties.class,
+  SpeechSynthesisProperties.class
 })
 public class YukcscaApplication {
   public static void main(String[] args) {
