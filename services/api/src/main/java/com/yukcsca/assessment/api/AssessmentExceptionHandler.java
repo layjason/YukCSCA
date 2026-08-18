@@ -1,5 +1,6 @@
 package com.yukcsca.assessment.api;
 
+import com.yukcsca.academic.application.FormalAssistanceDisabledException;
 import com.yukcsca.assessment.application.AssessmentAccessDeniedException;
 import com.yukcsca.assessment.application.AssessmentConflictException;
 import com.yukcsca.assessment.application.AssessmentNotFoundException;
@@ -61,6 +62,11 @@ public class AssessmentExceptionHandler {
   @ExceptionHandler(AssessmentNotFoundException.class)
   ProblemDetail notFound(AssessmentNotFoundException exception) {
     return problem(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage());
+  }
+
+  @ExceptionHandler(FormalAssistanceDisabledException.class)
+  ProblemDetail formalDisabled(FormalAssistanceDisabledException exception) {
+    return problem(HttpStatus.FORBIDDEN, "FORMAL_ASSISTANCE_DISABLED", exception.getMessage());
   }
 
   @ExceptionHandler(AssessmentAccessDeniedException.class)

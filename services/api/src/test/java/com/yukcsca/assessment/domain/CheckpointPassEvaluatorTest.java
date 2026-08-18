@@ -25,4 +25,10 @@ class CheckpointPassEvaluatorTest {
     assertThat(CheckpointPassEvaluator.revalidationPasses(true, true)).isFalse();
     assertThat(CheckpointPassEvaluator.revalidationPasses(false, false)).isFalse();
   }
+
+  @Test
+  void languageAssistIsNotACheckpointPassInput() {
+    assertThat(CheckpointPassEvaluator.passes(true, false)).isTrue();
+    assertThat(CheckpointPassEvaluator.revalidationPasses(true, false)).isTrue();
+  }
 }

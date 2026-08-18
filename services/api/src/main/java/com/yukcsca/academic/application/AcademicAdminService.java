@@ -6,16 +6,23 @@ import com.yukcsca.academic.domain.AcademicPackage;
 import com.yukcsca.academic.domain.AcademicPackageStatus;
 import com.yukcsca.academic.domain.AcademicRevision;
 import com.yukcsca.academic.domain.AcademicSubjectProfile;
+import com.yukcsca.academic.domain.AcademicTermPronunciation;
+import com.yukcsca.academic.infrastructure.SpeechSynthesisProperties;
 import com.yukcsca.identity.application.CurrentAccount;
 import com.yukcsca.identity.application.CurrentAccountRole;
 import com.yukcsca.identity.application.CurrentAuthenticationService;
+import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +31,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 @Service
 public class AcademicAdminService {
+  private static final Logger LOGGER = LoggerFactory.getLogger(AcademicAdminService.class);
   private static final Set<String> ORIGINS = Set.of("YUKCSCA_ORIGINAL", "LICENSED", "OPEN_LICENSE");
 
   private final AcademicPackageStore packages;
@@ -33,6 +41,9 @@ public class AcademicAdminService {
   private final CurrentAuthenticationService authentication;
   private final AcademicDraftProcessor drafts;
   private final AcademicImageProcessor imageProcessor;
+  private final SpeechSynthesisPort speech;
+  private final AcademicTermPronunciationStore pronunciations;
+  private final SpeechSynthesisProperties speechProperties;
   private final Clock clock;
 
   public AcademicAdminService(
@@ -43,6 +54,9 @@ public class AcademicAdminService {
       CurrentAuthenticationService authentication,
       AcademicDraftProcessor drafts,
       AcademicImageProcessor imageProcessor,
+      SpeechSynthesisPort speech,
+      AcademicTermPronunciationStore pronunciations,
+      SpeechSynthesisProperties speechProperties,
       Clock clock) {
     this.packages = packages;
     this.revisions = revisions;
@@ -51,6 +65,9 @@ public class AcademicAdminService {
     this.authentication = authentication;
     this.drafts = drafts;
     this.imageProcessor = imageProcessor;
+    this.speech = speech;
+    this.pronunciations = pronunciations;
+    this.speechProperties = speechProperties;
     this.clock = clock;
   }
 
@@ -210,6 +227,7 @@ public class AcademicAdminService {
         });
     academicPackage.activateRevision(revision.getId(), drafts.serialize(reviewed), now);
     packages.save(academicPackage);
+    renderTermAudio(revision.getId(), reviewed, now);
     audit(actorId, "PACKAGE_PUBLISHED", "ACADEMIC_PACKAGE", packageId, "SUCCEEDED", null, now);
     return snapshot(academicPackage);
   }
@@ -359,5 +377,53 @@ public class AcademicAdminService {
 
   private static AcademicValidationException validation(String path, AcademicViolationCode code) {
     return new AcademicValidationException(List.of(new AcademicViolation(path, code)));
+  }
+
+  private void renderTermAudio(UUID revisionId, ObjectNode draft, Instant now) {
+    JsonNode terms = draft.path("terms");
+    if (!terms.isArray() || terms.isEmpty()) return;
+    int budget = Math.max(1, speechProperties.maxClipsPerPublish());
+    int rendered = 0;
+    for (JsonNode term : terms) {
+      UUID termId;
+      try {
+        termId = UUID.fromString(term.path("id").asText());
+      } catch (RuntimeException exception) {
+        continue;
+      }
+      JsonNode surfaces = term.path("surfaceForms");
+      if (!surfaces.isArray()) continue;
+      for (JsonNode surface : surfaces) {
+        if (rendered >= budget) return;
+        String text = surface.path("text").asText(null);
+        if (text == null || text.isBlank()) continue;
+        if (pronunciations
+            .findByPackageRevisionIdAndTermIdAndSurfaceForm(revisionId, termId, text)
+            .isPresent()) {
+          continue;
+        }
+        Optional<byte[]> clip = speech.synthesize(text);
+        if (clip.isEmpty()) {
+          LOGGER.info("terminology.audio.rendered termId={} status=skipped byteLength=0", termId);
+          continue;
+        }
+        byte[] bytes = clip.get();
+        pronunciations.save(
+            new AcademicTermPronunciation(revisionId, termId, text, bytes, sha256(bytes), now));
+        rendered++;
+        LOGGER.info(
+            "terminology.audio.rendered termId={} status=stored byteLength={}",
+            termId,
+            bytes.length);
+      }
+    }
+  }
+
+  private static String sha256(byte[] bytes) {
+    try {
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+    } catch (java.security.NoSuchAlgorithmException exception) {
+      throw new IllegalStateException("SHA-256 is required.", exception);
+    }
   }
 }

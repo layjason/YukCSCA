@@ -677,7 +677,7 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 4. ~~Frontend records any `CR-NN`. Backend accepts, declines, or escalates, regenerates, and obtains re-review.~~ **`CR-01` ACCEPTED** and applied as `VS-010A-R10-cr-applied`.
 5. ~~Frontend re-review.~~ **Done (rev 11)** — `CR-01` satisfied; zero further `CR-NN`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes).
 6. ~~Backend records `CONTRACT_READY`.~~ **Done (rev 12)** — status `CONTRACT_READY`.
-7. Backend and frontend implement from `VS-010A-R10-accepted`. Change `DESIGN.md` before CSS if a shared visual rule changes.
+7. Backend and frontend implement from `VS-010A-R10-accepted`. Change `DESIGN.md` before CSS if a shared visual rule changes. **Backend complete** for this checkpoint (V12, student terminology APIs, publish-time speech port, assessment Language help). Frontend implementation is separate.
 8. Integrate the real HTTP flow early. Add contract, backend, frontend, and journey evidence.
 9. Slice owner advances lifecycle only after both sides record evidence.
 10. Verify privacy, failure recovery, mobile/desktop, reduced motion, and localization before `DONE`.
@@ -704,20 +704,20 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 
 ## Verification evidence
 
-| Evidence                     | Result                                                                                                                                                                  |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Contract build               | `pnpm generate` passed after `CR-01` (TypeSpec 1.14 compile + OpenAPI + frontend declarations).                                                                         |
-| Initial contract checkpoint  | `VS-010A-R8-initial` established (hashes below).                                                                                                                        |
-| Frontend contract review     | Revision 9 review of `VS-010A-R8-initial` complete. Filed `CR-01`.                                                                                                      |
-| CR disposition               | `CR-01` **ACCEPTED** and applied; checkpoint `VS-010A-R10-cr-applied`. Zero open `CR-NN`.                                                                               |
-| Frontend re-review           | Revision 11 re-review of `VS-010A-R10-cr-applied` complete. `CR-01` **Satisfied**. Zero further `CR-NN`.                                                                |
-| Accepted contract checkpoint | **`VS-010A-R10-accepted`** — identical hashes to `VS-010A-R10-cr-applied` (table below). Backend confirmed 2026-08-15. Status **`CONTRACT_READY`**.                     |
-| Web typecheck                | `pnpm typecheck:web` passed after regeneration. Existing VS-009 `SessionItemView` constructors include `languageHelpAvailable: false`.                                  |
-| Technology/ADR review        | Not run (implementation).                                                                                                                                               |
-| Backend tests                | Not run — no backend implementation in this step. Live VS-009 mapper does not emit the new field until VS-010A implementation.                                          |
-| Frontend tests               | `pnpm --filter @yukcsca/web test` — 54 files / 264 tests passed after adding `languageHelpAvailable: false` to existing VS-009 constructors. No Language-help UI added. |
-| Frontend visual review       | Not run                                                                                                                                                                 |
-| End-to-end/manual flow       | Not run                                                                                                                                                                 |
+| Evidence                     | Result                                                                                                                                                                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract build               | `pnpm generate` passed after `CR-01` (TypeSpec 1.14 compile + OpenAPI + frontend declarations).                                                                                                                            |
+| Initial contract checkpoint  | `VS-010A-R8-initial` established (hashes below).                                                                                                                                                                           |
+| Frontend contract review     | Revision 9 review of `VS-010A-R8-initial` complete. Filed `CR-01`.                                                                                                                                                         |
+| CR disposition               | `CR-01` **ACCEPTED** and applied; checkpoint `VS-010A-R10-cr-applied`. Zero open `CR-NN`.                                                                                                                                  |
+| Frontend re-review           | Revision 11 re-review of `VS-010A-R10-cr-applied` complete. `CR-01` **Satisfied**. Zero further `CR-NN`.                                                                                                                   |
+| Accepted contract checkpoint | **`VS-010A-R10-accepted`** — identical hashes to `VS-010A-R10-cr-applied` (table below). Backend confirmed 2026-08-15. Status **`CONTRACT_READY`**.                                                                        |
+| Web typecheck                | `pnpm typecheck:web` passed after regeneration. Existing VS-009 `SessionItemView` constructors include `languageHelpAvailable: false`.                                                                                     |
+| Technology/ADR review        | Azure Speech only at publish behind `SpeechSynthesisPort`; tests use `TestSpeechSynthesisPort`. CI does not contact Azure.                                                                                                 |
+| Backend tests                | Focused unit + HTTP ITs **passed** 2026-08-18 (73 tests after reviewer repair). Commands and classes recorded below. TypeSpec hashes unchanged (`VS-010A-R10-accepted`). Independent reviewer verdict `PASS_WITH_REPAIRS`. |
+| Frontend tests               | `pnpm --filter @yukcsca/web test` — 54 files / 264 tests passed after adding `languageHelpAvailable: false` to existing VS-009 constructors. No Language-help UI added.                                                    |
+| Frontend visual review       | Not run                                                                                                                                                                                                                    |
+| End-to-end/manual flow       | Not run                                                                                                                                                                                                                    |
 
 ### `VS-010A-R8-initial` artifact hashes (`git hash-object`)
 
@@ -747,7 +747,18 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 
 Accepted checkpoint `VS-010A-R10-accepted` uses the same hashes.
 
-**Intentionally not run:** `make verify`, backend `./mvnw verify`, Playwright, Compose — lifecycle status only; no domain or production UI implementation in this step. PLAN bumped to `0.5.37` for the `CONTRACT_READY` delivery-index change.
+**Backend implementation evidence (2026-08-18):**
+
+```text
+cd services/api && ./mvnw --batch-mode -Dtest=AcademicDraftProcessorTest,PublishedPackageProjectorTest,AcademicAssessmentDraftValidationTest,CheckpointPassEvaluatorTest,TerminologyProjectorTest,StudentTerminologyNotebookTest,FormalAssistancePolicyTest,AcademicTerminologyHttpIT,AssessmentLanguageHelpHttpIT,AcademicStudentHttpIT,AssessmentStudentHttpIT,AcademicAdminHttpIT,DatabaseMigrationIT test
+# BUILD SUCCESS — Tests run: 73, Failures: 0, Errors: 0, Skipped: 0
+```
+
+Named coverage: `AcademicDraftProcessorTest` (omit terms; missing surface/pinyin/domainMeaning; TOPIC_TERM outline; unknown requiredTermIds/attachments), `TerminologyProjectorTest` (UTF-16/alias; no extra TOPIC_TERM auto-match; admin-preset can add a non-required `TOPIC_TERM`), `StudentTerminologyNotebookTest` (idempotent upsert + familiarity/due), `FormalAssistancePolicyTest`, `CheckpointPassEvaluatorTest` (language assist is not a pass input), `AcademicTerminologyHttpIT` (preview GET/PUT/check, lookup MATCHED/NOT_IN_BANK, notebook/review, audio 200/404, English omit chrome, formal 403), `AssessmentLanguageHelpHttpIT` (English `languageHelpAvailable=false` + disclose 409; zh-CN disclose spans only required + exam-wording; `languageAssistUsed=false`; checkpoint pass; revalidation pass with only LANGUAGE_ASSIST; formal 403). Existing `AcademicStudentHttpIT` / `AssessmentStudentHttpIT` / `AcademicAdminHttpIT` still pass without `terms[]`.
+
+Independent backend review (2026-08-18): `PASS_WITH_REPAIRS`. One in-scope defect repaired: scored-item auto-match no longer chips non-required `TOPIC_TERM` that only share outline ids. Residual items are low (LearningEvidencePort not extended, republish re-synthesizes clips, unique-key races accepted at pilot). Frontend remains `NOT_ASSESSED`.
+
+**Intentionally not run:** `make verify`, full `./mvnw verify`, Playwright, Compose, frontend suites — frontend UI is not in this change; contract artifacts were not edited. PLAN not bumped (`CONTRACT_READY` until both sides complete).
 
 ## Later candidates (not this slice)
 

@@ -156,6 +156,7 @@ class AssessmentStudentHttpIT {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
             .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].languageHelpAvailable").value(false))
             .andExpect(jsonPath("$.items[0].hintLadder[0].strength").value("STANDARD"))
             .andExpect(jsonPath("$.items[0].hintLadder[1].strength").value("STRONG"))
             .andExpect(jsonPath("$.items[0].disclosedHints.length()").value(0))

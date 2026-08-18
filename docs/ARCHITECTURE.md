@@ -60,15 +60,19 @@ state, and retention. Profile owns student activation and student-owned profile
 maintenance, reaching identity only through application-facing account,
 authentication, and security-event APIs. Academic owns the pilot Mathematics
 package draft, immutable published revisions, bounded academic images,
-minimized administrative audit, and student-safe published projections with
+reviewed term-bank JSON on those revisions, publish-time term pronunciation
+bytes, student terminology preview/notebook/lookup/audio, minimized
+administrative audit, and student-safe published projections with
 per-student LESSON and REMEDIATION content progress (not mastery). Assessment
-owns student assessment sessions, item attempts, assistance events, mistakes,
-and bounded objective evidence; it reads published assessment content and
-content-progress only through academic application ports
-(`PublishedAssessmentCatalog`, `StudentContentProgressQuery`) and never imports
-academic JPA. Academic never imports assessment. Modules never import another
-module's repository, JPA entity, controller, or infrastructure. New modules
-appear only with their first accepted use case.
+owns student assessment sessions, item attempts, assistance events (including
+`LANGUAGE_ASSIST` word/phrase help that does not set `languageAssistUsed`),
+mistakes, and bounded objective evidence; it reads published assessment content,
+content-progress, and the published term bank only through academic application
+ports (`PublishedAssessmentCatalog`, `StudentContentProgressQuery`,
+`PublishedTerminologyCatalog`) and never imports academic JPA. Academic never
+imports assessment JPA; ITEM term lookups use `AssessmentItemContextPort`.
+Modules never import another module's repository, JPA entity, controller, or
+infrastructure. New modules appear only with their first accepted use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
@@ -170,34 +174,54 @@ immutable. PNG/JPEG assets are bounded, decoded, re-encoded without submitted
 metadata, hashed, and stored in PostgreSQL separately from revision documents.
 Archive retains revisions, images, and value-free audit evidence.
 
-Student consumption (VS-008 + VS-009 academic extensions) projects only
-`PUBLISHED` packages with an active revision: package list/browse by subject,
-LESSON and REMEDIATION bodies by explanation language (`id` | `en` | `zh-CN`)
-with explicit language-unavailable payloads, content-progress upsert keyed by
-`(account, package, resource)` for both LESSON and REMEDIATION, and image GET
-only when the image is referenced by an active published revision. Student
-responses never include drafts, questions, mocks, answer keys, or admin
-publisher identity. Pilot access is open to every activated `STUDENT` via
-`ContentAccessPolicy` (entitlements later). Progress is content status only
-(`NOT_STARTED` | `IN_PROGRESS` | `CONTENT_COMPLETE` + resume block index)—never
-mastery. Soft `updatedSinceCompleted` signals when the active revision is newer
-than the revision last marked content-complete without demoting status. V8
-stores `student_content_progress`.
+Student consumption (VS-008 + VS-009 academic extensions, plus VS-010A
+terminology) projects only `PUBLISHED` packages with an active revision:
+package list/browse by subject, LESSON and REMEDIATION bodies by explanation
+language (`id` | `en` | `zh-CN`) with explicit language-unavailable payloads,
+content-progress upsert keyed by `(account, package, resource)` for both LESSON
+and REMEDIATION, and image GET only when the image is referenced by an active
+published revision. When a published revision has a Chinese exam-language term
+bank, browse/lesson projections may add terminology preview refs, a topic rail,
+and UTF-16 TEXT spans; those fields are omitted when the package has no terms.
+Student terminology APIs cover preview GET (side-effect free), preview progress
+and optional matching-pairs checks, term lookup (`MATCHED` / `NOT_IN_BANK`),
+one notebook with due cloze-or-pairs review, and authorized MPEG pronunciation
+GET. Viewing, preview checks, and word/phrase lookups are not mastery and never
+write `CHECKPOINT_PASSED`. Missing explanation-language glosses are
+`LANGUAGE_UNAVAILABLE` (never substituted). Student responses never include
+drafts, questions, mocks, answer keys, or admin publisher identity. Pilot
+access is open to every activated `STUDENT` via `ContentAccessPolicy`
+(entitlements later). Progress is content status only (`NOT_STARTED` |
+`IN_PROGRESS` | `CONTENT_COMPLETE` + resume block index)—never mastery.
+Preview progress uses a separate table (`IN_PROGRESS` | `PREVIEW_COMPLETE`).
+Soft `updatedSinceCompleted` signals when the active revision is newer than
+the revision last marked content-complete without demoting status. V8 stores
+`student_content_progress`. V12 stores term audio, preview progress, notebook,
+and review events.
 
-The `assessment` module (VS-009 backend) implements the student assessment
-lifecycle under `/api/v1/assessment/**`: published set catalog and lesson
-checkpoint availability, session start/resume/list/cancel, ordered mathematical
-hint disclosure, IMMEDIATE vs SET_END answer locking, session submit with
-CHECKPOINT pass rule (`ALL_CORRECT_NO_STRONG_ASSISTANCE`), mistake notebook with
-attempt-question copy and optional annotation, remediation candidate resolution,
-revalidation (STRONG hints disabled; any assistance blocks
-`REVALIDATION_PASSED`), and append-only `CHECKPOINT_PASSED` objective evidence
-on checkpoint pass only. Pre-feedback payloads omit correct keys and
-undisclosed hint bodies; `hintLadder` exposes strength metadata only. V9 stores
-`assessment_session`, `assessment_item_attempt`, `assessment_assistance_event`,
-`assessment_mistake`, and `assessment_objective_evidence`.
-`LearningEvidencePort` is the read-oriented evidence surface for later modules.
-No LLM/provider calls. Observability is value-free (no stems/answers/notes/keys).
+The `assessment` module (VS-009 backend, plus VS-010A Language help) implements
+the student assessment lifecycle under `/api/v1/assessment/**`: published set
+catalog and lesson checkpoint availability, session start/resume/list/cancel,
+ordered mathematical hint disclosure, on-request Language help
+(`languageHelpAvailable` on first paint; chips only after disclose), IMMEDIATE
+vs SET_END answer locking, session submit with CHECKPOINT pass rule
+(`ALL_CORRECT_NO_STRONG_ASSISTANCE`), mistake notebook with attempt-question
+copy and optional annotation, remediation candidate resolution, revalidation
+(STRONG hints disabled; `MATH_HINT` assistance blocks `REVALIDATION_PASSED`;
+`LANGUAGE_ASSIST` does not), and append-only `CHECKPOINT_PASSED` objective
+evidence on checkpoint pass only. Word/phrase Language help writes
+`LANGUAGE_ASSIST` (`WORD` | `PHRASE`) and leaves `languageAssistUsed` false.
+Pre-feedback payloads omit correct keys and undisclosed hint bodies;
+`hintLadder` exposes strength metadata only. V9 stores `assessment_session`,
+`assessment_item_attempt`, `assessment_assistance_event`,
+`assessment_mistake`, and `assessment_objective_evidence`. V12 extends
+assistance uniqueness to `(item_attempt_id, kind, tier_index)` and stores a
+disclosed Language-help snapshot on the item. `LearningEvidencePort` is the
+read-oriented evidence surface for later modules. Publish-time term audio uses
+`SpeechSynthesisPort` (Azure adapter when enabled; tests use an in-process
+stub). CI and tests do not contact Azure. Student audio GET never synthesizes.
+No LLM/provider calls. Observability is value-free (no stems/answers/notes/keys,
+selected unmatched text, SSML, or speech keys).
 
 VS-005 is `DONE` after contract, PostgreSQL/Flyway (V6–V7), backend, production
 admin frontend (`/admin/academic-packages` under `features/academic-admin`),
@@ -244,7 +268,10 @@ student consumer of published LESSON content with content progress only.
 VS-009 student assessment APIs are implemented under `/api/v1/assessment/**`
 from checkpoint `VS-009-R8-accepted` and are `DONE` after product-owner
 acceptance of the checkpoint, topic-practice, and mistake→remediation→revalidation
-journeys.
+journeys. VS-010A backend student terminology and Language-help APIs are
+implemented from accepted checkpoint `VS-010A-R10-accepted`. The production
+frontend for that slice is not claimed here; the slice remains
+`CONTRACT_READY` until both sides record completion evidence.
 
 ## Prototype boundaries
 

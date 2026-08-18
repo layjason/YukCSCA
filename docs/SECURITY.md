@@ -137,6 +137,12 @@ These controls must ship with the first feature that needs them:
 - Scored items and answer keys require human review and immutable version references.
 - Leaked, scraped, or unauthorized official questions are prohibited.
 
+### Term pronunciation and language lookup
+
+- Term audio is synthesized only at package publish through `SpeechSynthesisPort`. The student GET serves stored `audio/mpeg` bytes for an authorized `STUDENT` and never calls Azure. Missing clips are 404; pinyin remains on the card.
+- Speech key, SSML, surface text, selected unmatched lookup text, definitions, stems, and answer keys are excluded from logs. Publish logs `termId`, clip status, and byte length only.
+- Unmatched selected text returns HTTP 200 `NOT_IN_BANK` and writes nothing. Formal-mock policy (reserved, always false until a formal session exists) denies lookup, preview writes, review, and Language-help disclose with `403 FORMAL_ASSISTANCE_DISABLED`.
+
 ### Files and provider integrations
 
 - Validate extension, MIME signature, size, malware status, ownership, retention, and download authorization.

@@ -7,11 +7,13 @@ import com.yukcsca.assessment.application.AssessmentStudentService.AssistanceSum
 import com.yukcsca.assessment.application.AssessmentStudentService.CheckpointForLessonView;
 import com.yukcsca.assessment.application.AssessmentStudentService.ContextSummaryView;
 import com.yukcsca.assessment.application.AssessmentStudentService.DiscloseHintView;
+import com.yukcsca.assessment.application.AssessmentStudentService.DiscloseLanguageHelpView;
 import com.yukcsca.assessment.application.AssessmentStudentService.DisclosedHintView;
 import com.yukcsca.assessment.application.AssessmentStudentService.EvidenceView;
 import com.yukcsca.assessment.application.AssessmentStudentService.ItemAnswerView;
 import com.yukcsca.assessment.application.AssessmentStudentService.ItemFeedbackView;
 import com.yukcsca.assessment.application.AssessmentStudentService.ItemView;
+import com.yukcsca.assessment.application.AssessmentStudentService.LanguageHelpView;
 import com.yukcsca.assessment.application.AssessmentStudentService.MistakeDetailView;
 import com.yukcsca.assessment.application.AssessmentStudentService.MistakeListView;
 import com.yukcsca.assessment.application.AssessmentStudentService.MistakeSummaryView;
@@ -131,6 +133,23 @@ public class AssessmentStudentController {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("item", itemBody(result.item()));
     body.put("disclosed", disclosedBody(result.disclosed()));
+    body.put("sessionAssistanceSummary", assistance(result.sessionAssistanceSummary()));
+    return body;
+  }
+
+  @PostMapping("/sessions/{sessionId}/items/{itemId}/language-help")
+  public Map<String, Object> discloseLanguageHelp(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID sessionId,
+      @PathVariable UUID itemId,
+      @Valid @RequestBody DiscloseLanguageHelpRequest request,
+      HttpServletResponse response) {
+    noStore(response);
+    DiscloseLanguageHelpView result =
+        assessment.discloseLanguageHelp(actor(jwt), sessionId, itemId, request.trigger());
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("item", itemBody(result.item()));
+    body.put("languageHelp", languageHelp(result.languageHelp()));
     body.put("sessionAssistanceSummary", assistance(result.sessionAssistanceSummary()));
     return body;
   }
@@ -378,6 +397,32 @@ public class AssessmentStudentController {
     body.put("feedback", item.feedback() == null ? null : feedback(item.feedback()));
     body.put("outlineItemIds", item.outlineItemIds());
     body.put("objectiveIds", item.objectiveIds());
+    body.put("languageHelpAvailable", item.languageHelpAvailable());
+    if (item.languageHelp() != null) {
+      body.put("languageHelp", languageHelp(item.languageHelp()));
+    }
+    return body;
+  }
+
+  private Map<String, Object> languageHelp(LanguageHelpView view) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("disclosed", view.disclosed());
+    body.put("trigger", view.trigger());
+    body.put(
+        "spans",
+        view.spans().stream()
+            .map(
+                span -> {
+                  Map<String, Object> row = new LinkedHashMap<>();
+                  row.put("termId", span.termId());
+                  row.put("surfaceForm", span.surfaceForm());
+                  row.put("blockIndex", span.blockIndex());
+                  row.put("startOffset", span.startOffset());
+                  row.put("endOffset", span.endOffset());
+                  row.put("alreadyInNotebook", span.alreadyInNotebook());
+                  return row;
+                })
+            .toList());
     return body;
   }
 
@@ -426,6 +471,12 @@ public class AssessmentStudentController {
     body.put("maxTierDisclosed", summary.maxTierDisclosed());
     body.put("strongUsed", summary.strongUsed());
     body.put("languageAssistUsed", summary.languageAssistUsed());
+    if (summary.maxLanguageTier() != null) {
+      body.put("maxLanguageTier", summary.maxLanguageTier());
+    }
+    if (summary.languageHelpDisclosed() != null) {
+      body.put("languageHelpDisclosed", summary.languageHelpDisclosed());
+    }
     return body;
   }
 
@@ -568,4 +619,6 @@ public class AssessmentStudentController {
       UUID planTaskId) {}
 
   public record SubmitAnswerRequest(@NotBlank @Size(max = 40) String selectedOptionKey) {}
+
+  public record DiscloseLanguageHelpRequest(@NotBlank String trigger) {}
 }

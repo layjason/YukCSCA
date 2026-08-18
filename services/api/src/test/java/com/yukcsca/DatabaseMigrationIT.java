@@ -27,10 +27,12 @@ class DatabaseMigrationIT {
                     + "'account_policy_acceptance', 'credential_email_outbox', "
                     + "'password_recovery_claim', 'password_recovery_email_outbox', "
                     + "'academic_package', 'academic_revision', 'academic_image', "
-                    + "'academic_audit', 'student_content_progress')");
+                    + "'academic_audit', 'student_content_progress', "
+                    + "'academic_term_pronunciation', 'student_terminology_preview_progress', "
+                    + "'student_terminology_notebook', 'student_terminology_review')");
         var result = statement.executeQuery()) {
       assertThat(result.next()).isTrue();
-      assertThat(result.getInt(1)).isEqualTo(14);
+      assertThat(result.getInt(1)).isEqualTo(18);
     }
   }
 }
