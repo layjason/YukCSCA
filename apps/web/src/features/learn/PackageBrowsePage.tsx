@@ -11,6 +11,7 @@ import { findFirstIncompleteLesson } from './browseHelpers';
 import { formatLearnDate } from './formatLearnDate';
 import { resolveLocalizedText } from './localizedText';
 import { isAcademicSubject, type PublishedPackageBrowse } from './types';
+import { lessonEntryHref } from './previewNavigation';
 import './learn.css';
 
 export function PackageBrowsePage(): React.JSX.Element {
@@ -126,10 +127,15 @@ export function PackageBrowsePage(): React.JSX.Element {
   return (
     <div className="page-content learn-page learn-page-fill learn-browse-page">
       <header className="learn-browse-hero">
-        <Link to="/app/learn" className="learn-back-link">
-          <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />
-          {t('learn.backToLearn')}
-        </Link>
+        <div className="learn-reader-chrome-row">
+          <Link to="/app/learn" className="learn-back-link">
+            <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />
+            {t('learn.backToLearn')}
+          </Link>
+          <Link to="/app/learn/terms" className="learn-back-link">
+            {t('learn.termsLink')}
+          </Link>
+        </div>
 
         <div className="learn-browse-hero-body">
           <div className="learn-browse-hero-copy">
@@ -158,7 +164,7 @@ export function PackageBrowsePage(): React.JSX.Element {
                 <ContentProgressFrom progress={continueLesson.contentProgress} />
               </div>
               <Link
-                to={`/app/learn/${subject}/lessons/${continueLesson.resourceId}`}
+                to={lessonEntryHref(subject, continueLesson)}
                 className="btn-primary learn-continue-action"
               >
                 <Play size={18} strokeWidth={2} aria-hidden="true" />
@@ -178,7 +184,7 @@ export function PackageBrowsePage(): React.JSX.Element {
                 <ContentProgressFrom progress={startLesson.contentProgress} />
               </div>
               <Link
-                to={`/app/learn/${subject}/lessons/${startLesson.resourceId}`}
+                to={lessonEntryHref(subject, startLesson)}
                 className="btn-primary learn-continue-action"
               >
                 <Play size={18} strokeWidth={2} aria-hidden="true" />

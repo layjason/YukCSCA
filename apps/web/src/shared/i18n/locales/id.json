@@ -79,7 +79,10 @@
     "backToDashboard": "Kembali ke Beranda",
     "backToProfile": "Kembali ke Profil",
     "checkpoint": "Checkpoint",
-    "remediation": "Ulasan"
+    "remediation": "Ulasan",
+    "terminologyPreview": "Pratinjau istilah",
+    "termsNotebook": "Istilah",
+    "termDetail": "Istilah"
   },
   "shell": {
     "navLabel": "Navigasi utama",
@@ -330,6 +333,88 @@
       "invalidSubjectDescription": "Mata pelajaran itu tidak didukung di Belajar.",
       "invalidLessonTitle": "Tautan pelajaran tidak valid",
       "invalidLessonDescription": "Alamat pelajaran tidak lengkap atau tidak valid."
+    },
+    "termsLink": "Istilah",
+    "openNotebook": "Buka buku catatan"
+  },
+  "terminology": {
+    "notebookTitle": "Buku catatan istilah",
+    "previewTitle": "Istilah wajib",
+    "previewLead": "Pelajari kata ujian berbahasa Tionghoa ini sebelum pelajaran. Melihatnya bukan penguasaan.",
+    "continueToLesson": "Lanjut ke pelajaran",
+    "practicePairs": "Latih istilah ini",
+    "skipPairs": "Lewati pencocokan dan lanjut",
+    "pairsTitle": "Cocokkan istilah Tionghoa dengan artinya",
+    "pairsSubmit": "Periksa pasangan",
+    "pairsResult": "{{correct}} dari {{total}} pasangan benar. Ini pemeriksaan bahasa, bukan checkpoint.",
+    "pairsPrompt": "Cocokkan",
+    "previewComplete": "Istilah wajib sudah masuk buku catatan Anda.",
+    "requiredSetUpdated": "Istilah wajib topik ini berubah. Tinjau pratinjaunya kapan Anda bisa — buku catatan Anda tetap utuh.",
+    "openUpdatedPreview": "Tinjau istilah yang diperbarui",
+    "railTitle": "Istilah topik",
+    "railEmpty": "Tidak ada istilah wajib di pelajaran ini.",
+    "due": "Jatuh tempo",
+    "dueOnly": "Hanya yang jatuh tempo",
+    "search": "Cari istilah",
+    "searchPlaceholder": "Cari karakter",
+    "classFilter": "Kelompok istilah",
+    "classFilterAll": "Semua",
+    "emptyNotebookTitle": "Belum ada istilah terkumpul",
+    "emptyNotebookDescription": "Buka pratinjau topik atau cari kata saat latihan. Setiap istilah hanya masuk sekali.",
+    "emptyDueTitle": "Anda sudah selesai untuk sekarang",
+    "emptyDueDescription": "Tidak ada yang perlu ditinjau saat ini.",
+    "reviewDue": "Tinjau yang jatuh tempo",
+    "reviewTitle": "Tinjau istilah ini",
+    "reviewSubmit": "Periksa",
+    "reviewCorrect": "Pasangan itu benar.",
+    "reviewIncorrect": "Belum tepat. Istilah ini tetap jatuh tempo.",
+    "nextDue": "Tinjau istilah berikutnya",
+    "alreadyInNotebook": "Sudah ada di buku catatan Anda.",
+    "notInBank": "Kata itu tidak ada di bank istilah yang ditinjau.",
+    "play": "Putar",
+    "playSurface": "Putar {{text}}",
+    "playAria": "Putar pelafalan {{text}}",
+    "playUnavailable": "Audio tidak tersedia. Pinyin tetap ditampilkan.",
+    "close": "Tutup",
+    "englishEquivalent": "Padanan Inggris",
+    "domainMeaning": "Makna domain",
+    "symbols": "Simbol",
+    "example": "Contoh",
+    "definitionUnavailable": "Tidak ada definisi dalam bahasa ini",
+    "definitionUnavailableDetail": "Tidak ada definisi dalam {{language}}.",
+    "metIn": "Ditemui di {{place}}{{topic}}",
+    "metInTopic": " · {{topic}}",
+    "loadFailed": "Istilah ini tidak dapat dimuat. Periksa koneksi dan coba lagi.",
+    "saveFailed": "Perubahan itu tidak tersimpan. Jawaban Anda masih di sini — coba lagi.",
+    "lookupFailed": "Istilah tidak dapat dibuka. Coba lagi.",
+    "formalDisabled": "Bantuan bahasa dan penulisan buku catatan tidak tersedia dalam mode ini.",
+    "notFoundTitle": "Istilah tidak ditemukan",
+    "notFoundDescription": "Pratinjau atau entri buku catatan ini tidak ada di paket terbit.",
+    "entryNotFoundTitle": "Istilah tidak ditemukan",
+    "entryNotFoundDescription": "Baris buku catatan ini hilang atau tautannya kedaluwarsa.",
+    "chooseMatch": "Pilih padanan",
+    "lookUpSelection": "Cari pilihan",
+    "selectHint": "Pilih kata atau frasa pendek, lalu cari.",
+    "class": {
+      "EXAM_INSTRUCTION": "Kata ujian",
+      "LOGICAL_EXPRESSION": "Kata ujian",
+      "TOPIC_TERM": "Istilah topik"
+    },
+    "classGroup": {
+      "EXAM_WORDING": "Kata ujian",
+      "TOPIC_TERM": "Istilah topik"
+    },
+    "place": {
+      "PREVIEW": "pratinjau",
+      "LESSON": "pelajaran",
+      "CHECKPOINT": "checkpoint",
+      "PRACTICE": "latihan",
+      "NOTEBOOK": "buku catatan"
+    },
+    "familiarity": {
+      "NEW": "Baru",
+      "LEARNING": "Sedang dipelajari",
+      "FAMILIAR": "Dikenal"
     }
   },
   "syllabus": {
@@ -1564,7 +1649,34 @@
         "resources": "Sumber belajar",
         "questions": "Soal",
         "mock": "Mock berwaktu",
-        "assessment": "Set asesmen"
+        "assessment": "Set asesmen",
+        "terms": "Istilah"
+      },
+      "terms": {
+        "title": "Bank istilah",
+        "item": "Istilah",
+        "add": "Tambah istilah",
+        "empty": "Belum ada istilah tertinjau. Tulis satu identitas per makna.",
+        "untitled": "Istilah tanpa judul {{index}}",
+        "editTitle": "Sunting istilah",
+        "remove": "Hapus istilah",
+        "termClass": "Peran bahasa ujian",
+        "class": {
+          "TOPIC_TERM": "Istilah topik",
+          "EXAM_INSTRUCTION": "Instruksi ujian",
+          "LOGICAL_EXPRESSION": "Ungkapan logika"
+        },
+        "surface": "Bentuk permukaan Tionghoa",
+        "pinyin": "Pinyin",
+        "addSurface": "Tambah alias",
+        "englishEquivalent": "Padanan Inggris",
+        "domainMeaning": "Makna domain",
+        "symbols": "Simbol",
+        "example": "Contoh",
+        "outlineRefs": "Ikatan topik",
+        "requiredSet": "Istilah wajib untuk pratinjau ini",
+        "questionAttachments": "Lampiran istilah opsional",
+        "questionAttachmentsHint": "Tandai beberapa rentang kata atau frasa yang sulit. Platform tetap mencocokkan bentuk wajib dan instruksi. Anda tidak perlu menandai setiap karakter."
       },
       "statusDraft": "Draf",
       "statusPublished": "Diterbitkan",
@@ -1834,6 +1946,7 @@
           "source": "Sumber resmi",
           "outline": "Garis besar silabus",
           "assessment": "Set asesmen",
+          "terms": "Istilah",
           "questions": "Soal",
           "general": "Paket",
           "parts": {
@@ -1861,7 +1974,8 @@
           "resources": "Sumber belajar",
           "questions": "Soal",
           "mock": "Mock",
-          "assessment": "Set asesmen"
+          "assessment": "Set asesmen",
+          "terms": "Istilah"
         },
         "fields": {
           "officialDateStatus": "Pilih Tidak dinyatakan, atau Dinyatakan beserta tanggal.",
@@ -2121,6 +2235,18 @@
         "correct": "benar",
         "incorrect": "salah"
       }
+    },
+    "languageHelp": {
+      "open": "Bantuan bahasa",
+      "opening": "Membuka bantuan bahasa…",
+      "regionLabel": "Bantuan bahasa",
+      "wordingHard": "Apakah kata-katanya sulit?",
+      "wordingHardYes": "Ya, kata-katanya sulit",
+      "wordingHardNo": "Tidak, itu bagian matematikanya",
+      "wordingHardRecorded": "Kami akan mencatat ini sebagai masalah kata.",
+      "discloseFailed": "Bantuan bahasa tidak dapat dibuka.",
+      "disabled": "Bantuan bahasa tidak tersedia untuk soal ini.",
+      "openNotebook": "Buka buku catatan istilah"
     },
     "hints": {
       "regionLabel": "Petunjuk",

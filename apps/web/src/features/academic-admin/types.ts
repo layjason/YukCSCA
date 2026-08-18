@@ -30,5 +30,9 @@ export type ExamLanguage = components['schemas']['AcademicAdmin.ExamLanguage'];
 export type ExplanationLanguage = components['schemas']['AcademicAdmin.ExplanationLanguage'];
 export type QuestionDifficulty = components['schemas']['AcademicAdmin.QuestionDifficulty'];
 
+export type TermDraft = components['schemas']['AcademicAdmin.TermDraft'];
+export type TermClass = components['schemas']['AcademicAdmin.TermClass'];
+export type AuthoredTermAttachment = components['schemas']['AcademicAdmin.AuthoredTermAttachment'];
+
 export type AdminEditorTab =
-  'source' | 'outline' | 'objectives' | 'resources' | 'questions' | 'assessment' | 'mock';
+  'source' | 'outline' | 'objectives' | 'resources' | 'questions' | 'assessment' | 'mock' | 'terms';

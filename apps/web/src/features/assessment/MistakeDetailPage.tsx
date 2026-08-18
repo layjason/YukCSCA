@@ -176,6 +176,9 @@ export function MistakeDetailPage(): React.JSX.Element {
         </span>
         {t('assessment.mistakes.backToList')}
       </Link>
+      <Link to="/app/learn/terms" className="learn-back-link">
+        {t('assessment.languageHelp.openNotebook')}
+      </Link>
 
       <header className="assessment-hero assessment-hero-sky">
         <span className={`assessment-status status-${mistake.status.toLowerCase()}`}>

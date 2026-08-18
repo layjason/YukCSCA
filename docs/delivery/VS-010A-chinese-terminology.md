@@ -6,8 +6,8 @@
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Status                       | `CONTRACT_READY`                                                                                                                                                                                                                                                                                            |
 | Human gate                   | `APPROVED`                                                                                                                                                                                                                                                                                                  |
-| Plan revision                | 12                                                                                                                                                                                                                                                                                                          |
-| Updated                      | 2026-08-15                                                                                                                                                                                                                                                                                                  |
+| Plan revision                | 13                                                                                                                                                                                                                                                                                                          |
+| Updated                      | 2026-08-18                                                                                                                                                                                                                                                                                                  |
 | Primary actor                | Activated `STUDENT` on a published package that has Chinese (`zh-CN`) exam-language terms. First platform admin authors the term bank. First content: Mathematics.                                                                                                                                          |
 | Story IDs                    | `US-TERM-01`, `US-TERM-02`, `US-TERM-03`; partial `US-HINT-01` (record language help, do not treat word/phrase as independent mastery); partial `US-ADM-02`                                                                                                                                                 |
 | Requirement sections         | English: 4.4 (canonical term identity), 4.5, 4.7 (P0 notebook clause), 5.3 (Chinese language assistance); Chinese: the matching clauses                                                                                                                                                                     |
@@ -715,9 +715,9 @@ Follow root [`DESIGN.md`](../../DESIGN.md) and [`docs/design/README.md`](../desi
 | Web typecheck                | `pnpm typecheck:web` passed after regeneration. Existing VS-009 `SessionItemView` constructors include `languageHelpAvailable: false`.                                                                                     |
 | Technology/ADR review        | Azure Speech only at publish behind `SpeechSynthesisPort`; tests use `TestSpeechSynthesisPort`. CI does not contact Azure.                                                                                                 |
 | Backend tests                | Focused unit + HTTP ITs **passed** 2026-08-18 (73 tests after reviewer repair). Commands and classes recorded below. TypeSpec hashes unchanged (`VS-010A-R10-accepted`). Independent reviewer verdict `PASS_WITH_REPAIRS`. |
-| Frontend tests               | `pnpm --filter @yukcsca/web test` — 54 files / 264 tests passed after adding `languageHelpAvailable: false` to existing VS-009 constructors. No Language-help UI added.                                                    |
+| Frontend tests               | Focused web tests for terminology, Learn, Practice, admin, routes, and i18n parity passed. See revision 13 notes.                                   |
 | Frontend visual review       | Not run                                                                                                                                                                                                                    |
-| End-to-end/manual flow       | Not run                                                                                                                                                                                                                    |
+| End-to-end/manual flow       | Not run                                                                                                                                                                                                                                                                                                                             |
 
 ### `VS-010A-R8-initial` artifact hashes (`git hash-object`)
 
@@ -756,9 +756,38 @@ cd services/api && ./mvnw --batch-mode -Dtest=AcademicDraftProcessorTest,Publish
 
 Named coverage: `AcademicDraftProcessorTest` (omit terms; missing surface/pinyin/domainMeaning; TOPIC_TERM outline; unknown requiredTermIds/attachments), `TerminologyProjectorTest` (UTF-16/alias; no extra TOPIC_TERM auto-match; admin-preset can add a non-required `TOPIC_TERM`), `StudentTerminologyNotebookTest` (idempotent upsert + familiarity/due), `FormalAssistancePolicyTest`, `CheckpointPassEvaluatorTest` (language assist is not a pass input), `AcademicTerminologyHttpIT` (preview GET/PUT/check, lookup MATCHED/NOT_IN_BANK, notebook/review, audio 200/404, English omit chrome, formal 403), `AssessmentLanguageHelpHttpIT` (English `languageHelpAvailable=false` + disclose 409; zh-CN disclose spans only required + exam-wording; `languageAssistUsed=false`; checkpoint pass; revalidation pass with only LANGUAGE_ASSIST; formal 403). Existing `AcademicStudentHttpIT` / `AssessmentStudentHttpIT` / `AcademicAdminHttpIT` still pass without `terms[]`.
 
-Independent backend review (2026-08-18): `PASS_WITH_REPAIRS`. One in-scope defect repaired: scored-item auto-match no longer chips non-required `TOPIC_TERM` that only share outline ids. Residual items are low (LearningEvidencePort not extended, republish re-synthesizes clips, unique-key races accepted at pilot). Frontend remains `NOT_ASSESSED`.
+Independent backend review (2026-08-18): `PASS_WITH_REPAIRS`. One in-scope defect repaired: scored-item auto-match no longer chips non-required `TOPIC_TERM` that only share outline ids. Residual items are low (LearningEvidencePort not extended, republish re-synthesizes clips, unique-key races accepted at pilot). 
 
 **Intentionally not run:** `make verify`, full `./mvnw verify`, Playwright, Compose, frontend suites — frontend UI is not in this change; contract artifacts were not edited. PLAN not bumped (`CONTRACT_READY` until both sides complete).
+**Intentionally not run:** `make verify`, backend `./mvnw verify`, Playwright, Compose — frontend-only implementation against `VS-010A-R10-accepted`. Backend HTTP/persistence is still required before product-owner journeys.
+
+### Frontend implementation (revision 13)
+
+Implemented from `VS-010A-R10-accepted` on `feat/vs-010A-chinese-terminology-frontend`. Lifecycle stays `CONTRACT_READY`. No TypeSpec edits.
+
+Student:
+
+- Production routes: `/app/learn/:subject/terminology/:resourceId`, `/app/learn/terms`, `/app/learn/terms/:termId` (`availability: implemented`, `access: student-settings`). Restored `/` is unchanged (`/app/learn`).
+- Shared presentational `TermCard` + dialog + Play (no feature API imports). Student adapters live in `shared/api/terminologyStudentApi.ts`.
+- Preview collects on `PUT` progress; matching pairs optional; Continue never locked; no mastery copy.
+- Browse/outline intercept unfinished preview; lesson GET of unfinished preview redirects; `requiredSetUpdatedSinceCompleted` is a soft notice.
+- Lesson rail + tappable TEXT spans; packages without `terminology` hide chrome.
+- Player first paint uses `languageHelpAvailable` only (`CR-01`). Disclose reveals chips. “Was the wording hard?” opens the same help and may `PATCH` `TERMINOLOGY_MISUNDERSTANDING` after submit.
+- One notebook with Due, search, class group, cloze-or-pairs review.
+
+Admin:
+
+- Term-bank tab (including optional symbols/example); `requiredTermIds` on `TERMINOLOGY` resources; optional `authoredTermAttachments` on questions. Draft save always sends `terms`. Reviewer-worker repaired SET_END wording-cause PATCH, notebook `?dueOnly=1`, Play-on-404, and dialog focus trap.
+
+Evidence:
+
+- `pnpm typecheck:web` — pass
+- `pnpm lint:web` — pass
+- Focused Vitest including i18n parity, routes, TermCard, preview, notebook, Language help, Learn/Practice/admin neighbors — pass
+- DEV fallback remains offline/`401` only; `5xx` stays an honest error
+- Independent reviewer-worker: first pass `PASS_WITH_REPAIRS` (SET_END wording PATCH, `?dueOnly=1`, Play-on-404, dialog focus trap); after symbols/example authoring, second pass **`PASS`**. Not product-owner acceptance.
+
+PX-001 fixture terminology was not promoted.
 
 ## Later candidates (not this slice)
 
@@ -776,6 +805,7 @@ Do not add: LLM definitions, a runtime dictionary, student-owned decks, HSK or s
 
 | Revision | Date       | Change                                                                                                                                                                                                                                                                                                                                       |
 | -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13       | 2026-08-18 | Frontend implementation from `VS-010A-R10-accepted`: preview, lesson rail, Language help (`CR-01`), notebook, admin term bank, production routes, en/id/zh-CN. Status remains `CONTRACT_READY`. No TypeSpec edits. Backend HTTP and product-owner journeys remain.                                                                           |
 | 12       | 2026-08-15 | Backend confirmed `VS-010A-R10-accepted` hashes; zero open `CR-NN` / `D-NN`; moved slice to **`CONTRACT_READY`**. PLAN `0.5.37`. Implementation unstarted.                                                                                                                                                                                   |
 | 11       | 2026-08-15 | Frontend re-review of `VS-010A-R10-cr-applied`: `CR-01` confirmed on TypeSpec, OpenAPI, and generated web types; zero further `CR-NN`; accepted checkpoint `VS-010A-R10-accepted` (identical hashes). Status remains `SHAPING`. Backend should mark `CONTRACT_READY`. No TypeSpec edits by frontend. PLAN not bumped.                        |
 | 10       | 2026-08-15 | Backend **ACCEPTED** `CR-01`: required `SessionItemView.languageHelpAvailable`. Regenerated OpenAPI/web; recorded `VS-010A-R10-cr-applied`. Existing VS-009 constructors set `false`. Status remains `SHAPING` pending frontend re-review. Not `CONTRACT_READY`. PLAN not bumped.                                                            |

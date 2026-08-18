@@ -30,6 +30,9 @@ import { PlanReviewPage } from '@/prototype/student/onboarding/PlanReviewPage';
 import LearnPackagesPage from '@/features/learn/LearnPackagesPage';
 import PackageBrowsePage from '@/features/learn/PackageBrowsePage';
 import LessonReaderPage from '@/features/learn/LessonReaderPage';
+import TerminologyPreviewPage from '@/features/learn/TerminologyPreviewPage';
+import TerminologyNotebookPage from '@/features/learn/TerminologyNotebookPage';
+import TerminologyNotebookEntryPage from '@/features/learn/TerminologyNotebookEntryPage';
 import PracticeHubPage from '@/features/assessment/PracticeHubPage';
 import SessionPlayerPage from '@/features/assessment/SessionPlayerPage';
 import SessionResultPage from '@/features/assessment/SessionResultPage';
@@ -183,6 +186,9 @@ const routeElements = {
   learn: <LearnPackagesPage />,
   'learn-subject': <PackageBrowsePage />,
   'learn-lesson': <LessonReaderPage />,
+  'learn-terminology': <TerminologyPreviewPage />,
+  'learn-terms': <TerminologyNotebookPage />,
+  'learn-term-detail': <TerminologyNotebookEntryPage />,
   'learn-checkpoint': <CheckpointPage />,
   'learn-remediation': <RemediationReaderPage />,
   practice: <PracticeHubPage />,
