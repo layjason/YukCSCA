@@ -106,6 +106,10 @@ test('renders official source, continue, outline, and content progress chip', as
   expect(screen.getAllByText('Factorisation').length).toBeGreaterThan(0);
   expect(screen.getAllByText(/In progress/i).length).toBeGreaterThan(0);
   expect(screen.queryByText(/Mastered/i)).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /term notebook/i })).toHaveAttribute(
+    'href',
+    '/app/learn/terms',
+  );
 });
 
 test('shows not-found empty state for missing package', async () => {

@@ -7,6 +7,7 @@ import { LessonReaderPage } from './LessonReaderPage';
 import * as learnApi from './api/learnApi';
 import * as profileApi from '@/features/profile/studentProfileApi';
 import * as assessmentApi from '@/features/assessment/api/assessmentApi';
+import * as terminologyApi from '@/shared/api/terminologyStudentApi';
 import type { PublishedLessonDetail } from './types';
 
 beforeEach(async () => {
@@ -50,6 +51,10 @@ function renderReader(path = `/app/learn/MATHEMATICS/lessons/${baseLesson.resour
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/app/learn/:subject/lessons/:resourceId" element={<LessonReaderPage />} />
+          <Route
+            path="/app/learn/:subject/terminology/:resourceId"
+            element={<h1>Preview destination</h1>}
+          />
         </Routes>
       </MemoryRouter>
     </I18nextProvider>,
@@ -95,6 +100,83 @@ test('loads lesson with profile default language and seeds in-progress progress'
       expect.objectContaining({ status: 'IN_PROGRESS' }),
     );
   });
+});
+
+test('unfinished preview redirects before seeding lesson progress', async () => {
+  mockProfile('id');
+  const previewId = '44444444-4444-4444-8444-444444444444';
+  vi.spyOn(learnApi, 'getPublishedLesson').mockResolvedValue({
+    ...baseLesson,
+    terminology: { previewResourceId: previewId, rail: [], spans: [] },
+  });
+  const upsert = vi.spyOn(learnApi, 'upsertContentProgress');
+  vi.spyOn(terminologyApi, 'getTerminologyPreview').mockResolvedValue({
+    packageId: baseLesson.packageId,
+    packageRevisionId: baseLesson.packageRevisionId,
+    subject: 'MATHEMATICS',
+    resourceId: previewId,
+    title: baseLesson.title,
+    outlineItemIds: [],
+    lessonResourceIds: [baseLesson.resourceId],
+    requestedExplanationLanguage: 'id',
+    terms: [],
+    matchingPairsAvailable: false,
+    matchTargets: [],
+    previewProgress: {
+      status: 'IN_PROGRESS',
+      updatedAt: '2026-08-18T00:00:00Z',
+      requiredSetUpdatedSinceCompleted: false,
+    },
+  });
+
+  renderReader();
+
+  expect(await screen.findByRole('heading', { name: /Preview destination/i })).toBeInTheDocument();
+  expect(upsert).not.toHaveBeenCalled();
+  expect(screen.queryByText(/Teks pelajaran bahasa Indonesia/i)).not.toBeInTheDocument();
+});
+
+test('shows a neutral required-set notice with a review link', async () => {
+  mockProfile('id');
+  const previewId = '44444444-4444-4444-8444-444444444444';
+  vi.spyOn(learnApi, 'getPublishedLesson').mockResolvedValue({
+    ...baseLesson,
+    terminology: { previewResourceId: previewId, rail: [], spans: [] },
+  });
+  vi.spyOn(learnApi, 'upsertContentProgress').mockResolvedValue({
+    status: 'IN_PROGRESS',
+    resumeBlockIndex: 0,
+    updatedAt: '2026-08-18T00:00:00Z',
+    updatedSinceCompleted: false,
+  });
+  vi.spyOn(terminologyApi, 'getTerminologyPreview').mockResolvedValue({
+    packageId: baseLesson.packageId,
+    packageRevisionId: baseLesson.packageRevisionId,
+    subject: 'MATHEMATICS',
+    resourceId: previewId,
+    title: baseLesson.title,
+    outlineItemIds: [],
+    lessonResourceIds: [baseLesson.resourceId],
+    requestedExplanationLanguage: 'id',
+    terms: [],
+    matchingPairsAvailable: false,
+    matchTargets: [],
+    previewProgress: {
+      status: 'PREVIEW_COMPLETE',
+      updatedAt: '2026-08-18T00:00:00Z',
+      requiredSetUpdatedSinceCompleted: true,
+    },
+  });
+
+  renderReader();
+
+  const notice = await screen.findByText(/required terms changed/i);
+  expect(notice.closest('.learn-update-notice')).not.toBeNull();
+  expect(notice.closest('.learn-update-banner')).toBeNull();
+  expect(screen.getByRole('link', { name: /review updated terms/i })).toHaveAttribute(
+    'href',
+    `/app/learn/MATHEMATICS/terminology/${previewId}?lessonResourceId=${baseLesson.resourceId}`,
+  );
 });
 
 test('refreshes a linked mistake after lesson study starts', async () => {

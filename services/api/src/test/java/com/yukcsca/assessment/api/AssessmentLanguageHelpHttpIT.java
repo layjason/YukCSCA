@@ -1,5 +1,6 @@
 package com.yukcsca.assessment.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -269,6 +270,49 @@ class AssessmentLanguageHelpHttpIT {
   }
 
   @Test
+  void itemLookupStoresStemSnippetForCloze() throws Exception {
+    Fixture fixture = publishPackage(true);
+    completeLesson(fixture.lessonId());
+    MvcResult started =
+        mvc.perform(
+                post("/api/v1/assessment/sessions")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(startBody("CHECKPOINT", fixture.checkpointSetId(), "zh-CN")))
+            .andExpect(status().isCreated())
+            .andReturn();
+    JsonNode session = json.readTree(started.getResponse().getContentAsString());
+    String sessionId = session.path("sessionId").asText();
+    String itemId = session.path("items").get(0).path("itemId").asText();
+
+    ObjectNode lookup = json.createObjectNode();
+    lookup.put("subject", "MATHEMATICS");
+    lookup.put("explanationLanguage", "en");
+    lookup.put("source", "ITEM");
+    lookup.put("selectedText", "单调递增");
+    lookup.put("sessionId", sessionId);
+    lookup.put("itemId", itemId);
+    MvcResult resolved =
+        mvc.perform(
+                post("/api/v1/academic/term-lookups")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(lookup)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.outcome").value("MATCHED"))
+            .andExpect(jsonPath("$.entry.metIn.place").value("CHECKPOINT"))
+            .andReturn();
+    JsonNode pending =
+        json.readTree(resolved.getResponse().getContentAsString())
+            .path("entry")
+            .path("pendingReview");
+    assertThat(pending.path("kind").asText()).isEqualTo("CONTEXT_CLOZE");
+    assertThat(pending.path("snippet").asText()).contains("______");
+    assertThat(pending.path("snippet").asText()).contains("求函数是否");
+    assertThat(pending.path("snippet").asText()).doesNotContain("单调递增");
+  }
+
+  @Test
   void formalPolicyDisablesLanguageHelpWithDedicatedCode() throws Exception {
     Fixture fixture = publishPackage(true);
     completeLesson(fixture.lessonId());
@@ -450,7 +494,7 @@ class AssessmentLanguageHelpHttpIT {
       fs.put("pinyin", "qiú");
       find.putObject("definitions").put("english", "find");
       find.put("englishEquivalent", "find");
-      find.put("domainMeaning", "Ask for a value.");
+
       find.putArray("outlineItemIds");
       ObjectNode increase = draft.withArray("terms").addObject();
       increase.put("id", increaseId.toString());
@@ -460,7 +504,7 @@ class AssessmentLanguageHelpHttpIT {
       is.put("pinyin", "dāndiào dìzēng");
       increase.putObject("definitions").put("english", "increasing");
       increase.put("englishEquivalent", "monotonically increasing");
-      increase.put("domainMeaning", "Increases on an interval.");
+
       increase.putArray("outlineItemIds").add(outlineId.toString());
       ObjectNode extra = draft.withArray("terms").addObject();
       extra.put("id", UUID.randomUUID().toString());
@@ -470,7 +514,7 @@ class AssessmentLanguageHelpHttpIT {
       es.put("pinyin", "dǎoshù");
       extra.putObject("definitions").put("english", "derivative");
       extra.put("englishEquivalent", "derivative");
-      extra.put("domainMeaning", "Instantaneous rate of change.");
+
       extra.putArray("outlineItemIds").add(outlineId.toString());
     }
     ArrayNode questions = draft.withArray("questions");

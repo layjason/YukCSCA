@@ -1019,6 +1019,7 @@ a.mistakes-row:focus-visible {
 .assessment-stem {
   font-size: 1.1rem;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -1803,6 +1804,109 @@ a.mistakes-row:focus-visible {
   border-radius: var(--radius-md);
   background: var(--color-block-cream);
   border: 1px solid color-mix(in srgb, var(--color-block-cream) 35%, var(--color-border));
+}
+
+.language-help-idle {
+  margin-top: var(--space-sm);
+}
+
+.language-help-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.language-help-icon:hover:not(:disabled) {
+  background: var(--color-block-sky);
+}
+
+.language-help-icon:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.language-help-icon:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.language-help-phrases-kicker {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-info);
+}
+
+.language-help-phrase-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.language-help-phrase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-sm);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-xs) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: normal;
+}
+
+.language-help-phrase:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.language-help-phrase-text {
+  flex: 0 1 auto;
+  max-width: 100%;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.language-help-phrase-leader {
+  flex: 1 0 1.5rem;
+  min-width: 1.5rem;
+  height: 0;
+  align-self: flex-end;
+  margin-bottom: 0.35em;
+  border-bottom: 2px dotted color-mix(in srgb, var(--color-pronunciation) 70%, var(--color-border));
+}
+
+.language-help-lookup {
+  margin-top: var(--space-sm);
+}
+
+.language-help-lookup summary {
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  font-size: 0.92rem;
+}
+
+.language-help-lookup .btn-secondary {
+  margin-top: var(--space-sm);
 }
 
 .language-help-open,

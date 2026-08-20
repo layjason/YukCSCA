@@ -31,6 +31,7 @@ colors:
   semantic-danger-soft: '#f9e1e3'
   semantic-info: '#315b8a'
   semantic-info-soft: '#e2edf8'
+  pronunciation: '#4aa6e8'
   overlay-scrim: '#171717'
 
 typography:
@@ -485,6 +486,11 @@ Rules:
 - Color icons with `currentColor` (default) so CSS and design tokens control appearance.
 - Default sizes: **16px** compact inline, **20px** toolbar/icon-button, **24px** navigation or empty-state. Match `{components.icon-button}` at **44×44px** hit target.
 - Prefer stroke weight about **1.75–2** for clarity on white and pastel surfaces.
+- Pronunciation play uses `{colors.pronunciation}` as a transparent listening glyph (filled speaker cone, stroked waves) on a 44×44px hit target. It is not a filled `{components.icon-button}` and must not sit on a lilac or other pastel pill.
+- Reviewed term spans that become tappable after Language help use a dotted underline in `{colors.pronunciation}`. First paint of a scored stem stays unmarked.
+- Language-help Key phrases show the full Chinese surface (wrap, never ellipsis) plus one dotted leader per row (CSS rule, not wrapping “……” glyphs).
+- Term-card overlays close with a right-side `{colors.semantic-danger}` X and hide the mobile bottom nav while open. Do not use a bottom Close bar on that sheet.
+- Soft content-update notices (`required terms changed`, lesson updated since complete) use a white/neutral surface with `{colors.border}`, not `{colors.block-sky}` or `{colors.block-coral}`.
 - Icon-only controls require a localized `aria-label` and usually a `title` tooltip. Visible text remains required for high-stakes or primary actions.
 - Use an icon-only `{components.icon-button}` for repeated secondary actions (for example remove row / delete block). Do not use a long text danger pill for those dense list patterns.
 - Keep text labels on primary, secondary, and high-stakes destructive actions (publish, archive, confirm dialogs).

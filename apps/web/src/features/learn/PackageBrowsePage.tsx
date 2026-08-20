@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, CalendarDays, Play } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { getPublishedPackageBrowse } from './api/learnApi';
+import { LearnNotebookEntry } from './components/LearnNotebookEntry';
 import { OfficialSourceCard } from './components/OfficialSourceCard';
 import { OutlineLessonList } from './components/OutlineLessonList';
 import { ContentProgressFrom } from './components/ContentProgressChip';
@@ -132,9 +133,7 @@ export function PackageBrowsePage(): React.JSX.Element {
             <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />
             {t('learn.backToLearn')}
           </Link>
-          <Link to="/app/learn/terms" className="learn-back-link">
-            {t('learn.termsLink')}
-          </Link>
+          <LearnNotebookEntry compact />
         </div>
 
         <div className="learn-browse-hero-body">

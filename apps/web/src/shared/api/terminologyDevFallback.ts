@@ -48,7 +48,6 @@ function card(
   pinyin: string,
   definition: string,
   english: string,
-  domain: string,
   language: ExplanationLanguage,
 ): TermCard {
   return {
@@ -60,7 +59,6 @@ function card(
     aliases: [],
     definition: { availability: 'AVAILABLE', language, text: definition },
     englishEquivalent: english,
-    domainMeaning: domain,
     symbols: null,
     example: null,
     outlineItemIds: [],
@@ -80,7 +78,6 @@ function cardsFor(language: ExplanationLanguage): TermCard[] {
           ? '几个整式公有的因式'
           : 'Common factor',
       'common factor',
-      'A polynomial factor shared by two or more expressions.',
       language,
     ),
     card(
@@ -94,7 +91,6 @@ function cardsFor(language: ExplanationLanguage): TermCard[] {
           ? '函数值随自变量增大而增大'
           : 'Monotonically increasing',
       'monotonically increasing',
-      'A function whose values do not decrease as the input increases.',
       language,
     ),
     card(
@@ -104,7 +100,6 @@ function cardsFor(language: ExplanationLanguage): TermCard[] {
       'qiú',
       language === 'id' ? 'Tentukan' : language === 'zh-CN' ? '求出' : 'Find',
       'find',
-      'An exam instruction asking the student to determine a value.',
       language,
     ),
   ];
@@ -264,6 +259,8 @@ export function devGetTerminologyNotebookEntry(
       options: [
         { key: 'a', label: cardValue.englishEquivalent },
         { key: 'b', label: 'even function' },
+        { key: 'c', label: 'domain' },
+        { key: 'd', label: 'range' },
       ],
     };
   }

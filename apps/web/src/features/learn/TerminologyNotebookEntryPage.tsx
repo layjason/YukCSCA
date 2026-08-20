@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import {
@@ -8,17 +8,21 @@ import {
   listTerminologyNotebook,
   submitTermReview,
 } from '@/shared/api/terminologyStudentApi';
+import { MixedProse } from '@/shared/content/MixedProse';
 import { TermCardView } from '@/shared/terminology/TermCardView';
+import { TermPracticeDock } from '@/shared/terminology/TermPracticeDock';
 import { useTermAudio } from '@/shared/terminology/useTermAudio';
 import type { NotebookEntryDetail, TermReviewResult } from '@/shared/terminology/types';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { isExplanationLanguage, type ExplanationLanguage } from './types';
 import { formatMetInLine } from './termMetIn';
+import { notebookBackLabelKey, notebookReturnTo } from '@/shared/terminology/notebookReturn';
 import './learn.css';
 
 export function TerminologyNotebookEntryPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { termId } = useParams<{ termId: string }>();
   const [explanationLanguage, setExplanationLanguage] = useState<ExplanationLanguage | null>(null);
   const [detail, setDetail] = useState<NotebookEntryDetail | null>(null);
@@ -28,7 +32,7 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const audio = useTermAudio(termId ?? null);
+  const audio = useTermAudio();
 
   useEffect(() => {
     let active = true;
@@ -75,6 +79,11 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setSelected('');
+    setResult(null);
+  }, [termId]);
+
   async function handleReview(): Promise<void> {
     if (!detail || !selected || busy) return;
     const prompt = detail.entry.pendingReview;
@@ -84,7 +93,13 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
     try {
       const next = await submitTermReview(detail.entry.termId, prompt.kind, selected);
       setResult(next);
-      setDetail({ ...detail, entry: next.entry });
+      setDetail({
+        ...detail,
+        entry: {
+          ...next.entry,
+          pendingReview: prompt,
+        },
+      });
     } catch (err) {
       if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
         setError(t('terminology.formalDisabled'));
@@ -98,15 +113,27 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
 
   async function handleNextDue(): Promise<void> {
     if (!explanationLanguage) return;
-    const list = await listTerminologyNotebook({
-      explanationLanguage,
-      dueOnly: true,
-    });
-    const next = list.items.find((item) => item.termId !== termId) ?? list.items[0];
-    if (next) {
-      void navigate(`/app/learn/terms/${next.termId}`);
-    } else {
-      void navigate('/app/learn/terms?dueOnly=1');
+    setBusy(true);
+    setError(null);
+    try {
+      const list = await listTerminologyNotebook({
+        explanationLanguage,
+        dueOnly: true,
+      });
+      const next = list.items.find((item) => item.termId !== termId);
+      if (next) {
+        void navigate(`/app/learn/terms/${next.termId}`, { state: location.state });
+        return;
+      }
+      void navigate('/app/learn/terms?dueOnly=1', { state: location.state });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setError(t('terminology.formalDisabled'));
+      } else {
+        setError(t('terminology.loadFailed'));
+      }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -132,7 +159,7 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
         <section className="empty-state state-notice state-notice-info" role="status">
           <h1>{t('terminology.entryNotFoundTitle')}</h1>
           <p>{t('terminology.entryNotFoundDescription')}</p>
-          <Link to="/app/learn/terms" className="btn-secondary">
+          <Link to="/app/learn/terms" state={location.state} className="btn-secondary">
             {t('terminology.notebookTitle')}
           </Link>
         </section>
@@ -162,22 +189,33 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
   }
 
   const prompt = detail.entry.pendingReview;
+  const origin = notebookReturnTo(location.state, '');
 
   return (
-    <div className="page-content learn-page">
-      <Link to="/app/learn/terms" className="learn-back-link">
+    <div className="page-content learn-page term-entry-page">
+      <button
+        type="button"
+        className="learn-back-link"
+        onClick={() => {
+          if (origin) navigate(-1);
+          else navigate('/app/learn/terms');
+        }}
+      >
         <ArrowLeft size={18} aria-hidden="true" />
-        {t('terminology.notebookTitle')}
-      </Link>
+        {origin ? t(notebookBackLabelKey(origin)) : t('terminology.notebookTitle')}
+      </button>
 
       <TermCardView
+        layout="entry"
         card={detail.card}
         alreadyInNotebook
         metInLine={formatMetInLine(detail.entry.metIn, i18n.language, t)}
         onPlay={
-          detail.card.primarySurface.audioAvailable && !audio.playFailed
+          (detail.card.primarySurface.audioAvailable ||
+            detail.card.aliases.some((alias) => alias.audioAvailable)) &&
+          !audio.playFailed
             ? (surface) => {
-                void audio.play(surface);
+                void audio.play(detail.card.termId, surface);
               }
             : undefined
         }
@@ -193,47 +231,66 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
 
       {prompt ? (
         <section className="term-review" aria-labelledby="term-review-heading">
-          <h2 id="term-review-heading">{t('terminology.reviewTitle')}</h2>
+          <h2 id="term-review-heading" className="term-match-title">
+            {t('terminology.reviewTitle')}
+          </h2>
           {prompt.kind === 'CONTEXT_CLOZE' ? (
-            <p className="term-cloze" lang="zh">
-              {prompt.snippet}
+            <MixedProse
+              text={prompt.snippet}
+              as="p"
+              className="term-review-prompt term-cloze"
+              lang="zh"
+            />
+          ) : (
+            <p className="term-review-prompt" lang="zh">
+              {prompt.promptSurface}
             </p>
-          ) : (
-            <p lang="zh">{prompt.promptSurface}</p>
           )}
-          <fieldset className="term-review-options" disabled={busy || Boolean(result)}>
+          <fieldset className="term-review-choices" disabled={busy || Boolean(result)}>
             <legend className="sr-only">{t('terminology.chooseMatch')}</legend>
-            {prompt.options.map((option) => (
-              <label key={option.key} className="term-review-option">
-                <input
-                  type="radio"
-                  name="term-review"
-                  value={option.key}
-                  checked={selected === option.key}
-                  onChange={() => setSelected(option.key)}
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
+            {prompt.options.map((option) => {
+              const isKey = result != null && option.key === result.correctOptionKey;
+              const isMiss = result != null && !result.correct && option.key === selected;
+              return (
+                <label
+                  key={option.key}
+                  className={`term-review-choice${isKey ? ' is-key' : ''}${isMiss ? ' is-miss' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="term-review"
+                    value={option.key}
+                    checked={selected === option.key}
+                    onChange={() => setSelected(option.key)}
+                  />
+                  <MixedProse text={option.label} as="span" />
+                </label>
+              );
+            })}
           </fieldset>
-          {!result ? (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!selected || busy}
-              onClick={() => void handleReview()}
-            >
-              {t('terminology.reviewSubmit')}
-            </button>
+          {result ? (
+            <TermPracticeDock
+              tone={result.correct ? 'correct' : 'incorrect'}
+              idleLabel={t('terminology.reviewSubmit')}
+              title={
+                result.correct ? t('terminology.pairsNicelyDone') : t('terminology.reviewIncorrect')
+              }
+              actionLabel={t('terminology.pairsContinue')}
+              onAction={() => {
+                void handleNextDue();
+              }}
+              busy={busy}
+            />
           ) : (
-            <div role="status">
-              <p>
-                {result.correct ? t('terminology.reviewCorrect') : t('terminology.reviewIncorrect')}
-              </p>
-              <button type="button" className="btn-primary" onClick={() => void handleNextDue()}>
-                {t('terminology.nextDue')}
-              </button>
-            </div>
+            <TermPracticeDock
+              tone="idle"
+              idleLabel={t('terminology.reviewSubmit')}
+              actionDisabled={!selected}
+              busy={busy}
+              onAction={() => {
+                void handleReview();
+              }}
+            />
           )}
         </section>
       ) : null}

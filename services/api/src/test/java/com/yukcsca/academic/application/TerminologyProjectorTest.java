@@ -28,7 +28,6 @@ class TerminologyProjectorTest {
             "factorization",
             null,
             "factorization",
-            "writing a polynomial as a product",
             null,
             null,
             List.of());
@@ -45,6 +44,68 @@ class TerminologyProjectorTest {
   }
 
   @Test
+  void doesNotMatchSurfaceInsideInlineLatex() {
+    UUID termId = UUID.randomUUID();
+    PublishedTerm term =
+        new PublishedTerm(
+            termId,
+            "TOPIC_TERM",
+            List.of(new Surface("单调递增", "dāndiào dìzēng")),
+            null,
+            "increasing",
+            null,
+            "monotonically increasing",
+            null,
+            null,
+            List.of());
+    ObjectNode block = json.createObjectNode();
+    block.put("kind", "TEXT");
+    block.put("text", "记号 \\(单调递增\\) 且单调递增。");
+    List<TermSpanMatch> spans =
+        projector.matchSpans(List.of(block), List.of(term), Set.of(termId), 64);
+    assertThat(spans).hasSize(1);
+    assertThat(spans.getFirst().startOffset()).isEqualTo("记号 \\(单调递增\\) 且单调递增。".indexOf("且") + 1);
+  }
+
+  @Test
+  void clozeSkipsASurfaceThatOnlyAppearsInsideLatex() {
+    PublishedTerm term =
+        new PublishedTerm(
+            UUID.randomUUID(),
+            "TOPIC_TERM",
+            List.of(new Surface("单调递增", "dāndiào dìzēng")),
+            null,
+            "increasing",
+            null,
+            "monotonically increasing",
+            null,
+            "记号 \\(单调递增\\) 且单调递增。",
+            List.of());
+    String cloze = projector.clozeSnippet(term, term.example()).orElseThrow();
+    assertThat(cloze).contains("______");
+    assertThat(cloze).contains("\\(单调递增\\)");
+    assertThat(cloze.indexOf("______")).isGreaterThan(cloze.indexOf("\\)"));
+  }
+
+  @Test
+  void encounterSnippetDoesNotCutInsideInlineLatex() {
+    PublishedTerm term =
+        new PublishedTerm(
+            UUID.randomUUID(),
+            "TOPIC_TERM",
+            List.of(new Surface("导数", "dǎo shù")),
+            null,
+            "derivative",
+            null,
+            "derivative",
+            null,
+            "前" + "\\(" + "x".repeat(420) + "\\)" + "导数后",
+            List.of());
+    String snippet = projector.encounterSnippet(term, term.example());
+    assertThat(snippet).isEqualTo("前");
+  }
+
+  @Test
   void doesNotAutoMatchTopicTermOutsideRequiredSet() {
     UUID required = UUID.randomUUID();
     UUID other = UUID.randomUUID();
@@ -57,7 +118,6 @@ class TerminologyProjectorTest {
             "increasing",
             null,
             "monotonically increasing",
-            "increasing on an interval",
             null,
             null,
             List.of());
@@ -70,7 +130,6 @@ class TerminologyProjectorTest {
             "derivative",
             null,
             "derivative",
-            "instantaneous rate",
             null,
             null,
             List.of());
@@ -96,7 +155,6 @@ class TerminologyProjectorTest {
             "increasing",
             null,
             "monotonically increasing",
-            "increasing on an interval",
             null,
             null,
             List.of());
@@ -109,7 +167,6 @@ class TerminologyProjectorTest {
             "derivative",
             null,
             "derivative",
-            "instantaneous rate",
             null,
             null,
             List.of());
@@ -130,6 +187,66 @@ class TerminologyProjectorTest {
   }
 
   @Test
+  void languageHelpHonorsExclusiveAttachmentsOnceAPresetIsChecked() {
+    UUID required = UUID.fromString("00000000-0000-4000-8000-0000000000e1");
+    UUID extra = UUID.fromString("00000000-0000-4000-8000-0000000000e2");
+    UUID instruction = UUID.fromString("00000000-0000-4000-8000-0000000000e3");
+    PublishedTerm requiredTerm =
+        new PublishedTerm(
+            required,
+            "TOPIC_TERM",
+            List.of(new Surface("场强", "chǎng qiáng")),
+            null,
+            "field",
+            null,
+            "field strength",
+            null,
+            null,
+            List.of());
+    PublishedTerm extraTerm =
+        new PublishedTerm(
+            extra,
+            "TOPIC_TERM",
+            List.of(new Surface("真空", "zhēn kōng")),
+            null,
+            "vacuum",
+            null,
+            "vacuum",
+            null,
+            null,
+            List.of());
+    PublishedTerm instructionTerm =
+        new PublishedTerm(
+            instruction,
+            "EXAM_INSTRUCTION",
+            List.of(new Surface("如图", "rú tú")),
+            null,
+            "as shown",
+            null,
+            "as shown",
+            null,
+            null,
+            List.of());
+    List<PublishedTerm> bank = List.of(requiredTerm, extraTerm, instructionTerm);
+    Set<UUID> requiredIds = Set.of(required);
+
+    ObjectNode missing = json.createObjectNode();
+    assertThat(projector.languageHelpTermIds(missing, bank, requiredIds))
+        .containsExactlyInAnyOrder(required, instruction);
+
+    ObjectNode extrasOnly = json.createObjectNode();
+    extrasOnly.putArray("authoredTermAttachments").addObject().put("termId", extra.toString());
+    assertThat(projector.languageHelpTermIds(extrasOnly, bank, requiredIds))
+        .containsExactlyInAnyOrder(required, instruction, extra);
+
+    ObjectNode exclusive = json.createObjectNode();
+    exclusive.putArray("authoredTermAttachments").addObject().put("termId", extra.toString());
+    exclusive.withArray("authoredTermAttachments").addObject().put("termId", required.toString());
+    assertThat(projector.languageHelpTermIds(exclusive, bank, requiredIds))
+        .containsExactlyInAnyOrder(required, extra);
+  }
+
+  @Test
   void missingExplanationLanguageDoesNotSubstitute() {
     PublishedTerm term =
         new PublishedTerm(
@@ -140,7 +257,6 @@ class TerminologyProjectorTest {
             "find",
             null,
             "find",
-            "request a value",
             null,
             null,
             List.of());
@@ -160,7 +276,6 @@ class TerminologyProjectorTest {
     surface.put("pinyin", "qiú");
     term.putObject("definitions").put("english", "find");
     term.put("englishEquivalent", "find");
-    term.put("domainMeaning", "ask for a value");
     assertThat(projector.hasPublishedTermBank(content)).isTrue();
     assertThat(projector.terms(content)).hasSize(1);
     assertThat(projector.terms(content).getFirst().id()).isEqualTo(id);

@@ -3,6 +3,8 @@ package com.yukcsca.assessment.application;
 import com.yukcsca.academic.application.AssessmentItemContextPort;
 import com.yukcsca.assessment.domain.AssessmentItemAttempt;
 import com.yukcsca.assessment.domain.AssessmentSession;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,22 @@ public class AssessmentItemContextService implements AssessmentItemContextPort {
             session.get().getPackageRevisionId(),
             item.get().getQuestionId(),
             examLanguage,
-            session.get().getPurpose().name()));
+            session.get().getPurpose().name(),
+            stemTexts(copy)));
+  }
+
+  private static List<String> stemTexts(JsonNode copy) {
+    if (copy == null) return List.of();
+    JsonNode stem = copy.path("stem");
+    if (!stem.isArray()) return List.of();
+    List<String> texts = new ArrayList<>();
+    for (JsonNode block : stem) {
+      if (!"TEXT".equals(block.path("kind").asText(null))) continue;
+      String body = block.path("text").asText(null);
+      if (body != null && !body.isBlank()) {
+        texts.add(body);
+      }
+    }
+    return List.copyOf(texts);
   }
 }

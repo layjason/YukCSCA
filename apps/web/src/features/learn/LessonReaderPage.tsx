@@ -63,11 +63,12 @@ export function LessonReaderPage(): React.JSX.Element {
   const [resumeHighlightIndex, setResumeHighlightIndex] = useState<number | null>(null);
   const [contentVisible, setContentVisible] = useState(false);
   const [requiredSetNotice, setRequiredSetNotice] = useState(false);
+  const [previewResolved, setPreviewResolved] = useState(false);
   const [openCard, setOpenCard] = useState<TermCard | null>(null);
   const [alreadySaved, setAlreadySaved] = useState(false);
   const [metInLine, setMetInLine] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
-  const audio = useTermAudio(openCard?.termId ?? null);
+  const audio = useTermAudio();
 
   const resumeAppliedRef = useRef(false);
   const progressSeededRef = useRef(false);
@@ -186,6 +187,7 @@ export function LessonReaderPage(): React.JSX.Element {
       skipResumeScrollRef.current = false;
       preservedScrollYRef.current = null;
       hasLessonBodyRef.current = false;
+      setPreviewResolved(false);
     }
     // Language-only reloads keep skipResumeScrollRef / preservedScrollY set by handleLanguageChange.
 
@@ -197,6 +199,7 @@ export function LessonReaderPage(): React.JSX.Element {
     const previewId = lesson.terminology?.previewResourceId;
     if (!previewId) {
       setRequiredSetNotice(false);
+      setPreviewResolved(true);
       return;
     }
     let active = true;
@@ -211,9 +214,12 @@ export function LessonReaderPage(): React.JSX.Element {
           return;
         }
         setRequiredSetNotice(preview.previewProgress.requiredSetUpdatedSinceCompleted);
+        setPreviewResolved(true);
       })
       .catch(() => {
-        if (active) setRequiredSetNotice(false);
+        if (!active) return;
+        setRequiredSetNotice(false);
+        setPreviewResolved(true);
       });
     return () => {
       active = false;
@@ -249,6 +255,7 @@ export function LessonReaderPage(): React.JSX.Element {
 
   // Seed IN_PROGRESS on first open when not started.
   useEffect(() => {
+    if (!previewResolved) return;
     if (!lesson || !subject || !resourceId || progressSeededRef.current) return;
     if (lesson.body.availability !== 'AVAILABLE') return;
     if (progress?.status === 'NOT_STARTED' || !progress) {
@@ -272,7 +279,7 @@ export function LessonReaderPage(): React.JSX.Element {
       progressSeededRef.current = true;
       void refreshLinkedMistake();
     }
-  }, [lesson, subject, resourceId, progress, refreshLinkedMistake]);
+  }, [lesson, previewResolved, progress, refreshLinkedMistake, resourceId, subject]);
 
   // One-time resume scroll + highlight — only on first open of a lesson, never on language switch.
   useEffect(() => {
@@ -494,7 +501,9 @@ export function LessonReaderPage(): React.JSX.Element {
   );
   const body = lesson.body;
   const isAvailable = body.availability === 'AVAILABLE';
-  const blocks = isAvailable ? body.blocks : [];
+  const awaitingPreview = Boolean(lesson.terminology?.previewResourceId) && !previewResolved;
+  const showBody = isAvailable && !awaitingPreview;
+  const blocks = showBody ? body.blocks : [];
   const isComplete = progress?.status === 'CONTENT_COMPLETE' && !needsReview;
 
   return (
@@ -519,12 +528,12 @@ export function LessonReaderPage(): React.JSX.Element {
           disabled={loading}
         />
         {needsReview ? (
-          <p className="learn-update-banner" role="status">
+          <p className="learn-update-notice" role="status">
             {t('learn.lesson.updatedSinceComplete')}
           </p>
         ) : null}
         {requiredSetNotice && lesson.terminology?.previewResourceId ? (
-          <p className="learn-update-banner" role="status">
+          <p className="learn-update-notice" role="status">
             {t('terminology.requiredSetUpdated')}{' '}
             <Link to={previewHref(subject, lesson.terminology.previewResourceId, resourceId)}>
               {t('terminology.openUpdatedPreview')}
@@ -533,14 +542,14 @@ export function LessonReaderPage(): React.JSX.Element {
         ) : null}
       </header>
 
-      {loading && !isAvailable && blocks.length === 0 ? (
+      {(loading || awaitingPreview) && !showBody && blocks.length === 0 ? (
         <div className="learn-reader-skeleton" aria-busy="true">
           <div className="learn-skeleton learn-skeleton-block" />
           <div className="learn-skeleton learn-skeleton-block" />
         </div>
       ) : null}
 
-      {!isAvailable && !loading ? (
+      {!isAvailable && !loading && !awaitingPreview ? (
         <section
           className="learn-language-unavailable state-notice state-notice-info"
           role="status"
@@ -557,7 +566,7 @@ export function LessonReaderPage(): React.JSX.Element {
         </section>
       ) : null}
 
-      {isAvailable ? (
+      {showBody ? (
         <div className="learn-reader-with-rail">
           <article
             className={`learn-reader-body${contentVisible ? ' is-visible' : ''}${loading ? ' is-reloading' : ''}`}
@@ -610,7 +619,7 @@ export function LessonReaderPage(): React.JSX.Element {
           onPlay={
             openCard.primarySurface.audioAvailable && !audio.playFailed
               ? (surface) => {
-                  void audio.play(surface);
+                  void audio.play(openCard.termId, surface);
                 }
               : undefined
           }
@@ -619,7 +628,7 @@ export function LessonReaderPage(): React.JSX.Element {
         />
       ) : null}
 
-      {isAvailable ? (
+      {showBody ? (
         <footer className="learn-reader-actions">
           {isComplete && !needsReview ? (
             <p className="learn-complete-ack" role="status">

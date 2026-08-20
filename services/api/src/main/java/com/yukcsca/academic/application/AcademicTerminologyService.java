@@ -106,7 +106,7 @@ public class AcademicTerminologyService {
     List<PublishedTerm> bank = terms.terms(ctx.content());
     Set<UUID> requiredIds = terms.requiredTermIds(resource);
     List<PublishedTerm> required = terms.requiredTerms(bank, requiredIds);
-    Set<UUID> audio = audioTermIds(ctx.revision().getId(), required);
+    Set<String> audio = audioTermIds(ctx.revision().getId(), required);
     List<TermCardView> cards =
         required.stream().map(term -> card(term, language, ctx.pkg(), audio)).toList();
     boolean pairs = required.size() >= 2;
@@ -255,6 +255,7 @@ public class AcademicTerminologyService {
     LocalizedText topic = null;
     UUID outlineId = null;
     String snippet = null;
+    List<String> itemStemTexts = List.of();
     if ("PREVIEW".equals(command.source()) || "LESSON".equals(command.source())) {
       JsonNode resource = terms.resourceById(ctx.content(), command.resourceId());
       if (resource == null) {
@@ -268,7 +269,10 @@ public class AcademicTerminologyService {
       topic = terms.localized(resource.path("title"));
       outlineId = firstUuid(resource.path("outlineItemIds"));
       snippet = lessonSnippet(resource, command.selectedText(), command.explanationLanguage());
-    } else if ("ITEM".equals(command.source())) {
+    } else if ("ITEM".equals(command.source())
+        || ("LANGUAGE_MISTAKE".equals(command.source())
+            && command.sessionId() != null
+            && command.itemId() != null)) {
       AssessmentItemContextPort.ItemContext item =
           itemContext
               .findOwnedItem(actorId, command.sessionId(), command.itemId())
@@ -280,6 +284,7 @@ public class AcademicTerminologyService {
               .orElseThrow(() -> new AcademicNotFoundException("Published package not found."));
       ctx = new PublishedContext(ctx.pkg(), pinned, projector.parseContent(pinned.getContent()));
       place = "CHECKPOINT".equals(item.purpose()) ? "CHECKPOINT" : "PRACTICE";
+      itemStemTexts = item.stemTexts() == null ? List.of() : item.stemTexts();
     }
     List<PublishedTerm> bank = terms.terms(ctx.content());
     Optional<PublishedTerm> matched;
@@ -303,12 +308,13 @@ public class AcademicTerminologyService {
         "LANGUAGE_MISTAKE".equals(command.source())
             ? StudentTerminologyNotebook.SOURCE_LANGUAGE_MISTAKE
             : StudentTerminologyNotebook.SOURCE_CLICKED;
+    if (snippet == null) snippet = stemSnippet(itemStemTexts, term);
     if (snippet == null) snippet = term.example();
     Instant now = now();
     boolean existed = notebook.findByAccountIdAndTermId(actorId, term.id()).isPresent();
     StudentTerminologyNotebook entry =
         upsertNotebook(actorId, ctx.pkg(), term, source, place, topic, outlineId, snippet, now);
-    Set<UUID> audio = audioTermIds(revisionId, List.of(term));
+    Set<String> audio = audioTermIds(revisionId, List.of(term));
     TermCardView card = card(term, command.explanationLanguage(), ctx.pkg(), audio);
     return new TermLookupView(
         "MATCHED",
@@ -363,7 +369,7 @@ public class AcademicTerminologyService {
       Optional<PublishedTerm> term = terms.findTerm(terms.terms(ctx.content()), row.getTermId());
       if (term.isEmpty()) continue;
       if (q != null && !q.isBlank() && !matchesQuery(term.get(), q)) continue;
-      Set<UUID> audio = audioTermIds(ctx.revision().getId(), List.of(term.get()));
+      Set<String> audio = audioTermIds(ctx.revision().getId(), List.of(term.get()));
       items.add(notebookEntry(row, term.get(), language, ctx, audio));
       if (items.size() == pageSize + 1) {
         NotebookEntryView lastKept = items.get(pageSize - 1);
@@ -391,7 +397,7 @@ public class AcademicTerminologyService {
         terms
             .findTerm(terms.terms(ctx.content()), termId)
             .orElseThrow(() -> new AcademicNotFoundException("Notebook entry not found."));
-    Set<UUID> audio = audioTermIds(ctx.revision().getId(), List.of(term));
+    Set<String> audio = audioTermIds(ctx.revision().getId(), List.of(term));
     return new NotebookDetailView(
         notebookEntry(row, term, language, ctx, audio), card(term, language, ctx.pkg(), audio));
   }
@@ -450,7 +456,7 @@ public class AcademicTerminologyService {
         termId,
         correct ? "correct" : "incorrect",
         row.getFamiliarity());
-    Set<UUID> audio = audioTermIds(ctx.revision().getId(), List.of(term));
+    Set<String> audio = audioTermIds(ctx.revision().getId(), List.of(term));
     return new TermReviewResultView(
         termId,
         kind,
@@ -472,16 +478,17 @@ public class AcademicTerminologyService {
       Optional<PublishedTerm> term = terms.findTerm(terms.terms(content), termId);
       if (term.isEmpty()) continue;
       String surface =
-          surfaceForm == null || surfaceForm.isBlank() ? term.get().primary().text() : surfaceForm;
+          surfaceForm == null || surfaceForm.isBlank()
+              ? term.get().primary().text()
+              : surfaceForm.trim();
       Optional<AcademicTermPronunciation> clip =
           pronunciations.findByPackageRevisionIdAndTermIdAndSurfaceForm(
               revision.getId(), termId, surface);
-      if (clip.isEmpty()) {
-        throw new AcademicNotFoundException("Pronunciation not found.");
+      if (clip.isPresent()) {
+        return new AcademicImageContent(clip.get().getMediaType(), clip.get().getContent());
       }
-      return new AcademicImageContent(clip.get().getMediaType(), clip.get().getContent());
     }
-    throw new AcademicNotFoundException("Pronunciation not found.");
+    throw new AcademicNotFoundException("Pronunciation");
   }
 
   public LessonTerminologyView lessonTerminology(
@@ -500,7 +507,7 @@ public class AcademicTerminologyService {
     List<PublishedTerm> bank = terms.terms(content);
     Set<UUID> requiredIds = preview.map(terms::requiredTermIds).orElseGet(LinkedHashSet::new);
     List<PublishedTerm> railTerms = terms.requiredTerms(bank, requiredIds);
-    Set<UUID> audio = audioTermIds(revision.getId(), railTerms);
+    Set<String> audio = audioTermIds(revision.getId(), railTerms);
     List<TermCardView> rail =
         railTerms.stream()
             .map(term -> card(term, explanationLanguage, academicPackage, audio))
@@ -557,7 +564,7 @@ public class AcademicTerminologyService {
       row.refreshEncounter(source, metIn, snippet, now);
       return notebook.save(row);
     }
-    return notebook.save(
+    StudentTerminologyNotebook created =
         new StudentTerminologyNotebook(
             accountId,
             term.id(),
@@ -567,7 +574,11 @@ public class AcademicTerminologyService {
             source,
             metIn,
             snippet,
-            now));
+            now);
+    if (StudentTerminologyNotebook.SOURCE_LANGUAGE_MISTAKE.equals(source)) {
+      created.markLanguageMistake(now);
+    }
+    return notebook.save(created);
   }
 
   private void validateLookup(TermLookupCommand command) {
@@ -600,7 +611,7 @@ public class AcademicTerminologyService {
       PublishedTerm term,
       String explanationLanguage,
       AcademicPackage academicPackage,
-      Set<UUID> audio) {
+      Set<String> audio) {
     String definition = terms.definitionText(term, explanationLanguage);
     TermDefinitionView definitionView =
         definition == null
@@ -611,11 +622,12 @@ public class AcademicTerminologyService {
         academicPackage.getSubject(),
         academicPackage.getId(),
         term.termClass(),
-        surface(term.primary(), audio.contains(term.id())),
-        term.aliases().stream().map(s -> surface(s, false)).toList(),
+        surface(term.primary(), hasAudio(audio, term.id(), term.primary().text())),
+        term.aliases().stream()
+            .map(alias -> surface(alias, hasAudio(audio, term.id(), alias.text())))
+            .toList(),
         definitionView,
         term.englishEquivalent(),
-        term.domainMeaning(),
         term.symbols(),
         term.example(),
         term.outlineItemIds());
@@ -625,9 +637,8 @@ public class AcademicTerminologyService {
     return new TermSurfaceView(surface.text(), surface.pinyin(), audio);
   }
 
-  private Set<UUID> audioTermIds(UUID revisionId, List<PublishedTerm> required) {
+  private Set<String> audioTermIds(UUID revisionId, List<PublishedTerm> required) {
     if (required.isEmpty()) return Set.of();
-    Set<UUID> ids = new HashSet<>();
     List<AcademicTermPronunciation> clips =
         pronunciations.findByPackageRevisionIdAndTermIdIn(
             revisionId, required.stream().map(PublishedTerm::id).toList());
@@ -635,12 +646,11 @@ public class AcademicTerminologyService {
     for (AcademicTermPronunciation clip : clips) {
       keys.add(clip.getTermId() + "\0" + clip.getSurfaceForm());
     }
-    for (PublishedTerm term : required) {
-      if (keys.contains(term.id() + "\0" + term.primary().text())) {
-        ids.add(term.id());
-      }
-    }
-    return ids;
+    return keys;
+  }
+
+  private static boolean hasAudio(Set<String> keys, UUID termId, String surface) {
+    return keys.contains(termId + "\0" + surface);
   }
 
   private PreviewProgressView previewProgressView(
@@ -666,7 +676,7 @@ public class AcademicTerminologyService {
       PublishedTerm term,
       String explanationLanguage,
       PublishedContext ctx,
-      Set<UUID> audio) {
+      Set<String> audio) {
     TermReviewPromptView pending =
         row.isDue() ? pendingReview(row, term, ctx, explanationLanguage) : null;
     return new NotebookEntryView(
@@ -674,7 +684,7 @@ public class AcademicTerminologyService {
         row.getSubject(),
         row.getPackageId(),
         row.getTermClass(),
-        surface(term.primary(), audio.contains(term.id())),
+        surface(term.primary(), hasAudio(audio, term.id(), term.primary().text())),
         row.getFamiliarity(),
         row.isDue(),
         row.getLastReviewAt(),
@@ -691,7 +701,7 @@ public class AcademicTerminologyService {
       String explanationLanguage) {
     List<PublishedTerm> bank = terms.terms(ctx.content());
     Optional<String> cloze = terms.clozeSnippet(term, row.getEncounterSnippet());
-    List<PublishedTerm> distractors = distractors(term, bank);
+    List<PublishedTerm> distractors = TermReviewOptionPicker.pickDistractors(term, bank);
     if (cloze.isPresent() && distractors.size() + 1 >= 2) {
       List<ReviewOptionView> options = reviewOptions(term, distractors, true);
       return new TermReviewPromptView(
@@ -705,39 +715,6 @@ public class AcademicTerminologyService {
     return null;
   }
 
-  private List<PublishedTerm> distractors(PublishedTerm term, List<PublishedTerm> bank) {
-    List<PublishedTerm> sameClass = new ArrayList<>();
-    List<PublishedTerm> sameOutline = new ArrayList<>();
-    Set<UUID> outline = new HashSet<>(term.outlineItemIds());
-    for (PublishedTerm other : bank) {
-      if (other.id().equals(term.id())) continue;
-      if (other.termClass().equals(term.termClass())) {
-        sameClass.add(other);
-      } else if (other.outlineItemIds().stream().anyMatch(outline::contains)) {
-        sameOutline.add(other);
-      }
-    }
-    sameClass.sort(Comparator.comparing(PublishedTerm::id));
-    sameOutline.sort(Comparator.comparing(PublishedTerm::id));
-    LinkedHashSet<PublishedTerm> picked = new LinkedHashSet<>();
-    for (PublishedTerm other : sameClass) {
-      if (picked.size() >= 5) break;
-      picked.add(other);
-    }
-    for (PublishedTerm other : sameOutline) {
-      if (picked.size() >= 5) break;
-      picked.add(other);
-    }
-    if (picked.isEmpty()) {
-      bank.stream()
-          .filter(other -> !other.id().equals(term.id()))
-          .sorted(Comparator.comparing(PublishedTerm::id))
-          .limit(5)
-          .forEach(picked::add);
-    }
-    return List.copyOf(picked);
-  }
-
   private List<ReviewOptionView> reviewOptions(
       PublishedTerm term, List<PublishedTerm> distractors, boolean cloze) {
     List<ReviewOptionView> options = new ArrayList<>();
@@ -748,7 +725,7 @@ public class AcademicTerminologyService {
       options.add(
           new ReviewOptionView(
               other.id().toString(), cloze ? other.primary().text() : other.englishEquivalent()));
-      if (options.size() == 6) break;
+      if (options.size() == TermReviewOptionPicker.CHOICE_COUNT) break;
     }
     options.sort(Comparator.comparing(ReviewOptionView::key));
     return List.copyOf(options);
@@ -767,6 +744,22 @@ public class AcademicTerminologyService {
       }
     }
     return false;
+  }
+
+  private static String stemSnippet(List<String> stemTexts, PublishedTerm term) {
+    if (stemTexts == null || stemTexts.isEmpty()) return null;
+    for (String body : stemTexts) {
+      if (body == null || body.isBlank()) continue;
+      if (body.contains(term.primary().text())) {
+        return body.length() > 400 ? body.substring(0, 400) : body;
+      }
+      for (Surface alias : term.aliases()) {
+        if (body.contains(alias.text())) {
+          return body.length() > 400 ? body.substring(0, 400) : body;
+        }
+      }
+    }
+    return null;
   }
 
   private String lessonSnippet(JsonNode resource, String selectedText, String explanationLanguage) {
@@ -1016,7 +1009,6 @@ public class AcademicTerminologyService {
       List<TermSurfaceView> aliases,
       TermDefinitionView definition,
       String englishEquivalent,
-      String domainMeaning,
       String symbols,
       String example,
       List<UUID> outlineItemIds) {}

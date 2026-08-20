@@ -14,7 +14,7 @@ const card: TermCard = {
   aliases: [],
   definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
   englishEquivalent: 'common factor',
-  domainMeaning: 'A shared polynomial factor.',
+
   symbols: null,
   example: null,
   outlineItemIds: [],
@@ -35,6 +35,26 @@ test('Escape closes the dialog and restores focus', () => {
 
   const close = screen.getByRole('button', { name: /close/i });
   expect(close).toHaveFocus();
+  expect(close).toHaveClass('term-dialog-close');
+  expect(document.querySelector('.dialog-actions')).toBeNull();
+  expect(document.body.classList.contains('app-term-overlay-open')).toBe(true);
   fireEvent.keyDown(document, { key: 'Escape' });
   expect(onClose).toHaveBeenCalled();
+});
+
+test('hides the mobile bottom nav while the dialog is open', () => {
+  const nav = document.createElement('nav');
+  nav.className = 'app-bottom-nav';
+  nav.textContent = 'Nav';
+  document.body.append(nav);
+  const onClose = vi.fn();
+  const { unmount } = render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardDialog card={card} onClose={onClose} />
+    </I18nextProvider>,
+  );
+  expect(document.body.classList.contains('app-term-overlay-open')).toBe(true);
+  unmount();
+  expect(document.body.classList.contains('app-term-overlay-open')).toBe(false);
+  nav.remove();
 });

@@ -238,6 +238,7 @@ class AcademicTerminologyHttpIT {
                     .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.entry.due").value(true))
+            .andExpect(jsonPath("$.entry.pendingReview.options.length()").value(4))
             .andReturn();
     JsonNode pending =
         json.readTree(entry.getResponse().getContentAsString()).path("entry").path("pendingReview");
@@ -254,16 +255,41 @@ class AcademicTerminologyHttpIT {
         .andExpect(jsonPath("$.familiarity").value("FAMILIAR"))
         .andExpect(jsonPath("$.due").value(false));
 
+    MvcResult studentAudio =
+        mvc.perform(
+                get("/api/v1/academic/terms/{id}/audio", fixture.findId())
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+            .andReturn();
+
+    MvcResult adminAudio =
+        mvc.perform(
+                get(
+                        "/api/v1/admin/academic-packages/{id}/terms/{termId}/audio",
+                        fixture.packageId(),
+                        fixture.findId())
+                    .param("surfaceForm", "求")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+            .andExpect(status().isOk())
+            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+            .andReturn();
+    assertThat(adminAudio.getResponse().getContentAsByteArray())
+        .isEqualTo(studentAudio.getResponse().getContentAsByteArray());
+
     mvc.perform(
-            get("/api/v1/academic/terms/{id}/audio", fixture.findId())
-                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
-        .andExpect(status().isOk())
-        .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+            get(
+                    "/api/v1/admin/academic-packages/{id}/terms/{termId}/audio",
+                    fixture.packageId(),
+                    fixture.findId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(unassignedToken)))
+        .andExpect(status().isForbidden());
 
     mvc.perform(
             get("/api/v1/academic/terms/{id}/audio", UUID.randomUUID())
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNotFound())
+        .andExpect(header().string("Cache-Control", "no-store"));
 
     mvc.perform(
             get("/api/v1/academic/packages/MATHEMATICS/lessons/{id}", fixture.lessonId())
@@ -272,6 +298,69 @@ class AcademicTerminologyHttpIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.terminology.rail.length()").value(2))
         .andExpect(jsonPath("$.terminology.spans").isArray());
+  }
+
+  @Test
+  void draftPackageHasNoTermAudioUntilPublish() throws Exception {
+    UUID packageId = createPackage();
+    mvc.perform(
+            get(
+                    "/api/v1/admin/academic-packages/{id}/terms/{termId}/audio",
+                    packageId,
+                    UUID.randomUUID())
+                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void languageMistakeLookupMarksFamiliarTermDue() throws Exception {
+    TermFixture fixture = publishChineseTerms();
+    mvc.perform(
+            put(
+                    "/api/v1/academic/packages/MATHEMATICS/terminology/{id}/progress",
+                    fixture.previewId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"PREVIEW_COMPLETE\"}"))
+        .andExpect(status().isOk());
+    MvcResult entry =
+        mvc.perform(
+                get("/api/v1/academic/terminology-notebook/{id}", fixture.increaseId())
+                    .param("explanationLanguage", "en")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+    JsonNode pending =
+        json.readTree(entry.getResponse().getContentAsString()).path("entry").path("pendingReview");
+    ObjectNode review = json.createObjectNode();
+    review.put("kind", pending.path("kind").asText());
+    review.put("selectedOptionKey", fixture.increaseId().toString());
+    mvc.perform(
+            post("/api/v1/academic/terminology-notebook/{id}/reviews", fixture.increaseId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(review)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.familiarity").value("FAMILIAR"))
+        .andExpect(jsonPath("$.due").value(false));
+
+    ObjectNode lookup = json.createObjectNode();
+    lookup.put("subject", "MATHEMATICS");
+    lookup.put("explanationLanguage", "en");
+    lookup.put("source", "LANGUAGE_MISTAKE");
+    lookup.put("termId", fixture.increaseId().toString());
+    mvc.perform(
+            post("/api/v1/academic/term-lookups")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(lookup)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome").value("MATCHED"))
+        .andExpect(jsonPath("$.alreadyInNotebook").value(true))
+        .andExpect(jsonPath("$.entry.familiarity").value("LEARNING"))
+        .andExpect(jsonPath("$.entry.due").value(true))
+        .andExpect(
+            jsonPath("$.entry.sources").value(org.hamcrest.Matchers.hasItem("LANGUAGE_MISTAKE")));
   }
 
   @Test
@@ -312,7 +401,8 @@ class AcademicTerminologyHttpIT {
         .andExpect(jsonPath("$.code").value("FORMAL_ASSISTANCE_DISABLED"));
   }
 
-  private record TermFixture(UUID previewId, UUID lessonId, UUID findId, UUID increaseId) {}
+  private record TermFixture(
+      UUID packageId, UUID previewId, UUID lessonId, UUID findId, UUID increaseId) {}
 
   private TermFixture publishChineseTerms() throws Exception {
     UUID packageId = createPackage();
@@ -329,7 +419,6 @@ class AcademicTerminologyHttpIT {
     findSurface.put("pinyin", "qiú");
     find.putObject("definitions").put("english", "find");
     find.put("englishEquivalent", "find");
-    find.put("domainMeaning", "Ask for a value.");
     find.putArray("outlineItemIds");
     ObjectNode increase = draft.withArray("terms").addObject();
     increase.put("id", increaseId.toString());
@@ -339,9 +428,12 @@ class AcademicTerminologyHttpIT {
     incSurface.put("pinyin", "dāndiào dìzēng");
     increase.putObject("definitions").put("english", "monotonically increasing");
     increase.put("englishEquivalent", "monotonically increasing");
-    increase.put("domainMeaning", "A function increases on an interval.");
     increase.put("example", "函数在区间上单调递增");
     increase.putArray("outlineItemIds").add(outlineId.toString());
+    addTopicTerm(draft, outlineId, "导数", "dǎo shù", "derivative");
+    addTopicTerm(draft, outlineId, "定义域", "dìng yì yù", "domain");
+    addTopicTerm(draft, outlineId, "真空", "zhēn kōng", "vacuum");
+    addTopicTerm(draft, outlineId, "共线", "gòng xiàn", "collinear");
     UUID previewId = null;
     UUID lessonId = null;
     for (JsonNode resource : draft.path("resources")) {
@@ -361,7 +453,20 @@ class AcademicTerminologyHttpIT {
     }
     save(packageId, 0, draft);
     publish(packageId, 1);
-    return new TermFixture(previewId, lessonId, findId, increaseId);
+    return new TermFixture(packageId, previewId, lessonId, findId, increaseId);
+  }
+
+  private void addTopicTerm(
+      ObjectNode draft, UUID outlineId, String surface, String pinyin, String english) {
+    ObjectNode term = draft.withArray("terms").addObject();
+    term.put("id", UUID.randomUUID().toString());
+    term.put("termClass", "TOPIC_TERM");
+    ObjectNode form = term.putArray("surfaceForms").addObject();
+    form.put("text", surface);
+    form.put("pinyin", pinyin);
+    term.putObject("definitions").put("english", english);
+    term.put("englishEquivalent", english);
+    term.putArray("outlineItemIds").add(outlineId.toString());
   }
 
   private UUID createPackage() throws Exception {

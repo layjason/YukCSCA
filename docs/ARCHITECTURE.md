@@ -218,8 +218,9 @@ Pre-feedback payloads omit correct keys and undisclosed hint bodies;
 assistance uniqueness to `(item_attempt_id, kind, tier_index)` and stores a
 disclosed Language-help snapshot on the item. `LearningEvidencePort` is the
 read-oriented evidence surface for later modules. Publish-time term audio uses
-`SpeechSynthesisPort` (Azure adapter when enabled; tests use an in-process
-stub). CI and tests do not contact Azure. Student audio GET never synthesizes.
+`SpeechSynthesisPort` (Edge TTS adapter when enabled; tests use an in-process
+stub). CI and tests do not contact Microsoft Edge TTS. Student and admin audio
+GETs never synthesize.
 No LLM/provider calls. Observability is value-free (no stems/answers/notes/keys,
 selected unmatched text, SSML, or speech keys).
 
@@ -233,8 +234,9 @@ privacy, prototype isolation, and product-owner journey evidence. VS-009 is `DON
 `VS-009-R8-accepted`), V9+ assessment tables, backend student APIs, production
 Practice/Mistakes/checkpoint/remediation UI (`features/assessment`),
 security/privacy, prototype isolation, and product-owner journey evidence
-(2026-08-14). KaTeX is used for admin formula preview and student LESSON MATH
-rendering. Short video, object storage, and any scene-render worker remain
+(2026-08-14). KaTeX is used for admin formula preview, student LESSON MATH
+blocks, and bounded `\(...\)` inline math inside TEXT-like prose
+(lessons, questions, remediation, and term definition/example/English equivalent). Short video, object storage, and any scene-render worker remain
 unimplemented (`VS-010B` is proposed only). Multi-subject content seeding and
 mock student flows remain later slices.
 

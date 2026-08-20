@@ -11,6 +11,13 @@ import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import { useAdminNotify } from '../adminNotify';
+import { termDraftLabel } from '../termDraftLabel';
+import {
+  adminCheckedTermIds,
+  matchDraftTermSpans,
+  suggestedTermIdsInStem,
+} from '../matchDraftTermSpans';
+import { MixedProse } from '@/shared/content/MixedProse';
 import type {
   LearningObjective,
   Question,
@@ -64,6 +71,18 @@ function createEmptyQuestion(
       reviewedAt: null,
     },
   };
+}
+
+function requiredTermIdsForQuestion(resources: StudyResource[], question: Question): Set<string> {
+  const outlines = new Set(question.outlineItemIds ?? []);
+  const ids = new Set<string>();
+  for (const resource of resources) {
+    if (resource.kind !== 'TERMINOLOGY') continue;
+    const shares = (resource.outlineItemIds ?? []).some((id) => outlines.has(id));
+    if (!shares) continue;
+    for (const id of resource.requiredTermIds ?? []) ids.add(id);
+  }
+  return ids;
 }
 
 /** Deep-clone a question with a fresh id. Content and mappings stay intentional for volume authoring. */
@@ -570,34 +589,39 @@ export function QuestionEditor({
               {t('admin.academic.terms.questionAttachments')}
             </legend>
             <p className="admin-hint">{t('admin.academic.terms.questionAttachmentsHint')}</p>
+            {selectedQuestion ? (
+              <StemLanguagePreview
+                question={selectedQuestion}
+                terms={terms}
+                resources={resources}
+              />
+            ) : null}
             {terms.length === 0 ? (
               <p className="admin-muted">{t('admin.academic.terms.empty')}</p>
             ) : (
-              <div className="admin-check-list">
-                {terms.map((term) => {
-                  const selectedIds = (selectedQuestion.authoredTermAttachments ?? []).map(
-                    (attachment) => attachment.termId,
+              <StemTermChecks
+                question={selectedQuestion}
+                terms={terms}
+                resources={resources}
+                disabled={disabled}
+                onToggle={(termId, checked) => {
+                  const texts = stemTexts(selectedQuestion);
+                  const required = requiredTermIdsForQuestion(resources, selectedQuestion);
+                  const current = adminCheckedTermIds(
+                    texts,
+                    terms,
+                    required,
+                    selectedQuestion.authoredTermAttachments,
                   );
-                  return (
-                    <label key={term.id} className="admin-check-row">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(term.id)}
-                        onChange={(e) => {
-                          const current = selectedQuestion.authoredTermAttachments ?? [];
-                          handleUpdateQuestion({
-                            ...selectedQuestion,
-                            authoredTermAttachments: e.target.checked
-                              ? [...current, { termId: term.id }]
-                              : current.filter((attachment) => attachment.termId !== term.id),
-                          });
-                        }}
-                      />
-                      <span>{term.surfaceForms[0]?.text || term.englishEquivalent || term.id}</span>
-                    </label>
-                  );
-                })}
-              </div>
+                  const next = new Set(current);
+                  if (checked) next.add(termId);
+                  else next.delete(termId);
+                  handleUpdateQuestion({
+                    ...selectedQuestion,
+                    authoredTermAttachments: [...next].map((id) => ({ termId: id })),
+                  });
+                }}
+              />
             )}
           </fieldset>
 
@@ -674,6 +698,109 @@ export function QuestionEditor({
       ) : (
         <p className="admin-muted">{t('admin.academic.questions.empty')}</p>
       )}
+    </div>
+  );
+}
+
+function stemTexts(question: Question): string[] {
+  return (question.stem ?? [])
+    .filter((block): block is TextContentBlock => block.kind === 'TEXT')
+    .map((block) => block.text);
+}
+
+function StemTermChecks({
+  question,
+  terms,
+  resources,
+  disabled,
+  onToggle,
+}: {
+  question: Question;
+  terms: TermDraft[];
+  resources: StudyResource[];
+  disabled?: boolean;
+  onToggle: (termId: string, checked: boolean) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const required = requiredTermIdsForQuestion(resources, question);
+  const texts = stemTexts(question);
+  const checkedIds = adminCheckedTermIds(texts, terms, required, question.authoredTermAttachments);
+  const suggestedIds = suggestedTermIdsInStem(texts, terms, required);
+
+  return (
+    <div className="admin-check-list">
+      {terms.map((term, index) => (
+        <label key={term.id} className="admin-check-row">
+          <input
+            type="checkbox"
+            checked={checkedIds.has(term.id)}
+            disabled={disabled}
+            onChange={(event) => onToggle(term.id, event.target.checked)}
+          />
+          <span lang="zh">
+            {termDraftLabel(term, t('admin.academic.terms.untitled', { index: index + 1 }))}
+            {suggestedIds.has(term.id) ? (
+              <span className="admin-muted"> · {t('admin.academic.terms.presetCue')}</span>
+            ) : null}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function StemLanguagePreview({
+  question,
+  terms,
+  resources,
+}: {
+  question: Question;
+  terms: TermDraft[];
+  resources: StudyResource[];
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const textBlocks = (question.stem ?? []).filter(
+    (block): block is TextContentBlock => block.kind === 'TEXT',
+  );
+  const hasMathOnly = (question.stem ?? []).length > 0 && textBlocks.length === 0;
+  const required = requiredTermIdsForQuestion(resources, question);
+  const checkedIds = adminCheckedTermIds(
+    stemTexts(question),
+    terms,
+    required,
+    question.authoredTermAttachments,
+  );
+
+  return (
+    <div className="admin-term-stem-preview">
+      <p className="admin-field-label">{t('admin.academic.terms.stemPreview')}</p>
+      {hasMathOnly ? (
+        <p className="admin-muted">{t('admin.academic.terms.stemPreviewMathOnly')}</p>
+      ) : null}
+      {textBlocks.map((block, index) => {
+        const spans = matchDraftTermSpans(block.text, terms, checkedIds);
+        return (
+          <div key={`stem-preview-${index}`} className="admin-term-stem-preview-block">
+            <MixedProse
+              text={block.text}
+              as="p"
+              className="admin-term-stem-preview-text"
+              lang="zh"
+              spans={spans.map((span) => ({
+                termId: span.termId,
+                surfaceForm: span.surfaceForm,
+                startOffset: span.startOffset,
+                endOffset: span.endOffset,
+              }))}
+              onActivate={() => undefined}
+              disabled
+            />
+            {spans.length === 0 ? (
+              <p className="admin-muted">{t('admin.academic.terms.stemPreviewEmpty')}</p>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

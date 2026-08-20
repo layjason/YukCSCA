@@ -1,6 +1,5 @@
 package com.yukcsca.academic.application;
 
-import com.yukcsca.academic.application.TerminologyProjector.AuthoredAttachment;
 import com.yukcsca.academic.application.TerminologyProjector.PublishedTerm;
 import com.yukcsca.academic.application.TerminologyProjector.TermSpanMatch;
 import com.yukcsca.academic.domain.AcademicRevision;
@@ -54,11 +53,8 @@ public class PublishedTerminologyCatalogService implements PublishedTerminologyC
           .terminologyBoundTo(content, uuidList(question.path("outlineItemIds")))
           .ifPresent(resource -> required.addAll(terms.requiredTermIds(resource)));
     }
-    Set<UUID> auto = terms.autoMatchTermIds(bank, required);
-    List<TermSpanMatch> autoSpans = terms.matchSpans(stem, bank, auto, 64);
-    List<AuthoredAttachment> attachments =
-        question == null ? List.of() : terms.authoredAttachments(question);
-    List<TermSpanMatch> spans = terms.mergeAuthoredSpans(autoSpans, stem, bank, attachments, 64);
+    Set<UUID> lighting = terms.languageHelpTermIds(question, bank, required);
+    List<TermSpanMatch> spans = terms.matchSpans(stem, bank, lighting, 64);
     Set<UUID> owned =
         notebookTermIds(accountId, spans.stream().map(TermSpanMatch::termId).distinct().toList());
     return new LanguageHelpProjection(

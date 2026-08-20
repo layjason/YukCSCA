@@ -209,11 +209,11 @@ Admin LESSON (versions[].blocks TEXT|MATH|IMAGE)
 
 ### Block mapping
 
-| Block | Student presentation                                             |
-| ----- | ---------------------------------------------------------------- |
-| TEXT  | Body prose; long-form measure ~68ch                              |
-| MATH  | Safe KaTeX (same options as admin preview); display vs inline    |
-| IMAGE | Authorized student image URL, alt required, caption when present |
+| Block | Student presentation                                                                     |
+| ----- | ---------------------------------------------------------------------------------------- |
+| TEXT  | Body prose; long-form measure ~68ch. May include bounded inline KaTeX between `\(...\)`. |
+| MATH  | Safe KaTeX (same options as admin preview); standalone display vs inline-sized formula   |
+| IMAGE | Authorized student image URL, alt required, caption when present                         |
 
 ### Language toggle
 

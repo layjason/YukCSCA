@@ -646,6 +646,7 @@ export function AcademicPackageEditor({
                 terms={draft.terms ?? []}
                 outlineItems={draft.outlineItems}
                 disabled={isArchived}
+                publishedPackageId={pkg.activeRevision ? pkg.id : null}
                 onChange={(updated) =>
                   applyPackageUpdate({
                     ...pkg,

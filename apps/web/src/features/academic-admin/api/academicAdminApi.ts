@@ -540,6 +540,33 @@ export async function publishAcademicPackage(
   }
 }
 
+export async function getPublishedTermPronunciation(
+  packageId: string,
+  termId: string,
+  surfaceForm?: string,
+): Promise<Blob> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new ApiError(401, { title: 'Authentication required' });
+  }
+  const query = new URLSearchParams();
+  if (surfaceForm) query.set('surfaceForm', surfaceForm);
+  const qs = query.toString();
+  const res = await fetch(
+    `/api/v1/admin/academic-packages/${encodeURIComponent(packageId)}/terms/${encodeURIComponent(termId)}/audio${qs ? `?${qs}` : ''}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'audio/mpeg',
+      },
+    },
+  );
+  if (!res.ok) {
+    throw new ApiError(res.status, { title: `Audio load failed (${res.status})` });
+  }
+  return res.blob();
+}
+
 export async function archiveAcademicPackage(
   id: string,
   expectedDraftRevision: number,

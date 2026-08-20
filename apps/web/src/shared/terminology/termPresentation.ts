@@ -1,6 +1,13 @@
 import type { TermCard, TermClass, TermDefinition, TermMetIn } from './types';
 import { classGroupFor } from './types';
 
+export interface TappableSpan {
+  termId: string;
+  surfaceForm: string;
+  startOffset: number;
+  endOffset: number;
+}
+
 export function termDefinitionText(definition: TermDefinition, unavailableLabel: string): string {
   return definition.availability === 'AVAILABLE' ? definition.text : unavailableLabel;
 }
@@ -50,6 +57,18 @@ export function splitTextBySpans<T extends { startOffset: number; endOffset: num
 }
 
 const MAX_LOOKUP_CHARS = 24;
+
+/** First span per term id, preserving encounter order. */
+export function uniqueSpansByTermId<T extends { termId: string }>(spans: readonly T[]): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const span of spans) {
+    if (seen.has(span.termId)) continue;
+    seen.add(span.termId);
+    unique.push(span);
+  }
+  return unique;
+}
 
 export function selectedLookupText(raw: string): string | null {
   const trimmed = raw.replace(/\s+/g, ' ').trim();

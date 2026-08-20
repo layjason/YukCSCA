@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-/** Never contacts Azure. Publish ITs persist this stub clip when terms are present. */
+/** Never contacts Microsoft Edge TTS. Publish ITs persist this stub clip when terms are present. */
 @Component
 @Primary
 @Profile("test")

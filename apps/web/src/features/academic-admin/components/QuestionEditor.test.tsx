@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import { QuestionEditor } from './QuestionEditor';
-import type { LearningObjective, Question, SyllabusOutlineItem } from '../types';
+import type { LearningObjective, Question, StudyResource, SyllabusOutlineItem } from '../types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -39,6 +39,15 @@ vi.mock('react-i18next', () => ({
         'admin.academic.questions.removeHint': 'Remove tier',
         'admin.academic.questions.hintsEmpty': 'No hints yet.',
         'admin.academic.questions.relatedResources': 'Related resources',
+        'admin.academic.terms.questionAttachments': 'Optional term attachments',
+        'admin.academic.terms.questionAttachmentsHint': 'Optional extras only.',
+        'admin.academic.terms.stemPreview': 'Language-help preview on this stem',
+        'admin.academic.terms.stemPreviewEmpty': 'No surfaces in this TEXT stem.',
+        'admin.academic.terms.stemPreviewMathOnly': 'This stem has no TEXT.',
+        'admin.academic.terms.pinnedCue': 'Pinned',
+        'admin.academic.terms.presetCue': 'Suggested',
+        'admin.academic.terms.empty': 'No terms',
+        'admin.academic.terms.untitled': `Untitled term ${opts?.index ?? 1}`,
         'admin.academic.questions.commonMistakeNotes': 'Common mistake notes',
         'admin.academic.questions.commonMistakeEn': 'English note',
         'admin.academic.questions.commonMistakeId': 'Indonesian note',
@@ -167,5 +176,76 @@ describe('QuestionEditor', () => {
     const next = onChange.mock.calls[0]?.[0] as Question[];
     expect(next[0]?.hintTiers).toHaveLength(1);
     expect(next[0]?.hintTiers?.[0]?.strength).toBe('STANDARD');
+  });
+
+  test('pre-checks suggested stem matches and unchecking removes the underline', () => {
+    const requiredTerm = {
+      id: 't-req',
+      termClass: 'TOPIC_TERM' as const,
+      surfaceForms: [{ text: '场强', pinyin: 'chǎng qiáng' }],
+      definitions: { indonesian: '', english: 'field', simplifiedChinese: '' },
+      englishEquivalent: 'field',
+      outlineItemIds: ['out-1'],
+    };
+    const extra = {
+      id: 't-extra',
+      termClass: 'TOPIC_TERM' as const,
+      surfaceForms: [{ text: '真空', pinyin: 'zhēn kōng' }],
+      definitions: { indonesian: '', english: 'vacuum', simplifiedChinese: '' },
+      englishEquivalent: 'vacuum',
+      outlineItemIds: ['out-1'],
+    };
+    const instruction = {
+      id: 't-ins',
+      termClass: 'EXAM_INSTRUCTION' as const,
+      surfaceForms: [{ text: '如图', pinyin: 'rú tú' }],
+      definitions: { indonesian: '', english: 'as shown', simplifiedChinese: '' },
+      englishEquivalent: 'as shown',
+      outlineItemIds: [],
+    };
+    const resources: StudyResource[] = [
+      {
+        id: 'res-term',
+        kind: 'TERMINOLOGY',
+        title: { indonesian: '', english: 'Terms', simplifiedChinese: '' },
+        outlineItemIds: ['out-1'],
+        objectiveIds: ['obj-1'],
+        versions: [],
+        requiredTermIds: ['t-req'],
+        provenance: {
+          origin: 'YUKCSCA_ORIGINAL',
+          authorUserId: '00000000-0000-0000-0000-000000000001',
+          reviewedByUserId: null,
+          reviewedAt: null,
+        },
+      },
+    ];
+    const onChange = vi.fn();
+    render(
+      <QuestionEditor
+        questions={[
+          question({
+            examLanguage: 'zh-CN',
+            stem: [{ kind: 'TEXT', text: '如图，真空中场强' }],
+          }),
+        ]}
+        outlineItems={outlineItems}
+        objectives={objectives}
+        resources={resources}
+        terms={[requiredTerm, extra, instruction]}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: /场强/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /如图/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /真空/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: '场强' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '如图' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: '真空' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /如图/ }));
+    const next = onChange.mock.calls[0]?.[0] as Question[];
+    expect(next[0]?.authoredTermAttachments?.map((row) => row.termId).sort()).toEqual(['t-req']);
   });
 });

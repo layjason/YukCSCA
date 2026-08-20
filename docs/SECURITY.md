@@ -139,8 +139,8 @@ These controls must ship with the first feature that needs them:
 
 ### Term pronunciation and language lookup
 
-- Term audio is synthesized only at package publish through `SpeechSynthesisPort`. The student GET serves stored `audio/mpeg` bytes for an authorized `STUDENT` and never calls Azure. Missing clips are 404; pinyin remains on the card.
-- Speech key, SSML, surface text, selected unmatched lookup text, definitions, stems, and answer keys are excluded from logs. Publish logs `termId`, clip status, and byte length only.
+- Term audio is synthesized only at package publish through `SpeechSynthesisPort` (Edge TTS / `edge_tts` protocol). The student GET and the administrator published-revision GET serve stored `audio/mpeg` bytes and never synthesize. Missing clips are 404; pinyin remains on the card. Draft authoring has no live preview.
+- SSML, surface text, selected unmatched lookup text, definitions, stems, and answer keys are excluded from logs. Publish logs `termId`, clip status, and byte length only.
 - Unmatched selected text returns HTTP 200 `NOT_IN_BANK` and writes nothing. Formal-mock policy (reserved, always false until a formal session exists) denies lookup, preview writes, review, and Language-help disclose with `403 FORMAL_ASSISTANCE_DISABLED`.
 
 ### Files and provider integrations

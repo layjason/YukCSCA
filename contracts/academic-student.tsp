@@ -328,7 +328,7 @@ enum TermReviewKind {
   MATCH_PAIRS,
 }
 
-@doc("Pre-rendered short clip for one published Chinese surface form. Student GET never calls Azure.")
+@doc("Pre-rendered short clip for one published Chinese surface form. Student GET never synthesizes.")
 model TermPronunciationFile extends File<"audio/mpeg", bytes> {}
 
 model TermSurfaceForm {
@@ -347,6 +347,7 @@ model TermDefinitionAvailable {
   availability: "AVAILABLE";
   language: AcademicAdmin.ExplanationLanguage;
 
+  @doc("Explanation-language gloss. May include bounded \\(...\\) inline KaTeX.")
   @minLength(1)
   @maxLength(4000)
   text: string;
@@ -375,22 +376,22 @@ model TermCard {
 
   definition: TermDefinition;
 
+  @doc("Short English equivalent. May include bounded \\(...\\) inline KaTeX.")
   @minLength(1)
   @maxLength(200)
   englishEquivalent: string;
 
-  @minLength(1)
-  @maxLength(500)
-  domainMeaning: string;
-
+  @doc("Optional notation as bounded KaTeX without \\(...\\) wrappers.")
   symbols: string | null;
+
+  @doc("Optional authentic example. May include bounded \\(...\\) inline KaTeX.")
   example: string | null;
 
   @maxItems(32)
   outlineItemIds: YukCSCA.uuid[];
 }
 
-@doc("Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's text.")
+@doc("Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's source text, including any \\(...\\) delimiters. Spans must not overlap inline math regions.")
 model TermSpan {
   termId: YukCSCA.uuid;
 
@@ -947,7 +948,7 @@ interface AcademicStudentApi {
     | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Returns the pre-rendered pronunciation clip for one published surface form. Never calls Azure. 404 when no clip exists.")
+  @doc("Returns the pre-rendered pronunciation clip for one published surface form. Never synthesizes. 404 when no clip exists.")
   @get
   @route("/terms/{termId}/audio")
   @useAuth(BearerAuth)

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { NotebookText } from 'lucide-react';
 import { resolveTermLookup } from '@/shared/api/terminologyStudentApi';
 import { TermCardDialog } from '@/shared/terminology/TermCardDialog';
@@ -9,6 +9,7 @@ import type { TermCard } from '@/shared/terminology/types';
 import { ApiError } from '@/shared/api/httpClient';
 import type { AcademicSubject, ExplanationLanguage } from '../types';
 import { formatMetInLine } from '../termMetIn';
+import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
 
 interface LessonTermRailProps {
   subject: AcademicSubject;
@@ -24,11 +25,12 @@ export function LessonTermRail({
   rail,
 }: LessonTermRailProps): React.JSX.Element {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const [open, setOpen] = useState<TermCard | null>(null);
   const [already, setAlready] = useState(false);
   const [metInLine, setMetInLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const audio = useTermAudio(open?.termId ?? null);
+  const audio = useTermAudio();
 
   async function openTerm(card: TermCard): Promise<void> {
     setError(null);
@@ -60,7 +62,11 @@ export function LessonTermRail({
     <aside className="term-rail" aria-labelledby="term-rail-heading">
       <div className="term-rail-header">
         <h2 id="term-rail-heading">{t('terminology.railTitle')}</h2>
-        <Link to="/app/learn/terms" className="learn-back-link">
+        <Link
+          to="/app/learn/terms"
+          state={notebookStateFrom(`${location.pathname}${location.search}`)}
+          className="learn-back-link"
+        >
           <NotebookText size={16} aria-hidden="true" />
           {t('learn.openNotebook')}
         </Link>
@@ -91,7 +97,7 @@ export function LessonTermRail({
           onPlay={
             open.primarySurface.audioAvailable && !audio.playFailed
               ? (surface) => {
-                  void audio.play(surface);
+                  void audio.play(open.termId, surface);
                 }
               : undefined
           }

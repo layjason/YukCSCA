@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -92,6 +93,22 @@ public class AcademicAdminController {
             CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePrivate().immutable())
         .header("X-Content-Type-Options", "nosniff")
         .body(image.bytes());
+  }
+
+  @GetMapping("/academic-packages/{id}/terms/{termId}/audio")
+  public ResponseEntity<byte[]> getPublishedTermPronunciation(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID id,
+      @PathVariable UUID termId,
+      @RequestParam(required = false) String surfaceForm) {
+    AcademicImageContent audio =
+        academic.getPublishedTermPronunciation(actor(jwt), id, termId, surfaceForm);
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(audio.mediaType()))
+        .cacheControl(
+            CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePrivate().immutable())
+        .header("X-Content-Type-Options", "nosniff")
+        .body(audio.bytes());
   }
 
   @PostMapping("/academic-packages/{id}:publish")

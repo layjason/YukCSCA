@@ -14,7 +14,6 @@ const card: TermCard = {
   aliases: [],
   definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
   englishEquivalent: 'common factor',
-  domainMeaning: 'A shared polynomial factor.',
   symbols: null,
   example: null,
   outlineItemIds: [],
@@ -24,7 +23,7 @@ beforeEach(async () => {
   await i18n.changeLanguage('en');
 });
 
-test('renders characters, pinyin, definition, and domain meaning', () => {
+test('renders characters, pinyin, definition, and English equivalent', () => {
   render(
     <I18nextProvider i18n={i18n}>
       <TermCardView card={card} />
@@ -34,9 +33,28 @@ test('renders characters, pinyin, definition, and domain meaning', () => {
   expect(screen.getByText('公因式')).toBeInTheDocument();
   expect(screen.getByText('gōng yīn shì')).toBeInTheDocument();
   expect(screen.getByText('Common factor')).toBeInTheDocument();
-  expect(screen.getByText('common factor')).toBeInTheDocument();
-  expect(screen.getByText('A shared polynomial factor.')).toBeInTheDocument();
+  expect(screen.queryByText('common factor')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /play/i })).not.toBeInTheDocument();
+});
+
+test('shows alias surface with its own play control', () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView
+        card={{
+          ...card,
+          primarySurface: { ...card.primarySurface, audioAvailable: true },
+          aliases: [{ text: '导函数', pinyin: 'dǎo hánshù', audioAvailable: true }],
+        }}
+        onPlay={() => undefined}
+      />
+    </I18nextProvider>,
+  );
+
+  expect(screen.getByText('Also written')).toBeInTheDocument();
+  expect(screen.getByText('导函数')).toBeInTheDocument();
+  expect(screen.getByText('dǎo hánshù')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /play pronunciation of 导函数/i })).toBeInTheDocument();
 });
 
 test('hides Play and keeps pinyin when audio failed', () => {
@@ -56,6 +74,77 @@ test('hides Play and keeps pinyin when audio failed', () => {
   expect(screen.getByText('gōng yīn shì')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /play/i })).not.toBeInTheDocument();
   expect(screen.getByRole('status')).toHaveTextContent(/audio is not available/i);
+});
+
+test('renders inline latex in the definition and example', () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView
+        card={{
+          ...card,
+          definition: {
+            availability: 'AVAILABLE',
+            language: 'en',
+            text: 'If \\(x^2\\) is positive.',
+          },
+          example: '已知 \\(f(x)=x^2\\)',
+        }}
+      />
+    </I18nextProvider>,
+  );
+
+  expect(screen.getAllByRole('img', { name: /x\^2/i }).length).toBeGreaterThanOrEqual(2);
+});
+
+test('renders symbols as KaTeX', () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView card={{ ...card, symbols: 'x^2' }} />
+    </I18nextProvider>,
+  );
+
+  expect(screen.getByText('Symbols')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: /x\^2/i })).toBeInTheDocument();
+});
+
+test('renders english, symbols, and example as separate labeled regions', () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView
+        card={{
+          ...card,
+          definition: { availability: 'AVAILABLE', language: 'id', text: 'Faktor persekutuan' },
+          englishEquivalent: 'common factor',
+          symbols: 'x^2',
+          example: '已知 \\(f(x)=x^2\\)',
+        }}
+      />
+    </I18nextProvider>,
+  );
+
+  expect(screen.getByText('Faktor persekutuan')).toBeInTheDocument();
+  expect(screen.getByText('In English')).toBeInTheDocument();
+  expect(screen.getByText('common factor')).toBeInTheDocument();
+  expect(screen.getByText('Symbols')).toBeInTheDocument();
+  expect(screen.getByText('Example')).toBeInTheDocument();
+  expect(screen.getAllByRole('img', { name: /x\^2/i }).length).toBeGreaterThanOrEqual(2);
+});
+
+test('entry layout labels example and skips the already-saved banner', () => {
+  render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView
+        layout="entry"
+        card={{ ...card, example: '已知 \\(f(x)=x^2\\)' }}
+        alreadyInNotebook
+        metInLine="Met in lesson"
+      />
+    </I18nextProvider>,
+  );
+
+  expect(screen.getByText('Example')).toBeInTheDocument();
+  expect(screen.getByText('Met in lesson')).toBeInTheDocument();
+  expect(screen.queryByText(/already in your notebook/i)).not.toBeInTheDocument();
 });
 
 test('makes a missing explanation-language gloss explicit', () => {

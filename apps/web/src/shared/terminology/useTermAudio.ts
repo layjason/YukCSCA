@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/shared/api/httpClient';
 import { getTermPronunciation } from '@/shared/api/terminologyStudentApi';
 
-export function useTermAudio(termId: string | null): {
-  play: (surfaceForm?: string) => Promise<void>;
+export function useTermAudio(): {
+  play: (termId: string, surfaceForm?: string) => Promise<void>;
+  playingTermId: string | null;
   playingSurface: string | null;
   playFailed: boolean;
 } {
+  const [playingTermId, setPlayingTermId] = useState<string | null>(null);
   const [playingSurface, setPlayingSurface] = useState<string | null>(null);
   const [playFailed, setPlayFailed] = useState(false);
   const urlRef = useRef<string | null>(null);
@@ -22,12 +24,13 @@ export function useTermAudio(termId: string | null): {
     setPlayingSurface(null);
   }, []);
 
-  useEffect(() => cleanup, [cleanup, termId]);
+  useEffect(() => cleanup, [cleanup]);
 
   const play = useCallback(
-    async (surfaceForm?: string) => {
+    async (termId: string, surfaceForm?: string) => {
       if (!termId) return;
       cleanup();
+      setPlayingTermId(termId);
       setPlayFailed(false);
       try {
         const blob = await getTermPronunciation(termId, surfaceForm);
@@ -47,8 +50,8 @@ export function useTermAudio(termId: string | null): {
         setPlayFailed(true);
       }
     },
-    [cleanup, termId],
+    [cleanup],
   );
 
-  return { play, playingSurface, playFailed };
+  return { play, playingTermId, playingSurface, playFailed };
 }

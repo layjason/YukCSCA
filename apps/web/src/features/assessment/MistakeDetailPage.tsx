@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BookOpen, RefreshCw, Wrench } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import {
@@ -17,11 +17,13 @@ import { OptionRadiogroup } from './components/OptionRadiogroup';
 import { resolveLocalizedText } from './localizedText';
 import type { ErrorCause, MistakeDetail } from './types';
 import { ERROR_CAUSES } from './types';
+import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
 import './assessment.css';
 
 export function MistakeDetailPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { mistakeId } = useParams<{ mistakeId: string }>();
 
   const [mistake, setMistake] = useState<MistakeDetail | null>(null);
@@ -176,7 +178,11 @@ export function MistakeDetailPage(): React.JSX.Element {
         </span>
         {t('assessment.mistakes.backToList')}
       </Link>
-      <Link to="/app/learn/terms" className="learn-back-link">
+      <Link
+        to="/app/learn/terms"
+        state={notebookStateFrom(`${location.pathname}${location.search}`)}
+        className="learn-back-link"
+      >
         {t('assessment.languageHelp.openNotebook')}
       </Link>
 

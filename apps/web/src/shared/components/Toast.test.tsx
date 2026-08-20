@@ -33,4 +33,18 @@ describe('Toast', () => {
 
     vi.useRealTimers();
   });
+
+  it('still auto-dismisses when onDismiss identity changes each render', () => {
+    vi.useFakeTimers();
+    const onDismiss = vi.fn();
+    const { rerender } = render(
+      <Toast message="Saved." onDismiss={() => onDismiss()} durationMs={2000} />,
+    );
+    rerender(<Toast message="Saved." onDismiss={() => onDismiss()} durationMs={2000} />);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
 });

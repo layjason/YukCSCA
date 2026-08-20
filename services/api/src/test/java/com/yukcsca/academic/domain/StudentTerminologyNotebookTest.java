@@ -62,6 +62,26 @@ class StudentTerminologyNotebookTest {
   }
 
   @Test
+  void firstLanguageMistakeCollectStartsLearningAndDue() {
+    Instant now = Instant.parse("2026-08-01T00:00:00Z");
+    StudentTerminologyNotebook row =
+        new StudentTerminologyNotebook(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            "MATHEMATICS",
+            "TOPIC_TERM",
+            StudentTerminologyNotebook.SOURCE_LANGUAGE_MISTAKE,
+            "{}",
+            "求函数是否单调递增",
+            now);
+    assertThat(row.getFamiliarity()).isEqualTo(StudentTerminologyNotebook.FAMILIARITY_LEARNING);
+    assertThat(row.isDue()).isTrue();
+    assertThat(row.getSources())
+        .containsExactly(StudentTerminologyNotebook.SOURCE_LANGUAGE_MISTAKE);
+  }
+
+  @Test
   void languageMistakeMarksLearningAndDue() {
     Instant now = Instant.parse("2026-08-01T00:00:00Z");
     StudentTerminologyNotebook row =

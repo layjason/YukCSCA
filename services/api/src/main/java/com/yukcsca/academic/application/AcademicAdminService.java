@@ -177,6 +177,26 @@ public class AcademicAdminService {
     return new AcademicImageContent(image.getMediaType(), image.getContent());
   }
 
+  @Transactional(readOnly = true)
+  public AcademicImageContent getPublishedTermPronunciation(
+      UUID actorId, UUID packageId, UUID termId, String surfaceForm) {
+    requireAdmin(actorId);
+    AcademicPackage academicPackage = findPackage(packageId);
+    if (academicPackage.getActiveRevisionId() == null) {
+      throw new AcademicNotFoundException("Pronunciation");
+    }
+    AcademicRevision revision = activeRevision(academicPackage);
+    String surface =
+        surfaceForm == null || surfaceForm.isBlank()
+            ? primaryPublishedSurface(revision, termId)
+            : surfaceForm.trim();
+    AcademicTermPronunciation clip =
+        pronunciations
+            .findByPackageRevisionIdAndTermIdAndSurfaceForm(revision.getId(), termId, surface)
+            .orElseThrow(() -> new AcademicNotFoundException("Pronunciation"));
+    return new AcademicImageContent(clip.getMediaType(), clip.getContent());
+  }
+
   @Transactional(noRollbackFor = AcademicValidationException.class)
   public AcademicPackageSnapshot publish(UUID actorId, UUID packageId, long expectedRevision) {
     requireAdmin(actorId);
@@ -188,6 +208,10 @@ public class AcademicAdminService {
     }
     if (academicPackage.getStatus() == AcademicPackageStatus.PUBLISHED
         && !academicPackage.hasUnpublishedChanges()) {
+      if (speechProperties.usable()) {
+        AcademicRevision revision = activeRevision(academicPackage);
+        renderTermAudio(revision.getId(), drafts.parseObject(revision.getContent()), now());
+      }
       return snapshot(academicPackage);
     }
 
@@ -338,6 +362,23 @@ public class AcademicAdminService {
         .orElseThrow(() -> new IllegalStateException("Active academic revision is missing."));
   }
 
+  private String primaryPublishedSurface(AcademicRevision revision, UUID termId) {
+    JsonNode terms = drafts.parseObject(revision.getContent()).path("terms");
+    if (!terms.isArray()) {
+      throw new AcademicNotFoundException("Pronunciation");
+    }
+    for (JsonNode term : terms) {
+      if (!termId.toString().equals(term.path("id").asText())) continue;
+      JsonNode surfaces = term.path("surfaceForms");
+      if (surfaces.isArray() && !surfaces.isEmpty()) {
+        String text = surfaces.get(0).path("text").asText(null);
+        if (text != null && !text.isBlank()) return text.trim();
+      }
+      break;
+    }
+    throw new AcademicNotFoundException("Pronunciation");
+  }
+
   private static AcademicImageSnapshot imageSnapshot(AcademicImage image) {
     return new AcademicImageSnapshot(
         image.getId(),
@@ -382,8 +423,13 @@ public class AcademicAdminService {
   private void renderTermAudio(UUID revisionId, ObjectNode draft, Instant now) {
     JsonNode terms = draft.path("terms");
     if (!terms.isArray() || terms.isEmpty()) return;
+    if (!speechProperties.usable()) {
+      LOGGER.info("terminology.audio.skipped reason=speech_disabled revisionId={}", revisionId);
+      return;
+    }
     int budget = Math.max(1, speechProperties.maxClipsPerPublish());
     int rendered = 0;
+    int skipped = 0;
     for (JsonNode term : terms) {
       UUID termId;
       try {
@@ -397,6 +443,7 @@ public class AcademicAdminService {
         if (rendered >= budget) return;
         String text = surface.path("text").asText(null);
         if (text == null || text.isBlank()) continue;
+        text = text.trim();
         if (pronunciations
             .findByPackageRevisionIdAndTermIdAndSurfaceForm(revisionId, termId, text)
             .isPresent()) {
@@ -404,6 +451,7 @@ public class AcademicAdminService {
         }
         Optional<byte[]> clip = speech.synthesize(text);
         if (clip.isEmpty()) {
+          skipped++;
           LOGGER.info("terminology.audio.rendered termId={} status=skipped byteLength=0", termId);
           continue;
         }
@@ -416,6 +464,12 @@ public class AcademicAdminService {
             termId,
             bytes.length);
       }
+    }
+    if (rendered == 0 && skipped > 0) {
+      LOGGER.warn(
+          "terminology.audio.rendered revisionId={} status=none_stored skipped={}",
+          revisionId,
+          skipped);
     }
   }
 

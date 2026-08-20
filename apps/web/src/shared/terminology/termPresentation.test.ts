@@ -1,5 +1,10 @@
 import { expect, test } from 'vitest';
-import { selectedLookupText, splitTextBySpans, termAccessibleName } from './termPresentation';
+import {
+  selectedLookupText,
+  splitTextBySpans,
+  termAccessibleName,
+  uniqueSpansByTermId,
+} from './termPresentation';
 import type { TermCard } from './types';
 
 const card: TermCard = {
@@ -11,7 +16,7 @@ const card: TermCard = {
   aliases: [],
   definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
   englishEquivalent: 'common factor',
-  domainMeaning: 'A shared polynomial factor.',
+
   symbols: null,
   example: null,
   outlineItemIds: [],
@@ -49,4 +54,17 @@ test('selectedLookupText rejects empty or sentence-like selections', () => {
   expect(selectedLookupText('  求  ')).toBe('求');
   expect(selectedLookupText('')).toBeNull();
   expect(selectedLookupText('已知函数 f(x) 在区间上单调递增，则导数大于零。')).toBeNull();
+});
+
+test('uniqueSpansByTermId keeps first encounter', () => {
+  expect(
+    uniqueSpansByTermId([
+      { termId: 'a', surfaceForm: '如图' },
+      { termId: 'b', surfaceForm: '场强' },
+      { termId: 'a', surfaceForm: '如图' },
+    ]),
+  ).toEqual([
+    { termId: 'a', surfaceForm: '如图' },
+    { termId: 'b', surfaceForm: '场强' },
+  ]);
 });

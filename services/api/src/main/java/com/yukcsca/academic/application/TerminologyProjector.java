@@ -57,7 +57,6 @@ public class TerminologyProjector {
               text(definitions, "english"),
               text(definitions, "simplifiedChinese"),
               text(node, "englishEquivalent") == null ? "" : text(node, "englishEquivalent"),
-              text(node, "domainMeaning") == null ? "" : text(node, "domainMeaning"),
               text(node, "symbols"),
               text(node, "example"),
               uuidArray(node.path("outlineItemIds"))));
@@ -153,6 +152,38 @@ public class TerminologyProjector {
     return ids;
   }
 
+  /**
+   * Terms that light up on a scored stem. Missing or extra-only attachments keep platform presets
+   * (required topic terms + exam wording). Once attachments include a preset, the checked set is
+   * exclusive so an admin uncheck is honored.
+   */
+  public Set<UUID> languageHelpTermIds(
+      JsonNode question, List<PublishedTerm> bank, Set<UUID> requiredTopicTermIds) {
+    Set<UUID> auto = autoMatchTermIds(bank, requiredTopicTermIds);
+    if (question == null) {
+      return auto;
+    }
+    JsonNode nodes = question.get("authoredTermAttachments");
+    if (nodes == null || nodes.isNull() || nodes.isMissingNode() || !nodes.isArray()) {
+      return auto;
+    }
+    Set<UUID> attached = new LinkedHashSet<>();
+    for (AuthoredAttachment attachment : authoredAttachments(question)) {
+      attached.add(attachment.termId());
+    }
+    if (attached.isEmpty()) {
+      return auto;
+    }
+    for (UUID id : attached) {
+      if (auto.contains(id)) {
+        return Set.copyOf(attached);
+      }
+    }
+    Set<UUID> lighting = new LinkedHashSet<>(auto);
+    lighting.addAll(attached);
+    return lighting;
+  }
+
   public List<TermSpanMatch> matchSpans(
       List<JsonNode> blocks, List<PublishedTerm> bank, Set<UUID> autoMatchIds, int maxSpans) {
     List<SurfaceCandidate> candidates = new ArrayList<>();
@@ -169,7 +200,7 @@ public class TerminologyProjector {
       if (!"TEXT".equals(text(block, "kind"))) continue;
       String body = text(block, "text");
       if (body == null || body.isEmpty()) continue;
-      boolean[] used = new boolean[body.length()];
+      boolean[] used = occupiedByLatex(body);
       for (SurfaceCandidate candidate : candidates) {
         String needle = candidate.text();
         int from = 0;
@@ -222,15 +253,18 @@ public class TerminologyProjector {
           if (!"TEXT".equals(text(block, "kind"))) continue;
           String body = text(block, "text");
           if (body == null) continue;
+          boolean[] used = occupiedByLatex(body);
           int from = 0;
           while (from <= body.length() - needle.length()) {
             int start = body.indexOf(needle, from);
             if (start < 0) break;
             int end = start + needle.length();
-            TermSpanMatch span = new TermSpanMatch(term.id(), needle, blockIndex, start, end);
-            if (seen.add(spanKey(span))) {
-              merged.add(span);
-              if (merged.size() >= maxSpans) return List.copyOf(merged);
+            if (!rangeUsed(used, start, end)) {
+              TermSpanMatch span = new TermSpanMatch(term.id(), needle, blockIndex, start, end);
+              if (seen.add(spanKey(span))) {
+                merged.add(span);
+                if (merged.size() >= maxSpans) return List.copyOf(merged);
+              }
             }
             from = start + 1;
           }
@@ -267,8 +301,7 @@ public class TerminologyProjector {
       source = term.example();
     }
     if (source == null || source.isBlank()) return null;
-    if (source.length() > 400) source = source.substring(0, 400);
-    return source;
+    return InlineLatex.truncatePreserving(source, 400);
   }
 
   public Optional<String> clozeSnippet(PublishedTerm term, String encounterSnippet) {
@@ -276,11 +309,11 @@ public class TerminologyProjector {
     if (source == null || source.isBlank()) source = term.example();
     if (source == null || source.isBlank()) return Optional.empty();
     String primary = term.primary().text();
-    int index = source.indexOf(primary);
+    int index = InlineLatex.indexOutsideReserved(source, primary);
     String matched = primary;
     if (index < 0) {
       for (Surface surface : term.surfaces()) {
-        index = source.indexOf(surface.text());
+        index = InlineLatex.indexOutsideReserved(source, surface.text());
         if (index >= 0) {
           matched = surface.text();
           break;
@@ -290,8 +323,7 @@ public class TerminologyProjector {
     if (index < 0) return Optional.empty();
     String replaced =
         source.substring(0, index) + "______" + source.substring(index + matched.length());
-    if (replaced.length() > 400) replaced = replaced.substring(0, 400);
-    return Optional.of(replaced);
+    return Optional.of(InlineLatex.truncatePreserving(replaced, 400));
   }
 
   public LocalizedText localized(JsonNode node) {
@@ -315,6 +347,14 @@ public class TerminologyProjector {
       if (questionId.equals(uuid(question.path("id")))) return question;
     }
     return null;
+  }
+
+  private static boolean[] occupiedByLatex(String body) {
+    boolean[] used = new boolean[body.length()];
+    for (InlineLatex.Range range : InlineLatex.reservedRanges(body)) {
+      markUsed(used, range.start(), range.end());
+    }
+    return used;
   }
 
   private static boolean rangeUsed(boolean[] used, int start, int end) {
@@ -377,7 +417,6 @@ public class TerminologyProjector {
       String definitionEn,
       String definitionZh,
       String englishEquivalent,
-      String domainMeaning,
       String symbols,
       String example,
       List<UUID> outlineItemIds) {

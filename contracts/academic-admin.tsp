@@ -199,6 +199,7 @@ model LearningObjective {
 model TextContentBlock {
   kind: "TEXT";
 
+  @doc("Prose that may include bounded inline KaTeX between \\(...\\). Display-mode formulas stay MATH blocks. Terminology span offsets are UTF-16 code units into this source string, including delimiters, and must not overlap inline math. Raw HTML and arbitrary macros are not supported.")
   @minLength(1)
   @maxLength(12000)
   text: string;
@@ -207,7 +208,7 @@ model TextContentBlock {
 model MathContentBlock {
   kind: "MATH";
 
-  @doc("A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported.")
+  @doc("A bounded KaTeX-compatible LaTeX expression for a standalone formula. Use displayMode true for centered display; false for a standalone inline-sized formula. Mixed sentence math belongs in TEXT with \\(...\\). Raw HTML and arbitrary macros are not supported.")
   @minLength(1)
   @maxLength(4000)
   latex: string;
@@ -278,7 +279,7 @@ model TermSurfaceFormInput {
   pinyin: string;
 }
 
-@doc("Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package. One id per domain meaning.")
+@doc("Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package.")
 model TermDraft {
   id: YukCSCA.uuid;
   termClass: TermClass;
@@ -287,21 +288,19 @@ model TermDraft {
   @maxItems(8)
   surfaceForms: TermSurfaceFormInput[];
 
-  @doc("Explanation-language glosses. Missing languages are allowed and must be flagged to students; they do not fork identity.")
+  @doc("Explanation-language glosses. May include the same \\(...\\) inline KaTeX as TEXT blocks. Missing languages are allowed and must be flagged to students; they do not fork identity.")
   definitions: LocalizedText;
 
+  @doc("Short English equivalent. May include \\(...\\) inline KaTeX.")
   @minLength(1)
   @maxLength(200)
   englishEquivalent: string;
 
-  @doc("Canonical scientific or mathematical sense. Not a subject lock.")
-  @minLength(1)
-  @maxLength(500)
-  domainMeaning: string;
-
+  @doc("Optional notation as bounded KaTeX (no \\(...\\) wrappers). Raw HTML and arbitrary macros are not supported.")
   @maxLength(80)
   symbols?: string | null;
 
+  @doc("Optional authentic example. May include the same \\(...\\) inline KaTeX as TEXT blocks.")
   @maxLength(500)
   example?: string | null;
 
@@ -649,6 +648,16 @@ model AcademicImageContentResponse {
   @bodyRoot image: AcademicImageUploadFile;
 }
 
+@doc("Pre-rendered short clip for one published Chinese surface form. Admin GET never synthesizes.")
+model TermPronunciationFile extends File<"audio/mpeg", bytes> {}
+
+model TermPronunciationContentResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "private, max-age=31536000, immutable";
+  @header("X-Content-Type-Options") contentTypeOptions: "nosniff";
+  @bodyRoot audio: TermPronunciationFile;
+}
+
 @route("/api/v1/admin")
 interface AcademicAdminApi {
   @doc("Lists the pilot academic packages visible to the authenticated administrator.")
@@ -743,5 +752,20 @@ interface AcademicAdminApi {
     | YukCSCA.ForbiddenResponse
     | YukCSCA.NotFoundResponse
     | YukCSCA.ConflictResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Returns the stored pronunciation clip from the package's active published revision — the audio students hear. Never synthesizes. 404 when the package has no active revision or no clip.")
+  @get
+  @route("/academic-packages/{id}/terms/{termId}/audio")
+  @useAuth(BearerAuth)
+  getPublishedTermPronunciation(
+    @path id: YukCSCA.uuid,
+    @path termId: YukCSCA.uuid,
+    @query @maxLength(40) surfaceForm?: string,
+  ):
+    | TermPronunciationContentResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 }

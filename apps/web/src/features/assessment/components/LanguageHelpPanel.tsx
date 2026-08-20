@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpenText, NotebookText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { BookOpenText } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { resolveTermLookup } from '@/shared/api/terminologyStudentApi';
 import { TermCardDialog } from '@/shared/terminology/TermCardDialog';
-import { selectedLookupText } from '@/shared/terminology/termPresentation';
-import { TappableText, type TappableSpan } from '@/shared/terminology/TappableText';
+import { selectedLookupText, uniqueSpansByTermId } from '@/shared/terminology/termPresentation';
+import type { TappableSpan } from '@/shared/terminology/TappableText';
 import { useTermAudio } from '@/shared/terminology/useTermAudio';
-import type { TermCard } from '@/shared/terminology/types';
+import type { TermCard, TermLookupRequest } from '@/shared/terminology/types';
 import type {
   AcademicSubject,
   ExplanationLanguage,
@@ -16,15 +15,24 @@ import type {
   SessionItemView,
 } from '../types';
 import { formatMetInLine } from '@/shared/terminology/termMetIn';
-import { AssessmentBlocks } from './AssessmentBlocks';
+import type { AssessmentTermSpan } from './AssessmentBlocks';
+
+export interface LanguageHelpStemProps {
+  spans: readonly AssessmentTermSpan[];
+  onActivate: (span: TappableSpan) => void;
+  disabled: boolean;
+}
 
 interface LanguageHelpPanelProps {
   item: SessionItemView;
   subject: AcademicSubject;
   sessionId: string;
   explanationLanguage: ExplanationLanguage;
+  lookupSource?: Extract<TermLookupRequest['source'], 'ITEM' | 'LANGUAGE_MISTAKE'>;
+  canDisclose?: boolean;
   busy: boolean;
   onDisclose: (trigger: LanguageHelpTrigger) => Promise<void>;
+  renderStem?: (help: LanguageHelpStemProps) => React.ReactNode;
 }
 
 export function LanguageHelpPanel({
@@ -32,8 +40,11 @@ export function LanguageHelpPanel({
   subject,
   sessionId,
   explanationLanguage,
+  lookupSource = 'ITEM',
+  canDisclose = true,
   busy,
   onDisclose,
+  renderStem,
 }: LanguageHelpPanelProps): React.JSX.Element | null {
   const { t, i18n } = useTranslation();
   const [openCard, setOpenCard] = useState<TermCard | null>(null);
@@ -41,13 +52,26 @@ export function LanguageHelpPanel({
   const [metInLine, setMetInLine] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [notInBank, setNotInBank] = useState(false);
-  const audio = useTermAudio(openCard?.termId ?? null);
+  const [lookupOpen, setLookupOpen] = useState(false);
+  const audio = useTermAudio();
 
   if (!item.languageHelpAvailable && !item.languageHelp) {
     return null;
   }
 
   const disclosed = item.languageHelp?.disclosed === true;
+
+  const rawSpans = item.languageHelp?.spans ?? [];
+  const stemSpans: AssessmentTermSpan[] = disclosed
+    ? rawSpans.map((span) => ({
+        termId: span.termId,
+        surfaceForm: span.surfaceForm,
+        blockIndex: span.blockIndex,
+        startOffset: span.startOffset,
+        endOffset: span.endOffset,
+      }))
+    : [];
+  const phrases = uniqueSpansByTermId(rawSpans);
 
   async function lookup(termId?: string, selectedText?: string): Promise<void> {
     setLookupError(null);
@@ -56,7 +80,7 @@ export function LanguageHelpPanel({
       const result = await resolveTermLookup({
         subject,
         explanationLanguage,
-        source: 'ITEM',
+        source: lookupSource,
         sessionId,
         itemId: item.itemId,
         ...(termId ? { termId } : {}),
@@ -90,59 +114,81 @@ export function LanguageHelpPanel({
     void lookup(undefined, text);
   }
 
-  return (
-    <section className="language-help-panel" aria-label={t('assessment.languageHelp.regionLabel')}>
-      {!disclosed ? (
-        <button
-          type="button"
-          className="btn-secondary language-help-open"
-          disabled={busy}
-          onClick={() => void onDisclose('STUDENT_REQUEST')}
-        >
-          <BookOpenText size={16} aria-hidden="true" />
-          {busy ? t('assessment.languageHelp.opening') : t('assessment.languageHelp.open')}
-        </button>
-      ) : (
-        <>
-          <div className="language-help-stem">
-            {item.stem.map((block, index) => {
-              if (block.kind !== 'TEXT') {
-                return <AssessmentBlocks key={`stem-${index}`} blocks={[block]} />;
-              }
-              const spans = (item.languageHelp?.spans ?? [])
-                .filter((span) => span.blockIndex === index)
-                .map((span) => ({
-                  termId: span.termId,
-                  surfaceForm: span.surfaceForm,
-                  startOffset: span.startOffset,
-                  endOffset: span.endOffset,
-                }));
-              return (
-                <TappableText
-                  key={`stem-text-${index}`}
-                  text={block.text}
-                  spans={spans}
-                  onActivate={handleChip}
-                  disabled={busy}
-                />
-              );
-            })}
-          </div>
-          <p className="language-help-hint">{t('terminology.selectHint')}</p>
-          <div className="language-help-actions">
-            <button type="button" className="btn-secondary" onClick={handleSelectionLookup}>
-              {t('terminology.lookUpSelection')}
-            </button>
-            <Link to="/app/learn/terms" className="learn-back-link">
-              <NotebookText size={16} aria-hidden="true" />
-              {t('assessment.languageHelp.openNotebook')}
-            </Link>
-          </div>
-        </>
-      )}
+  const openLabel = busy ? t('assessment.languageHelp.opening') : t('assessment.languageHelp.open');
 
-      {notInBank ? <p role="status">{t('terminology.notInBank')}</p> : null}
-      {lookupError ? <p role="alert">{lookupError}</p> : null}
+  return (
+    <>
+      {renderStem ? (
+        <div lang="zh">
+          {renderStem({
+            spans: stemSpans,
+            onActivate: handleChip,
+            disabled: busy,
+          })}
+        </div>
+      ) : null}
+
+      {(!disclosed && canDisclose) || disclosed || notInBank || lookupError ? (
+        <section
+          className={disclosed ? 'language-help-panel' : 'language-help-idle'}
+          aria-label={t('assessment.languageHelp.regionLabel')}
+        >
+          {!disclosed && canDisclose ? (
+            <button
+              type="button"
+              className="language-help-icon"
+              disabled={busy}
+              aria-label={openLabel}
+              title={openLabel}
+              onClick={() => void onDisclose('STUDENT_REQUEST')}
+            >
+              <BookOpenText size={20} aria-hidden="true" />
+            </button>
+          ) : null}
+
+          {disclosed ? (
+            <div className="language-help-phrases">
+              <p className="language-help-phrases-kicker">
+                {t('assessment.languageHelp.keyPhrases')}
+              </p>
+              {phrases.length === 0 ? (
+                <p className="language-help-hint">{t('assessment.languageHelp.emptySpans')}</p>
+              ) : (
+                <ul className="language-help-phrase-list">
+                  {phrases.map((phrase) => (
+                    <li key={phrase.termId}>
+                      <button
+                        type="button"
+                        className="language-help-phrase"
+                        disabled={busy}
+                        onClick={() => void lookup(phrase.termId)}
+                      >
+                        <span lang="zh" className="language-help-phrase-text">
+                          {phrase.surfaceForm}
+                        </span>
+                        <span className="language-help-phrase-leader" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <details
+                className="language-help-lookup"
+                open={lookupOpen}
+                onToggle={(event) => setLookupOpen(event.currentTarget.open)}
+              >
+                <summary>{t('assessment.languageHelp.lookUpOther')}</summary>
+                <button type="button" className="btn-secondary" onClick={handleSelectionLookup}>
+                  {t('terminology.lookUpSelection')}
+                </button>
+              </details>
+            </div>
+          ) : null}
+
+          {notInBank ? <p role="status">{t('terminology.notInBank')}</p> : null}
+          {lookupError ? <p role="alert">{lookupError}</p> : null}
+        </section>
+      ) : null}
 
       {openCard ? (
         <TermCardDialog
@@ -153,7 +199,7 @@ export function LanguageHelpPanel({
           onPlay={
             openCard.primarySurface.audioAvailable && !audio.playFailed
               ? (surface) => {
-                  void audio.play(surface);
+                  void audio.play(openCard.termId, surface);
                 }
               : undefined
           }
@@ -161,6 +207,6 @@ export function LanguageHelpPanel({
           playFailed={audio.playFailed}
         />
       ) : null}
-    </section>
+    </>
   );
 }

@@ -28,7 +28,7 @@ const preview: TerminologyPreview = {
       aliases: [],
       definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
       englishEquivalent: 'common factor',
-      domainMeaning: 'A shared polynomial factor.',
+
       symbols: null,
       example: null,
       outlineItemIds: [],
@@ -105,7 +105,54 @@ test('loads preview cards and keeps Continue available without matching pairs', 
   expect(screen.getByText('gōng yīn shì')).toBeInTheDocument();
   expect(screen.getByText('Common factor')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /continue to lesson/i })).toBeEnabled();
+  expect(screen.getByRole('button', { name: /practice these terms/i })).toBeInTheDocument();
   expect(screen.queryByText(/mastered/i)).not.toBeInTheDocument();
+});
+
+test('keeps cards when collecting preview progress fails', async () => {
+  vi.spyOn(terminologyApi, 'getTerminologyPreview').mockResolvedValue(preview);
+  vi.spyOn(terminologyApi, 'upsertPreviewProgress').mockRejectedValue(
+    new ApiError(500, { title: 'broken' }),
+  );
+
+  renderPage();
+
+  expect(await screen.findByText('公因式')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /continue to lesson/i })).toBeEnabled();
+  expect(
+    await screen.findByText(/could not be saved|gagal disimpan|无法保存/i),
+  ).toBeInTheDocument();
+});
+
+test('acknowledges an updated required set so the notice leaves the preview', async () => {
+  vi.spyOn(terminologyApi, 'getTerminologyPreview').mockResolvedValue({
+    ...preview,
+    previewProgress: {
+      status: 'PREVIEW_COMPLETE',
+      updatedAt: '2026-08-18T00:00:00Z',
+      requiredSetUpdatedSinceCompleted: true,
+    },
+  });
+  const upsert = vi.spyOn(terminologyApi, 'upsertPreviewProgress').mockResolvedValue({
+    status: 'PREVIEW_COMPLETE',
+    updatedAt: '2026-08-19T00:00:00Z',
+    requiredSetUpdatedSinceCompleted: false,
+  });
+
+  renderPage();
+
+  await waitFor(() => {
+    expect(upsert).toHaveBeenCalledWith(
+      'MATHEMATICS',
+      preview.resourceId,
+      'PREVIEW_COMPLETE',
+      preview.packageRevisionId,
+    );
+  });
+  await waitFor(() => {
+    expect(screen.queryByText(/required terms changed/i)).not.toBeInTheDocument();
+  });
+  expect(document.querySelector('.learn-update-banner')).toBeNull();
 });
 
 test('shows a recoverable error without fabricating cards', async () => {

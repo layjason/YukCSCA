@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, NotebookText } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import {
@@ -9,11 +9,14 @@ import {
   upsertPreviewProgress,
 } from '@/shared/api/terminologyStudentApi';
 import { TermCardView } from '@/shared/terminology/TermCardView';
+import { TermMatchBoard } from '@/shared/terminology/TermMatchBoard';
+import { TermPracticeLaunch } from '@/shared/terminology/TermPracticeLaunch';
 import { useTermAudio } from '@/shared/terminology/useTermAudio';
-import type { PreviewCheckResult, TerminologyPreview } from '@/shared/terminology/types';
+import type { TerminologyPreview } from '@/shared/terminology/types';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { isAcademicSubject, isExplanationLanguage, type ExplanationLanguage } from './types';
+import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
 import { lessonHref } from './previewNavigation';
 import { resolveLocalizedText } from './localizedText';
 import './learn.css';
@@ -21,6 +24,7 @@ import './learn.css';
 export function TerminologyPreviewPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { subject: subjectParam, resourceId } = useParams<{
     subject: string;
     resourceId: string;
@@ -35,12 +39,9 @@ export function TerminologyPreviewPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [pairsOpen, setPairsOpen] = useState(false);
-  const [pairChoices, setPairChoices] = useState<Record<string, string>>({});
-  const [checkResult, setCheckResult] = useState<PreviewCheckResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
-  const [playingTermId, setPlayingTermId] = useState<string | null>(null);
-  const audio = useTermAudio(playingTermId);
+  const audio = useTermAudio();
 
   useEffect(() => {
     let active = true;
@@ -70,13 +71,36 @@ export function TerminologyPreviewPage(): React.JSX.Element {
       const data = await getTerminologyPreview(subject, resourceId, explanationLanguage);
       setPreview(data);
       if (data.previewProgress.status === 'NOT_STARTED') {
-        const next = await upsertPreviewProgress(
-          subject,
-          resourceId,
-          'IN_PROGRESS',
-          data.packageRevisionId,
-        );
-        setPreview({ ...data, previewProgress: next });
+        try {
+          const next = await upsertPreviewProgress(
+            subject,
+            resourceId,
+            'IN_PROGRESS',
+            data.packageRevisionId,
+          );
+          setPreview({ ...data, previewProgress: next });
+        } catch (err) {
+          if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+            setError(t('terminology.formalDisabled'));
+          } else {
+            setError(t('terminology.saveFailed'));
+          }
+        }
+      } else if (
+        data.previewProgress.status === 'PREVIEW_COMPLETE' &&
+        data.previewProgress.requiredSetUpdatedSinceCompleted
+      ) {
+        try {
+          const next = await upsertPreviewProgress(
+            subject,
+            resourceId,
+            'PREVIEW_COMPLETE',
+            data.packageRevisionId,
+          );
+          setPreview({ ...data, previewProgress: next });
+        } catch {
+          /* Keep the notice visible if acknowledgement fails. */
+        }
       }
     } catch (err) {
       setPreview(null);
@@ -103,6 +127,17 @@ export function TerminologyPreviewPage(): React.JSX.Element {
     }
     return preview.lessonResourceIds[0] ?? null;
   }, [preview, preferredLessonId]);
+
+  const matchTiles = useMemo(
+    () =>
+      (preview?.matchTargets ?? []).map((target) => ({
+        ...target,
+        pinyin:
+          preview?.terms.find((card) => card.termId === target.termId)?.primarySurface.pinyin ??
+          null,
+      })),
+    [preview],
+  );
 
   async function handleContinue(): Promise<void> {
     if (!subject || !resourceId || !preview || busy) return;
@@ -135,18 +170,13 @@ export function TerminologyPreviewPage(): React.JSX.Element {
     }
   }
 
-  async function handleCheck(): Promise<void> {
+  async function handleCheck(pairs: { termId: string; selectedMatchKey: string }[]): Promise<void> {
     if (!subject || !resourceId || !preview || busy) return;
-    const pairs = preview.matchTargets.map((target) => ({
-      termId: target.termId,
-      selectedMatchKey: pairChoices[target.termId] ?? '',
-    }));
     if (pairs.some((pair) => !pair.selectedMatchKey)) return;
     setBusy(true);
     setError(null);
     try {
       const result = await submitPreviewCheck(subject, resourceId, pairs);
-      setCheckResult(result);
       setPreview({ ...preview, previewProgress: result.previewProgress });
     } catch (err) {
       if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
@@ -219,28 +249,39 @@ export function TerminologyPreviewPage(): React.JSX.Element {
   const title = resolveLocalizedText(preview.title, i18n.language) || t('terminology.previewTitle');
 
   return (
-    <div className="page-content learn-page terminology-preview-page">
+    <div
+      className={
+        pairsOpen
+          ? 'page-content learn-page terminology-preview-page is-matching'
+          : 'page-content learn-page terminology-preview-page'
+      }
+    >
       {toast ? (
         <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
       ) : null}
 
-      <header className="learn-reader-chrome">
-        <div className="learn-reader-chrome-row">
-          <Link to={`/app/learn/${subject}`} className="learn-back-link">
-            <ArrowLeft size={18} aria-hidden="true" />
-            {t('learn.backToBrowse')}
-          </Link>
-          <Link to="/app/learn/terms" className="learn-back-link">
-            <NotebookText size={18} aria-hidden="true" />
-            {t('learn.openNotebook')}
-          </Link>
-        </div>
-        <h1>{title}</h1>
-        <p className="learn-lede">{t('terminology.previewLead')}</p>
-      </header>
+      {pairsOpen ? null : (
+        <header className="learn-reader-chrome">
+          <div className="learn-reader-chrome-row">
+            <Link to={`/app/learn/${subject}`} className="learn-back-link">
+              <ArrowLeft size={18} aria-hidden="true" />
+              {t('learn.backToBrowse')}
+            </Link>
+            <Link
+              to="/app/learn/terms"
+              state={notebookStateFrom(`${location.pathname}${location.search}`)}
+              className="learn-back-link"
+            >
+              <NotebookText size={18} aria-hidden="true" />
+              {t('learn.openNotebook')}
+            </Link>
+          </div>
+          <h1>{title}</h1>
+        </header>
+      )}
 
-      {preview.previewProgress.requiredSetUpdatedSinceCompleted ? (
-        <p className="learn-update-banner" role="status">
+      {preview.previewProgress.requiredSetUpdatedSinceCompleted && !pairsOpen ? (
+        <p className="learn-update-notice" role="status">
           {t('terminology.requiredSetUpdated')}
         </p>
       ) : null}
@@ -254,109 +295,63 @@ export function TerminologyPreviewPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <ol className="term-preview-list">
-        {preview.terms.map((card) => (
-          <li key={card.termId}>
-            <TermCardView
-              card={card}
-              onPlay={
-                (card.primarySurface.audioAvailable ||
-                  card.aliases.some((alias) => alias.audioAvailable)) &&
-                !(audio.playFailed && playingTermId === card.termId)
-                  ? (surface) => {
-                      setPlayingTermId(card.termId);
-                      void audio.play(surface);
-                    }
-                  : undefined
-              }
-              playingSurface={playingTermId === card.termId ? audio.playingSurface : null}
-              playFailed={audio.playFailed && playingTermId === card.termId}
-            />
-          </li>
-        ))}
-      </ol>
+      {pairsOpen && preview.matchingPairsAvailable ? (
+        <TermMatchBoard
+          targets={matchTiles}
+          busy={busy}
+          onSubmit={(pairs) => void handleCheck(pairs)}
+          onContinue={() => void handleContinue()}
+          onPlayPrompt={(termId, surface) => {
+            void audio.play(termId, surface);
+          }}
+          onEnd={() => {
+            setPairsOpen(false);
+          }}
+        />
+      ) : (
+        <ol className="term-preview-list">
+          {preview.terms.map((card) => (
+            <li key={card.termId}>
+              <TermCardView
+                card={card}
+                onPlay={
+                  (card.primarySurface.audioAvailable ||
+                    card.aliases.some((alias) => alias.audioAvailable)) &&
+                  !(audio.playFailed && audio.playingTermId === card.termId)
+                    ? (surface) => {
+                        void audio.play(card.termId, surface);
+                      }
+                    : undefined
+                }
+                playingSurface={audio.playingTermId === card.termId ? audio.playingSurface : null}
+                playFailed={audio.playFailed && audio.playingTermId === card.termId}
+              />
+            </li>
+          ))}
+        </ol>
+      )}
 
       {preview.matchingPairsAvailable && !pairsOpen ? (
-        <button type="button" className="btn-secondary" onClick={() => setPairsOpen(true)}>
-          {t('terminology.practicePairs')}
-        </button>
+        <TermPracticeLaunch
+          label={t('terminology.practicePairs')}
+          onClick={() => {
+            setPairsOpen(true);
+          }}
+        />
       ) : null}
 
-      {pairsOpen && preview.matchingPairsAvailable ? (
-        <section className="term-pairs" aria-labelledby="term-pairs-heading">
-          <h2 id="term-pairs-heading">{t('terminology.pairsTitle')}</h2>
-          <ul className="term-pairs-list">
-            {preview.matchTargets.map((target) => {
-              const selected = pairChoices[target.termId] ?? '';
-              const localCorrect = checkResult ? selected === target.matchKey : null;
-              return (
-                <li key={target.termId} className="term-pair-row">
-                  <span lang="zh" className="term-pair-prompt">
-                    {target.promptSurface}
-                  </span>
-                  <label className="term-pair-label">
-                    <span className="sr-only">{t('terminology.pairsPrompt')}</span>
-                    <select
-                      value={selected}
-                      onChange={(event) =>
-                        setPairChoices((current) => ({
-                          ...current,
-                          [target.termId]: event.target.value,
-                        }))
-                      }
-                      disabled={busy}
-                    >
-                      <option value="">{t('terminology.chooseMatch')}</option>
-                      {preview.matchTargets.map((option) => (
-                        <option key={option.matchKey} value={option.matchKey}>
-                          {option.matchLabel}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {localCorrect === true ? (
-                    <span className="term-pair-mark is-correct">
-                      {t('assessment.session.mark.correct')}
-                    </span>
-                  ) : null}
-                  {localCorrect === false ? (
-                    <span className="term-pair-mark is-incorrect">
-                      {t('assessment.session.mark.incorrect')}
-                    </span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+      {pairsOpen ? null : (
+        <footer className="learn-reader-actions">
           <button
             type="button"
-            className="btn-secondary"
-            disabled={busy || preview.matchTargets.some((target) => !pairChoices[target.termId])}
-            onClick={() => void handleCheck()}
+            className="btn-primary"
+            disabled={busy}
+            onClick={() => void handleContinue()}
           >
-            {t('terminology.pairsSubmit')}
+            {t('terminology.continueToLesson')}
           </button>
-          {checkResult ? (
-            <p role="status">
-              {t('terminology.pairsResult', {
-                correct: checkResult.correctCount,
-                total: checkResult.totalCount,
-              })}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      <footer className="learn-reader-actions">
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={busy}
-          onClick={() => void handleContinue()}
-        >
-          {t('terminology.continueToLesson')}
-        </button>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

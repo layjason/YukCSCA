@@ -1055,7 +1055,7 @@ paths:
   /api/v1/academic/terms/{termId}/audio:
     get:
       operationId: AcademicStudentApi_getTermPronunciation
-      description: Returns the pre-rendered pronunciation clip for one published surface form. Never calls Azure. 404 when no clip exists.
+      description: Returns the pre-rendered pronunciation clip for one published surface form. Never synthesizes. 404 when no clip exists.
       parameters:
         - name: termId
           in: path
@@ -1508,6 +1508,79 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AcademicAdmin.SaveAcademicPackageDraftRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages/{id}/terms/{termId}/audio:
+    get:
+      operationId: AcademicAdminApi_getPublishedTermPronunciation
+      description: Returns the stored pronunciation clip from the package's active published revision — the audio students hear. Never synthesizes. 404 when the package has no active revision or no clip.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: surfaceForm
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 40
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - private, max-age=31536000, immutable
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            audio/mpeg:
+              schema:
+                contentMediaType: audio/mpeg
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
   /api/v1/admin/academic-packages/{id}:archive:
@@ -4032,7 +4105,7 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
-          description: A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported.
+          description: A bounded KaTeX-compatible LaTeX expression for a standalone formula. Use displayMode true for centered display; false for a standalone inline-sized formula. Mixed sentence math belongs in TEXT with \(...\). Raw HTML and arbitrary macros are not supported.
         displayMode:
           type: boolean
     AcademicAdmin.MockPaper:
@@ -4311,7 +4384,6 @@ components:
         - surfaceForms
         - definitions
         - englishEquivalent
-        - domainMeaning
         - outlineItemIds
       properties:
         id:
@@ -4326,33 +4398,31 @@ components:
           maxItems: 8
         definitions:
           $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
-          description: Explanation-language glosses. Missing languages are allowed and must be flagged to students; they do not fork identity.
+          description: Explanation-language glosses. May include the same \(...\) inline KaTeX as TEXT blocks. Missing languages are allowed and must be flagged to students; they do not fork identity.
         englishEquivalent:
           type: string
           minLength: 1
           maxLength: 200
-        domainMeaning:
-          type: string
-          minLength: 1
-          maxLength: 500
-          description: Canonical scientific or mathematical sense. Not a subject lock.
+          description: Short English equivalent. May include \(...\) inline KaTeX.
         symbols:
           anyOf:
             - type: string
             - type: 'null'
           maxLength: 80
+          description: Optional notation as bounded KaTeX (no \(...\) wrappers). Raw HTML and arbitrary macros are not supported.
         example:
           anyOf:
             - type: string
             - type: 'null'
           maxLength: 500
+          description: Optional authentic example. May include the same \(...\) inline KaTeX as TEXT blocks.
         outlineItemIds:
           type: array
           items:
             $ref: '#/components/schemas/uuid'
           maxItems: 32
           description: TOPIC_TERM should bind at least one outline item at publish. Exam-wording classes may be empty and reused across topics.
-      description: Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package. One id per domain meaning.
+      description: Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package.
     AcademicAdmin.TermSurfaceFormInput:
       type: object
       required:
@@ -4382,6 +4452,7 @@ components:
           type: string
           minLength: 1
           maxLength: 12000
+          description: Prose that may include bounded inline KaTeX between \(...\). Display-mode formulas stay MATH blocks. Terminology span offsets are UTF-16 code units into this source string, including delimiters, and must not overlap inline math. Raw HTML and arbitrary macros are not supported.
     AcademicAdmin.TopicMapping:
       type: object
       required:
@@ -5027,7 +5098,6 @@ components:
         - aliases
         - definition
         - englishEquivalent
-        - domainMeaning
         - symbols
         - example
         - outlineItemIds
@@ -5053,18 +5123,17 @@ components:
           type: string
           minLength: 1
           maxLength: 200
-        domainMeaning:
-          type: string
-          minLength: 1
-          maxLength: 500
+          description: Short English equivalent. May include bounded \(...\) inline KaTeX.
         symbols:
           anyOf:
             - type: string
             - type: 'null'
+          description: Optional notation as bounded KaTeX without \(...\) wrappers.
         example:
           anyOf:
             - type: string
             - type: 'null'
+          description: Optional authentic example. May include bounded \(...\) inline KaTeX.
         outlineItemIds:
           type: array
           items:
@@ -5098,6 +5167,7 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
+          description: Explanation-language gloss. May include bounded \(...\) inline KaTeX.
     AcademicStudent.TermDefinitionUnavailable:
       type: object
       required:
@@ -5285,7 +5355,7 @@ components:
           type: integer
           format: int32
           minimum: 0
-      description: Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's text.
+      description: Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's source text, including any \(...\) delimiters. Spans must not overlap inline math regions.
     AcademicStudent.TermSurfaceForm:
       type: object
       required:

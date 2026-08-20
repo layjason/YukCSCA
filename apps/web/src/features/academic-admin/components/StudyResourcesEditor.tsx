@@ -10,6 +10,7 @@ import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
 import { useAdminNotify } from '../adminNotify';
+import { termDraftLabel } from '../termDraftLabel';
 import type { LearningObjective, StudyResource, SyllabusOutlineItem, TermDraft } from '../types';
 
 interface StudyResourcesEditorProps {
@@ -348,7 +349,7 @@ export function StudyResourcesEditor({
                 <p className="admin-muted">{t('admin.academic.terms.empty')}</p>
               ) : (
                 <div className="admin-check-list">
-                  {terms.map((term) => (
+                  {terms.map((term, index) => (
                     <label key={term.id} className="admin-check-row">
                       <input
                         type="checkbox"
@@ -364,7 +365,12 @@ export function StudyResourcesEditor({
                           })
                         }
                       />
-                      <span>{term.surfaceForms[0]?.text || term.englishEquivalent || term.id}</span>
+                      <span lang="zh">
+                        {termDraftLabel(
+                          term,
+                          t('admin.academic.terms.untitled', { index: index + 1 }),
+                        )}
+                      </span>
                     </label>
                   ))}
                 </div>

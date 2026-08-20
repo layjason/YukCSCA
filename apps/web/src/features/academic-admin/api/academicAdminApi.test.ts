@@ -4,6 +4,7 @@ import {
   archiveAcademicPackage,
   createAcademicPackage,
   getAcademicPackage,
+  getPublishedTermPronunciation,
   listAcademicPackages,
   publishAcademicPackage,
   saveAcademicPackageDraft,
@@ -317,5 +318,28 @@ describe('academicAdminApi', () => {
       statusCode: 400,
       problem: expect.objectContaining({ code: 'ACADEMIC_VALIDATION_FAILED' }),
     });
+  });
+
+  test('getPublishedTermPronunciation fetches the stored mpeg clip', async () => {
+    setAccessToken('admin-access-token');
+    const blob = new Blob(['ID3'], { type: 'audio/mpeg' });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => blob,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getPublishedTermPronunciation('pkg-1', 'term-1', '求');
+    expect(result).toBe(blob);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/academic-packages/pkg-1/terms/term-1/audio?surfaceForm=%E6%B1%82',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer admin-access-token',
+          Accept: 'audio/mpeg',
+        }),
+      }),
+    );
   });
 });

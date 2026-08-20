@@ -32,8 +32,6 @@ yukcsca:
       mail-from: ${YUKCSCA_VERIFICATION_MAIL_FROM:no-reply@yukcsca.local}
   speech:
     enabled: ${YUKCSCA_SPEECH_ENABLED:false}
-    key: ${YUKCSCA_SPEECH_KEY:}
-    region: ${YUKCSCA_SPEECH_REGION:}
-    endpoint: ${YUKCSCA_SPEECH_ENDPOINT:}
+    voice: ${YUKCSCA_SPEECH_VOICE:zh-CN-XiaoxiaoNeural}
     timeout: ${YUKCSCA_SPEECH_TIMEOUT:8s}
     max-clips-per-publish: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:200}

@@ -128,7 +128,6 @@ final class TerminologyResponses {
     body.put("aliases", value.aliases().stream().map(TerminologyResponses::surface).toList());
     body.put("definition", definition(value.definition()));
     body.put("englishEquivalent", value.englishEquivalent());
-    body.put("domainMeaning", value.domainMeaning());
     body.put("symbols", value.symbols());
     body.put("example", value.example());
     body.put("outlineItemIds", value.outlineItemIds());

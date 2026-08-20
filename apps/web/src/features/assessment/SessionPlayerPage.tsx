@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
+import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import {
   discloseHint,
@@ -43,6 +44,7 @@ import './assessment.css';
 export function SessionPlayerPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { sessionId } = useParams<{ sessionId: string }>();
 
   const [session, setSession] = useState<AssessmentSession | null>(null);
@@ -400,7 +402,11 @@ export function SessionPlayerPage(): React.JSX.Element {
             <ArrowLeft size={18} aria-hidden="true" />
             {t('assessment.backToPractice')}
           </Link>
-          <Link to="/app/learn/terms" className="learn-back-link">
+          <Link
+            to="/app/learn/terms"
+            state={notebookStateFrom(`${location.pathname}${location.search}`)}
+            className="learn-back-link"
+          >
             {t('assessment.languageHelp.openNotebook')}
           </Link>
           <span className="assessment-chip is-soft">{purposeLabel}</span>
@@ -430,15 +436,30 @@ export function SessionPlayerPage(): React.JSX.Element {
         key={item.itemId}
       >
         <div className="assessment-stem">
-          {item.languageHelp?.disclosed ? null : <AssessmentBlocks blocks={item.stem} />}
-          <LanguageHelpPanel
-            item={item}
-            subject={session.subject}
-            sessionId={session.sessionId}
-            explanationLanguage={explanationLanguage}
-            busy={busy}
-            onDisclose={handleLanguageDisclose}
-          />
+          {item.languageHelpAvailable || item.languageHelp ? (
+            <LanguageHelpPanel
+              item={item}
+              subject={session.subject}
+              sessionId={session.sessionId}
+              explanationLanguage={explanationLanguage}
+              lookupSource={
+                wordingHardQuestionIds.has(item.questionId) ? 'LANGUAGE_MISTAKE' : 'ITEM'
+              }
+              canDisclose={session.status === 'IN_PROGRESS' && !reviewing}
+              busy={busy}
+              onDisclose={handleLanguageDisclose}
+              renderStem={({ spans, onActivate, disabled }) => (
+                <AssessmentBlocks
+                  blocks={item.stem}
+                  termSpans={spans.length > 0 ? spans : undefined}
+                  onTermActivate={spans.length > 0 ? onActivate : undefined}
+                  termDisabled={disabled}
+                />
+              )}
+            />
+          ) : (
+            <AssessmentBlocks blocks={item.stem} />
+          )}
         </div>
 
         <OptionRadiogroup

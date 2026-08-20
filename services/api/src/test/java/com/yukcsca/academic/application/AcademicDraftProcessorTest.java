@@ -84,7 +84,7 @@ class AcademicDraftProcessorTest {
   }
 
   @Test
-  void missingSurfaceAndDomainMeaningAreRejected() {
+  void missingSurfaceIsRejected() {
     ObjectNode draft = publicationSkeleton();
     ObjectNode term = draft.withArray("terms").addObject();
     term.put("id", UUID.randomUUID().toString());
@@ -96,8 +96,45 @@ class AcademicDraftProcessorTest {
         .satisfies(
             exception ->
                 assertThat(((AcademicValidationException) exception).violations())
-                    .anyMatch(v -> v.path().contains("surfaceForms"))
-                    .anyMatch(v -> v.path().contains("domainMeaning")));
+                    .anyMatch(v -> v.path().contains("surfaceForms")));
+  }
+
+  @Test
+  void inlineLatexInTextIsNotAPublishViolation() {
+    ObjectNode draft = publicationSkeleton();
+    textBlock(draft).put("text", "若函数 \\(f'(x)\\gt 0\\) 单调递增");
+    addPublishableMock(draft);
+    processor.validateForPublication(draft, Set.of());
+  }
+
+  @Test
+  void inlineLatexAngleBracketsInTextAreRejected() {
+    ObjectNode draft = publicationSkeleton();
+    textBlock(draft).put("text", "若 \\(f'(x)>0\\) 单调递增");
+    assertThatThrownBy(() -> processor.validateForPublication(draft, Set.of()))
+        .isInstanceOf(AcademicValidationException.class)
+        .satisfies(
+            exception ->
+                assertThat(((AcademicValidationException) exception).violations())
+                    .anyMatch(
+                        v ->
+                            v.path().contains(".text")
+                                && v.code() == AcademicViolationCode.UNSUPPORTED));
+  }
+
+  @Test
+  void unmatchedInlineLatexInTextIsRejected() {
+    ObjectNode draft = publicationSkeleton();
+    textBlock(draft).put("text", "若 \\(f(x) 单调递增");
+    assertThatThrownBy(() -> processor.validateForPublication(draft, Set.of()))
+        .isInstanceOf(AcademicValidationException.class)
+        .satisfies(
+            exception ->
+                assertThat(((AcademicValidationException) exception).violations())
+                    .anyMatch(
+                        v ->
+                            v.path().contains(".text")
+                                && v.code() == AcademicViolationCode.UNSUPPORTED));
   }
 
   @Test
@@ -111,7 +148,6 @@ class AcademicDraftProcessorTest {
     surface.put("pinyin", "dǎoshù");
     term.putObject("definitions").put("english", "derivative");
     term.put("englishEquivalent", "derivative");
-    term.put("domainMeaning", "The instantaneous rate of change.");
     term.putArray("outlineItemIds");
     assertThatThrownBy(() -> processor.validateForPublication(draft, Set.of()))
         .isInstanceOf(AcademicValidationException.class)
@@ -125,34 +161,64 @@ class AcademicDraftProcessorTest {
   }
 
   @Test
-  void unknownRequiredTermIdIsRejected() {
+  void unknownRequiredTermIdIsDroppedOnPublish() {
     ObjectNode draft = publicationSkeleton();
+    UUID liveTermId = UUID.randomUUID();
+    ObjectNode term = draft.withArray("terms").addObject();
+    term.put("id", liveTermId.toString());
+    term.put("termClass", "EXAM_INSTRUCTION");
+    ObjectNode surface = term.putArray("surfaceForms").addObject();
+    surface.put("text", "求");
+    surface.put("pinyin", "qiú");
+    term.putObject("definitions").put("english", "find");
+    term.put("englishEquivalent", "find");
+    term.putArray("outlineItemIds");
+    ObjectNode terminology = null;
     for (var resource : draft.path("resources")) {
       if ("TERMINOLOGY".equals(resource.path("kind").asText())) {
-        ((ObjectNode) resource).putArray("requiredTermIds").add(UUID.randomUUID().toString());
+        terminology = (ObjectNode) resource;
+        terminology
+            .putArray("requiredTermIds")
+            .add(UUID.randomUUID().toString())
+            .add(liveTermId.toString());
         break;
       }
     }
-    assertThatThrownBy(() -> processor.validateForPublication(draft, Set.of()))
-        .isInstanceOf(AcademicValidationException.class)
-        .satisfies(
-            exception ->
-                assertThat(((AcademicValidationException) exception).violations())
-                    .anyMatch(v -> v.path().contains("requiredTermIds")));
+    addPublishableMock(draft);
+    processor.validateForPublication(draft, Set.of());
+    assertThat(terminology.path("requiredTermIds"))
+        .extracting(node -> node.asText())
+        .containsExactly(liveTermId.toString());
   }
 
   @Test
-  void unknownAuthoredTermAttachmentIsRejected() {
+  void unknownAuthoredTermAttachmentIsDroppedOnPublish() {
     ObjectNode draft = publicationSkeleton();
     ObjectNode question = (ObjectNode) draft.path("questions").get(0);
     ObjectNode attachment = question.putArray("authoredTermAttachments").addObject();
     attachment.put("termId", UUID.randomUUID().toString());
-    assertThatThrownBy(() -> processor.validateForPublication(draft, Set.of()))
-        .isInstanceOf(AcademicValidationException.class)
-        .satisfies(
-            exception ->
-                assertThat(((AcademicValidationException) exception).violations())
-                    .anyMatch(v -> v.path().contains("authoredTermAttachments")));
+    addPublishableMock(draft);
+    processor.validateForPublication(draft, Set.of());
+    assertThat(question.path("authoredTermAttachments")).isEmpty();
+  }
+
+  @Test
+  void normalizeForSaveDropsUnknownRequiredTermIds() {
+    ObjectNode submitted = json.createObjectNode();
+    submitted.putObject("officialSyllabus").put("subject", "MATHEMATICS");
+    submitted.putArray("outlineItems");
+    submitted.putArray("learningObjectives");
+    ObjectNode resource = submitted.putArray("resources").addObject();
+    resource.put("id", UUID.randomUUID().toString());
+    resource.put("kind", "TERMINOLOGY");
+    resource.putArray("requiredTermIds").add(UUID.randomUUID().toString());
+    submitted.putArray("questions");
+    submitted.putArray("mocks");
+    submitted.putArray("terms");
+    ObjectNode normalized =
+        processor.normalizeForSave(
+            submitted, processor.emptyDraft("MATHEMATICS"), UUID.randomUUID(), "MATHEMATICS");
+    assertThat(normalized.path("resources").get(0).path("requiredTermIds")).isEmpty();
   }
 
   private ObjectNode publicationSkeleton() {
@@ -231,6 +297,25 @@ class AcademicDraftProcessorTest {
     draft.putArray("terms");
     draft.putArray("mocks");
     return draft;
+  }
+
+  private static ObjectNode textBlock(ObjectNode draft) {
+    return (ObjectNode)
+        draft.path("resources").get(0).path("versions").get(0).path("blocks").get(0);
+  }
+
+  private static void addPublishableMock(ObjectNode draft) {
+    String questionId = draft.path("questions").get(0).path("id").asText();
+    ObjectNode mock = draft.withArray("mocks").addObject();
+    mock.put("id", UUID.randomUUID().toString());
+    mock.put("title", "Timed mock");
+    mock.put("examLanguage", "en");
+    mock.put("durationMinutes", 60);
+    mock.put("totalPoints", 100);
+    mock.put("questionCount", 1);
+    mock.put("questionType", "SINGLE_ANSWER");
+    mock.putArray("questions").addObject().put("questionId", questionId).put("points", 100);
+    mock.putObject("provenance").put("origin", "YUKCSCA_ORIGINAL");
   }
 
   private static void localized(ObjectNode node) {

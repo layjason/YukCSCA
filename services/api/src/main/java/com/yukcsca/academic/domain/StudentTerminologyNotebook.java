@@ -84,7 +84,8 @@ public class StudentTerminologyNotebook {
     this.packageId = packageId;
     this.subject = subject;
     this.termClass = termClass;
-    this.familiarity = FAMILIARITY_NEW;
+    this.familiarity =
+        SOURCE_LANGUAGE_MISTAKE.equals(source) ? FAMILIARITY_LEARNING : FAMILIARITY_NEW;
     this.due = true;
     this.sources = new ArrayList<>();
     this.sources.add(source);

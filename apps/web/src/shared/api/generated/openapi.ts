@@ -249,7 +249,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Returns the pre-rendered pronunciation clip for one published surface form. Never calls Azure. 404 when no clip exists. */
+    /** @description Returns the pre-rendered pronunciation clip for one published surface form. Never synthesizes. 404 when no clip exists. */
     get: operations['AcademicStudentApi_getTermPronunciation'];
     put?: never;
     post?: never;
@@ -338,6 +338,23 @@ export interface paths {
     get?: never;
     /** @description Replaces the package draft when its expected revision is current. Stale writes fail without merging. */
     put: operations['AcademicAdminApi_saveAcademicPackageDraft'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-packages/{id}/terms/{termId}/audio': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the stored pronunciation clip from the package's active published revision — the audio students hear. Never synthesizes. 404 when the package has no active revision or no clip. */
+    get: operations['AcademicAdminApi_getPublishedTermPronunciation'];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -1058,7 +1075,7 @@ export interface components {
     'AcademicAdmin.MathContentBlock': {
       /** @enum {string} */
       kind: 'MATH';
-      /** @description A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported. */
+      /** @description A bounded KaTeX-compatible LaTeX expression for a standalone formula. Use displayMode true for centered display; false for a standalone inline-sized formula. Mixed sentence math belongs in TEXT with \(...\). Raw HTML and arbitrary macros are not supported. */
       latex: string;
       displayMode: boolean;
     };
@@ -1164,17 +1181,18 @@ export interface components {
      * @enum {string}
      */
     'AcademicAdmin.TermClass': 'EXAM_INSTRUCTION' | 'LOGICAL_EXPRESSION' | 'TOPIC_TERM';
-    /** @description Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package. One id per domain meaning. */
+    /** @description Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package. */
     'AcademicAdmin.TermDraft': {
       id: components['schemas']['uuid'];
       termClass: components['schemas']['AcademicAdmin.TermClass'];
       surfaceForms: components['schemas']['AcademicAdmin.TermSurfaceFormInput'][];
-      /** @description Explanation-language glosses. Missing languages are allowed and must be flagged to students; they do not fork identity. */
+      /** @description Explanation-language glosses. May include the same \(...\) inline KaTeX as TEXT blocks. Missing languages are allowed and must be flagged to students; they do not fork identity. */
       definitions: components['schemas']['AcademicAdmin.LocalizedText'];
+      /** @description Short English equivalent. May include \(...\) inline KaTeX. */
       englishEquivalent: string;
-      /** @description Canonical scientific or mathematical sense. Not a subject lock. */
-      domainMeaning: string;
+      /** @description Optional notation as bounded KaTeX (no \(...\) wrappers). Raw HTML and arbitrary macros are not supported. */
       symbols?: string | null;
+      /** @description Optional authentic example. May include the same \(...\) inline KaTeX as TEXT blocks. */
       example?: string | null;
       /** @description TOPIC_TERM should bind at least one outline item at publish. Exam-wording classes may be empty and reused across topics. */
       outlineItemIds: components['schemas']['uuid'][];
@@ -1187,6 +1205,7 @@ export interface components {
     'AcademicAdmin.TextContentBlock': {
       /** @enum {string} */
       kind: 'TEXT';
+      /** @description Prose that may include bounded inline KaTeX between \(...\). Display-mode formulas stay MATH blocks. Terminology span offsets are UTF-16 code units into this source string, including delimiters, and must not overlap inline math. Raw HTML and arbitrary macros are not supported. */
       text: string;
     };
     'AcademicAdmin.TopicMapping': {
@@ -1431,9 +1450,11 @@ export interface components {
       primarySurface: components['schemas']['AcademicStudent.TermSurfaceForm'];
       aliases: components['schemas']['AcademicStudent.TermSurfaceForm'][];
       definition: components['schemas']['AcademicStudent.TermDefinition'];
+      /** @description Short English equivalent. May include bounded \(...\) inline KaTeX. */
       englishEquivalent: string;
-      domainMeaning: string;
+      /** @description Optional notation as bounded KaTeX without \(...\) wrappers. */
       symbols: string | null;
+      /** @description Optional authentic example. May include bounded \(...\) inline KaTeX. */
       example: string | null;
       outlineItemIds: components['schemas']['uuid'][];
     };
@@ -1449,6 +1470,7 @@ export interface components {
       /** @enum {string} */
       availability: 'AVAILABLE';
       language: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      /** @description Explanation-language gloss. May include bounded \(...\) inline KaTeX. */
       text: string;
     };
     'AcademicStudent.TermDefinitionUnavailable': {
@@ -1528,7 +1550,7 @@ export interface components {
       due: boolean;
       entry: components['schemas']['AcademicStudent.NotebookEntry'];
     };
-    /** @description Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's text. */
+    /** @description Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's source text, including any \(...\) delimiters. Spans must not overlap inline math regions. */
     'AcademicStudent.TermSpan': {
       termId: components['schemas']['uuid'];
       surfaceForm: string;
@@ -3621,6 +3643,70 @@ export interface operations {
       };
       /** @description The request conflicts with the current state of the server. */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getPublishedTermPronunciation: {
+    parameters: {
+      query?: {
+        surfaceForm?: string;
+      };
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+        termId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'private, max-age=31536000, immutable';
+          'X-Content-Type-Options': 'nosniff';
+          [name: string]: unknown;
+        };
+        content: {
+          'audio/mpeg': unknown;
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
         headers: {
           [name: string]: unknown;
         };

@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import { TermCardView } from './TermCardView';
 import type { TermCard } from './types';
+
+const OVERLAY_CLASS = 'app-term-overlay-open';
 
 interface TermCardDialogProps {
   card: TermCard;
@@ -31,6 +34,13 @@ export function TermCardDialog({
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<Element | null>(null);
+
+  useEffect(() => {
+    document.body.classList.add(OVERLAY_CLASS);
+    return () => {
+      document.body.classList.remove(OVERLAY_CLASS);
+    };
+  }, []);
 
   useEffect(() => {
     restoreRef.current = document.activeElement;
@@ -83,6 +93,16 @@ export function TermCardDialog({
         ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
       >
+        <button
+          ref={closeRef}
+          type="button"
+          className="term-dialog-close"
+          onClick={onClose}
+          aria-label={t('terminology.close')}
+          title={t('terminology.close')}
+        >
+          <X size={22} strokeWidth={2.25} aria-hidden="true" />
+        </button>
         <h2 id="term-dialog-title" className="sr-only">
           {card.primarySurface.text}
         </h2>
@@ -96,11 +116,6 @@ export function TermCardDialog({
           playFailed={playFailed}
         />
         {extra}
-        <div className="dialog-actions">
-          <button ref={closeRef} type="button" className="btn-primary" onClick={onClose}>
-            {t('terminology.close')}
-          </button>
-        </div>
       </div>
     </div>,
     document.body,

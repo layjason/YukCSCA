@@ -1,11 +1,7 @@
-import { splitTextBySpans } from './termPresentation';
+import { MixedProse } from '@/shared/content/MixedProse';
+import type { TappableSpan } from './termPresentation';
 
-export interface TappableSpan {
-  termId: string;
-  surfaceForm: string;
-  startOffset: number;
-  endOffset: number;
-}
+export type { TappableSpan };
 
 interface TappableTextProps {
   text: string;
@@ -20,24 +16,15 @@ export function TappableText({
   onActivate,
   disabled = false,
 }: TappableTextProps): React.JSX.Element {
-  const parts = splitTextBySpans(text, spans);
   return (
-    <p className="term-tappable-text" lang="zh">
-      {parts.map((part, index) =>
-        part.span ? (
-          <button
-            key={`${part.span.termId}-${part.span.startOffset}-${index}`}
-            type="button"
-            className="term-chip"
-            disabled={disabled}
-            onClick={() => onActivate(part.span!)}
-          >
-            {part.text}
-          </button>
-        ) : (
-          <span key={`plain-${index}`}>{part.text}</span>
-        ),
-      )}
-    </p>
+    <MixedProse
+      text={text}
+      as="p"
+      className="term-tappable-text"
+      lang="zh"
+      spans={spans}
+      onActivate={onActivate}
+      disabled={disabled}
+    />
   );
 }

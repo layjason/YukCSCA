@@ -1,5 +1,6 @@
 package com.yukcsca.academic.application;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,5 +17,6 @@ public interface AssessmentItemContextPort {
       UUID packageRevisionId,
       UUID questionId,
       String examLanguage,
-      String purpose) {}
+      String purpose,
+      List<String> stemTexts) {}
 }

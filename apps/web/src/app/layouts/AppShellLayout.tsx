@@ -1,7 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
-import { PreviewBadge } from '@/shared/components/PreviewBadge';
 import { RouteFocusManager } from '@/app/focus/RouteFocusManager';
 import {
   isRouteActive,
@@ -121,9 +120,6 @@ export function AppShellLayout(): React.JSX.Element {
       </nav>
 
       <div className="app-content-wrapper">
-        <header className="app-content-header">
-          <PreviewBadge />
-        </header>
         <main id="main-content" className="app-content">
           <RouteFocusManager />
           <Outlet />

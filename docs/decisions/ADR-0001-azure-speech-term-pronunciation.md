@@ -1,10 +1,10 @@
 # ADR-0001 — Azure Speech for reviewed term pronunciation
 
-| Field         | Value      |
-| ------------- | ---------- |
-| Status        | `ACCEPTED` |
-| Date          | 2026-08-14 |
-| Related slice | `VS-010A`  |
+| Field         | Value                                                                 |
+| ------------- | --------------------------------------------------------------------- |
+| Status        | `SUPERSEDED` by [`ADR-0002`](ADR-0002-edge-tts-term-pronunciation.md) |
+| Date          | 2026-08-14                                                            |
+| Related slice | `VS-010A`                                                             |
 
 Chinese Mathematics terminology cards must show pinyin and may play a short pronunciation. The product owner selected Azure Neural voice `zh-CN-XiaoxiaoNeural`. YukCSCA therefore introduces a `SpeechSynthesisPort` on this slice, earlier than the `VS-010B` narration candidate.
 

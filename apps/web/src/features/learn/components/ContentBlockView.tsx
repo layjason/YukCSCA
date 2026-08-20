@@ -1,4 +1,5 @@
-import { TappableText, type TappableSpan } from '@/shared/terminology/TappableText';
+import { MixedProse } from '@/shared/content/MixedProse';
+import type { TappableSpan } from '@/shared/terminology/TappableText';
 import type { ContentBlock } from '../types';
 import { LessonImage } from './LessonImage';
 import { MathBlock } from './MathBlock';
@@ -10,6 +11,7 @@ interface ContentBlockViewProps {
   blockRef?: (element: HTMLElement | null) => void;
   termSpans?: readonly TappableSpan[] | undefined;
   onTermActivate?: ((span: TappableSpan) => void) | undefined;
+  termDisabled?: boolean | undefined;
 }
 
 export function ContentBlockView({
@@ -19,6 +21,7 @@ export function ContentBlockView({
   blockRef,
   termSpans,
   onTermActivate,
+  termDisabled = false,
 }: ContentBlockViewProps): React.JSX.Element {
   const className = [
     'learn-content-block',
@@ -31,11 +34,14 @@ export function ContentBlockView({
   return (
     <div ref={blockRef} className={className} data-block-index={index} id={`learn-block-${index}`}>
       {block.kind === 'TEXT' ? (
-        termSpans && termSpans.length > 0 && onTermActivate ? (
-          <TappableText text={block.text} spans={termSpans} onActivate={onTermActivate} />
-        ) : (
-          <p className="learn-text-block">{block.text}</p>
-        )
+        <MixedProse
+          text={block.text}
+          as="p"
+          className="learn-text-block"
+          spans={termSpans}
+          onActivate={onTermActivate}
+          disabled={termDisabled}
+        />
       ) : null}
       {block.kind === 'MATH' ? (
         <MathBlock latex={block.latex} displayMode={block.displayMode} />

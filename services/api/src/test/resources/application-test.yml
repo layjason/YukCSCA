@@ -43,9 +43,7 @@ yukcsca:
       cleanup-interval: 1h
       retention: 30d
   speech:
-    enabled: false
-    key:
-    region:
-    endpoint:
+    enabled: true
+    voice: zh-CN-XiaoxiaoNeural
     timeout: 1s
     max-clips-per-publish: 200

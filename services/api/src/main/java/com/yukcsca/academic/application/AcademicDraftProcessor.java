@@ -129,6 +129,7 @@ public class AcademicDraftProcessor {
     if (!normalized.has("terms") || !normalized.path("terms").isArray()) {
       normalized.putArray("terms");
     }
+    dropStaleTermReferences(normalized);
     // Package identity owns subject; drafts cannot reassign a package to another subject.
     ObjectNode syllabus =
         normalized.get("officialSyllabus") instanceof ObjectNode existing
@@ -161,6 +162,7 @@ public class AcademicDraftProcessor {
   }
 
   public void validateForPublication(ObjectNode draft, Set<UUID> availableImageIds) {
+    dropStaleTermReferences(draft);
     List<AcademicViolation> violations = new ArrayList<>();
     ExamStructureSnapshot structure =
         validateOfficialSyllabus(draft.path("officialSyllabus"), violations);
@@ -866,10 +868,13 @@ public class AcademicDraftProcessor {
       JsonNode block = blocks.get(index);
       String blockPath = path + "[" + index + "]";
       switch (text(block, "kind")) {
-        case "TEXT" -> requireText(block, "text", blockPath + ".text", 12000, violations);
+        case "TEXT" -> {
+          String body = requireText(block, "text", blockPath + ".text", 12000, violations);
+          validateInlineLatex(body, blockPath + ".text", violations);
+        }
         case "MATH" -> {
           String latex = requireText(block, "latex", blockPath + ".latex", 4000, violations);
-          if (latex != null && !safeLatex(latex)) {
+          if (latex != null && !InlineLatex.isSafe(latex)) {
             violations.add(
                 new AcademicViolation(blockPath + ".latex", AcademicViolationCode.UNSUPPORTED));
           }
@@ -955,10 +960,17 @@ public class AcademicDraftProcessor {
         }
       }
       validateOptionalDefinitions(term.path("definitions"), path + ".definitions", violations);
-      requireText(term, "englishEquivalent", path + ".englishEquivalent", 200, violations);
-      requireText(term, "domainMeaning", path + ".domainMeaning", 500, violations);
-      optionalTextMax(text(term, "symbols"), 80, path + ".symbols", violations);
-      optionalTextMax(text(term, "example"), 500, path + ".example", violations);
+      String englishEquivalent =
+          requireText(term, "englishEquivalent", path + ".englishEquivalent", 200, violations);
+      validateInlineLatex(englishEquivalent, path + ".englishEquivalent", violations);
+      String symbols = text(term, "symbols");
+      optionalTextMax(symbols, 80, path + ".symbols", violations);
+      if (symbols != null && !symbols.isBlank() && !InlineLatex.isSafe(symbols)) {
+        violations.add(new AcademicViolation(path + ".symbols", AcademicViolationCode.UNSUPPORTED));
+      }
+      String example = text(term, "example");
+      optionalTextMax(example, 500, path + ".example", violations);
+      validateInlineLatex(example, path + ".example", violations);
       JsonNode outline = term.path("outlineItemIds");
       if (outline.isMissingNode() || outline.isNull()) {
         if ("TOPIC_TERM".equals(termClass)) {
@@ -991,10 +1003,91 @@ public class AcademicDraftProcessor {
       violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
       return;
     }
-    optionalTextMax(text(definitions, "indonesian"), 4000, path + ".indonesian", violations);
-    optionalTextMax(text(definitions, "english"), 4000, path + ".english", violations);
-    optionalTextMax(
-        text(definitions, "simplifiedChinese"), 4000, path + ".simplifiedChinese", violations);
+    String indonesian = text(definitions, "indonesian");
+    optionalTextMax(indonesian, 4000, path + ".indonesian", violations);
+    validateInlineLatex(indonesian, path + ".indonesian", violations);
+    String english = text(definitions, "english");
+    optionalTextMax(english, 4000, path + ".english", violations);
+    validateInlineLatex(english, path + ".english", violations);
+    String simplifiedChinese = text(definitions, "simplifiedChinese");
+    optionalTextMax(simplifiedChinese, 4000, path + ".simplifiedChinese", violations);
+    validateInlineLatex(simplifiedChinese, path + ".simplifiedChinese", violations);
+  }
+
+  /**
+   * Term-bank edits are not a transactional rewrite of every resource/question pointer. Unknown
+   * {@code requiredTermIds} and attachments are dropped so a deleted term cannot block publish.
+   * Remaining ids are still validated against the live bank.
+   */
+  void dropStaleTermReferences(ObjectNode draft) {
+    Set<UUID> termIds = new LinkedHashSet<>();
+    JsonNode terms = draft.path("terms");
+    if (terms.isArray()) {
+      for (JsonNode term : terms) {
+        UUID id = parseUuid(text(term, "id"));
+        if (id != null) {
+          termIds.add(id);
+        }
+      }
+    }
+    JsonNode resources = draft.path("resources");
+    if (resources.isArray()) {
+      for (JsonNode resource : resources) {
+        if (!(resource instanceof ObjectNode node)) {
+          continue;
+        }
+        JsonNode required = node.get("requiredTermIds");
+        if (required == null || required.isNull() || required.isMissingNode()) {
+          continue;
+        }
+        if (!required.isArray() || !"TERMINOLOGY".equals(text(node, "kind"))) {
+          node.remove("requiredTermIds");
+          continue;
+        }
+        node.set("requiredTermIds", keepKnownIds(required, termIds));
+      }
+    }
+    JsonNode questions = draft.path("questions");
+    if (questions.isArray()) {
+      for (JsonNode question : questions) {
+        if (!(question instanceof ObjectNode node)) {
+          continue;
+        }
+        JsonNode attachments = node.get("authoredTermAttachments");
+        if (attachments == null || attachments.isNull() || attachments.isMissingNode()) {
+          continue;
+        }
+        if (!attachments.isArray()) {
+          node.remove("authoredTermAttachments");
+          continue;
+        }
+        ArrayNode kept = json.createArrayNode();
+        for (JsonNode attachment : attachments) {
+          if (!attachment.isObject()) {
+            continue;
+          }
+          UUID termId = parseUuid(text(attachment, "termId"));
+          if (termId == null || !termIds.contains(termId)) {
+            continue;
+          }
+          kept.add(attachment);
+        }
+        node.set("authoredTermAttachments", kept);
+      }
+    }
+  }
+
+  private ArrayNode keepKnownIds(JsonNode values, Set<UUID> known) {
+    ArrayNode kept = json.createArrayNode();
+    Set<UUID> unique = new LinkedHashSet<>();
+    for (JsonNode value : values) {
+      UUID id = parseUuid(value.asText());
+      if (id == null || !known.contains(id) || !unique.add(id)) {
+        continue;
+      }
+      kept.add(id.toString());
+    }
+    return kept;
   }
 
   private void validateRequiredTermIds(
@@ -1379,12 +1472,9 @@ public class AcademicDraftProcessor {
     }
   }
 
-  private static boolean safeLatex(String value) {
-    String normalized = value.toLowerCase(java.util.Locale.ROOT);
-    if (normalized.indexOf('<') >= 0 || normalized.indexOf('>') >= 0) return false;
-    return java.util.stream.Stream.of(
-            "\\html", "\\href", "\\url", "\\includegraphics", "\\def", "\\gdef", "\\newcommand")
-        .noneMatch(normalized::contains);
+  private void validateInlineLatex(String value, String path, List<AcademicViolation> violations) {
+    if (value == null || InlineLatex.isValidMixed(value)) return;
+    violations.add(new AcademicViolation(path, AcademicViolationCode.UNSUPPORTED));
   }
 
   private static String text(JsonNode parent, String field) {
