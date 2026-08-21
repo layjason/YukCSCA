@@ -15,7 +15,7 @@ interface TermCardViewProps {
   playingSurface?: string | null | undefined;
   playDisabled?: boolean | undefined;
   playFailed?: boolean | undefined;
-  layout?: 'card' | 'entry';
+  layout?: 'card' | 'entry' | 'rail';
   bookmarked?: boolean | undefined;
   onToggleBookmark?: (() => void) | undefined;
   bookmarkBusy?: boolean | undefined;

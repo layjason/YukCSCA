@@ -103,6 +103,7 @@ export function TermCardDialog({
         ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
       >
+        <div className="term-sheet-handle" aria-hidden="true" />
         <div className="term-dialog-actions">
           {onToggleBookmark ? (
             <button

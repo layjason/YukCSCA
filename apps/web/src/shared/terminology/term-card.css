@@ -241,6 +241,39 @@
   font-size: 2.35rem;
 }
 
+.term-card-rail {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  gap: var(--space-md);
+}
+
+.term-card-rail .term-card-characters {
+  font-size: 1.85rem;
+}
+
+.term-card-rail .term-card-pinyin {
+  font-size: 0.95rem;
+}
+
+.term-card-rail .term-card-definition {
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+
+.term-card-rail .term-card-notation {
+  min-height: 2.75rem;
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.term-card-rail .term-card-example-block {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.term-card-rail .term-card-example {
+  font-size: 0.95rem;
+}
+
 .term-entry-page {
   display: grid;
   justify-items: stretch;
@@ -326,20 +359,30 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: var(--space-md);
+  padding: 0;
   background: color-mix(in srgb, var(--color-overlay-scrim) 40%, transparent);
+  animation: term-scrim-fade var(--motion-quick) var(--ease-standard) both;
 }
 
 .term-dialog {
   position: relative;
-  width: min(36rem, 100%);
-  max-height: min(88vh, 40rem);
+  width: min(38rem, 100%);
+  max-height: min(85vh, 42rem);
   overflow: auto;
-  padding: var(--space-lg);
-  padding-top: calc(var(--space-lg) + 0.5rem);
-  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-md) var(--radius-md);
+  padding: var(--space-md) var(--space-lg) var(--space-xl);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
+  box-shadow: 0 -8px 32px color-mix(in srgb, var(--color-ink) 12%, transparent);
+  animation: term-sheet-slide var(--motion-standard) var(--ease-standard) both;
+}
+
+.term-sheet-handle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
 }
 
 .term-dialog-actions {
@@ -388,10 +431,34 @@
 @media (min-width: 720px) {
   .term-dialog-scrim {
     align-items: center;
+    padding: var(--space-md);
   }
 
   .term-dialog {
     border-radius: var(--radius-lg);
+    animation: surface-enter var(--motion-standard) var(--ease-standard) both;
+  }
+
+  .term-sheet-handle {
+    display: none;
+  }
+}
+
+@keyframes term-sheet-slide {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes term-scrim-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
