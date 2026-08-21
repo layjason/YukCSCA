@@ -340,10 +340,12 @@ export function StudyResourcesEditor({
             )}
           </fieldset>
 
-          {selected.kind === 'TERMINOLOGY' ? (
+          {selected.kind === 'LESSON' || selected.kind === 'TERMINOLOGY' ? (
             <fieldset className="admin-fieldset" disabled={disabled}>
               <legend className="admin-fieldset-legend">
-                {t('admin.academic.terms.requiredSet')}
+                {selected.kind === 'LESSON'
+                  ? t('admin.academic.terms.lessonRequiredSet')
+                  : t('admin.academic.terms.requiredSet')}
               </legend>
               {terms.length === 0 ? (
                 <p className="admin-muted">{t('admin.academic.terms.empty')}</p>

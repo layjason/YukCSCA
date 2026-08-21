@@ -40,7 +40,11 @@ public class PublishedTerminologyCatalogService implements PublishedTerminologyC
   @Override
   @Transactional(readOnly = true)
   public LanguageHelpProjection languageHelpForQuestion(
-      UUID packageRevisionId, UUID questionId, List<JsonNode> stem, UUID accountId) {
+      UUID packageRevisionId,
+      UUID questionId,
+      List<JsonNode> stem,
+      UUID accountId,
+      UUID lessonResourceId) {
     JsonNode content = loadContent(packageRevisionId).orElse(null);
     if (content == null || !terms.hasPublishedTermBank(content)) {
       return new LanguageHelpProjection(List.of());
@@ -48,10 +52,11 @@ public class PublishedTerminologyCatalogService implements PublishedTerminologyC
     List<PublishedTerm> bank = terms.terms(content);
     JsonNode question = terms.questionById(content, questionId);
     Set<UUID> required = new HashSet<>();
-    if (question != null) {
-      terms
-          .terminologyBoundTo(content, uuidList(question.path("outlineItemIds")))
-          .ifPresent(resource -> required.addAll(terms.requiredTermIds(resource)));
+    if (lessonResourceId != null) {
+      JsonNode lesson = terms.resourceById(content, lessonResourceId);
+      if (lesson != null) {
+        required.addAll(terms.requiredTermIds(lesson));
+      }
     }
     Set<UUID> lighting = terms.languageHelpTermIds(question, bank, required);
     List<TermSpanMatch> spans = terms.matchSpans(stem, bank, lighting, 64);

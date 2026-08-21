@@ -4,7 +4,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { ArrowLeft, ChevronDown, NotebookText } from 'lucide-react';
 import { DestPageHero } from '@/shared/components/DestPageHero';
 import { ApiError } from '@/shared/api/httpClient';
-import { listTerminologyNotebook } from '@/shared/api/terminologyStudentApi';
+import { Toast, type ToastTone } from '@/shared/components/Toast';
+import { listTerminologyNotebook, unbookmarkTerm } from '@/shared/api/terminologyStudentApi';
 import type { NotebookEntry } from '@/shared/terminology/types';
 import { TermLexemeRow } from '@/shared/terminology/TermLexemeRow';
 import { TermSearchField } from '@/shared/terminology/TermSearchField';
@@ -34,6 +35,8 @@ export function TerminologyNotebookPage(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unbookmarkBusy, setUnbookmarkBusy] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const audio = useTermAudio();
 
   useEffect(() => {
@@ -109,6 +112,25 @@ export function TerminologyNotebookPage(): React.JSX.Element {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function handleUnbookmark(termId: string): Promise<void> {
+    if (unbookmarkBusy) return;
+    setUnbookmarkBusy(termId);
+    setError(null);
+    try {
+      await unbookmarkTerm(termId);
+      setItems((current) => current?.filter((item) => item.termId !== termId) ?? current);
+      setToast({ message: t('terminology.unbookmarkedToast'), tone: 'info' });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setError(t('terminology.formalDisabled'));
+      } else {
+        setError(t('terminology.saveFailed'));
+      }
+    } finally {
+      setUnbookmarkBusy(null);
+    }
+  }
 
   const origin = notebookReturnTo(location.state, '');
   const firstDue = items?.find((item) => item.due);
@@ -233,6 +255,8 @@ export function TerminologyNotebookPage(): React.JSX.Element {
                       ? () => void audio.play(item.termId, item.primarySurface.text)
                       : undefined
                   }
+                  onUnbookmark={() => void handleUnbookmark(item.termId)}
+                  unbookmarkBusy={unbookmarkBusy === item.termId}
                 />
               </li>
             ))}
@@ -249,6 +273,9 @@ export function TerminologyNotebookPage(): React.JSX.Element {
             </button>
           ) : null}
         </div>
+      ) : null}
+      {toast ? (
+        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
       ) : null}
     </div>
   );

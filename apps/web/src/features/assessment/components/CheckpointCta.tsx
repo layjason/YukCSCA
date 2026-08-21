@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Lock, Play, RotateCcw } from 'lucide-react';
@@ -28,29 +28,36 @@ type PriorAttempt =
   | { status: 'failed'; sessionId: string }
   | { status: 'unknown'; sessionId: string };
 
-type LoadState =
-  | { status: 'idle' }
-  | {
-      status: 'ready';
-      checkpoint: CheckpointForLesson;
-      prior: PriorAttempt;
-      inProgressSessionId: string | null;
-    }
-  | { status: 'failed' };
+type ReadyState = {
+  status: 'ready';
+  checkpoint: CheckpointForLesson;
+  prior: PriorAttempt;
+  inProgressSessionId: string | null;
+};
+
+type LoadState = { status: 'idle' } | ReadyState | { status: 'failed' };
+
+/** Last ready strip for a lesson; language reload must not drop to idle/null. */
+const readyByLesson = new Map<string, ReadyState>();
+
+function lessonKey(subject: AcademicSubject, resourceId: string): string {
+  return `${subject}:${resourceId}`;
+}
 
 /**
  * Compact Learn handoff after content-complete. Uses chips/state, not long lecture copy.
  * Does not claim mastery. After a prior attempt, offers retry + practice instead of only Start.
  * When checkpoint material changed since the last attempt, surfaces an honest redo offer.
  */
-export function CheckpointCta({
+function CheckpointCtaComponent({
   subject,
   resourceId,
   enabled,
   lessonContentUpdated = false,
 }: CheckpointCtaProps): React.JSX.Element | null {
   const { t } = useTranslation();
-  const [state, setState] = useState<LoadState>({ status: 'idle' });
+  const key = lessonKey(subject, resourceId);
+  const [state, setState] = useState<LoadState>(() => readyByLesson.get(key) ?? { status: 'idle' });
 
   useEffect(() => {
     if (!enabled) return;
@@ -95,22 +102,37 @@ export function CheckpointCta({
           // History is best-effort; still show start CTA.
           prior = { status: 'none' };
         }
-        if (active) setState({ status: 'ready', checkpoint, prior, inProgressSessionId });
+        if (active) {
+          const ready: ReadyState = {
+            status: 'ready',
+            checkpoint,
+            prior,
+            inProgressSessionId,
+          };
+          readyByLesson.set(key, ready);
+          setState(ready);
+        }
       } catch {
-        if (active) setState({ status: 'failed' });
+        // Prefer the last good strip over a blank hole during transient failures.
+        if (active && !readyByLesson.has(key)) {
+          setState({ status: 'failed' });
+        }
       }
     })();
     return () => {
       active = false;
     };
-  }, [enabled, subject, resourceId]);
+  }, [enabled, subject, resourceId, key]);
 
-  if (!enabled || state.status === 'idle' || state.status === 'failed') return null;
+  if (!enabled) return null;
 
-  const checkpoint = state.checkpoint;
-  const prior = state.prior;
-  const inProgressHref = state.inProgressSessionId
-    ? `/app/practice/sessions/${state.inProgressSessionId}`
+  const view = state.status === 'ready' ? state : (readyByLesson.get(key) ?? null);
+  if (!view) return null;
+
+  const checkpoint = view.checkpoint;
+  const prior = view.prior;
+  const inProgressHref = view.inProgressSessionId
+    ? `/app/practice/sessions/${view.inProgressSessionId}`
     : null;
 
   // Hide entirely when no checkpoint exists at all
@@ -274,3 +296,5 @@ export function CheckpointCta({
     </div>
   );
 }
+
+export const CheckpointCta = memo(CheckpointCtaComponent);

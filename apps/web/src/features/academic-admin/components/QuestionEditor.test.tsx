@@ -206,7 +206,7 @@ describe('QuestionEditor', () => {
     const resources: StudyResource[] = [
       {
         id: 'res-term',
-        kind: 'TERMINOLOGY',
+        kind: 'LESSON',
         title: { indonesian: '', english: 'Terms', simplifiedChinese: '' },
         outlineItemIds: ['out-1'],
         objectiveIds: ['obj-1'],

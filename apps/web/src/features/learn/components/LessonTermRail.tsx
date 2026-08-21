@@ -2,11 +2,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { NotebookText } from 'lucide-react';
-import { resolveTermLookup } from '@/shared/api/terminologyStudentApi';
+import {
+  bookmarkTerm,
+  resolveTermLookup,
+  unbookmarkTerm,
+} from '@/shared/api/terminologyStudentApi';
 import { TermCardDialog } from '@/shared/terminology/TermCardDialog';
 import { useTermAudio } from '@/shared/terminology/useTermAudio';
 import type { TermCard } from '@/shared/terminology/types';
 import { ApiError } from '@/shared/api/httpClient';
+import { Toast, type ToastTone } from '@/shared/components/Toast';
 import type { AcademicSubject, ExplanationLanguage } from '../types';
 import { formatMetInLine } from '../termMetIn';
 import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
@@ -30,6 +35,7 @@ export function LessonTermRail({
   const [already, setAlready] = useState(false);
   const [metInLine, setMetInLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const audio = useTermAudio();
 
   async function openTerm(card: TermCard): Promise<void> {
@@ -45,7 +51,7 @@ export function LessonTermRail({
       if (result.outcome === 'MATCHED') {
         setOpen(result.card);
         setAlready(result.alreadyInNotebook);
-        setMetInLine(formatMetInLine(result.entry.metIn, i18n.language, t));
+        setMetInLine(result.entry ? formatMetInLine(result.entry.metIn, i18n.language, t) : null);
       } else {
         setError(t('terminology.notInBank'));
       }
@@ -92,6 +98,36 @@ export function LessonTermRail({
         <TermCardDialog
           card={open}
           alreadyInNotebook={already}
+          bookmarked={already}
+          onToggleBookmark={() => {
+            const next = !already;
+            void (
+              next
+                ? bookmarkTerm(open.termId, {
+                    subject,
+                    explanationLanguage,
+                    source: 'LESSON',
+                    resourceId,
+                  })
+                : unbookmarkTerm(open.termId)
+            )
+              .then(() => {
+                setAlready(next);
+                setToast({
+                  message: next
+                    ? t('terminology.bookmarkedToast')
+                    : t('terminology.unbookmarkedToast'),
+                  tone: next ? 'success' : 'info',
+                });
+              })
+              .catch((err: unknown) => {
+                if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+                  setError(t('terminology.formalDisabled'));
+                } else {
+                  setError(t('terminology.saveFailed'));
+                }
+              });
+          }}
           metInLine={metInLine}
           onClose={() => setOpen(null)}
           onPlay={
@@ -104,6 +140,9 @@ export function LessonTermRail({
           playingSurface={audio.playingSurface}
           playFailed={audio.playFailed}
         />
+      ) : null}
+      {toast ? (
+        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
       ) : null}
     </aside>
   );

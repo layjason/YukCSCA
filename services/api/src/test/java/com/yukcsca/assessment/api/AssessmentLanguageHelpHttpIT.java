@@ -300,12 +300,30 @@ class AssessmentLanguageHelpHttpIT {
                     .content(json.writeValueAsString(lookup)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.outcome").value("MATCHED"))
+            .andExpect(jsonPath("$.alreadyInNotebook").value(false))
+            .andReturn();
+    String termId =
+        json.readTree(resolved.getResponse().getContentAsString())
+            .path("card")
+            .path("termId")
+            .asText();
+    ObjectNode bookmark = json.createObjectNode();
+    bookmark.put("subject", "MATHEMATICS");
+    bookmark.put("explanationLanguage", "en");
+    bookmark.put("source", "ITEM");
+    bookmark.put("sessionId", sessionId);
+    bookmark.put("itemId", itemId);
+    MvcResult saved =
+        mvc.perform(
+                put("/api/v1/academic/terminology-notebook/{id}", termId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(bookmark)))
+            .andExpect(status().isOk())
             .andExpect(jsonPath("$.entry.metIn.place").value("CHECKPOINT"))
             .andReturn();
     JsonNode pending =
-        json.readTree(resolved.getResponse().getContentAsString())
-            .path("entry")
-            .path("pendingReview");
+        json.readTree(saved.getResponse().getContentAsString()).path("entry").path("pendingReview");
     assertThat(pending.path("kind").asText()).isEqualTo("CONTEXT_CLOZE");
     assertThat(pending.path("snippet").asText()).contains("______");
     assertThat(pending.path("snippet").asText()).contains("求函数是否");
@@ -480,7 +498,7 @@ class AssessmentLanguageHelpHttpIT {
             .put("altText", "diagram")
             .putNull("caption");
       }
-      if ("TERMINOLOGY".equals(kind) && chineseTerms) {
+      if ("LESSON".equals(kind) && chineseTerms) {
         resource.putArray("requiredTermIds").add(findId.toString()).add(increaseId.toString());
       }
       resource.putObject("provenance").put("origin", "YUKCSCA_ORIGINAL");

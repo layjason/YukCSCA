@@ -130,10 +130,27 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Returns one published TERMINOLOGY preview: ordered required term cards for the requested explanation language. Missing glosses are explicit. Opening the preview does not collect terms; PUT progress does. Not mastery. */
+    /** @description Returns this LESSON's terminology preview: ordered required term cards for the requested explanation language. resourceId is the LESSON id. Missing glosses are explicit. GET and PUT progress never write the notebook. Not mastery. */
     get: operations['AcademicStudentApi_getTerminologyPreview'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/packages/{subject}/terminology/{resourceId}/bookmarks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Bookmarks this LESSON's required list, or a subset of those ids. Opening or completing preview does not bookmark. Formal-mock sessions receive 403. */
+    post: operations['AcademicStudentApi_bookmarkLessonTerms'];
     delete?: never;
     options?: never;
     head?: never;
@@ -165,7 +182,7 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** @description Creates or replaces preview progress. IN_PROGRESS or PREVIEW_COMPLETE upserts required terms into the notebook as REQUIRED_COURSE. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403. */
+    /** @description Creates or replaces preview progress for this LESSON. Does not write the notebook. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403. */
     put: operations['AcademicStudentApi_upsertPreviewProgress'];
     post?: never;
     delete?: never;
@@ -183,7 +200,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** @description Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Matched terms upsert the notebook. Unmatched text is not logged. Formal-mock sessions receive 403. */
+    /** @description Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Does not write the notebook. Unmatched text is not logged and is not a student-authored term. Formal-mock sessions receive 403. */
     post: operations['AcademicStudentApi_resolveTermLookup'];
     delete?: never;
     options?: never;
@@ -217,9 +234,11 @@ export interface paths {
     };
     /** @description Returns one owner notebook entry and its term card. */
     get: operations['AcademicStudentApi_getTerminologyNotebookEntry'];
-    put?: never;
+    /** @description Adds one reviewed term to the notebook. Idempotent on (account, termId). Formal-mock sessions receive 403. */
+    put: operations['AcademicStudentApi_bookmarkTerm'];
     post?: never;
-    delete?: never;
+    /** @description Removes the term from the notebook. Idempotent when the row is already absent. Means the student already knows this and does not want it in review. Formal-mock sessions receive 403. */
+    delete: operations['AcademicStudentApi_unbookmarkTerm'];
     options?: never;
     head?: never;
     patch?: never;
@@ -849,7 +868,7 @@ export interface components {
         objectiveIds: components['schemas']['uuid'][];
         versions: components['schemas']['AcademicAdmin.LocalizedContent'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
-        /** @description Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION. */
+        /** @description Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION. */
         requiredTermIds?: components['schemas']['uuid'][];
       }[];
       questions: {
@@ -890,7 +909,7 @@ export interface components {
         objectiveIds: components['schemas']['uuid'][];
         versions: components['schemas']['AcademicAdmin.LocalizedContent'][];
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
-        /** @description Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION. */
+        /** @description Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION. */
         requiredTermIds?: components['schemas']['uuid'][];
       }[];
       questions: {
@@ -1216,6 +1235,33 @@ export interface components {
       file: unknown;
       provenance: components['schemas']['AcademicAdmin.ProvenanceInput'];
     };
+    /** @description Bookmarks this lesson's required list (or a subset). Ids not on the lesson are rejected. Formal-mock sessions receive 403. */
+    'AcademicStudent.BookmarkLessonTermsRequest': {
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      /** @description Subset of this lesson's required term ids. Omit or empty to bookmark the whole lesson list. */
+      termIds?: components['schemas']['uuid'][];
+    };
+    'AcademicStudent.BookmarkLessonTermsResult': {
+      termIds: components['schemas']['uuid'][];
+    };
+    /** @description Opt-in bookmark of one reviewed term. Validates the same source/resource rules as lookup. Formal-mock sessions receive 403. */
+    'AcademicStudent.BookmarkTermRequest': {
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      source: components['schemas']['AcademicStudent.TermLookupSource'];
+      /** @description Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id. */
+      resourceId?: components['schemas']['uuid'];
+      /** @description Required when source is ITEM. */
+      sessionId?: components['schemas']['uuid'];
+      /** @description Required when source is ITEM. */
+      itemId?: components['schemas']['uuid'];
+    };
+    'AcademicStudent.BookmarkTermResult': {
+      card: components['schemas']['AcademicStudent.TermCard'];
+      /** @enum {boolean} */
+      alreadyInNotebook: true;
+      entry: components['schemas']['AcademicStudent.NotebookEntry'];
+    };
     'AcademicStudent.ClozeReviewPrompt': {
       /** @enum {string} */
       kind: 'CONTEXT_CLOZE';
@@ -1268,13 +1314,14 @@ export interface components {
       title: components['schemas']['AcademicAdmin.LocalizedText'];
       outlineItemIds: components['schemas']['uuid'][];
       contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
-      /** @description Bound TERMINOLOGY preview for this topic when the published package has Chinese exam-language terms. Null or omitted when none. Lets the client offer preview before the LESSON. */
+      /** @description This lesson's terminology preview when the LESSON has a non-empty required term list. resourceId is the LESSON id. Null or omitted when this lesson has no required terms. Several lessons may share one outline node; each lesson only surfaces its own list. */
       terminologyPreview?: components['schemas']['AcademicStudent.TerminologyPreviewRef'] | null;
     };
     /** @description Lesson rail and tappable spans. Absent from the lesson when the package has no published Chinese terms. */
     'AcademicStudent.LessonTerminology': {
+      /** @description This LESSON id when the lesson has a required term list; otherwise null. Preview is per lesson, not a shared outline TERMINOLOGY resource. */
       previewResourceId: components['schemas']['uuid'] | null;
-      /** @description Required terms for this topic, in preview order. */
+      /** @description Required terms bound on this lesson, in preview order. */
       rail: components['schemas']['AcademicStudent.TermCard'][];
       /** @description Required and instruction/logic surface forms that occur in TEXT blocks of the requested lesson body. */
       spans: components['schemas']['AcademicStudent.TermSpan'][];
@@ -1285,7 +1332,7 @@ export interface components {
       promptSurface: string;
       options: components['schemas']['AcademicStudent.ReviewOption'][];
     };
-    /** @description One notebook row. Viewing or collecting a term is not topic mastery. */
+    /** @description One notebook row. Bookmarking is opt-in; viewing a preview or card is not topic mastery. */
     'AcademicStudent.NotebookEntry': {
       termId: components['schemas']['uuid'];
       subject: components['schemas']['AcademicAdmin.AcademicSubject'];
@@ -1310,7 +1357,7 @@ export interface components {
       nextCursor: string | null;
     };
     /**
-     * @description How a notebook row was collected. One row per account and term; sources accumulate.
+     * @description How a notebook row was collected. One row per account and term; sources accumulate. REQUIRED_COURSE remains for rows written before opt-in bookmarking; new writes use CLICKED or LANGUAGE_MISTAKE.
      * @enum {string}
      */
     'AcademicStudent.NotebookSource': 'REQUIRED_COURSE' | 'CLICKED' | 'LANGUAGE_MISTAKE';
@@ -1447,6 +1494,8 @@ export interface components {
       subject: components['schemas']['AcademicAdmin.AcademicSubject'];
       packageId: components['schemas']['uuid'];
       termClass: components['schemas']['AcademicAdmin.TermClass'];
+      /** @description True when this authenticated student already has the term in the notebook. Preview and rail use it for bookmark chrome. Lookup does not write the notebook. */
+      alreadyInNotebook: boolean;
       primarySurface: components['schemas']['AcademicStudent.TermSurfaceForm'];
       aliases: components['schemas']['AcademicStudent.TermSurfaceForm'][];
       definition: components['schemas']['AcademicStudent.TermDefinition'];
@@ -1494,7 +1543,8 @@ export interface components {
       outcome: 'MATCHED';
       card: components['schemas']['AcademicStudent.TermCard'];
       alreadyInNotebook: boolean;
-      entry: components['schemas']['AcademicStudent.NotebookEntry'];
+      /** @description Present when the term is already in the notebook. Lookup never writes a notebook row. */
+      entry: components['schemas']['AcademicStudent.NotebookEntry'] | null;
     };
     /** @description Selected text is not in the reviewed term bank. No invented definition and no notebook write. */
     'AcademicStudent.TermLookupNotInBank': {
@@ -1509,7 +1559,7 @@ export interface components {
       termId?: components['schemas']['uuid'];
       /** @description Student-selected text after Language help is open, or a tappable lesson form. Max phrase length; not a sentence. */
       selectedText?: string;
-      /** @description Required when source is LESSON or PREVIEW. */
+      /** @description Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id. */
       resourceId?: components['schemas']['uuid'];
       /** @description Required when source is ITEM. */
       sessionId?: components['schemas']['uuid'];
@@ -1566,15 +1616,16 @@ export interface components {
       pinyin: string;
       audioAvailable: boolean;
     };
-    /** @description Published TERMINOLOGY preview unit: ordered required cards plus optional matching-pairs material. Not an AssessmentSet. */
+    /** @description Per-lesson terminology preview: this LESSON's ordered required cards plus optional matching-pairs material. Not an AssessmentSet and not a shared outline dictionary. */
     'AcademicStudent.TerminologyPreview': {
       packageId: components['schemas']['uuid'];
       packageRevisionId: components['schemas']['uuid'];
       subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      /** @description The LESSON resource id this preview belongs to. */
       resourceId: components['schemas']['uuid'];
       title: components['schemas']['AcademicAdmin.LocalizedText'];
       outlineItemIds: components['schemas']['uuid'][];
-      /** @description LESSON resources bound to the same topic in the active revision. Continue-to-lesson uses these; the preview never locks them. */
+      /** @description The LESSON this preview introduces. Continue-to-lesson uses this id; the preview never locks it. Length is 1. */
       lessonResourceIds: components['schemas']['uuid'][];
       requestedExplanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
       terms: components['schemas']['AcademicStudent.TermCard'][];
@@ -2764,6 +2815,83 @@ export interface operations {
       };
     };
   };
+  AcademicStudentApi_bookmarkLessonTerms: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+        resourceId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.BookmarkLessonTermsRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.BookmarkLessonTermsResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.TerminologyValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
   AcademicStudentApi_submitPreviewCheck: {
     parameters: {
       query?: never;
@@ -3118,6 +3246,132 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_bookmarkTerm: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        termId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicStudent.BookmarkTermRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicStudent.BookmarkTermResult'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicStudent.TerminologyValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_unbookmarkTerm: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        termId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['Problem']
+            | components['schemas']['FormalAssistanceDisabledProblem'];
         };
       };
       /** @description Server error */

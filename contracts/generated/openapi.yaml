@@ -497,7 +497,7 @@ paths:
   /api/v1/academic/packages/{subject}/terminology/{resourceId}:
     get:
       operationId: AcademicStudentApi_getTerminologyPreview
-      description: 'Returns one published TERMINOLOGY preview: ordered required term cards for the requested explanation language. Missing glosses are explicit. Opening the preview does not collect terms; PUT progress does. Not mastery.'
+      description: "Returns this LESSON's terminology preview: ordered required term cards for the requested explanation language. resourceId is the LESSON id. Missing glosses are explicit. GET and PUT progress never write the notebook. Not mastery."
       parameters:
         - name: subject
           in: path
@@ -570,6 +570,86 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/terminology/{resourceId}/bookmarks:
+    post:
+      operationId: AcademicStudentApi_bookmarkLessonTerms
+      description: Bookmarks this LESSON's required list, or a subset of those ids. Opening or completing preview does not bookmark. Formal-mock sessions receive 403.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.BookmarkLessonTermsResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.BookmarkLessonTermsRequest'
       security:
         - BearerAuth: []
   /api/v1/academic/packages/{subject}/terminology/{resourceId}/checks:
@@ -655,7 +735,7 @@ paths:
   /api/v1/academic/packages/{subject}/terminology/{resourceId}/progress:
     put:
       operationId: AcademicStudentApi_upsertPreviewProgress
-      description: Creates or replaces preview progress. IN_PROGRESS or PREVIEW_COMPLETE upserts required terms into the notebook as REQUIRED_COURSE. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.
+      description: Creates or replaces preview progress for this LESSON. Does not write the notebook. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.
       parameters:
         - name: subject
           in: path
@@ -735,7 +815,7 @@ paths:
   /api/v1/academic/term-lookups:
     post:
       operationId: AcademicStudentApi_resolveTermLookup
-      description: Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Matched terms upsert the notebook. Unmatched text is not logged. Formal-mock sessions receive 403.
+      description: Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Does not write the notebook. Unmatched text is not logged and is not a student-authored term. Formal-mock sessions receive 403.
       parameters: []
       responses:
         '200':
@@ -969,6 +1049,119 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    put:
+      operationId: AcademicStudentApi_bookmarkTerm
+      description: Adds one reviewed term to the notebook. Idempotent on (account, termId). Formal-mock sessions receive 403.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.BookmarkTermResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.BookmarkTermRequest'
+      security:
+        - BearerAuth: []
+    delete:
+      operationId: AcademicStudentApi_unbookmarkTerm
+      description: Removes the term from the notebook. Idempotent when the row is already absent. Means the student already knows this and does not want it in review. Formal-mock sessions receive 403.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
         '500':
           description: Server error
           content:
@@ -3482,7 +3675,7 @@ components:
                 items:
                   $ref: '#/components/schemas/uuid'
                 maxItems: 64
-                description: Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION.
+                description: Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.
         questions:
           type: array
           items:
@@ -3626,7 +3819,7 @@ components:
                 items:
                   $ref: '#/components/schemas/uuid'
                 maxItems: 64
-                description: Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION.
+                description: Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.
         questions:
           type: array
           items:
@@ -4473,6 +4666,68 @@ components:
       required:
         - file
         - provenance
+    AcademicStudent.BookmarkLessonTermsRequest:
+      type: object
+      required:
+        - explanationLanguage
+      properties:
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        termIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 64
+          description: Subset of this lesson's required term ids. Omit or empty to bookmark the whole lesson list.
+      description: Bookmarks this lesson's required list (or a subset). Ids not on the lesson are rejected. Formal-mock sessions receive 403.
+    AcademicStudent.BookmarkLessonTermsResult:
+      type: object
+      required:
+        - termIds
+      properties:
+        termIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 64
+    AcademicStudent.BookmarkTermRequest:
+      type: object
+      required:
+        - subject
+        - explanationLanguage
+        - source
+      properties:
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        source:
+          $ref: '#/components/schemas/AcademicStudent.TermLookupSource'
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id.
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is ITEM.
+        itemId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is ITEM.
+      description: Opt-in bookmark of one reviewed term. Validates the same source/resource rules as lookup. Formal-mock sessions receive 403.
+    AcademicStudent.BookmarkTermResult:
+      type: object
+      required:
+        - card
+        - alreadyInNotebook
+        - entry
+      properties:
+        card:
+          $ref: '#/components/schemas/AcademicStudent.TermCard'
+        alreadyInNotebook:
+          type: boolean
+          enum:
+            - true
+        entry:
+          $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
     AcademicStudent.ClozeReviewPrompt:
       type: object
       required:
@@ -4614,7 +4869,7 @@ components:
           anyOf:
             - $ref: '#/components/schemas/AcademicStudent.TerminologyPreviewRef'
             - type: 'null'
-          description: Bound TERMINOLOGY preview for this topic when the published package has Chinese exam-language terms. Null or omitted when none. Lets the client offer preview before the LESSON.
+          description: This lesson's terminology preview when the LESSON has a non-empty required term list. resourceId is the LESSON id. Null or omitted when this lesson has no required terms. Several lessons may share one outline node; each lesson only surfaces its own list.
       description: LESSON summary for outline browse and continue chips. Kind is always LESSON; other resource kinds are omitted.
     AcademicStudent.LessonTerminology:
       type: object
@@ -4627,12 +4882,13 @@ components:
           anyOf:
             - $ref: '#/components/schemas/uuid'
             - type: 'null'
+          description: This LESSON id when the lesson has a required term list; otherwise null. Preview is per lesson, not a shared outline TERMINOLOGY resource.
         rail:
           type: array
           items:
             $ref: '#/components/schemas/AcademicStudent.TermCard'
           maxItems: 64
-          description: Required terms for this topic, in preview order.
+          description: Required terms bound on this lesson, in preview order.
         spans:
           type: array
           items:
@@ -4708,7 +4964,7 @@ components:
             - $ref: '#/components/schemas/AcademicStudent.TermReviewPrompt'
             - type: 'null'
           description: Present when due so the client can start review without a second fetch. Null when not due.
-      description: One notebook row. Viewing or collecting a term is not topic mastery.
+      description: One notebook row. Bookmarking is opt-in; viewing a preview or card is not topic mastery.
     AcademicStudent.NotebookEntryDetail:
       type: object
       required:
@@ -4740,7 +4996,7 @@ components:
         - REQUIRED_COURSE
         - CLICKED
         - LANGUAGE_MISTAKE
-      description: How a notebook row was collected. One row per account and term; sources accumulate.
+      description: How a notebook row was collected. One row per account and term; sources accumulate. REQUIRED_COURSE remains for rows written before opt-in bookmarking; new writes use CLICKED or LANGUAGE_MISTAKE.
     AcademicStudent.OfficialSourcePanel:
       type: object
       required:
@@ -5094,6 +5350,7 @@ components:
         - subject
         - packageId
         - termClass
+        - alreadyInNotebook
         - primarySurface
         - aliases
         - definition
@@ -5110,6 +5367,9 @@ components:
           $ref: '#/components/schemas/uuid'
         termClass:
           $ref: '#/components/schemas/AcademicAdmin.TermClass'
+        alreadyInNotebook:
+          type: boolean
+          description: True when this authenticated student already has the term in the notebook. Preview and rail use it for bookmark chrome. Lookup does not write the notebook.
         primarySurface:
           $ref: '#/components/schemas/AcademicStudent.TermSurfaceForm'
         aliases:
@@ -5213,7 +5473,10 @@ components:
         alreadyInNotebook:
           type: boolean
         entry:
-          $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+            - type: 'null'
+          description: Present when the term is already in the notebook. Lookup never writes a notebook row.
     AcademicStudent.TermLookupNotInBank:
       type: object
       required:
@@ -5247,7 +5510,7 @@ components:
           description: Student-selected text after Language help is open, or a tappable lesson form. Max phrase length; not a sentence.
         resourceId:
           $ref: '#/components/schemas/uuid'
-          description: Required when source is LESSON or PREVIEW.
+          description: Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id.
         sessionId:
           $ref: '#/components/schemas/uuid'
           description: Required when source is ITEM.
@@ -5397,6 +5660,7 @@ components:
           $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
         resourceId:
           $ref: '#/components/schemas/uuid'
+          description: The LESSON resource id this preview belongs to.
         title:
           $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
         outlineItemIds:
@@ -5409,7 +5673,7 @@ components:
           items:
             $ref: '#/components/schemas/uuid'
           maxItems: 8
-          description: LESSON resources bound to the same topic in the active revision. Continue-to-lesson uses these; the preview never locks them.
+          description: The LESSON this preview introduces. Continue-to-lesson uses this id; the preview never locks it. Length is 1.
         requestedExplanationLanguage:
           $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
         terms:
@@ -5427,7 +5691,7 @@ components:
           description: Match targets for the optional preview pairs activity. Empty when matchingPairsAvailable is false.
         previewProgress:
           $ref: '#/components/schemas/AcademicStudent.PreviewProgress'
-      description: 'Published TERMINOLOGY preview unit: ordered required cards plus optional matching-pairs material. Not an AssessmentSet.'
+      description: "Per-lesson terminology preview: this LESSON's ordered required cards plus optional matching-pairs material. Not an AssessmentSet and not a shared outline dictionary."
     AcademicStudent.TerminologyPreviewRef:
       type: object
       required:

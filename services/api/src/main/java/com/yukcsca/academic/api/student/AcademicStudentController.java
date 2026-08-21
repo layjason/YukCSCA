@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -166,6 +167,19 @@ public class AcademicStudentController {
                 .toList()));
   }
 
+  @PostMapping("/packages/{subject}/terminology/{resourceId}/bookmarks")
+  public Map<String, Object> bookmarkLessonTerms(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable String subject,
+      @PathVariable UUID resourceId,
+      @Valid @RequestBody BookmarkLessonTermsRequest request,
+      HttpServletResponse response) {
+    noStore(response);
+    return TerminologyResponses.bookmarkLesson(
+        terminology.bookmarkLessonTerms(
+            actor(jwt), subject, resourceId, request.explanationLanguage(), request.termIds()));
+  }
+
   @PostMapping("/term-lookups")
   public Map<String, Object> resolveTermLookup(
       @AuthenticationPrincipal Jwt jwt,
@@ -201,6 +215,35 @@ public class AcademicStudentController {
     return TerminologyResponses.notebookList(
         terminology.listNotebook(
             actor(jwt), explanationLanguage, dueOnly, q, classGroup, subject, cursor, limit));
+  }
+
+  @PutMapping("/terminology-notebook/{termId}")
+  public Map<String, Object> bookmarkTerm(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID termId,
+      @Valid @RequestBody BookmarkTermRequest request,
+      HttpServletResponse response) {
+    noStore(response);
+    return TerminologyResponses.bookmark(
+        terminology.bookmarkTerm(
+            actor(jwt),
+            termId,
+            new TermLookupCommand(
+                request.subject(),
+                request.explanationLanguage(),
+                request.source(),
+                termId,
+                null,
+                request.resourceId(),
+                request.sessionId(),
+                request.itemId())));
+  }
+
+  @DeleteMapping("/terminology-notebook/{termId}")
+  public ResponseEntity<Void> unbookmarkTerm(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable UUID termId) {
+    terminology.unbookmarkTerm(actor(jwt), termId);
+    return ResponseEntity.noContent().build();
   }
 
   @GetMapping("/terminology-notebook/{termId}")
@@ -281,4 +324,15 @@ public class AcademicStudentController {
 
   public record SubmitTermReviewRequest(
       @NotBlank String kind, @NotBlank @Size(max = 40) String selectedOptionKey) {}
+
+  public record BookmarkTermRequest(
+      @NotBlank String subject,
+      @NotBlank String explanationLanguage,
+      @NotBlank String source,
+      UUID resourceId,
+      UUID sessionId,
+      UUID itemId) {}
+
+  public record BookmarkLessonTermsRequest(
+      @NotBlank String explanationLanguage, @Size(max = 64) List<UUID> termIds) {}
 }

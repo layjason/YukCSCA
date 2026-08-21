@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { TermBookmarkIcon } from './TermBookmarkIcon';
 import { TermCardView } from './TermCardView';
 import type { TermCard } from './types';
 
@@ -17,6 +18,9 @@ interface TermCardDialogProps {
   playDisabled?: boolean | undefined;
   playFailed?: boolean | undefined;
   extra?: React.ReactNode | undefined;
+  bookmarked?: boolean | undefined;
+  onToggleBookmark?: (() => void) | undefined;
+  bookmarkBusy?: boolean | undefined;
 }
 
 export function TermCardDialog({
@@ -29,11 +33,17 @@ export function TermCardDialog({
   playDisabled,
   playFailed,
   extra,
+  bookmarked = false,
+  onToggleBookmark,
+  bookmarkBusy = false,
 }: TermCardDialogProps): React.JSX.Element {
   const { t } = useTranslation();
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<Element | null>(null);
+  const bookmarkLabel = bookmarked
+    ? t('terminology.unbookmarkAria', { text: card.primarySurface.text })
+    : t('terminology.bookmarkAria', { text: card.primarySurface.text });
 
   useEffect(() => {
     document.body.classList.add(OVERLAY_CLASS);
@@ -93,16 +103,31 @@ export function TermCardDialog({
         ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          ref={closeRef}
-          type="button"
-          className="term-dialog-close"
-          onClick={onClose}
-          aria-label={t('terminology.close')}
-          title={t('terminology.close')}
-        >
-          <X size={22} strokeWidth={2.25} aria-hidden="true" />
-        </button>
+        <div className="term-dialog-actions">
+          {onToggleBookmark ? (
+            <button
+              type="button"
+              className={`term-card-bookmark${bookmarked ? ' is-on' : ''}`}
+              aria-pressed={bookmarked}
+              aria-label={bookmarkLabel}
+              title={bookmarkLabel}
+              disabled={bookmarkBusy}
+              onClick={onToggleBookmark}
+            >
+              <TermBookmarkIcon marked={bookmarked} size={22} />
+            </button>
+          ) : null}
+          <button
+            ref={closeRef}
+            type="button"
+            className="term-dialog-close"
+            onClick={onClose}
+            aria-label={t('terminology.close')}
+            title={t('terminology.close')}
+          >
+            <X size={22} strokeWidth={2.25} aria-hidden="true" />
+          </button>
+        </div>
         <h2 id="term-dialog-title" className="sr-only">
           {card.primarySurface.text}
         </h2>
@@ -114,6 +139,8 @@ export function TermCardDialog({
           playingSurface={playingSurface}
           playDisabled={playDisabled}
           playFailed={playFailed}
+          bookmarked={bookmarked}
+          hideSavedNote={Boolean(onToggleBookmark)}
         />
         {extra}
       </div>

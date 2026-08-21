@@ -557,7 +557,8 @@ public class AssessmentStudentService {
               session.getPackageRevisionId(),
               item.getQuestionId(),
               projectBlocks(copy.path("stem")),
-              actorId);
+              actorId,
+              session.getLessonResourceId());
       String strength = languageTier(projection);
       view =
           new LanguageHelpView(

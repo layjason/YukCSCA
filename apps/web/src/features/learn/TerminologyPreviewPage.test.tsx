@@ -24,6 +24,7 @@ const preview: TerminologyPreview = {
       subject: 'MATHEMATICS',
       packageId: '11111111-1111-4111-8111-111111111111',
       termClass: 'TOPIC_TERM',
+      alreadyInNotebook: false,
       primarySurface: { text: '公因式', pinyin: 'gōng yīn shì', audioAvailable: false },
       aliases: [],
       definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
@@ -106,6 +107,8 @@ test('loads preview cards and keeps Continue available without matching pairs', 
   expect(screen.getByText('Common factor')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /continue to lesson/i })).toBeEnabled();
   expect(screen.getByRole('button', { name: /practice these terms/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /bookmark all/i })).toBeEnabled();
+  expect(screen.getByRole('button', { name: /bookmark 公因式/i })).toBeInTheDocument();
   expect(screen.queryByText(/mastered/i)).not.toBeInTheDocument();
 });
 

@@ -10,6 +10,7 @@ const card: TermCard = {
   subject: 'MATHEMATICS',
   packageId: '00000000-0000-4000-8000-0000000000a1',
   termClass: 'TOPIC_TERM',
+  alreadyInNotebook: false,
   primarySurface: { text: '公因式', pinyin: 'gōng yīn shì', audioAvailable: false },
   aliases: [],
   definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
@@ -42,19 +43,32 @@ test('Escape closes the dialog and restores focus', () => {
   expect(onClose).toHaveBeenCalled();
 });
 
-test('hides the mobile bottom nav while the dialog is open', () => {
-  const nav = document.createElement('nav');
-  nav.className = 'app-bottom-nav';
-  nav.textContent = 'Nav';
-  document.body.append(nav);
+test('renders bookmark and close buttons side-by-side in term-dialog-actions without overlap', () => {
   const onClose = vi.fn();
-  const { unmount } = render(
+  const onToggleBookmark = vi.fn();
+  render(
     <I18nextProvider i18n={i18n}>
-      <TermCardDialog card={card} onClose={onClose} />
+      <TermCardDialog
+        card={card}
+        onClose={onClose}
+        bookmarked={false}
+        onToggleBookmark={onToggleBookmark}
+      />
     </I18nextProvider>,
   );
-  expect(document.body.classList.contains('app-term-overlay-open')).toBe(true);
-  unmount();
-  expect(document.body.classList.contains('app-term-overlay-open')).toBe(false);
-  nav.remove();
+
+  const actions = document.querySelector('.term-dialog-actions');
+  expect(actions).not.toBeNull();
+
+  const bookmarkBtn = screen.getByRole('button', { name: /Bookmark/i });
+  const closeBtn = screen.getByRole('button', { name: /close/i });
+
+  expect(actions).toContainElement(bookmarkBtn);
+  expect(actions).toContainElement(closeBtn);
+
+  fireEvent.click(bookmarkBtn);
+  expect(onToggleBookmark).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(closeBtn);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });

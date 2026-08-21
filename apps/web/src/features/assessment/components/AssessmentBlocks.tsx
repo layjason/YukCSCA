@@ -12,7 +12,8 @@ interface AssessmentBlocksProps {
   /** List previews split copy/media and clip overflow instead of scaling. */
   preview?: boolean;
   termSpans?: readonly AssessmentTermSpan[] | undefined;
-  onTermActivate?: ((span: TappableSpan) => void) | undefined;
+  onTermActivate?: ((span: TappableSpan, target: HTMLElement) => void) | undefined;
+  onTermHoverEnd?: ((span: TappableSpan) => void) | undefined;
   termDisabled?: boolean | undefined;
 }
 
@@ -21,7 +22,8 @@ function renderBlock(
   index: number,
   preview: boolean,
   termSpans: readonly AssessmentTermSpan[] | undefined,
-  onTermActivate: ((span: TappableSpan) => void) | undefined,
+  onTermActivate: ((span: TappableSpan, target: HTMLElement) => void) | undefined,
+  onTermHoverEnd: ((span: TappableSpan) => void) | undefined,
   termDisabled: boolean,
 ): React.JSX.Element {
   const spans = termSpans
@@ -39,6 +41,7 @@ function renderBlock(
       index={index}
       termSpans={spans}
       onTermActivate={onTermActivate}
+      onTermHoverEnd={onTermHoverEnd}
       termDisabled={termDisabled}
     />
   );
@@ -59,13 +62,14 @@ export function AssessmentBlocks({
   preview = false,
   termSpans,
   onTermActivate,
+  onTermHoverEnd,
   termDisabled = false,
 }: AssessmentBlocksProps): React.JSX.Element {
   if (!preview) {
     return (
       <div className={className ?? 'assessment-blocks'}>
         {blocks.map((block, index) =>
-          renderBlock(block, index, false, termSpans, onTermActivate, termDisabled),
+          renderBlock(block, index, false, termSpans, onTermActivate, onTermHoverEnd, termDisabled),
         )}
       </div>
     );
@@ -91,14 +95,30 @@ export function AssessmentBlocks({
       {copy.length > 0 ? (
         <div className="mistakes-preview-copy">
           {copy.map(({ block, index }) =>
-            renderBlock(block, index, true, termSpans, onTermActivate, termDisabled),
+            renderBlock(
+              block,
+              index,
+              true,
+              termSpans,
+              onTermActivate,
+              onTermHoverEnd,
+              termDisabled,
+            ),
           )}
         </div>
       ) : null}
       {media.length > 0 ? (
         <div className="mistakes-preview-media">
           {media.map(({ block, index }) =>
-            renderBlock(block, index, true, termSpans, onTermActivate, termDisabled),
+            renderBlock(
+              block,
+              index,
+              true,
+              termSpans,
+              onTermActivate,
+              onTermHoverEnd,
+              termDisabled,
+            ),
           )}
         </div>
       ) : null}

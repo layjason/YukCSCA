@@ -10,7 +10,8 @@ interface ContentBlockViewProps {
   highlighted?: boolean;
   blockRef?: (element: HTMLElement | null) => void;
   termSpans?: readonly TappableSpan[] | undefined;
-  onTermActivate?: ((span: TappableSpan) => void) | undefined;
+  onTermActivate?: ((span: TappableSpan, target: HTMLElement) => void) | undefined;
+  onTermHoverEnd?: ((span: TappableSpan) => void) | undefined;
   termDisabled?: boolean | undefined;
 }
 
@@ -21,6 +22,7 @@ export function ContentBlockView({
   blockRef,
   termSpans,
   onTermActivate,
+  onTermHoverEnd,
   termDisabled = false,
 }: ContentBlockViewProps): React.JSX.Element {
   const className = [
@@ -40,6 +42,7 @@ export function ContentBlockView({
           className="learn-text-block"
           spans={termSpans}
           onActivate={onTermActivate}
+          onHoverEnd={onTermHoverEnd}
           disabled={termDisabled}
         />
       ) : null}

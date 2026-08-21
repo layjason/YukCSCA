@@ -7,6 +7,7 @@ import {
   getTerminologyNotebookEntry,
   listTerminologyNotebook,
   submitTermReview,
+  unbookmarkTerm,
 } from '@/shared/api/terminologyStudentApi';
 import { MixedProse } from '@/shared/content/MixedProse';
 import { TermCardView } from '@/shared/terminology/TermCardView';
@@ -209,6 +210,24 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
         layout="entry"
         card={detail.card}
         alreadyInNotebook
+        bookmarked
+        onToggleBookmark={() => {
+          if (!termId || busy) return;
+          setBusy(true);
+          void unbookmarkTerm(termId)
+            .then(() => {
+              void navigate('/app/learn/terms', { replace: true, state: location.state });
+            })
+            .catch((err: unknown) => {
+              if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+                setError(t('terminology.formalDisabled'));
+              } else {
+                setError(t('terminology.saveFailed'));
+              }
+            })
+            .finally(() => setBusy(false));
+        }}
+        bookmarkBusy={busy}
         metInLine={formatMetInLine(detail.entry.metIn, i18n.language, t)}
         onPlay={
           (detail.card.primarySurface.audioAvailable ||

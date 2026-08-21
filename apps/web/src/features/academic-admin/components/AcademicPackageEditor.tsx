@@ -254,7 +254,9 @@ export function AcademicPackageEditor({
         objectiveIds: r.objectiveIds,
         // Only send filled language versions (backend requires ≥1; empty optional langs omitted).
         versions: pruneEmptyLocalizedVersions(r.versions ?? []),
-        ...(r.kind === 'TERMINOLOGY' ? { requiredTermIds: r.requiredTermIds ?? [] } : {}),
+        ...(r.kind === 'TERMINOLOGY' || r.kind === 'LESSON'
+          ? { requiredTermIds: r.requiredTermIds ?? [] }
+          : {}),
         provenance: toDraftProvenanceInput(toEditableProvenance(r.provenance)),
       })),
       questions: draft.questions.map((q) => ({

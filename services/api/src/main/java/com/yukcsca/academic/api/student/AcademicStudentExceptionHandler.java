@@ -127,7 +127,9 @@ public class AcademicStudentExceptionHandler {
   @ExceptionHandler(Exception.class)
   ProblemDetail internal(Exception exception) {
     LOGGER.error(
-        "Unexpected student academic operation failure ({})", exception.getClass().getName());
+        "Unexpected student academic operation failure ({})",
+        exception.getClass().getName(),
+        exception);
     return problem(
         HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Student academic operation failed.");
   }

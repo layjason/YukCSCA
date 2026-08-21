@@ -1,6 +1,8 @@
 package com.yukcsca.academic.api.student;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.yukcsca.academic.application.AcademicTerminologyService.BookmarkLessonTermsView;
+import com.yukcsca.academic.application.AcademicTerminologyService.BookmarkTermView;
 import com.yukcsca.academic.application.AcademicTerminologyService.LessonTerminologyView;
 import com.yukcsca.academic.application.AcademicTerminologyService.MatchTargetView;
 import com.yukcsca.academic.application.AcademicTerminologyService.NotebookDetailView;
@@ -70,8 +72,24 @@ final class TerminologyResponses {
     if ("MATCHED".equals(value.outcome())) {
       body.put("card", card(value.card()));
       body.put("alreadyInNotebook", value.alreadyInNotebook());
-      body.put("entry", entry(value.entry()));
+      if (value.entry() != null) {
+        body.put("entry", entry(value.entry()));
+      }
     }
+    return body;
+  }
+
+  static Map<String, Object> bookmark(BookmarkTermView value) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("card", card(value.card()));
+    body.put("alreadyInNotebook", true);
+    body.put("entry", entry(value.entry()));
+    return body;
+  }
+
+  static Map<String, Object> bookmarkLesson(BookmarkLessonTermsView value) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("termIds", value.termIds());
     return body;
   }
 
@@ -124,6 +142,7 @@ final class TerminologyResponses {
     body.put("subject", value.subject());
     body.put("packageId", value.packageId());
     body.put("termClass", value.termClass());
+    body.put("alreadyInNotebook", value.alreadyInNotebook());
     body.put("primarySurface", surface(value.primarySurface()));
     body.put("aliases", value.aliases().stream().map(TerminologyResponses::surface).toList());
     body.put("definition", definition(value.definition()));

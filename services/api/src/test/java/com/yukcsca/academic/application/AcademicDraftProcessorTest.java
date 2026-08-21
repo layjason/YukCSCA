@@ -192,6 +192,37 @@ class AcademicDraftProcessorTest {
   }
 
   @Test
+  void lessonRequiredTermIdsAreKeptOnPublish() {
+    ObjectNode draft = publicationSkeleton();
+    UUID liveTermId = UUID.randomUUID();
+    ObjectNode term = draft.withArray("terms").addObject();
+    term.put("id", liveTermId.toString());
+    term.put("termClass", "EXAM_INSTRUCTION");
+    ObjectNode surface = term.putArray("surfaceForms").addObject();
+    surface.put("text", "求");
+    surface.put("pinyin", "qiú");
+    term.putObject("definitions").put("english", "find");
+    term.put("englishEquivalent", "find");
+    term.putArray("outlineItemIds");
+    ObjectNode lesson = null;
+    for (var resource : draft.path("resources")) {
+      if ("LESSON".equals(resource.path("kind").asText())) {
+        lesson = (ObjectNode) resource;
+        lesson
+            .putArray("requiredTermIds")
+            .add(UUID.randomUUID().toString())
+            .add(liveTermId.toString());
+        break;
+      }
+    }
+    addPublishableMock(draft);
+    processor.validateForPublication(draft, Set.of());
+    assertThat(lesson.path("requiredTermIds"))
+        .extracting(node -> node.asText())
+        .containsExactly(liveTermId.toString());
+  }
+
+  @Test
   void unknownAuthoredTermAttachmentIsDroppedOnPublish() {
     ObjectNode draft = publicationSkeleton();
     ObjectNode question = (ObjectNode) draft.path("questions").get(0);

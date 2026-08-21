@@ -97,7 +97,7 @@ model LessonSummary {
 
   contentProgress: ContentProgress;
 
-  @doc("Bound TERMINOLOGY preview for this topic when the published package has Chinese exam-language terms. Null or omitted when none. Lets the client offer preview before the LESSON.")
+  @doc("This lesson's terminology preview when the LESSON has a non-empty required term list. resourceId is the LESSON id. Null or omitted when this lesson has no required terms. Several lessons may share one outline node; each lesson only surfaces its own list.")
   terminologyPreview?: TerminologyPreviewRef | null;
 }
 
@@ -284,7 +284,7 @@ enum WritablePreviewProgressStatus {
   PREVIEW_COMPLETE,
 }
 
-@doc("How a notebook row was collected. One row per account and term; sources accumulate.")
+@doc("How a notebook row was collected. One row per account and term; sources accumulate. REQUIRED_COURSE remains for rows written before opt-in bookmarking; new writes use CLICKED or LANGUAGE_MISTAKE.")
 enum NotebookSource {
   REQUIRED_COURSE,
   CLICKED,
@@ -369,6 +369,10 @@ model TermCard {
   subject: AcademicAdmin.AcademicSubject;
   packageId: YukCSCA.uuid;
   termClass: AcademicAdmin.TermClass;
+
+  @doc("True when this authenticated student already has the term in the notebook. Preview and rail use it for bookmark chrome. Lookup does not write the notebook.")
+  alreadyInNotebook: boolean;
+
   primarySurface: TermSurfaceForm;
 
   @maxItems(7)
@@ -426,9 +430,10 @@ model TerminologyPreviewRef {
 
 @doc("Lesson rail and tappable spans. Absent from the lesson when the package has no published Chinese terms.")
 model LessonTerminology {
+  @doc("This LESSON id when the lesson has a required term list; otherwise null. Preview is per lesson, not a shared outline TERMINOLOGY resource.")
   previewResourceId: YukCSCA.uuid | null;
 
-  @doc("Required terms for this topic, in preview order.")
+  @doc("Required terms bound on this lesson, in preview order.")
   @maxItems(64)
   rail: TermCard[];
 
@@ -453,18 +458,20 @@ model PreviewMatchTarget {
   matchLabel: string;
 }
 
-@doc("Published TERMINOLOGY preview unit: ordered required cards plus optional matching-pairs material. Not an AssessmentSet.")
+@doc("Per-lesson terminology preview: this LESSON's ordered required cards plus optional matching-pairs material. Not an AssessmentSet and not a shared outline dictionary.")
 model TerminologyPreview {
   packageId: YukCSCA.uuid;
   packageRevisionId: YukCSCA.uuid;
   subject: AcademicAdmin.AcademicSubject;
+
+  @doc("The LESSON resource id this preview belongs to.")
   resourceId: YukCSCA.uuid;
   title: AcademicAdmin.LocalizedText;
 
   @maxItems(32)
   outlineItemIds: YukCSCA.uuid[];
 
-  @doc("LESSON resources bound to the same topic in the active revision. Continue-to-lesson uses these; the preview never locks them.")
+  @doc("The LESSON this preview introduces. Continue-to-lesson uses this id; the preview never locks it. Length is 1.")
   @maxItems(8)
   lessonResourceIds: YukCSCA.uuid[];
 
@@ -529,7 +536,7 @@ model TermLookupRequest {
   @maxLength(40)
   selectedText?: string;
 
-  @doc("Required when source is LESSON or PREVIEW.")
+  @doc("Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id.")
   resourceId?: YukCSCA.uuid;
 
   @doc("Required when source is ITEM.")
@@ -543,7 +550,45 @@ model TermLookupMatched {
   outcome: "MATCHED";
   card: TermCard;
   alreadyInNotebook: boolean;
+
+  @doc("Present when the term is already in the notebook. Lookup never writes a notebook row.")
+  entry: NotebookEntry | null;
+}
+
+@doc("Opt-in bookmark of one reviewed term. Validates the same source/resource rules as lookup. Formal-mock sessions receive 403.")
+model BookmarkTermRequest {
+  subject: AcademicAdmin.AcademicSubject;
+  explanationLanguage: AcademicAdmin.ExplanationLanguage;
+  source: TermLookupSource;
+
+  @doc("Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id.")
+  resourceId?: YukCSCA.uuid;
+
+  @doc("Required when source is ITEM.")
+  sessionId?: YukCSCA.uuid;
+
+  @doc("Required when source is ITEM.")
+  itemId?: YukCSCA.uuid;
+}
+
+model BookmarkTermResult {
+  card: TermCard;
+  alreadyInNotebook: true;
   entry: NotebookEntry;
+}
+
+@doc("Bookmarks this lesson's required list (or a subset). Ids not on the lesson are rejected. Formal-mock sessions receive 403.")
+model BookmarkLessonTermsRequest {
+  explanationLanguage: AcademicAdmin.ExplanationLanguage;
+
+  @doc("Subset of this lesson's required term ids. Omit or empty to bookmark the whole lesson list.")
+  @maxItems(64)
+  termIds?: YukCSCA.uuid[];
+}
+
+model BookmarkLessonTermsResult {
+  @maxItems(64)
+  termIds: YukCSCA.uuid[];
 }
 
 @doc("Selected text is not in the reviewed term bank. No invented definition and no notebook write.")
@@ -604,7 +649,7 @@ union TermReviewPrompt {
   matchPairs: MatchPairsReviewPrompt,
 }
 
-@doc("One notebook row. Viewing or collecting a term is not topic mastery.")
+@doc("One notebook row. Bookmarking is opt-in; viewing a preview or card is not topic mastery.")
 model NotebookEntry {
   termId: YukCSCA.uuid;
   subject: AcademicAdmin.AcademicSubject;
@@ -730,6 +775,24 @@ model TermReviewResponse {
   @body body: TermReviewResult;
 }
 
+model BookmarkTermResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "no-store";
+  @header("Pragma") pragma: "no-cache";
+  @body body: BookmarkTermResult;
+}
+
+model BookmarkLessonTermsResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "no-store";
+  @header("Pragma") pragma: "no-cache";
+  @body body: BookmarkLessonTermsResult;
+}
+
+model UnbookmarkTermResponse {
+  @statusCode statusCode: 204;
+}
+
 model TermPronunciationContentResponse {
   @statusCode statusCode: 200;
   @header("Cache-Control") cacheControl: "private, max-age=31536000, immutable";
@@ -835,7 +898,7 @@ interface AcademicStudentApi {
     | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Returns one published TERMINOLOGY preview: ordered required term cards for the requested explanation language. Missing glosses are explicit. Opening the preview does not collect terms; PUT progress does. Not mastery.")
+  @doc("Returns this LESSON's terminology preview: ordered required term cards for the requested explanation language. resourceId is the LESSON id. Missing glosses are explicit. GET and PUT progress never write the notebook. Not mastery.")
   @get
   @route("/packages/{subject}/terminology/{resourceId}")
   @useAuth(BearerAuth)
@@ -851,7 +914,7 @@ interface AcademicStudentApi {
     | YukCSCA.BadRequestResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Creates or replaces preview progress. IN_PROGRESS or PREVIEW_COMPLETE upserts required terms into the notebook as REQUIRED_COURSE. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.")
+  @doc("Creates or replaces preview progress for this LESSON. Does not write the notebook. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.")
   @put
   @route("/packages/{subject}/terminology/{resourceId}/progress")
   @useAuth(BearerAuth)
@@ -885,7 +948,7 @@ interface AcademicStudentApi {
     | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Matched terms upsert the notebook. Unmatched text is not logged. Formal-mock sessions receive 403.")
+  @doc("Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Does not write the notebook. Unmatched text is not logged and is not a student-authored term. Formal-mock sessions receive 403.")
   @post
   @route("/term-lookups")
   @useAuth(BearerAuth)
@@ -917,6 +980,23 @@ interface AcademicStudentApi {
     | YukCSCA.BadRequestResponse
     | YukCSCA.InternalServerErrorResponse;
 
+  @doc("Bookmarks this LESSON's required list, or a subset of those ids. Opening or completing preview does not bookmark. Formal-mock sessions receive 403.")
+  @post
+  @route("/packages/{subject}/terminology/{resourceId}/bookmarks")
+  @useAuth(BearerAuth)
+  bookmarkLessonTerms(
+    @path subject: AcademicAdmin.AcademicSubject,
+    @path resourceId: YukCSCA.uuid,
+    @body request: BookmarkLessonTermsRequest,
+  ):
+    | BookmarkLessonTermsResponse
+    | TerminologyValidationResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.FormalAssistanceDisabledResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
   @doc("Returns one owner notebook entry and its term card.")
   @get
   @route("/terminology-notebook/{termId}")
@@ -930,6 +1010,33 @@ interface AcademicStudentApi {
     | YukCSCA.ForbiddenResponse
     | YukCSCA.NotFoundResponse
     | YukCSCA.BadRequestResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Adds one reviewed term to the notebook. Idempotent on (account, termId). Formal-mock sessions receive 403.")
+  @put
+  @route("/terminology-notebook/{termId}")
+  @useAuth(BearerAuth)
+  bookmarkTerm(
+    @path termId: YukCSCA.uuid,
+    @body request: BookmarkTermRequest,
+  ):
+    | BookmarkTermResponse
+    | TerminologyValidationResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.FormalAssistanceDisabledResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Removes the term from the notebook. Idempotent when the row is already absent. Means the student already knows this and does not want it in review. Formal-mock sessions receive 403.")
+  @delete
+  @route("/terminology-notebook/{termId}")
+  @useAuth(BearerAuth)
+  unbookmarkTerm(@path termId: YukCSCA.uuid):
+    | UnbookmarkTermResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.FormalAssistanceDisabledResponse
     | YukCSCA.InternalServerErrorResponse;
 
   @doc("Submits one due recognition or contextual-use review. Familiarity and next due follow the result. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.")

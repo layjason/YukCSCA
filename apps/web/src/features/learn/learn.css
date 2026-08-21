@@ -852,6 +852,11 @@
   padding-bottom: var(--space-xl);
 }
 
+/* Do not replay page-enter motion on the reader; it fades the Checkpoint strip. */
+.page-content.lesson-reader-page {
+  animation: none;
+}
+
 .learn-reader-chrome {
   position: sticky;
   top: 0;
@@ -919,23 +924,9 @@
   cursor: not-allowed;
 }
 
-/* Reader body */
 .learn-reader-body {
   max-width: 68ch;
-  opacity: 0;
-  transform: translateY(6px);
-  transition:
-    opacity 240ms ease,
-    transform 240ms ease;
-}
-
-.learn-reader-body.is-visible {
-  opacity: 1;
-  transform: none;
-}
-
-.learn-reader-body.is-reloading {
-  opacity: 0.72;
+  overflow-anchor: none;
 }
 
 .learn-language-unavailable {
@@ -950,6 +941,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-sm);
+  overflow-anchor: none;
 }
 
 .learn-complete-button {
@@ -1031,11 +1023,6 @@
   .learn-notebook-entry-leaf {
     transform: none;
     right: -2px;
-  }
-
-  .learn-reader-body {
-    opacity: 1;
-    transform: none;
   }
 
   .learn-package-card:hover,
@@ -1137,6 +1124,10 @@
   gap: var(--space-md);
 }
 
+.learn-reader-with-rail {
+  min-height: 40vh;
+}
+
 .term-notebook-row,
 .term-rail-item {
   display: flex;
@@ -1179,6 +1170,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) 16rem;
     align-items: start;
+    min-height: 40vh;
   }
 
   .term-rail {

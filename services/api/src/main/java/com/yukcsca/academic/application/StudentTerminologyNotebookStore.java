@@ -15,4 +15,6 @@ public interface StudentTerminologyNotebookStore {
   List<StudentTerminologyNotebook> findByAccountIdOrderByUpdatedAtDesc(UUID accountId);
 
   StudentTerminologyNotebook save(StudentTerminologyNotebook entry);
+
+  long deleteByAccountIdAndTermId(UUID accountId, UUID termId);
 }

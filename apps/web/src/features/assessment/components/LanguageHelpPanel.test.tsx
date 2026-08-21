@@ -63,11 +63,12 @@ function renderHelp(
           explanationLanguage="en"
           busy={false}
           onDisclose={vi.fn()}
-          renderStem={({ spans, onActivate, disabled }) => (
+          renderStem={({ spans, onActivate, onHoverEnd, disabled }) => (
             <AssessmentBlocks
               blocks={view.stem}
               termSpans={spans.length > 0 ? spans : undefined}
               onTermActivate={spans.length > 0 ? onActivate : undefined}
+              onTermHoverEnd={spans.length > 0 ? onHoverEnd : undefined}
               termDisabled={disabled}
             />
           )}
@@ -88,7 +89,7 @@ test('hides Language help when the first-paint flag is false', () => {
   expect(container).toBeEmptyDOMElement();
 });
 
-test('shows a quiet icon before disclose and key phrases after', () => {
+test('shows a quiet icon before disclose and underlined stems after', () => {
   const { rerender, container } = renderHelp(item(true));
 
   expect(screen.getByRole('button', { name: /language help/i })).toBeInTheDocument();
@@ -111,11 +112,12 @@ test('shows a quiet icon before disclose and key phrases after', () => {
           explanationLanguage="en"
           busy={false}
           onDisclose={vi.fn()}
-          renderStem={({ spans, onActivate, disabled }) => (
+          renderStem={({ spans, onActivate, onHoverEnd, disabled }) => (
             <AssessmentBlocks
               blocks={item(true, true).stem}
               termSpans={spans.length > 0 ? spans : undefined}
               onTermActivate={spans.length > 0 ? onActivate : undefined}
+              onTermHoverEnd={spans.length > 0 ? onHoverEnd : undefined}
               termDisabled={disabled}
             />
           )}
@@ -124,22 +126,14 @@ test('shows a quiet icon before disclose and key phrases after', () => {
     </I18nextProvider>,
   );
 
-  expect(screen.getByText(/key phrases/i)).toBeInTheDocument();
+  expect(screen.queryByText(/key phrases/i)).not.toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: '求' }).length).toBeGreaterThanOrEqual(1);
-  const phraseText = container.querySelector('.language-help-phrase-text');
-  expect(phraseText).not.toBeNull();
-  expect(phraseText).toHaveTextContent('求');
-  expect(getComputedStyle(phraseText!).textOverflow).not.toBe('ellipsis');
-  expect(getComputedStyle(phraseText!).overflow).not.toBe('hidden');
-  expect(getComputedStyle(container.querySelector('.language-help-phrase')!).whiteSpace).not.toBe(
-    'nowrap',
-  );
-  expect(container.querySelector('.language-help-phrase-leader')).not.toBeNull();
-  expect(container.textContent ?? '').not.toMatch(/·····|……/);
+  expect(container.querySelector('.term-chip')).not.toBeNull();
+  expect(container.querySelector('.language-help-phrase-text')).toBeNull();
   expect(screen.queryByText(/select a word or short phrase/i)).not.toBeInTheDocument();
 });
 
-test('key phrase surfaces stay intact when they wrap', () => {
+test('underlined surfaces stay intact when they wrap', () => {
   const view = item(true, true);
   view.languageHelp = {
     disclosed: true,
@@ -155,11 +149,10 @@ test('key phrase surfaces stay intact when they wrap', () => {
       },
     ],
   };
+  view.stem = [{ kind: 'TEXT', text: '正点电荷在真空中产生的场强' }];
   const { container } = renderHelp(view);
   expect(screen.getByRole('button', { name: '正点电荷在真空中产生的场强' })).toBeInTheDocument();
-  const phraseText = container.querySelector('.language-help-phrase-text');
-  expect(phraseText).toHaveTextContent('正点电荷在真空中产生的场强');
-  expect(getComputedStyle(phraseText!).textOverflow).not.toBe('ellipsis');
+  expect(container.querySelector('.language-help-phrase-text')).toBeNull();
 });
 
 test('shows an honest empty state when disclose returns no spans', () => {
@@ -180,6 +173,7 @@ test('wording-hard chip lookup records LANGUAGE_MISTAKE instead of ITEM', async 
       subject: 'MATHEMATICS',
       packageId: '11111111-1111-4111-8111-111111111111',
       termClass: 'EXAM_INSTRUCTION',
+      alreadyInNotebook: true,
       primarySurface: { text: '求', pinyin: 'qiú', audioAvailable: false },
       aliases: [],
       definition: { availability: 'AVAILABLE', language: 'en', text: 'find' },
@@ -222,4 +216,89 @@ test('wording-hard chip lookup records LANGUAGE_MISTAKE instead of ITEM', async 
       }),
     );
   });
+  expect(await screen.findByText('find')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: /公因式|term card/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: /meaning of 求/i })).toBeInTheDocument();
+  expect(document.querySelector('.term-gloss-surface')).toBeNull();
+});
+
+test('compact gloss bookmarks with a toast and does not restate the Chinese surface', async () => {
+  vi.spyOn(terminologyApi, 'resolveTermLookup').mockResolvedValue({
+    outcome: 'MATCHED',
+    card: {
+      termId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      subject: 'MATHEMATICS',
+      packageId: '11111111-1111-4111-8111-111111111111',
+      termClass: 'EXAM_INSTRUCTION',
+      alreadyInNotebook: false,
+      primarySurface: { text: '求', pinyin: 'qiú', audioAvailable: false },
+      aliases: [],
+      definition: { availability: 'AVAILABLE', language: 'en', text: 'find' },
+      englishEquivalent: 'find',
+      symbols: null,
+      example: null,
+      outlineItemIds: [],
+    },
+    alreadyInNotebook: false,
+    entry: null,
+  });
+  vi.spyOn(terminologyApi, 'bookmarkTerm').mockResolvedValue({
+    card: {
+      termId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      subject: 'MATHEMATICS',
+      packageId: '11111111-1111-4111-8111-111111111111',
+      termClass: 'EXAM_INSTRUCTION',
+      alreadyInNotebook: true,
+      primarySurface: { text: '求', pinyin: 'qiú', audioAvailable: false },
+      aliases: [],
+      definition: { availability: 'AVAILABLE', language: 'en', text: 'find' },
+      englishEquivalent: 'find',
+      symbols: null,
+      example: null,
+      outlineItemIds: [],
+    },
+    alreadyInNotebook: true,
+    entry: {
+      termId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      subject: 'MATHEMATICS',
+      packageId: '11111111-1111-4111-8111-111111111111',
+      termClass: 'EXAM_INSTRUCTION',
+      primarySurface: { text: '求', pinyin: 'qiú', audioAvailable: false },
+      familiarity: 'NEW',
+      due: true,
+      lastReviewAt: null,
+      sources: ['CLICKED'],
+      metIn: {
+        source: 'CLICKED',
+        place: 'CHECKPOINT',
+        topicTitle: null,
+        outlineItemId: null,
+        at: '2026-08-21T00:00:00Z',
+      },
+      pendingReview: null,
+    },
+  });
+
+  renderHelp(item(true, true));
+  const chip = screen.getAllByRole('button', { name: '求' })[0]!;
+  chip.focus();
+  fireEvent.click(chip);
+  expect(await screen.findByText('find')).toBeInTheDocument();
+  const dialog = screen.getByRole('dialog', { name: /meaning of 求/i });
+  expect(dialog).not.toHaveTextContent('求');
+  expect(document.querySelector('.term-gloss-surface')).toBeNull();
+  const bookmark = screen.getByRole('button', { name: /bookmark 求/i });
+  expect(bookmark).toHaveAttribute('aria-pressed', 'false');
+  expect(bookmark).not.toHaveClass('is-on');
+  expect(bookmark.querySelector('svg')).not.toHaveClass('is-marked');
+  fireEvent.click(bookmark);
+  expect(await screen.findByText(/saved to your notebook/i)).toBeInTheDocument();
+  const saved = screen.getByRole('button', { name: /remove 求 from notebook/i });
+  expect(saved).toHaveAttribute('aria-pressed', 'true');
+  expect(saved).toHaveClass('is-on');
+  expect(saved.querySelector('svg')).toHaveClass('is-marked');
+  expect(saved.querySelector('svg')).toHaveAttribute('fill', 'currentColor');
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: /meaning of 求/i })).not.toBeInTheDocument();
+  expect(chip).toHaveFocus();
 });

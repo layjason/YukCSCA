@@ -29,7 +29,7 @@ test('unfinished preview intercepts the lesson entry href', () => {
       },
     }),
   );
-  expect(href).toBe('/app/learn/MATHEMATICS/terminology/preview-1?lessonResourceId=lesson-1');
+  expect(href).toBe('/app/learn/MATHEMATICS/terminology/preview-1');
 });
 
 test('completed preview keeps the lesson URL', () => {

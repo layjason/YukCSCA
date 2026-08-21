@@ -10,11 +10,13 @@ function TermChip({
   span,
   text,
   onActivate,
+  onHoverEnd,
   disabled,
 }: {
   span: TappableSpan;
   text: string;
-  onActivate: (span: TappableSpan) => void;
+  onActivate: (span: TappableSpan, target: HTMLElement) => void;
+  onHoverEnd?: ((span: TappableSpan) => void) | undefined;
   disabled: boolean;
 }): React.JSX.Element {
   const timer = useRef<number>(0);
@@ -27,17 +29,21 @@ function TermChip({
       className="term-chip"
       lang="zh"
       disabled={disabled}
-      onClick={() => {
+      onClick={(event) => {
         cancelHover();
-        onActivate(span);
+        onActivate(span, event.currentTarget);
       }}
       onPointerDown={cancelHover}
       onPointerEnter={(event) => {
         if (disabled || event.pointerType !== 'mouse') return;
         cancelHover();
-        timer.current = window.setTimeout(() => onActivate(span), POINTER_HOVER_MS);
+        const target = event.currentTarget;
+        timer.current = window.setTimeout(() => onActivate(span, target), POINTER_HOVER_MS);
       }}
-      onPointerLeave={cancelHover}
+      onPointerLeave={(event) => {
+        cancelHover();
+        if (event.pointerType === 'mouse') onHoverEnd?.(span);
+      }}
     >
       {text}
     </button>
@@ -50,7 +56,8 @@ interface MixedProseProps {
   className?: string;
   lang?: string;
   spans?: readonly TappableSpan[] | undefined;
-  onActivate?: ((span: TappableSpan) => void) | undefined;
+  onActivate?: ((span: TappableSpan, target: HTMLElement) => void) | undefined;
+  onHoverEnd?: ((span: TappableSpan) => void) | undefined;
   disabled?: boolean;
 }
 
@@ -62,6 +69,7 @@ export function MixedProse({
   lang,
   spans = [],
   onActivate,
+  onHoverEnd,
   disabled = false,
 }: MixedProseProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -113,6 +121,7 @@ export function MixedProse({
               span={part.span}
               text={part.text}
               onActivate={onActivate}
+              onHoverEnd={onHoverEnd}
               disabled={disabled}
             />
           ) : (

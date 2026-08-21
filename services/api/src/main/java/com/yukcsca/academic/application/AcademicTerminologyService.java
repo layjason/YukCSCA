@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -99,16 +100,14 @@ public class AcademicTerminologyService {
     requireStudent(actorId);
     String language = requireExplanationLanguage(explanationLanguage);
     PublishedContext ctx = requirePublished(subject);
-    JsonNode resource = terms.resourceById(ctx.content(), resourceId);
-    if (resource == null || !"TERMINOLOGY".equals(text(resource, "kind"))) {
-      throw new AcademicNotFoundException("Terminology preview not found.");
-    }
+    JsonNode resource = requireLessonPreview(ctx.content(), resourceId);
     List<PublishedTerm> bank = terms.terms(ctx.content());
     Set<UUID> requiredIds = terms.requiredTermIds(resource);
     List<PublishedTerm> required = terms.requiredTerms(bank, requiredIds);
     Set<String> audio = audioTermIds(ctx.revision().getId(), required);
+    Set<UUID> owned = notebookIds(actorId, requiredIds);
     List<TermCardView> cards =
-        required.stream().map(term -> card(term, language, ctx.pkg(), audio)).toList();
+        required.stream().map(term -> card(term, language, ctx.pkg(), audio, owned)).toList();
     boolean pairs = required.size() >= 2;
     List<MatchTargetView> targets =
         pairs
@@ -129,7 +128,7 @@ public class AcademicTerminologyService {
         resourceId,
         terms.localized(resource.path("title")),
         projectorUuidList(resource.path("outlineItemIds")),
-        terms.lessonResourceIdsSharingOutline(ctx.content(), resource),
+        List.of(resourceId),
         language,
         cards,
         pairs,
@@ -150,10 +149,7 @@ public class AcademicTerminologyService {
       throw terminology("status", "UNSUPPORTED");
     }
     PublishedContext ctx = requirePublished(subject);
-    JsonNode resource = terms.resourceById(ctx.content(), resourceId);
-    if (resource == null || !"TERMINOLOGY".equals(text(resource, "kind"))) {
-      throw new AcademicNotFoundException("Terminology preview not found.");
-    }
+    JsonNode resource = requireLessonPreview(ctx.content(), resourceId);
     if (expectedPackageRevisionId != null
         && !expectedPackageRevisionId.equals(ctx.revision().getId())) {
       LOGGER.info(
@@ -187,26 +183,11 @@ public class AcademicTerminologyService {
       existing.replace(status, ctx.revision().getId(), snapshotJson, now);
       previewProgress.save(existing);
     }
-    LocalizedText topic = terms.localized(resource.path("title"));
-    UUID outlineId = firstUuid(resource.path("outlineItemIds"));
-    List<PublishedTerm> required = terms.requiredTerms(terms.terms(ctx.content()), requiredIds);
-    for (PublishedTerm term : required) {
-      upsertNotebook(
-          actorId,
-          ctx.pkg(),
-          term,
-          StudentTerminologyNotebook.SOURCE_REQUIRED_COURSE,
-          "PREVIEW",
-          topic,
-          outlineId,
-          term.example(),
-          now);
-    }
     LOGGER.info(
-        "academic.student.terminology.progress resourceId={} status={} collected={}",
+        "academic.student.terminology.progress resourceId={} status={} required={}",
         resourceId,
         status,
-        required.size());
+        requiredIds.size());
     return toPreviewProgress(existing, requiredIds);
   }
 
@@ -219,10 +200,7 @@ public class AcademicTerminologyService {
       throw terminology("pairs", "OUT_OF_RANGE");
     }
     PublishedContext ctx = requirePublished(subject);
-    JsonNode resource = terms.resourceById(ctx.content(), resourceId);
-    if (resource == null || !"TERMINOLOGY".equals(text(resource, "kind"))) {
-      throw new AcademicNotFoundException("Terminology preview not found.");
-    }
+    JsonNode resource = requireLessonPreview(ctx.content(), resourceId);
     Set<UUID> requiredIds = terms.requiredTermIds(resource);
     int correct = 0;
     for (int i = 0; i < pairs.size(); i++) {
@@ -249,44 +227,8 @@ public class AcademicTerminologyService {
     requireStudent(actorId);
     denyFormal(actorId);
     validateLookup(command);
-    PublishedContext ctx = requirePublished(command.subject());
-    UUID revisionId = ctx.revision().getId();
-    String place = "NOTEBOOK";
-    LocalizedText topic = null;
-    UUID outlineId = null;
-    String snippet = null;
-    List<String> itemStemTexts = List.of();
-    if ("PREVIEW".equals(command.source()) || "LESSON".equals(command.source())) {
-      JsonNode resource = terms.resourceById(ctx.content(), command.resourceId());
-      if (resource == null) {
-        throw new AcademicNotFoundException("Resource not found.");
-      }
-      String expectedKind = "PREVIEW".equals(command.source()) ? "TERMINOLOGY" : "LESSON";
-      if (!expectedKind.equals(text(resource, "kind"))) {
-        throw new AcademicNotFoundException("Resource not found.");
-      }
-      place = "PREVIEW".equals(command.source()) ? "PREVIEW" : "LESSON";
-      topic = terms.localized(resource.path("title"));
-      outlineId = firstUuid(resource.path("outlineItemIds"));
-      snippet = lessonSnippet(resource, command.selectedText(), command.explanationLanguage());
-    } else if ("ITEM".equals(command.source())
-        || ("LANGUAGE_MISTAKE".equals(command.source())
-            && command.sessionId() != null
-            && command.itemId() != null)) {
-      AssessmentItemContextPort.ItemContext item =
-          itemContext
-              .findOwnedItem(actorId, command.sessionId(), command.itemId())
-              .orElseThrow(() -> new AcademicNotFoundException("Item not found."));
-      revisionId = item.packageRevisionId();
-      AcademicRevision pinned =
-          revisions
-              .findById(revisionId)
-              .orElseThrow(() -> new AcademicNotFoundException("Published package not found."));
-      ctx = new PublishedContext(ctx.pkg(), pinned, projector.parseContent(pinned.getContent()));
-      place = "CHECKPOINT".equals(item.purpose()) ? "CHECKPOINT" : "PRACTICE";
-      itemStemTexts = item.stemTexts() == null ? List.of() : item.stemTexts();
-    }
-    List<PublishedTerm> bank = terms.terms(ctx.content());
+    LookupEncounter encounter = resolveEncounter(actorId, command);
+    List<PublishedTerm> bank = terms.terms(encounter.ctx().content());
     Optional<PublishedTerm> matched;
     if (command.termId() != null) {
       matched = terms.findTerm(bank, command.termId());
@@ -304,23 +246,128 @@ public class AcademicTerminologyService {
       return new TermLookupView("NOT_IN_BANK", null, false, null);
     }
     PublishedTerm term = matched.get();
+    Optional<StudentTerminologyNotebook> existing =
+        notebook.findByAccountIdAndTermId(actorId, term.id());
+    Set<String> audio = audioTermIds(encounter.revisionId(), List.of(term));
+    TermCardView card =
+        card(
+            term,
+            command.explanationLanguage(),
+            encounter.ctx().pkg(),
+            audio,
+            existing.map(row -> Set.of(row.getTermId())).orElseGet(Set::of));
+    NotebookEntryView entry =
+        existing
+            .map(
+                row ->
+                    notebookEntry(row, term, command.explanationLanguage(), encounter.ctx(), audio))
+            .orElse(null);
+    return new TermLookupView("MATCHED", card, existing.isPresent(), entry);
+  }
+
+  @Transactional
+  public BookmarkTermView bookmarkTerm(UUID actorId, UUID termId, TermLookupCommand command) {
+    requireStudent(actorId);
+    denyFormal(actorId);
+    TermLookupCommand withTerm =
+        new TermLookupCommand(
+            command.subject(),
+            command.explanationLanguage(),
+            command.source(),
+            termId,
+            null,
+            command.resourceId(),
+            command.sessionId(),
+            command.itemId());
+    validateLookup(withTerm);
+    LookupEncounter encounter = resolveEncounter(actorId, withTerm);
+    PublishedTerm term =
+        terms
+            .findTerm(terms.terms(encounter.ctx().content()), termId)
+            .orElseThrow(() -> new AcademicNotFoundException("Term not found."));
     String source =
-        "LANGUAGE_MISTAKE".equals(command.source())
+        "LANGUAGE_MISTAKE".equals(withTerm.source())
             ? StudentTerminologyNotebook.SOURCE_LANGUAGE_MISTAKE
             : StudentTerminologyNotebook.SOURCE_CLICKED;
-    if (snippet == null) snippet = stemSnippet(itemStemTexts, term);
+    String snippet = encounter.snippet();
+    if (snippet == null) snippet = stemSnippet(encounter.itemStemTexts(), term);
     if (snippet == null) snippet = term.example();
     Instant now = now();
-    boolean existed = notebook.findByAccountIdAndTermId(actorId, term.id()).isPresent();
     StudentTerminologyNotebook entry =
-        upsertNotebook(actorId, ctx.pkg(), term, source, place, topic, outlineId, snippet, now);
-    Set<String> audio = audioTermIds(revisionId, List.of(term));
-    TermCardView card = card(term, command.explanationLanguage(), ctx.pkg(), audio);
-    return new TermLookupView(
-        "MATCHED",
-        card,
-        existed,
-        notebookEntry(entry, term, command.explanationLanguage(), ctx, audio));
+        upsertNotebook(
+            actorId,
+            encounter.ctx().pkg(),
+            term,
+            source,
+            encounter.place(),
+            encounter.topic(),
+            encounter.outlineId(),
+            snippet,
+            now);
+    Set<String> audio = audioTermIds(encounter.revisionId(), List.of(term));
+    TermCardView card =
+        card(term, withTerm.explanationLanguage(), encounter.ctx().pkg(), audio, Set.of(term.id()));
+    return new BookmarkTermView(
+        card, notebookEntry(entry, term, withTerm.explanationLanguage(), encounter.ctx(), audio));
+  }
+
+  @Transactional
+  public BookmarkLessonTermsView bookmarkLessonTerms(
+      UUID actorId,
+      String subject,
+      UUID resourceId,
+      String explanationLanguage,
+      List<UUID> termIds) {
+    requireStudent(actorId);
+    denyFormal(actorId);
+    String language = requireExplanationLanguage(explanationLanguage);
+    PublishedContext ctx = requirePublished(subject);
+    JsonNode lesson = requireLessonPreview(ctx.content(), resourceId);
+    Set<UUID> requiredIds = terms.requiredTermIds(lesson);
+    List<UUID> requested =
+        termIds == null || termIds.isEmpty() ? List.copyOf(requiredIds) : List.copyOf(termIds);
+    if (requested.size() > 64) {
+      throw terminology("termIds", "OUT_OF_RANGE");
+    }
+    for (int i = 0; i < requested.size(); i++) {
+      UUID id = requested.get(i);
+      if (id == null || !requiredIds.contains(id)) {
+        throw terminology("termIds[" + i + "]", "INVALID");
+      }
+    }
+    LocalizedText topic = terms.localized(lesson.path("title"));
+    UUID outlineId = firstUuid(lesson.path("outlineItemIds"));
+    Instant now = now();
+    List<PublishedTerm> bank = terms.terms(ctx.content());
+    List<UUID> bookmarked = new ArrayList<>();
+    for (UUID id : requested) {
+      PublishedTerm term = terms.findTerm(bank, id).orElse(null);
+      if (term == null) continue;
+      upsertNotebook(
+          actorId,
+          ctx.pkg(),
+          term,
+          StudentTerminologyNotebook.SOURCE_CLICKED,
+          "PREVIEW",
+          topic,
+          outlineId,
+          term.example(),
+          now);
+      bookmarked.add(id);
+    }
+    LOGGER.info(
+        "academic.student.terminology.bookmarked resourceId={} count={}",
+        resourceId,
+        bookmarked.size());
+    return new BookmarkLessonTermsView(List.copyOf(bookmarked));
+  }
+
+  @Transactional
+  public void unbookmarkTerm(UUID actorId, UUID termId) {
+    requireStudent(actorId);
+    denyFormal(actorId);
+    notebook.deleteByAccountIdAndTermId(actorId, termId);
+    LOGGER.info("academic.student.terminology.unbookmarked termId={}", termId);
   }
 
   @Transactional(readOnly = true)
@@ -399,7 +446,8 @@ public class AcademicTerminologyService {
             .orElseThrow(() -> new AcademicNotFoundException("Notebook entry not found."));
     Set<String> audio = audioTermIds(ctx.revision().getId(), List.of(term));
     return new NotebookDetailView(
-        notebookEntry(row, term, language, ctx, audio), card(term, language, ctx.pkg(), audio));
+        notebookEntry(row, term, language, ctx, audio),
+        card(term, language, ctx.pkg(), audio, Set.of(term.id())));
   }
 
   @Transactional
@@ -502,21 +550,20 @@ public class AcademicTerminologyService {
     if (!terms.hasPublishedTermBank(content)) return null;
     JsonNode lesson = terms.resourceById(content, lessonResourceId);
     if (lesson == null) return null;
-    Optional<JsonNode> preview =
-        terms.terminologyBoundTo(content, projectorUuidList(lesson.path("outlineItemIds")));
     List<PublishedTerm> bank = terms.terms(content);
-    Set<UUID> requiredIds = preview.map(terms::requiredTermIds).orElseGet(LinkedHashSet::new);
+    Set<UUID> requiredIds = terms.requiredTermIds(lesson);
     List<PublishedTerm> railTerms = terms.requiredTerms(bank, requiredIds);
     Set<String> audio = audioTermIds(revision.getId(), railTerms);
+    Set<UUID> owned = notebookIds(actorId, railTerms.stream().map(PublishedTerm::id).toList());
     List<TermCardView> rail =
         railTerms.stream()
-            .map(term -> card(term, explanationLanguage, academicPackage, audio))
+            .map(term -> card(term, explanationLanguage, academicPackage, audio, owned))
             .toList();
     Set<UUID> auto = terms.autoMatchTermIds(bank, requiredIds);
     List<TermSpanMatch> spans =
         terms.matchSpans(blocks == null ? List.of() : blocks, bank, auto, 200);
     return new LessonTerminologyView(
-        preview.map(node -> uuid(node.path("id"))).orElse(null),
+        requiredIds.isEmpty() ? null : lessonResourceId,
         rail,
         spans.stream()
             .map(
@@ -531,15 +578,14 @@ public class AcademicTerminologyService {
   }
 
   public PreviewRefView lessonPreviewRef(
-      UUID actorId, UUID packageId, JsonNode content, List<UUID> lessonOutlineIds) {
-    if (!terms.hasPublishedTermBank(content)) return null;
-    Optional<JsonNode> preview = terms.terminologyBoundTo(content, lessonOutlineIds);
-    if (preview.isEmpty()) return null;
-    UUID resourceId = uuid(preview.get().path("id"));
-    if (resourceId == null) return null;
+      UUID actorId, UUID packageId, JsonNode content, UUID lessonResourceId) {
+    if (!terms.hasPublishedTermBank(content) || lessonResourceId == null) return null;
+    JsonNode lesson = terms.resourceById(content, lessonResourceId);
+    if (lesson == null || !"LESSON".equals(text(lesson, "kind"))) return null;
+    Set<UUID> requiredIds = terms.requiredTermIds(lesson);
+    if (requiredIds.isEmpty()) return null;
     return new PreviewRefView(
-        resourceId,
-        previewProgressView(actorId, packageId, resourceId, terms.requiredTermIds(preview.get())));
+        lessonResourceId, previewProgressView(actorId, packageId, lessonResourceId, requiredIds));
   }
 
   public StudentTerminologyNotebook upsertNotebook(
@@ -611,7 +657,8 @@ public class AcademicTerminologyService {
       PublishedTerm term,
       String explanationLanguage,
       AcademicPackage academicPackage,
-      Set<String> audio) {
+      Set<String> audio,
+      Set<UUID> notebookIds) {
     String definition = terms.definitionText(term, explanationLanguage);
     TermDefinitionView definitionView =
         definition == null
@@ -622,6 +669,7 @@ public class AcademicTerminologyService {
         academicPackage.getSubject(),
         academicPackage.getId(),
         term.termClass(),
+        notebookIds != null && notebookIds.contains(term.id()),
         surface(term.primary(), hasAudio(audio, term.id(), term.primary().text())),
         term.aliases().stream()
             .map(alias -> surface(alias, hasAudio(audio, term.id(), alias.text())))
@@ -631,6 +679,65 @@ public class AcademicTerminologyService {
         term.symbols(),
         term.example(),
         term.outlineItemIds());
+  }
+
+  private JsonNode requireLessonPreview(JsonNode content, UUID resourceId) {
+    JsonNode resource = terms.resourceById(content, resourceId);
+    if (resource == null
+        || !"LESSON".equals(text(resource, "kind"))
+        || terms.requiredTermIds(resource).isEmpty()) {
+      throw new AcademicNotFoundException("Terminology preview not found.");
+    }
+    return resource;
+  }
+
+  private Set<UUID> notebookIds(UUID actorId, Collection<UUID> termIds) {
+    if (actorId == null || termIds == null || termIds.isEmpty()) return Set.of();
+    Set<UUID> owned = new HashSet<>();
+    for (StudentTerminologyNotebook row : notebook.findByAccountIdAndTermIdIn(actorId, termIds)) {
+      owned.add(row.getTermId());
+    }
+    return owned;
+  }
+
+  private LookupEncounter resolveEncounter(UUID actorId, TermLookupCommand command) {
+    PublishedContext published = requirePublished(command.subject());
+    UUID revisionId = published.revision().getId();
+    String place = "NOTEBOOK";
+    LocalizedText topic = null;
+    UUID outlineId = null;
+    String snippet = null;
+    List<String> itemStemTexts = List.of();
+    PublishedContext ctx = published;
+    if ("PREVIEW".equals(command.source()) || "LESSON".equals(command.source())) {
+      JsonNode resource = terms.resourceById(published.content(), command.resourceId());
+      if (resource == null || !"LESSON".equals(text(resource, "kind"))) {
+        throw new AcademicNotFoundException("Resource not found.");
+      }
+      place = "PREVIEW".equals(command.source()) ? "PREVIEW" : "LESSON";
+      topic = terms.localized(resource.path("title"));
+      outlineId = firstUuid(resource.path("outlineItemIds"));
+      snippet = lessonSnippet(resource, command.selectedText(), command.explanationLanguage());
+    } else if ("ITEM".equals(command.source())
+        || ("LANGUAGE_MISTAKE".equals(command.source())
+            && command.sessionId() != null
+            && command.itemId() != null)) {
+      AssessmentItemContextPort.ItemContext item =
+          itemContext
+              .findOwnedItem(actorId, command.sessionId(), command.itemId())
+              .orElseThrow(() -> new AcademicNotFoundException("Item not found."));
+      revisionId = item.packageRevisionId();
+      AcademicRevision pinned =
+          revisions
+              .findById(revisionId)
+              .orElseThrow(() -> new AcademicNotFoundException("Published package not found."));
+      ctx =
+          new PublishedContext(
+              published.pkg(), pinned, projector.parseContent(pinned.getContent()));
+      place = "CHECKPOINT".equals(item.purpose()) ? "CHECKPOINT" : "PRACTICE";
+      itemStemTexts = item.stemTexts() == null ? List.of() : item.stemTexts();
+    }
+    return new LookupEncounter(ctx, revisionId, place, topic, outlineId, snippet, itemStemTexts);
   }
 
   private TermSurfaceView surface(Surface surface, boolean audio) {
@@ -1005,6 +1112,7 @@ public class AcademicTerminologyService {
       String subject,
       UUID packageId,
       String termClass,
+      boolean alreadyInNotebook,
       TermSurfaceView primarySurface,
       List<TermSurfaceView> aliases,
       TermDefinitionView definition,
@@ -1085,4 +1193,17 @@ public class AcademicTerminologyService {
 
   public record LessonTerminologyView(
       UUID previewResourceId, List<TermCardView> rail, List<TermSpanView> spans) {}
+
+  public record BookmarkTermView(TermCardView card, NotebookEntryView entry) {}
+
+  public record BookmarkLessonTermsView(List<UUID> termIds) {}
+
+  private record LookupEncounter(
+      PublishedContext ctx,
+      UUID revisionId,
+      String place,
+      LocalizedText topic,
+      UUID outlineId,
+      String snippet,
+      List<String> itemStemTexts) {}
 }

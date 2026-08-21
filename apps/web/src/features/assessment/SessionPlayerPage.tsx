@@ -448,11 +448,12 @@ export function SessionPlayerPage(): React.JSX.Element {
               canDisclose={session.status === 'IN_PROGRESS' && !reviewing}
               busy={busy}
               onDisclose={handleLanguageDisclose}
-              renderStem={({ spans, onActivate, disabled }) => (
+              renderStem={({ spans, onActivate, onHoverEnd, disabled }) => (
                 <AssessmentBlocks
                   blocks={item.stem}
                   termSpans={spans.length > 0 ? spans : undefined}
                   onTermActivate={spans.length > 0 ? onActivate : undefined}
+                  onTermHoverEnd={spans.length > 0 ? onHoverEnd : undefined}
                   termDisabled={disabled}
                 />
               )}

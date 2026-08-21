@@ -1,4 +1,7 @@
 import type {
+  BookmarkLessonTermsResult,
+  BookmarkTermRequest,
+  BookmarkTermResult,
   ExplanationLanguage,
   NotebookEntry,
   NotebookEntryDetail,
@@ -55,6 +58,7 @@ function card(
     subject: 'MATHEMATICS',
     packageId: TERM_DEV_IDS.PACKAGE_ID,
     termClass,
+    alreadyInNotebook: notebook.has(termId),
     primarySurface: surface(text, pinyin, termId === TERM_DEV_IDS.TERM_FACTOR),
     aliases: [],
     definition: { availability: 'AVAILABLE', language, text: definition },
@@ -147,7 +151,7 @@ export function devGetTerminologyPreview(
   resourceId: string,
   explanationLanguage: ExplanationLanguage,
 ): TerminologyPreview | null {
-  if (subject !== 'MATHEMATICS' || resourceId !== TERM_DEV_IDS.PREVIEW_ID) return null;
+  if (subject !== 'MATHEMATICS' || !isPreviewResource(resourceId)) return null;
   const terms = cardsFor(explanationLanguage);
   return {
     packageId: TERM_DEV_IDS.PACKAGE_ID,
@@ -178,12 +182,7 @@ export function devUpsertPreviewProgress(
   resourceId: string,
   status: PreviewProgress['status'],
 ): PreviewProgress | null {
-  if (resourceId !== TERM_DEV_IDS.PREVIEW_ID) return null;
-  if (status === 'IN_PROGRESS' || status === 'PREVIEW_COMPLETE') {
-    for (const term of cardsFor('en')) {
-      upsertNotebook(term, 'REQUIRED_COURSE');
-    }
-  }
+  if (!isPreviewResource(resourceId)) return null;
   const next: PreviewProgress = {
     status,
     updatedAt: now(),
@@ -197,7 +196,7 @@ export function devSubmitPreviewCheck(
   resourceId: string,
   pairs: { termId: string; selectedMatchKey: string }[],
 ): PreviewCheckResult | null {
-  if (resourceId !== TERM_DEV_IDS.PREVIEW_ID) return null;
+  if (!isPreviewResource(resourceId)) return null;
   const progress = devUpsertPreviewProgress(resourceId, 'IN_PROGRESS') ?? defaultProgress();
   const correctCount = pairs.filter((pair) => pair.selectedMatchKey === pair.termId).length;
   return {
@@ -222,8 +221,51 @@ export function devResolveTermLookup(request: TermLookupRequest): TermLookupResu
     return { outcome: 'NOT_IN_BANK' };
   }
   const already = notebook.has(matched.termId);
-  const entry = upsertNotebook(matched, request.source === 'ITEM' ? 'CLICKED' : 'CLICKED');
-  return { outcome: 'MATCHED', card: matched, alreadyInNotebook: already, entry };
+  return {
+    outcome: 'MATCHED',
+    card: { ...matched, alreadyInNotebook: already },
+    alreadyInNotebook: already,
+    entry: already ? notebook.get(matched.termId)! : null,
+  };
+}
+
+function isPreviewResource(resourceId: string): boolean {
+  return resourceId === TERM_DEV_IDS.LESSON_ID || resourceId === TERM_DEV_IDS.PREVIEW_ID;
+}
+
+export function devBookmarkTerm(termId: string, request: BookmarkTermRequest): BookmarkTermResult {
+  const language = request.explanationLanguage;
+  const matched = cardsFor(language).find((term) => term.termId === termId);
+  if (!matched) {
+    throw new Error('Term not found');
+  }
+  const source = request.source === 'LANGUAGE_MISTAKE' ? 'LANGUAGE_MISTAKE' : 'CLICKED';
+  const entry = upsertNotebook(matched, source);
+  return {
+    card: { ...matched, alreadyInNotebook: true },
+    alreadyInNotebook: true,
+    entry,
+  };
+}
+
+export function devUnbookmarkTerm(termId: string): void {
+  notebook.delete(termId);
+}
+
+export function devBookmarkLessonTerms(
+  resourceId: string,
+  termIds?: readonly string[],
+): BookmarkLessonTermsResult {
+  if (!isPreviewResource(resourceId)) return { termIds: [] };
+  const terms = cardsFor('en');
+  const wanted = termIds && termIds.length > 0 ? new Set(termIds) : null;
+  const bookmarked: string[] = [];
+  for (const term of terms) {
+    if (wanted && !wanted.has(term.termId)) continue;
+    upsertNotebook(term, 'CLICKED');
+    bookmarked.push(term.termId);
+  }
+  return { termIds: bookmarked };
 }
 
 export function devListTerminologyNotebook(options: {

@@ -290,7 +290,7 @@ public class AcademicStudentService {
       UUID actorId, UUID packageId, JsonNode content, LessonSummaryProjection lesson) {
     if (lesson == null) return null;
     AcademicTerminologyService.PreviewRefView ref =
-        terminology.lessonPreviewRef(actorId, packageId, content, lesson.outlineItemIds());
+        terminology.lessonPreviewRef(actorId, packageId, content, lesson.resourceId());
     if (ref == null) return lesson;
     return new LessonSummaryProjection(
         lesson.resourceId(),

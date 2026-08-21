@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
-import { getTerminologyPreview, resolveTermLookup } from '@/shared/api/terminologyStudentApi';
-import { TermCardDialog } from '@/shared/terminology/TermCardDialog';
-import { useTermAudio } from '@/shared/terminology/useTermAudio';
+import {
+  bookmarkTerm,
+  getTerminologyPreview,
+  resolveTermLookup,
+  unbookmarkTerm,
+} from '@/shared/api/terminologyStudentApi';
+import { TermGlossBubble } from '@/shared/terminology/TermGlossBubble';
 import type { TappableSpan } from '@/shared/terminology/TappableText';
 import type { TermCard } from '@/shared/terminology/types';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
@@ -16,7 +20,6 @@ import { ContentProgressFrom } from './components/ContentProgressChip';
 import { LanguageToggle } from './components/LanguageToggle';
 import { LessonTermRail } from './components/LessonTermRail';
 import { resolveLocalizedTextForExplanation } from './localizedText';
-import { formatMetInLine } from './termMetIn';
 import { previewHref } from './previewNavigation';
 import {
   clampResumeBlockIndex,
@@ -34,6 +37,25 @@ import {
 import { getMistake } from '@/features/assessment/api/assessmentApi';
 import { CheckpointCta } from '@/features/assessment/components/CheckpointCta';
 import './learn.css';
+
+/** App shell scrolls `.app-content-wrapper`, not `window`. */
+function getShellScroller(): HTMLElement | null {
+  return document.querySelector('.app-content-wrapper');
+}
+
+function readShellScrollTop(): number {
+  const scroller = getShellScroller();
+  return scroller ? scroller.scrollTop : window.scrollY;
+}
+
+function writeShellScrollTop(top: number): void {
+  const scroller = getShellScroller();
+  if (scroller) {
+    scroller.scrollTop = top;
+    return;
+  }
+  window.scrollTo({ top, left: 0, behavior: 'auto' });
+}
 
 export function LessonReaderPage(): React.JSX.Element {
   const { t, i18n } = useTranslation();
@@ -56,35 +78,68 @@ export function LessonReaderPage(): React.JSX.Element {
   const [lesson, setLesson] = useState<PublishedLessonDetail | null>(null);
   const [progress, setProgress] = useState<ContentProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloading, setReloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [resumeHighlightIndex, setResumeHighlightIndex] = useState<number | null>(null);
-  const [contentVisible, setContentVisible] = useState(false);
   const [requiredSetNotice, setRequiredSetNotice] = useState(false);
   const [previewResolved, setPreviewResolved] = useState(false);
-  const [openCard, setOpenCard] = useState<TermCard | null>(null);
-  const [alreadySaved, setAlreadySaved] = useState(false);
-  const [metInLine, setMetInLine] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
-  const audio = useTermAudio();
+  const [activeGloss, setActiveGloss] = useState<{
+    span: TappableSpan;
+    target: HTMLElement;
+    restoreFocus: boolean;
+  } | null>(null);
+  const [glossCards, setGlossCards] = useState<Record<string, TermCard>>({});
+  const [glossBookmarked, setGlossBookmarked] = useState<Record<string, boolean>>({});
+  const [glossBookmarkBusy, setGlossBookmarkBusy] = useState(false);
+  const glossHideTimer = useRef<number>(0);
 
   const resumeAppliedRef = useRef(false);
   const progressSeededRef = useRef(false);
   /** When true, next lesson body load must not jump scroll to the resume block (language switch). */
   const skipResumeScrollRef = useRef(false);
-  /** Preserve viewport while explanation language reloads. */
-  const preservedScrollYRef = useRef<number | null>(null);
+  const preservedScrollTopRef = useRef<number | null>(null);
+  const columnRef = useRef<HTMLDivElement>(null);
   const activeLessonKeyRef = useRef<string | null>(null);
   const lastSavedIndexRef = useRef<number | null>(null);
   const resumeCoalescerRef = useRef<ResumeProgressCoalescer | null>(null);
   const blockElsRef = useRef<Map<number, HTMLElement>>(new Map());
+  const loadGenerationRef = useRef(0);
+  const hasLessonBodyRef = useRef(false);
 
   const dismissToast = useCallback(() => setToast(null), []);
   const contentComplete = progress?.status === 'CONTENT_COMPLETE';
   const needsReview = isUpdatedSinceCompleted(progress);
   const lessonKey = subject && resourceId ? `${subject}:${resourceId}` : null;
+
+  function cancelGlossHide(): void {
+    window.clearTimeout(glossHideTimer.current);
+  }
+
+  function scheduleGlossHide(): void {
+    cancelGlossHide();
+    glossHideTimer.current = window.setTimeout(() => setActiveGloss(null), 220);
+  }
+
+  useEffect(() => () => window.clearTimeout(glossHideTimer.current), []);
+
+  useEffect(() => {
+    if (!activeGloss) return;
+    const target = activeGloss.target;
+    function onDoc(event: PointerEvent): void {
+      const node = event.target as Node | null;
+      if (!node) return;
+      if (target.contains(node)) return;
+      const glossEl = document.querySelector('.term-gloss');
+      if (glossEl?.contains(node)) return;
+      setActiveGloss(null);
+    }
+    document.addEventListener('pointerdown', onDoc);
+    return () => document.removeEventListener('pointerdown', onDoc);
+  }, [activeGloss]);
 
   // Load profile default explanation language once (session-only override lives in state).
   useEffect(() => {
@@ -108,23 +163,28 @@ export function LessonReaderPage(): React.JSX.Element {
     };
   }, []);
 
-  const hasLessonBodyRef = useRef(false);
-
   const loadLesson = useCallback(async () => {
     if (!subject || !resourceId || !explanationLanguage) return;
-    // Soft reload keeps chrome + body mounted during language switches (avoids height collapse jumps).
-    const softReload = skipResumeScrollRef.current && hasLessonBodyRef.current;
+    const requestId = ++loadGenerationRef.current;
+    // Same-lesson reloads (language switch) keep the body and Checkpoint mounted.
+    const softReload = hasLessonBodyRef.current;
     if (!softReload) {
       setLoading(true);
-      setContentVisible(false);
+    } else {
+      setReloading(true);
     }
     setError(null);
     setNotFound(false);
     try {
       const data = await getPublishedLesson(subject, resourceId, explanationLanguage);
+      if (requestId !== loadGenerationRef.current) return;
       setLesson(data);
       hasLessonBodyRef.current = true;
-      setProgress(data.contentProgress);
+      // Progress is lesson-scoped, not language-scoped. Replacing it on a language
+      // reload remounts CheckpointCta (idle → null → fade-in).
+      if (!softReload) {
+        setProgress(data.contentProgress);
+      }
       const clamped =
         data.body.availability === 'AVAILABLE'
           ? clampResumeBlockIndex(data.contentProgress.resumeBlockIndex, data.body.blocks.length)
@@ -134,33 +194,15 @@ export function LessonReaderPage(): React.JSX.Element {
         lastSavedIndexRef.current = clamped;
         resumeCoalescerRef.current?.setLastSaved(clamped);
       }
-      // Prefer available language if profile default is missing for this resource.
-      if (
-        data.body.availability === 'LANGUAGE_UNAVAILABLE' &&
-        data.availableExplanationLanguages.length > 0 &&
-        !data.availableExplanationLanguages.includes(explanationLanguage)
-      ) {
-        // Keep explicit unavailable state — do not auto-switch (no silent fallback).
-      }
-      requestAnimationFrame(() => {
-        setContentVisible(true);
-        // Restore scroll after language switch so the page does not jump to the resume block.
-        const preservedY = preservedScrollYRef.current;
-        if (preservedY != null) {
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: preservedY, left: 0, behavior: 'auto' });
-            preservedScrollYRef.current = null;
-          });
-        }
-      });
     } catch (err) {
+      if (requestId !== loadGenerationRef.current) return;
       if (!softReload) {
         setLesson(null);
         setProgress(null);
         hasLessonBodyRef.current = false;
+        preservedScrollTopRef.current = null;
+        if (columnRef.current) columnRef.current.style.minHeight = '';
       }
-      preservedScrollYRef.current = null;
-      skipResumeScrollRef.current = false;
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
       } else if (err instanceof ApiError && err.status === 403) {
@@ -171,7 +213,10 @@ export function LessonReaderPage(): React.JSX.Element {
         setError(t('learn.errors.loadLesson'));
       }
     } finally {
-      setLoading(false);
+      if (requestId === loadGenerationRef.current) {
+        setLoading(false);
+        setReloading(false);
+      }
     }
   }, [subject, resourceId, explanationLanguage, t]);
 
@@ -185,16 +230,19 @@ export function LessonReaderPage(): React.JSX.Element {
       progressSeededRef.current = false;
       lastSavedIndexRef.current = null;
       skipResumeScrollRef.current = false;
-      preservedScrollYRef.current = null;
+      preservedScrollTopRef.current = null;
+      if (columnRef.current) columnRef.current.style.minHeight = '';
       hasLessonBodyRef.current = false;
       setPreviewResolved(false);
+      setReloading(false);
     }
-    // Language-only reloads keep skipResumeScrollRef / preservedScrollY set by handleLanguageChange.
+    // Language-only reloads keep skipResumeScrollRef / preservedScrollTopRef set by handleLanguageChange.
 
     void loadLesson();
   }, [profileLanguageReady, explanationLanguage, lessonKey, loadLesson]);
 
   useEffect(() => {
+    if (reloading) return;
     if (!lesson || !subject || !resourceId || !explanationLanguage) return;
     const previewId = lesson.terminology?.previewResourceId;
     if (!previewId) {
@@ -224,32 +272,111 @@ export function LessonReaderPage(): React.JSX.Element {
     return () => {
       active = false;
     };
-  }, [explanationLanguage, lesson, navigate, resourceId, subject]);
+  }, [explanationLanguage, lesson, navigate, reloading, resourceId, subject]);
 
-  async function handleTermActivate(span: TappableSpan): Promise<void> {
-    if (!subject || !resourceId || !explanationLanguage) return;
+  const lockColumnHeight = useCallback(() => {
+    const column = columnRef.current;
+    if (!column) return;
+    const locked = Number.parseInt(column.style.minHeight, 10) || 0;
+    column.style.minHeight = `${Math.max(locked, column.offsetHeight)}px`;
+  }, []);
+
+  // Language reload: keep the column from shrinking (footer stays below the
+  // lesson) and restore the shell scroller, not window.
+  useLayoutEffect(() => {
+    if (!lesson) return;
+    lockColumnHeight();
+    if (preservedScrollTopRef.current != null) {
+      writeShellScrollTop(preservedScrollTopRef.current);
+      preservedScrollTopRef.current = null;
+    }
+  }, [lesson, lockColumnHeight]);
+
+  async function loadGlossCard(termId: string): Promise<TermCard | null> {
+    if (!subject || !resourceId || !explanationLanguage) return null;
     setLookupError(null);
     try {
       const result = await resolveTermLookup({
         subject,
         explanationLanguage,
         source: 'LESSON',
-        termId: span.termId,
+        termId,
         resourceId,
       });
       if (result.outcome === 'MATCHED') {
-        setOpenCard(result.card);
-        setAlreadySaved(result.alreadyInNotebook);
-        setMetInLine(formatMetInLine(result.entry.metIn, i18n.language, t));
-      } else {
-        setLookupError(t('terminology.notInBank'));
+        setGlossCards((curr) => ({ ...curr, [result.card.termId]: result.card }));
+        setGlossBookmarked((curr) => ({
+          ...curr,
+          [result.card.termId]: result.alreadyInNotebook,
+        }));
+        return result.card;
       }
+      setLookupError(t('terminology.notInBank'));
+      setActiveGloss(null);
+      return null;
     } catch (err) {
       if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
         setLookupError(t('terminology.formalDisabled'));
       } else {
         setLookupError(t('terminology.lookupFailed'));
       }
+      return null;
+    }
+  }
+
+  function handleTermActivate(span: TappableSpan, target: HTMLElement): void {
+    cancelGlossHide();
+    const fromRail = lesson?.terminology?.rail.find((c) => c.termId === span.termId);
+    if (fromRail && glossBookmarked[span.termId] === undefined) {
+      setGlossBookmarked((curr) => ({
+        ...curr,
+        [span.termId]: fromRail.alreadyInNotebook,
+      }));
+    }
+    setActiveGloss({
+      span,
+      target,
+      restoreFocus: target === document.activeElement || target.contains(document.activeElement),
+    });
+    if (!glossCards[span.termId]) {
+      void loadGlossCard(span.termId);
+    }
+  }
+
+  async function handleToggleGlossBookmark(termId: string): Promise<void> {
+    if (!subject || !resourceId || !explanationLanguage || glossBookmarkBusy) return;
+    setGlossBookmarkBusy(true);
+    setLookupError(null);
+    const isSaved = Boolean(glossBookmarked[termId]);
+    try {
+      if (isSaved) {
+        await unbookmarkTerm(termId);
+        setGlossBookmarked((curr) => ({ ...curr, [termId]: false }));
+        setGlossCards((curr) =>
+          curr[termId]
+            ? { ...curr, [termId]: { ...curr[termId]!, alreadyInNotebook: false } }
+            : curr,
+        );
+        setToast({ message: t('terminology.unbookmarkedToast'), tone: 'info' });
+      } else {
+        const result = await bookmarkTerm(termId, {
+          subject,
+          explanationLanguage,
+          source: 'LESSON',
+          resourceId,
+        });
+        setGlossBookmarked((curr) => ({ ...curr, [termId]: true }));
+        setGlossCards((curr) => ({ ...curr, [termId]: result.card }));
+        setToast({ message: t('terminology.bookmarkedToast'), tone: 'success' });
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setLookupError(t('terminology.formalDisabled'));
+      } else {
+        setLookupError(t('terminology.saveFailed'));
+      }
+    } finally {
+      setGlossBookmarkBusy(false);
     }
   }
 
@@ -420,9 +547,10 @@ export function LessonReaderPage(): React.JSX.Element {
 
   function handleLanguageChange(lang: ExplanationLanguage): void {
     if (lang === explanationLanguage) return;
-    // Keep the student at the same reading position; do not re-run resume jump.
     skipResumeScrollRef.current = true;
-    preservedScrollYRef.current = window.scrollY;
+    preservedScrollTopRef.current = readShellScrollTop();
+    lockColumnHeight();
+    setReloading(true);
     setExplanationLanguage(lang);
   }
 
@@ -494,17 +622,26 @@ export function LessonReaderPage(): React.JSX.Element {
     );
   }
 
+  // Title follows the loaded body language, not the in-flight toggle. Switching
+  // the heading before the body arrives reflows the sticky chrome and jumps Checkpoint.
+  const displayedExplanationLanguage = isExplanationLanguage(lesson.requestedExplanationLanguage)
+    ? lesson.requestedExplanationLanguage
+    : explanationLanguage;
   const title = resolveLocalizedTextForExplanation(
     lesson.title,
-    explanationLanguage,
+    displayedExplanationLanguage,
     i18n.language,
   );
   const body = lesson.body;
   const isAvailable = body.availability === 'AVAILABLE';
   const awaitingPreview = Boolean(lesson.terminology?.previewResourceId) && !previewResolved;
-  const showBody = isAvailable && !awaitingPreview;
-  const blocks = showBody ? body.blocks : [];
+  // Keep an already-available body mounted during a language reload even if the
+  // preview gate has not resolved yet. Do not read `.blocks` unless AVAILABLE.
+  const showBody = isAvailable && (!awaitingPreview || reloading);
+  const blocks = isAvailable ? body.blocks : [];
   const isComplete = progress?.status === 'CONTENT_COMPLETE' && !needsReview;
+  const showCheckpoint = Boolean(subject && resourceId && progress?.status === 'CONTENT_COMPLETE');
+  const showFooter = showBody || showCheckpoint;
 
   return (
     <div className="page-content learn-page lesson-reader-page">
@@ -567,15 +704,15 @@ export function LessonReaderPage(): React.JSX.Element {
       ) : null}
 
       {showBody ? (
-        <div className="learn-reader-with-rail">
+        <div className="learn-reader-with-rail" ref={columnRef}>
           <article
-            className={`learn-reader-body${contentVisible ? ' is-visible' : ''}${loading ? ' is-reloading' : ''}`}
+            className={`learn-reader-body${reloading ? ' is-reloading' : ''}`}
             aria-label={title || t('learn.lesson.title')}
-            aria-busy={loading || undefined}
+            aria-busy={loading || reloading || undefined}
           >
             {blocks.map((block, index) => (
               <ContentBlockView
-                key={`${lesson.resourceId}-${explanationLanguage}-${index}`}
+                key={`${lesson.resourceId}-${index}`}
                 block={block}
                 index={index}
                 highlighted={resumeHighlightIndex === index}
@@ -592,6 +729,7 @@ export function LessonReaderPage(): React.JSX.Element {
                     : undefined
                 }
                 onTermActivate={lesson.terminology ? handleTermActivate : undefined}
+                onTermHoverEnd={lesson.terminology ? scheduleGlossHide : undefined}
                 blockRef={(el) => {
                   if (el) blockElsRef.current.set(index, el);
                   else blockElsRef.current.delete(index);
@@ -610,50 +748,50 @@ export function LessonReaderPage(): React.JSX.Element {
         </div>
       ) : null}
       {lookupError ? <p role="alert">{lookupError}</p> : null}
-      {openCard ? (
-        <TermCardDialog
-          card={openCard}
-          alreadyInNotebook={alreadySaved}
-          metInLine={metInLine}
-          onClose={() => setOpenCard(null)}
-          onPlay={
-            openCard.primarySurface.audioAvailable && !audio.playFailed
-              ? (surface) => {
-                  void audio.play(openCard.termId, surface);
-                }
-              : undefined
-          }
-          playingSurface={audio.playingSurface}
-          playFailed={audio.playFailed}
+      {activeGloss && glossCards[activeGloss.span.termId] ? (
+        <TermGlossBubble
+          card={glossCards[activeGloss.span.termId]!}
+          surfaceForm={activeGloss.span.surfaceForm}
+          anchor={activeGloss.target}
+          bookmarked={Boolean(glossBookmarked[activeGloss.span.termId])}
+          bookmarkBusy={glossBookmarkBusy}
+          onToggleBookmark={() => void handleToggleGlossBookmark(activeGloss.span.termId)}
+          onDismiss={() => setActiveGloss(null)}
+          restoreFocus={activeGloss.restoreFocus}
+          onHoverStay={cancelGlossHide}
+          onHoverLeave={scheduleGlossHide}
         />
       ) : null}
 
-      {showBody ? (
+      {showFooter ? (
         <footer className="learn-reader-actions">
-          {isComplete && !needsReview ? (
-            <p className="learn-complete-ack" role="status">
-              <Check size={18} aria-hidden="true" />
-              {t('learn.lesson.contentCompleteAck')}
-            </p>
-          ) : (
-            <button
-              type="button"
-              className="btn-primary learn-complete-button"
-              onClick={() => void handleMarkComplete()}
-              disabled={saving || loading}
-              aria-busy={saving}
-            >
-              {saving
-                ? t('learn.lesson.savingProgress')
-                : needsReview
-                  ? t('learn.lesson.markReviewed')
-                  : t('learn.lesson.markContentComplete')}
-            </button>
-          )}
+          {showBody ? (
+            isComplete && !needsReview ? (
+              <p className="learn-complete-ack" role="status">
+                <Check size={18} aria-hidden="true" />
+                {t('learn.lesson.contentCompleteAck')}
+              </p>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary learn-complete-button"
+                onClick={() => void handleMarkComplete()}
+                disabled={saving || loading}
+                aria-busy={saving}
+              >
+                {saving
+                  ? t('learn.lesson.savingProgress')
+                  : needsReview
+                    ? t('learn.lesson.markReviewed')
+                    : t('learn.lesson.markContentComplete')}
+              </button>
+            )
+          ) : null}
           {/* Keep checkpoint handoff while lesson soft-update is pending review so last result /
               retry / practice stay available with honest lesson-updated copy. */}
-          {progress?.status === 'CONTENT_COMPLETE' && subject && resourceId ? (
+          {showCheckpoint ? (
             <CheckpointCta
+              key={`${subject}:${resourceId}`}
               subject={subject}
               resourceId={resourceId}
               enabled

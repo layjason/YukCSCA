@@ -8,6 +8,9 @@ import type {
   PreviewCheckResult,
   PreviewProgress,
   TermClassGroup,
+  BookmarkLessonTermsResult,
+  BookmarkTermRequest,
+  BookmarkTermResult,
   TermLookupRequest,
   TermLookupResult,
   TerminologyPreview,
@@ -15,12 +18,15 @@ import type {
   TermReviewResult,
 } from '@/shared/terminology/types';
 import {
+  devBookmarkLessonTerms,
+  devBookmarkTerm,
   devGetTerminologyNotebookEntry,
   devGetTerminologyPreview,
   devListTerminologyNotebook,
   devResolveTermLookup,
   devSubmitPreviewCheck,
   devSubmitTermReview,
+  devUnbookmarkTerm,
   devUpsertPreviewProgress,
 } from './terminologyDevFallback';
 
@@ -236,6 +242,100 @@ export async function submitPreviewCheck(
     if (shouldUseTerminologyDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
       const mock = devSubmitPreviewCheck(resourceId, pairs);
       if (mock) return mock;
+    }
+    throw err;
+  }
+}
+
+function assertBookmark(value: unknown): asserts value is BookmarkTermResult {
+  if (!value || typeof value !== 'object' || !('card' in value) || !('entry' in value)) {
+    throw new ApiError(500, { title: 'Invalid bookmark response', code: 'CONTRACT_MISMATCH' });
+  }
+}
+
+function assertLessonBookmarks(value: unknown): asserts value is BookmarkLessonTermsResult {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('termIds' in value) ||
+    !Array.isArray((value as { termIds: unknown }).termIds)
+  ) {
+    throw new ApiError(500, { title: 'Invalid bookmark-all response', code: 'CONTRACT_MISMATCH' });
+  }
+}
+
+export async function bookmarkTerm(
+  termId: string,
+  request: BookmarkTermRequest,
+): Promise<BookmarkTermResult> {
+  try {
+    const response = await fetch(`${BASE}/terminology-notebook/${encodeURIComponent(termId)}`, {
+      method: 'PUT',
+      headers: authorizationHeaders(true),
+      body: JSON.stringify(request),
+    });
+    if (isDevFallback() && response.status === 401) {
+      return devBookmarkTerm(termId, request);
+    }
+    const data = await parseJsonResponse<unknown>(response);
+    assertBookmark(data);
+    return data;
+  } catch (err) {
+    if (shouldUseTerminologyDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      return devBookmarkTerm(termId, request);
+    }
+    throw err;
+  }
+}
+
+export async function unbookmarkTerm(termId: string): Promise<void> {
+  try {
+    const response = await fetch(`${BASE}/terminology-notebook/${encodeURIComponent(termId)}`, {
+      method: 'DELETE',
+      headers: authorizationHeaders(false),
+    });
+    if (isDevFallback() && response.status === 401) {
+      devUnbookmarkTerm(termId);
+      return;
+    }
+    if (response.status === 204) return;
+    await parseJsonResponse<unknown>(response);
+  } catch (err) {
+    if (shouldUseTerminologyDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      devUnbookmarkTerm(termId);
+      return;
+    }
+    throw err;
+  }
+}
+
+export async function bookmarkLessonTerms(
+  subject: AcademicSubject,
+  resourceId: string,
+  explanationLanguage: ExplanationLanguage,
+  termIds?: readonly string[],
+): Promise<BookmarkLessonTermsResult> {
+  try {
+    const response = await fetch(
+      `${BASE}/packages/${encodeURIComponent(subject)}/terminology/${encodeURIComponent(resourceId)}/bookmarks`,
+      {
+        method: 'POST',
+        headers: authorizationHeaders(true),
+        body: JSON.stringify({
+          explanationLanguage,
+          ...(termIds && termIds.length > 0 ? { termIds } : {}),
+        }),
+      },
+    );
+    if (isDevFallback() && response.status === 401) {
+      return devBookmarkLessonTerms(resourceId, termIds);
+    }
+    const data = await parseJsonResponse<unknown>(response);
+    assertLessonBookmarks(data);
+    return data;
+  } catch (err) {
+    if (shouldUseTerminologyDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      return devBookmarkLessonTerms(resourceId, termIds);
     }
     throw err;
   }

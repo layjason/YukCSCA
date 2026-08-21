@@ -1,6 +1,7 @@
 package com.yukcsca.academic.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -110,7 +111,10 @@ class AcademicTerminologyHttpIT {
         .andExpect(status().isOk())
         .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
         .andExpect(jsonPath("$.terms.length()").value(2))
+        .andExpect(jsonPath("$.resourceId").value(fixture.lessonId().toString()))
+        .andExpect(jsonPath("$.lessonResourceIds[0]").value(fixture.lessonId().toString()))
         .andExpect(jsonPath("$.terms[0].primarySurface.pinyin").exists())
+        .andExpect(jsonPath("$.terms[0].alreadyInNotebook").value(false))
         .andExpect(jsonPath("$.terms[0].definition.availability").value("AVAILABLE"))
         .andExpect(jsonPath("$.terms[0].englishEquivalent").value("find"))
         .andExpect(jsonPath("$.matchingPairsAvailable").value(true))
@@ -150,7 +154,7 @@ class AcademicTerminologyHttpIT {
 
     Integer notebookAfter =
         jdbc.queryForObject("select count(*) from student_terminology_notebook", Integer.class);
-    assertThat(notebookAfter).isEqualTo(2);
+    assertThat(notebookAfter).isZero();
 
     mvc.perform(
             put(
@@ -162,7 +166,7 @@ class AcademicTerminologyHttpIT {
         .andExpect(status().isOk());
     Integer notebookAgain =
         jdbc.queryForObject("select count(*) from student_terminology_notebook", Integer.class);
-    assertThat(notebookAgain).isEqualTo(2);
+    assertThat(notebookAgain).isZero();
 
     ObjectNode check = json.createObjectNode();
     ArrayNode pairs = check.putArray("pairs");
@@ -199,8 +203,8 @@ class AcademicTerminologyHttpIT {
                 .content(json.writeValueAsString(matched)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.outcome").value("MATCHED"))
-        .andExpect(jsonPath("$.alreadyInNotebook").value(true))
-        .andExpect(jsonPath("$.entry.metIn.place").value("LESSON"));
+        .andExpect(jsonPath("$.alreadyInNotebook").value(false))
+        .andExpect(jsonPath("$.entry").doesNotExist());
 
     ObjectNode miss = json.createObjectNode();
     miss.put("subject", "MATHEMATICS");
@@ -218,7 +222,31 @@ class AcademicTerminologyHttpIT {
         .andExpect(jsonPath("$.card").doesNotExist());
     assertThat(
             jdbc.queryForObject("select count(*) from student_terminology_notebook", Integer.class))
+        .isZero();
+
+    ObjectNode bookmarkAll = json.createObjectNode();
+    bookmarkAll.put("explanationLanguage", "en");
+    mvc.perform(
+            post(
+                    "/api/v1/academic/packages/MATHEMATICS/terminology/{id}/bookmarks",
+                    fixture.previewId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(bookmarkAll)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.termIds.length()").value(2));
+    assertThat(
+            jdbc.queryForObject("select count(*) from student_terminology_notebook", Integer.class))
         .isEqualTo(2);
+
+    mvc.perform(
+            post("/api/v1/academic/term-lookups")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(matched)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.alreadyInNotebook").value(true))
+        .andExpect(jsonPath("$.entry.metIn.place").value("PREVIEW"));
 
     mvc.perform(
             get("/api/v1/academic/terminology-notebook")
@@ -313,16 +341,20 @@ class AcademicTerminologyHttpIT {
   }
 
   @Test
-  void languageMistakeLookupMarksFamiliarTermDue() throws Exception {
+  void languageMistakeBookmarkMarksFamiliarTermDue() throws Exception {
     TermFixture fixture = publishChineseTerms();
+    ObjectNode bookmark = json.createObjectNode();
+    bookmark.put("subject", "MATHEMATICS");
+    bookmark.put("explanationLanguage", "en");
+    bookmark.put("source", "PREVIEW");
+    bookmark.put("resourceId", fixture.lessonId().toString());
     mvc.perform(
-            put(
-                    "/api/v1/academic/packages/MATHEMATICS/terminology/{id}/progress",
-                    fixture.previewId())
+            put("/api/v1/academic/terminology-notebook/{id}", fixture.increaseId())
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"PREVIEW_COMPLETE\"}"))
-        .andExpect(status().isOk());
+                .content(json.writeValueAsString(bookmark)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.alreadyInNotebook").value(true));
     MvcResult entry =
         mvc.perform(
                 get("/api/v1/academic/terminology-notebook/{id}", fixture.increaseId())
@@ -344,23 +376,30 @@ class AcademicTerminologyHttpIT {
         .andExpect(jsonPath("$.familiarity").value("FAMILIAR"))
         .andExpect(jsonPath("$.due").value(false));
 
-    ObjectNode lookup = json.createObjectNode();
-    lookup.put("subject", "MATHEMATICS");
-    lookup.put("explanationLanguage", "en");
-    lookup.put("source", "LANGUAGE_MISTAKE");
-    lookup.put("termId", fixture.increaseId().toString());
+    ObjectNode mistake = json.createObjectNode();
+    mistake.put("subject", "MATHEMATICS");
+    mistake.put("explanationLanguage", "en");
+    mistake.put("source", "LANGUAGE_MISTAKE");
     mvc.perform(
-            post("/api/v1/academic/term-lookups")
+            put("/api/v1/academic/terminology-notebook/{id}", fixture.increaseId())
                 .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(lookup)))
+                .content(json.writeValueAsString(mistake)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.outcome").value("MATCHED"))
-        .andExpect(jsonPath("$.alreadyInNotebook").value(true))
         .andExpect(jsonPath("$.entry.familiarity").value("LEARNING"))
         .andExpect(jsonPath("$.entry.due").value(true))
         .andExpect(
             jsonPath("$.entry.sources").value(org.hamcrest.Matchers.hasItem("LANGUAGE_MISTAKE")));
+
+    mvc.perform(
+            delete("/api/v1/academic/terminology-notebook/{id}", fixture.increaseId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isNoContent());
+    mvc.perform(
+            get("/api/v1/academic/terminology-notebook/{id}", fixture.increaseId())
+                .param("explanationLanguage", "en")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isNotFound());
   }
 
   @Test
@@ -434,26 +473,20 @@ class AcademicTerminologyHttpIT {
     addTopicTerm(draft, outlineId, "定义域", "dìng yì yù", "domain");
     addTopicTerm(draft, outlineId, "真空", "zhēn kōng", "vacuum");
     addTopicTerm(draft, outlineId, "共线", "gòng xiàn", "collinear");
-    UUID previewId = null;
     UUID lessonId = null;
     for (JsonNode resource : draft.path("resources")) {
-      if ("TERMINOLOGY".equals(resource.path("kind").asText())) {
-        previewId = UUID.fromString(resource.path("id").asText());
-        ((ObjectNode) resource)
-            .putArray("requiredTermIds")
-            .add(findId.toString())
-            .add(increaseId.toString());
-      }
       if ("LESSON".equals(resource.path("kind").asText())) {
         lessonId = UUID.fromString(resource.path("id").asText());
-        ObjectNode zh = ((ObjectNode) resource).withArray("versions").addObject();
+        ObjectNode lesson = (ObjectNode) resource;
+        lesson.putArray("requiredTermIds").add(findId.toString()).add(increaseId.toString());
+        ObjectNode zh = lesson.withArray("versions").addObject();
         zh.put("language", "zh-CN");
         zh.putArray("blocks").addObject().put("kind", "TEXT").put("text", "求函数是否单调递增。");
       }
     }
     save(packageId, 0, draft);
     publish(packageId, 1);
-    return new TermFixture(packageId, previewId, lessonId, findId, increaseId);
+    return new TermFixture(packageId, lessonId, lessonId, findId, increaseId);
   }
 
   private void addTopicTerm(

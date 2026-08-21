@@ -21,6 +21,10 @@ export type NotebookListResponseBody =
   components['schemas']['AcademicStudent.NotebookListResponseBody'];
 export type TermLookupRequest = components['schemas']['AcademicStudent.TermLookupRequest'];
 export type TermLookupResult = components['schemas']['AcademicStudent.TermLookupResult'];
+export type BookmarkTermRequest = components['schemas']['AcademicStudent.BookmarkTermRequest'];
+export type BookmarkTermResult = components['schemas']['AcademicStudent.BookmarkTermResult'];
+export type BookmarkLessonTermsResult =
+  components['schemas']['AcademicStudent.BookmarkLessonTermsResult'];
 export type TermReviewPrompt = components['schemas']['AcademicStudent.TermReviewPrompt'];
 export type TermReviewResult = components['schemas']['AcademicStudent.TermReviewResult'];
 export type TermReviewKind = components['schemas']['AcademicStudent.TermReviewKind'];

@@ -181,13 +181,15 @@ language (`id` | `en` | `zh-CN`) with explicit language-unavailable payloads,
 content-progress upsert keyed by `(account, package, resource)` for both LESSON
 and REMEDIATION, and image GET only when the image is referenced by an active
 published revision. When a published revision has a Chinese exam-language term
-bank, browse/lesson projections may add terminology preview refs, a topic rail,
-and UTF-16 TEXT spans; those fields are omitted when the package has no terms.
-Student terminology APIs cover preview GET (side-effect free), preview progress
-and optional matching-pairs checks, term lookup (`MATCHED` / `NOT_IN_BANK`),
-one notebook with due cloze-or-pairs review, and authorized MPEG pronunciation
-GET. Viewing, preview checks, and word/phrase lookups are not mastery and never
-write `CHECKPOINT_PASSED`. Missing explanation-language glosses are
+bank, browse/lesson projections may add per-lesson terminology preview refs, a
+lesson rail, and UTF-16 TEXT spans; those fields are omitted when the lesson has
+no required terms. Student terminology APIs cover preview GET (side-effect
+free; `resourceId` is the LESSON), preview progress that does not write the
+notebook, optional matching-pairs checks, term lookup (`MATCHED` / `NOT_IN_BANK`,
+no notebook write), opt-in bookmark/unbookmark, one notebook with due
+cloze-or-pairs review, and authorized MPEG pronunciation GET. Viewing, preview
+checks, and word/phrase lookups are not mastery and never write
+`CHECKPOINT_PASSED`. Missing explanation-language glosses are
 `LANGUAGE_UNAVAILABLE` (never substituted). Student responses never include
 drafts, questions, mocks, answer keys, or admin publisher identity. Pilot
 access is open to every activated `STUDENT` via `ContentAccessPolicy`
@@ -275,8 +277,10 @@ journeys. VS-010A backend student terminology and Language-help APIs and the
 production Learn/Practice/admin terminology UI are implemented from accepted
 checkpoint `VS-010A-R10-accepted`. The slice remains `CONTRACT_READY` until
 product-owner journey acceptance; it is not claimed `DONE` here. Admin
-authoring of `draft.terms[]`, `requiredTermIds`, and `authoredTermAttachments`
-is on the existing package editor (`features/academic-admin`). Shared
+authoring of `draft.terms[]`, lesson `requiredTermIds`, and `authoredTermAttachments`
+is on the existing package editor (`features/academic-admin`). Student preview
+and the lesson rail use that lesson’s `requiredTermIds`, not a shared
+`TERMINOLOGY` outline dump. Shared
 presentational term-card chrome lives in `shared/terminology` and does not
 import feature APIs. PX-001 fixture terminology was not promoted.
 

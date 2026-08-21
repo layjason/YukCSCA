@@ -49,6 +49,7 @@ function entryDetail(due = true): NotebookEntryDetail {
       subject: 'MATHEMATICS',
       packageId: '11111111-1111-4111-8111-111111111111',
       termClass: 'TOPIC_TERM',
+      alreadyInNotebook: true,
       primarySurface: { text: '导数', pinyin: 'dǎo shù', audioAvailable: false },
       aliases: [],
       definition: {

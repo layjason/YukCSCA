@@ -7,8 +7,8 @@
 | Field                        | Value                                                                                                                                                                     |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Plan ID                      | `YUK-P0-DELIVERY`                                                                                                                                                         |
-| Plan version                 | `0.5.41`                                                                                                                                                                  |
-| Updated                      | 2026-08-19                                                                                                                                                                |
+| Plan version                 | `0.5.42`                                                                                                                                                                  |
+| Updated                      | 2026-08-21                                                                                                                                                                |
 | Current baseline             | [`VS-009`](delivery/VS-009-assessment-practice-remediation.md) assessment practice and remediation — `DONE`                                                               |
 | Current experience milestone | [`PX-002`](delivery/PX-002-public-parent-commerce-baseline.md) consumer experience baseline — `DONE`                                                                      |
 | Current production slice     | [`VS-010A`](delivery/VS-010A-chinese-terminology.md) Chinese exam-language terminology — `CONTRACT_READY` (backend + frontend implemented; product-owner journeys remain) |
@@ -190,6 +190,7 @@ Deferral is not prohibition. The accepted slice must demonstrate the problem, co
 
 | Version | Date | Change |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | |
+| 0.5.42 | 2026-08-20 | VS-010A `D-11` / `CR-05`: lesson-bound preview; opt-in notebook bookmark; compact practice gloss. Slice revision 18. Status remains **`CONTRACT_READY`**. |
 | 0.5.41 | 2026-08-19 | VS-010A `CR-04`: TEXT-like prose may include bounded `\(...\)` inline KaTeX; MATH stays standalone/display formulas. Slice revision 17. Status remains **`CONTRACT_READY`**. |
 | 0.5.40 | 2026-08-19 | VS-010A `D-09`: removed `domainMeaning` from the term bank and student cards. Slice revision 16. Status remains **`CONTRACT_READY`**. |
 | 0.5.39 | 2026-08-19 | VS-010A product-owner authoring follow-ups: editable auto-pinyin, alias delete, KaTeX symbols, plain admin labels, Edge TTS (`ADR-0002` supersedes `ADR-0001`), and `CR-02` admin published-clip GET. Slice revision 15. Status remains **`CONTRACT_READY`**. |

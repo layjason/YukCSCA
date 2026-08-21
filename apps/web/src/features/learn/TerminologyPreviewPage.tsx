@@ -4,8 +4,11 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { ArrowLeft, NotebookText } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import {
+  bookmarkLessonTerms,
+  bookmarkTerm,
   getTerminologyPreview,
   submitPreviewCheck,
+  unbookmarkTerm,
   upsertPreviewProgress,
 } from '@/shared/api/terminologyStudentApi';
 import { TermCardView } from '@/shared/terminology/TermCardView';
@@ -41,6 +44,7 @@ export function TerminologyPreviewPage(): React.JSX.Element {
   const [pairsOpen, setPairsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const audio = useTermAudio();
 
   useEffect(() => {
@@ -152,7 +156,7 @@ export function TerminologyPreviewPage(): React.JSX.Element {
           preview.packageRevisionId,
         );
         setPreview({ ...preview, previewProgress: next });
-        setToast({ message: t('terminology.previewComplete'), tone: 'success' });
+        setToast({ message: t('terminology.previewSaved'), tone: 'success' });
       }
       if (lessonTarget) {
         void navigate(lessonHref(subject, lessonTarget));
@@ -167,6 +171,70 @@ export function TerminologyPreviewPage(): React.JSX.Element {
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  function markBookmarked(termIds: readonly string[], value: boolean): void {
+    setPreview((current) =>
+      current
+        ? {
+            ...current,
+            terms: current.terms.map((card) =>
+              termIds.includes(card.termId) ? { ...card, alreadyInNotebook: value } : card,
+            ),
+          }
+        : current,
+    );
+  }
+
+  async function handleToggleBookmark(termId: string, bookmarked: boolean): Promise<void> {
+    if (!subject || !resourceId || bookmarkBusy) return;
+    setBookmarkBusy(true);
+    setError(null);
+    try {
+      if (bookmarked) {
+        await unbookmarkTerm(termId);
+        markBookmarked([termId], false);
+        setToast({ message: t('terminology.unbookmarkedToast'), tone: 'info' });
+      } else {
+        await bookmarkTerm(termId, {
+          subject,
+          explanationLanguage: explanationLanguage ?? 'id',
+          source: 'PREVIEW',
+          resourceId,
+        });
+        markBookmarked([termId], true);
+        setToast({ message: t('terminology.bookmarkedToast'), tone: 'success' });
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setError(t('terminology.formalDisabled'));
+      } else {
+        setError(t('terminology.saveFailed'));
+      }
+    } finally {
+      setBookmarkBusy(false);
+    }
+  }
+
+  async function handleBookmarkAll(): Promise<void> {
+    if (!subject || !resourceId || !preview || bookmarkBusy) return;
+    setBookmarkBusy(true);
+    setError(null);
+    try {
+      const result = await bookmarkLessonTerms(subject, resourceId, explanationLanguage ?? 'id');
+      markBookmarked(result.termIds, true);
+      if (result.termIds.length > 0) {
+        setToast({ message: t('terminology.bookmarkedToast'), tone: 'success' });
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+        setError(t('terminology.formalDisabled'));
+      } else {
+        setError(t('terminology.saveFailed'));
+      }
+    } finally {
+      setBookmarkBusy(false);
     }
   }
 
@@ -309,26 +377,45 @@ export function TerminologyPreviewPage(): React.JSX.Element {
           }}
         />
       ) : (
-        <ol className="term-preview-list">
-          {preview.terms.map((card) => (
-            <li key={card.termId}>
-              <TermCardView
-                card={card}
-                onPlay={
-                  (card.primarySurface.audioAvailable ||
-                    card.aliases.some((alias) => alias.audioAvailable)) &&
-                  !(audio.playFailed && audio.playingTermId === card.termId)
-                    ? (surface) => {
-                        void audio.play(card.termId, surface);
-                      }
-                    : undefined
-                }
-                playingSurface={audio.playingTermId === card.termId ? audio.playingSurface : null}
-                playFailed={audio.playFailed && audio.playingTermId === card.termId}
-              />
-            </li>
-          ))}
-        </ol>
+        <>
+          {preview.terms.length > 0 ? (
+            <div className="term-preview-toolbar">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={bookmarkBusy || preview.terms.every((card) => card.alreadyInNotebook)}
+                onClick={() => void handleBookmarkAll()}
+              >
+                {t('terminology.bookmarkAll')}
+              </button>
+            </div>
+          ) : null}
+          <ol className="term-preview-list">
+            {preview.terms.map((card) => (
+              <li key={card.termId}>
+                <TermCardView
+                  card={card}
+                  bookmarked={card.alreadyInNotebook}
+                  bookmarkBusy={bookmarkBusy}
+                  onToggleBookmark={() =>
+                    void handleToggleBookmark(card.termId, card.alreadyInNotebook)
+                  }
+                  onPlay={
+                    (card.primarySurface.audioAvailable ||
+                      card.aliases.some((alias) => alias.audioAvailable)) &&
+                    !(audio.playFailed && audio.playingTermId === card.termId)
+                      ? (surface) => {
+                          void audio.play(card.termId, surface);
+                        }
+                      : undefined
+                  }
+                  playingSurface={audio.playingTermId === card.termId ? audio.playingSurface : null}
+                  playFailed={audio.playFailed && audio.playingTermId === card.termId}
+                />
+              </li>
+            ))}
+          </ol>
+        </>
       )}
 
       {preview.matchingPairsAvailable && !pairsOpen ? (

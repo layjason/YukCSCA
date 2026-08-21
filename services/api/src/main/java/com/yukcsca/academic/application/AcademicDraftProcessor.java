@@ -1040,7 +1040,8 @@ public class AcademicDraftProcessor {
         if (required == null || required.isNull() || required.isMissingNode()) {
           continue;
         }
-        if (!required.isArray() || !"TERMINOLOGY".equals(text(node, "kind"))) {
+        String kind = text(node, "kind");
+        if (!required.isArray() || !("TERMINOLOGY".equals(kind) || "LESSON".equals(kind))) {
           node.remove("requiredTermIds");
           continue;
         }
@@ -1104,7 +1105,7 @@ public class AcademicDraftProcessor {
           new AcademicViolation(path + ".requiredTermIds", AcademicViolationCode.INVALID));
       return;
     }
-    if (!"TERMINOLOGY".equals(kind)) {
+    if (!"TERMINOLOGY".equals(kind) && !"LESSON".equals(kind)) {
       if (!requiredTermIds.isEmpty()) {
         violations.add(
             new AcademicViolation(path + ".requiredTermIds", AcademicViolationCode.INVALID));

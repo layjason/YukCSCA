@@ -1583,6 +1583,11 @@ a.mistakes-row:focus-visible {
   animation: assessment-enter var(--motion-standard) var(--ease-standard);
 }
 
+.learn-reader-actions .assessment-checkpoint-cta {
+  animation: none;
+  overflow-anchor: none;
+}
+
 .assessment-checkpoint-cta.is-locked {
   background: var(--color-surface-soft);
 }

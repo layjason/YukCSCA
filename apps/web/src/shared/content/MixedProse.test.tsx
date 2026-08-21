@@ -46,6 +46,7 @@ test('keeps term chips out of latex ranges', async () => {
   chip.click();
   expect(onActivate).toHaveBeenCalledWith(
     expect.objectContaining({ termId: 't1', surfaceForm: '公因式' }),
+    expect.any(HTMLElement),
   );
   expect(screen.queryByRole('button', { name: /x\^2/i })).not.toBeInTheDocument();
   expect(chip).toHaveAttribute('lang', 'zh');

@@ -1,4 +1,5 @@
 import { Volume2 } from 'lucide-react';
+import { TermBookmarkIcon } from './TermBookmarkIcon';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './term-practice.css';
@@ -12,6 +13,8 @@ export function TermLexemeRow({
   audioAvailable = false,
   playing = false,
   onPlay,
+  onUnbookmark,
+  unbookmarkBusy = false,
 }: {
   surface: string;
   subtitle?: string | null;
@@ -21,6 +24,8 @@ export function TermLexemeRow({
   audioAvailable?: boolean;
   playing?: boolean;
   onPlay?: (() => void) | undefined;
+  onUnbookmark?: (() => void) | undefined;
+  unbookmarkBusy?: boolean | undefined;
 }): React.JSX.Element {
   const { t } = useTranslation();
   const body = (
@@ -63,6 +68,23 @@ export function TermLexemeRow({
       ) : (
         <div className="term-lexeme-body">{body}</div>
       )}
+      {onUnbookmark ? (
+        <button
+          type="button"
+          className="term-card-bookmark is-on"
+          aria-pressed
+          aria-label={t('terminology.unbookmarkAria', { text: surface })}
+          title={t('terminology.unbookmarkAria', { text: surface })}
+          disabled={unbookmarkBusy}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onUnbookmark();
+          }}
+        >
+          <TermBookmarkIcon marked size={20} />
+        </button>
+      ) : null}
     </div>
   );
 }

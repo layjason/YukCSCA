@@ -10,6 +10,7 @@ const card: TermCard = {
   subject: 'MATHEMATICS',
   packageId: '00000000-0000-4000-8000-0000000000a1',
   termClass: 'TOPIC_TERM',
+  alreadyInNotebook: false,
   primarySurface: { text: '公因式', pinyin: 'gōng yīn shì', audioAvailable: false },
   aliases: [],
   definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
@@ -21,6 +22,30 @@ const card: TermCard = {
 
 beforeEach(async () => {
   await i18n.changeLanguage('en');
+});
+
+test('fills the bookmark control in pronunciation blue when saved', () => {
+  const { rerender } = render(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView card={card} bookmarked={false} onToggleBookmark={() => undefined} />
+    </I18nextProvider>,
+  );
+
+  const off = screen.getByRole('button', { name: /bookmark 公因式/i });
+  expect(off).not.toHaveClass('is-on');
+  expect(off.querySelector('svg')).not.toHaveClass('is-marked');
+  expect(off.querySelector('svg')).toHaveAttribute('fill', 'none');
+
+  rerender(
+    <I18nextProvider i18n={i18n}>
+      <TermCardView card={card} bookmarked onToggleBookmark={() => undefined} />
+    </I18nextProvider>,
+  );
+
+  const on = screen.getByRole('button', { name: /remove 公因式 from notebook/i });
+  expect(on).toHaveClass('is-on');
+  expect(on.querySelector('svg')).toHaveClass('is-marked');
+  expect(on.querySelector('svg')).toHaveAttribute('fill', 'currentColor');
 });
 
 test('renders characters, pinyin, definition, and English equivalent', () => {

@@ -77,7 +77,7 @@ function requiredTermIdsForQuestion(resources: StudyResource[], question: Questi
   const outlines = new Set(question.outlineItemIds ?? []);
   const ids = new Set<string>();
   for (const resource of resources) {
-    if (resource.kind !== 'TERMINOLOGY') continue;
+    if (resource.kind !== 'LESSON') continue;
     const shares = (resource.outlineItemIds ?? []).some((id) => outlines.has(id));
     if (!shares) continue;
     for (const id of resource.requiredTermIds ?? []) ids.add(id);

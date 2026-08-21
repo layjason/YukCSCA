@@ -13,7 +13,11 @@ public interface PublishedTerminologyCatalog {
   boolean hasPublishedTermBank(UUID packageRevisionId);
 
   LanguageHelpProjection languageHelpForQuestion(
-      UUID packageRevisionId, UUID questionId, List<JsonNode> stem, UUID accountId);
+      UUID packageRevisionId,
+      UUID questionId,
+      List<JsonNode> stem,
+      UUID accountId,
+      UUID lessonResourceId);
 
   Optional<TermMatch> matchSelectedText(UUID packageRevisionId, String selectedText);
 

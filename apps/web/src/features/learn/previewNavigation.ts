@@ -10,7 +10,7 @@ export function shouldOfferTerminologyPreview(
 export function lessonEntryHref(subject: string, lesson: LessonSummary): string {
   if (shouldOfferTerminologyPreview(lesson.terminologyPreview) && lesson.terminologyPreview) {
     const previewId = lesson.terminologyPreview.resourceId;
-    return `/app/learn/${subject}/terminology/${previewId}?lessonResourceId=${encodeURIComponent(lesson.resourceId)}`;
+    return `/app/learn/${subject}/terminology/${previewId}`;
   }
   return `/app/learn/${subject}/lessons/${lesson.resourceId}`;
 }

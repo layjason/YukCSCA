@@ -488,7 +488,8 @@ Rules:
 - Prefer stroke weight about **1.75–2** for clarity on white and pastel surfaces.
 - Pronunciation play uses `{colors.pronunciation}` as a transparent listening glyph (filled speaker cone, stroked waves) on a 44×44px hit target. It is not a filled `{components.icon-button}` and must not sit on a lilac or other pastel pill.
 - Reviewed term spans that become tappable after Language help use a dotted underline in `{colors.pronunciation}`. First paint of a scored stem stays unmarked.
-- Language-help Key phrases show the full Chinese surface (wrap, never ellipsis) plus one dotted leader per row (CSS rule, not wrapping “……” glyphs).
+- After Language help, hover (wide) or tap (phone) on an underlined span opens a compact gloss bubble: one `{colors.surface-soft}` pill with the explanation-language meaning centered beside a bookmark control, and a small pointer. Do not restate the Chinese surface inside the bubble — the underlined span is already visible. It is not the full term card. Terminology bookmark controls (gloss, term card, notebook) use an empty Lucide `Bookmark` when off and a filled `{colors.pronunciation}` bookmark when on (not a check mark, not `{colors.primary}`). Bookmarking shows `{components.toast-notification}`.
+- Do not add a Key phrases tray under a scored stem. The underlines are enough.
 - Term-card overlays close with a right-side `{colors.semantic-danger}` X and hide the mobile bottom nav while open. Do not use a bottom Close bar on that sheet.
 - Soft content-update notices (`required terms changed`, lesson updated since complete) use a white/neutral surface with `{colors.border}`, not `{colors.block-sky}` or `{colors.block-coral}`.
 - Icon-only controls require a localized `aria-label` and usually a `title` tooltip. Visible text remains required for high-stakes or primary actions.

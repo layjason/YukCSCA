@@ -328,7 +328,7 @@ model StudyResource<Provenance> {
   versions: LocalizedContent[];
   provenance: Provenance;
 
-  @doc("Ordered required term ids when kind is TERMINOLOGY (the preview unit, not the term identity). Empty or omitted for LESSON and REMEDIATION.")
+  @doc("Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.")
   @maxItems(64)
   requiredTermIds?: YukCSCA.uuid[];
 }

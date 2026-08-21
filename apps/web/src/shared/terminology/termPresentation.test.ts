@@ -12,6 +12,7 @@ const card: TermCard = {
   subject: 'MATHEMATICS',
   packageId: '00000000-0000-4000-8000-0000000000a1',
   termClass: 'TOPIC_TERM',
+  alreadyInNotebook: false,
   primarySurface: { text: '公因式', pinyin: 'gōng yīn shì', audioAvailable: false },
   aliases: [],
   definition: { availability: 'AVAILABLE', language: 'en', text: 'Common factor' },
