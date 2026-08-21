@@ -106,3 +106,19 @@ test('passed mistake does not offer Recheck or a required remediations step', as
   expect(screen.queryByText(/study the review first/i)).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: /review again/i })).toHaveClass('btn-secondary');
 });
+
+test('hides term notebook link for English mistakes', async () => {
+  vi.spyOn(api, 'getMistake').mockResolvedValue(detail({ examLanguage: 'en' }));
+
+  renderDetail();
+
+  expect(await screen.findByRole('button', { name: /recheck/i })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /open term notebook/i })).not.toBeInTheDocument();
+});
+
+test('shows term notebook link for zh-CN mistakes', async () => {
+  vi.spyOn(api, 'getMistake').mockResolvedValue(detail({ examLanguage: 'zh-CN' }));
+  renderDetail();
+
+  expect(await screen.findByRole('link', { name: /open term notebook/i })).toBeInTheDocument();
+});

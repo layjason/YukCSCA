@@ -85,7 +85,7 @@ export function TermCardView({
 
   return (
     <article className={`term-card term-card-${layout}`} aria-label={name}>
-      <div className="term-card-layout">
+      <div className={`term-card-layout${onToggleBookmark ? ' has-bookmark' : ''}`}>
         <div className="term-card-main">
           <header className="term-card-lexicon">
             <span className={`term-class-chip is-${classKind}`}>

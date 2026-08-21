@@ -294,3 +294,101 @@ test('SET_END wording-hard after submit patches TERMINOLOGY_MISUNDERSTANDING', a
   });
   expect(disclose).not.toHaveBeenCalled();
 });
+
+test('does not show purpose chip in header for topic practice or checkpoint', async () => {
+  const session = baseSession({ purpose: 'TOPIC_PRACTICE' });
+  vi.spyOn(api, 'getAssessmentSession').mockResolvedValue(session);
+
+  renderPlayer();
+
+  await screen.findByText(/Stem 1/i);
+  expect(screen.queryByText(/topic practice/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/checkpoint/i)).not.toBeInTheDocument();
+});
+
+test('hides language help and term notebook link when exam language is English', async () => {
+  const session = baseSession({ examLanguage: 'en' });
+  vi.spyOn(api, 'getAssessmentSession').mockResolvedValue(session);
+
+  renderPlayer();
+
+  await screen.findByText(/Stem 1/i);
+  expect(screen.queryByRole('button', { name: /stuck on a word/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /open term notebook/i })).not.toBeInTheDocument();
+});
+
+test('for zh-CN exam language, shows Stuck on a word initially and replaces with Open term notebook after disclose', async () => {
+  const openItem: SessionItemView = {
+    ...lockedItem('item-open', 0),
+    status: 'OPEN',
+    selectedOptionKey: null,
+    correct: null,
+    feedback: null,
+    languageHelpAvailable: true,
+    stem: [{ kind: 'TEXT', text: '求公因式' }],
+  };
+  const session = baseSession({
+    examLanguage: 'zh-CN',
+    items: [openItem],
+    questionCount: 1,
+  });
+
+  vi.spyOn(api, 'getAssessmentSession').mockResolvedValue(session);
+  const disclose = vi.spyOn(api, 'discloseLanguageHelp').mockResolvedValue({
+    item: {
+      ...openItem,
+      languageHelp: {
+        disclosed: true,
+        trigger: 'STUDENT_REQUEST',
+        spans: [
+          {
+            termId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            surfaceForm: '求',
+            blockIndex: 0,
+            startOffset: 0,
+            endOffset: 1,
+            alreadyInNotebook: false,
+          },
+        ],
+      },
+    },
+    languageHelp: {
+      disclosed: true,
+      trigger: 'STUDENT_REQUEST',
+      spans: [
+        {
+          termId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          surfaceForm: '求',
+          blockIndex: 0,
+          startOffset: 0,
+          endOffset: 1,
+          alreadyInNotebook: false,
+        },
+      ],
+    },
+    sessionAssistanceSummary: {
+      maxTierDisclosed: 0,
+      strongUsed: false,
+      languageAssistUsed: false,
+    },
+  });
+
+  renderPlayer();
+
+  const askBtn = await screen.findByRole('button', { name: /stuck on a word/i });
+  expect(askBtn).toBeInTheDocument();
+  // Not shown before disclose
+  expect(screen.queryByRole('link', { name: /open term notebook/i })).not.toBeInTheDocument();
+
+  fireEvent.click(askBtn);
+
+  await waitFor(() => {
+    expect(disclose).toHaveBeenCalledWith(SESSION_ID, 'item-open', 'STUDENT_REQUEST');
+  });
+
+  // After disclose, "Stuck on a word?" is replaced with "Open term notebook"
+  expect(screen.queryByRole('button', { name: /stuck on a word/i })).not.toBeInTheDocument();
+  const notebookLink = await screen.findByRole('link', { name: /open term notebook/i });
+  expect(notebookLink).toBeInTheDocument();
+  expect(notebookLink).toHaveAttribute('href', '/app/learn/terms');
+});

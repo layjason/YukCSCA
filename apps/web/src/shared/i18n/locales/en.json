@@ -433,9 +433,6 @@
     "entryNotFoundTitle": "Term not found",
     "entryNotFoundDescription": "This notebook row is gone or the link is out of date.",
     "chooseMatch": "Choose a match",
-    "lookUpSelection": "Look up selection",
-    "selectHint": "Select a word or short phrase, then look it up.",
-    "lookUpOther": "Look up other text",
     "class": {
       "EXAM_INSTRUCTION": "Exam wording",
       "LOGICAL_EXPRESSION": "Exam wording",
@@ -2293,6 +2290,7 @@
     },
     "languageHelp": {
       "open": "Language help",
+      "ask": "Stuck on a word?",
       "opening": "Opening language help…",
       "regionLabel": "Language help",
       "wordingHard": "Was the wording hard?",
@@ -2303,8 +2301,7 @@
       "disabled": "Language help is not available on this question.",
       "openNotebook": "Open term notebook",
       "keyPhrases": "Key phrases",
-      "emptySpans": "No reviewed terms appear in this question.",
-      "lookUpOther": "Look up other text"
+      "emptySpans": "No reviewed terms appear in this question."
     },
     "hints": {
       "regionLabel": "Hints",

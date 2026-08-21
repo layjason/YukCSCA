@@ -4,7 +4,8 @@
   gap: var(--space-lg);
   width: 100%;
   max-width: none;
-  padding: var(--space-lg);
+  box-sizing: border-box;
+  padding: var(--space-lg) var(--space-xl);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
@@ -146,7 +147,8 @@
 
 .term-card-body {
   display: grid;
-  gap: var(--space-md);
+  gap: var(--space-lg);
+  width: 100%;
 }
 
 .term-card-sense {
@@ -366,10 +368,11 @@
 
 .term-dialog {
   position: relative;
-  width: min(38rem, 100%);
-  max-height: min(85vh, 42rem);
+  width: min(42rem, 100%);
+  max-height: min(92vh, 48rem);
+  height: auto;
   overflow: auto;
-  padding: var(--space-md) var(--space-lg) var(--space-xl);
+  padding: var(--space-lg) var(--space-xl) var(--space-xl);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
@@ -477,14 +480,24 @@
 }
 
 .term-card-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
+  position: relative;
+  display: block;
+  width: 100%;
 }
 
 .term-card-main {
-  flex: 1;
+  width: 100%;
   min-width: 0;
+}
+
+.term-card-layout.has-bookmark .term-card-lexicon {
+  padding-inline-end: 3rem;
+}
+
+.term-card-layout > .term-card-bookmark {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
 }
 
 .term-card-bookmark,

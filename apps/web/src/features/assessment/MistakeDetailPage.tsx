@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, RefreshCw, Wrench } from 'lucide-react';
+import { BookOpen, BookOpenText, RefreshCw, Wrench } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import {
   getMistake,
@@ -178,13 +178,16 @@ export function MistakeDetailPage(): React.JSX.Element {
         </span>
         {t('assessment.mistakes.backToList')}
       </Link>
-      <Link
-        to="/app/learn/terms"
-        state={notebookStateFrom(`${location.pathname}${location.search}`)}
-        className="learn-back-link"
-      >
-        {t('assessment.languageHelp.openNotebook')}
-      </Link>
+      {mistake.examLanguage === 'zh-CN' ? (
+        <Link
+          to="/app/learn/terms"
+          state={notebookStateFrom(`${location.pathname}${location.search}`)}
+          className="learn-back-link"
+        >
+          <BookOpenText size={18} aria-hidden="true" />
+          {t('assessment.languageHelp.openNotebook')}
+        </Link>
+      ) : null}
 
       <header className="assessment-hero assessment-hero-sky">
         <span className={`assessment-status status-${mistake.status.toLowerCase()}`}>

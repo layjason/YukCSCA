@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, BookOpenText, Send } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
 import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
@@ -28,7 +28,7 @@ import {
 import { AssessmentBlocks } from './components/AssessmentBlocks';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { HintPanel } from './components/HintPanel';
-import { LanguageHelpPanel } from './components/LanguageHelpPanel';
+import { LanguageHelpAskControl, LanguageHelpPanel } from './components/LanguageHelpPanel';
 import { ItemNavigator } from './components/ItemNavigator';
 import { OptionRadiogroup } from './components/OptionRadiogroup';
 import {
@@ -384,7 +384,6 @@ export function SessionPlayerPage(): React.JSX.Element {
     reviewing ||
     (session.feedbackMode === 'IMMEDIATE' && session.items.some((i) => i.correct != null));
   const canFinish = canFinishInProgressSession(session) && !reviewing;
-  const purposeLabel = t(`assessment.purpose.${session.purpose}`);
   const finishLabel =
     session.feedbackMode === 'IMMEDIATE'
       ? t('assessment.session.finish')
@@ -402,18 +401,34 @@ export function SessionPlayerPage(): React.JSX.Element {
             <ArrowLeft size={18} aria-hidden="true" />
             {t('assessment.backToPractice')}
           </Link>
-          <Link
-            to="/app/learn/terms"
-            state={notebookStateFrom(`${location.pathname}${location.search}`)}
-            className="learn-back-link"
-          >
-            {t('assessment.languageHelp.openNotebook')}
-          </Link>
-          <span className="assessment-chip is-soft">{purposeLabel}</span>
         </div>
-        <p className="assessment-progress-label">
-          {t('assessment.session.itemOf', { current: itemIndex + 1, total: session.items.length })}
-        </p>
+        <div className="assessment-progress-row">
+          <p className="assessment-progress-label">
+            {t('assessment.session.itemOf', {
+              current: itemIndex + 1,
+              total: session.items.length,
+            })}
+          </p>
+          {item &&
+          session.examLanguage === 'zh-CN' &&
+          (item.languageHelpAvailable || item.languageHelp) ? (
+            !item.languageHelp?.disclosed && session.status === 'IN_PROGRESS' && !reviewing ? (
+              <LanguageHelpAskControl
+                busy={busy}
+                onClick={() => void handleLanguageDisclose('STUDENT_REQUEST')}
+              />
+            ) : item.languageHelp?.disclosed ? (
+              <Link
+                to="/app/learn/terms"
+                state={notebookStateFrom(`${location.pathname}${location.search}`)}
+                className="learn-back-link"
+              >
+                <BookOpenText size={18} aria-hidden="true" />
+                {t('assessment.languageHelp.openNotebook')}
+              </Link>
+            ) : null
+          ) : null}
+        </div>
       </header>
 
       {error ? (
@@ -445,7 +460,8 @@ export function SessionPlayerPage(): React.JSX.Element {
               lookupSource={
                 wordingHardQuestionIds.has(item.questionId) ? 'LANGUAGE_MISTAKE' : 'ITEM'
               }
-              canDisclose={session.status === 'IN_PROGRESS' && !reviewing}
+              canDisclose={false}
+              showAskControl={false}
               busy={busy}
               onDisclose={handleLanguageDisclose}
               renderStem={({ spans, onActivate, onHoverEnd, disabled }) => (

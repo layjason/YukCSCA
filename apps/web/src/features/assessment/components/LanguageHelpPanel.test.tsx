@@ -85,17 +85,17 @@ beforeEach(async () => {
 
 test('hides Language help when the first-paint flag is false', () => {
   const { container } = renderHelp(item(false));
-  expect(screen.queryByRole('button', { name: /language help/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /stuck on a word/i })).not.toBeInTheDocument();
   expect(container).toBeEmptyDOMElement();
 });
 
 test('shows a quiet icon before disclose and underlined stems after', () => {
   const { rerender, container } = renderHelp(item(true));
 
-  expect(screen.getByRole('button', { name: /language help/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /language help/i })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: /stuck on a word/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /stuck on a word/i })).toHaveAttribute(
     'title',
-    'Language help',
+    'Stuck on a word?',
   );
   expect(screen.queryByRole('button', { name: '求' })).not.toBeInTheDocument();
   expect(container.querySelector('.term-chip')).toBeNull();
@@ -130,7 +130,10 @@ test('shows a quiet icon before disclose and underlined stems after', () => {
   expect(screen.getAllByRole('button', { name: '求' }).length).toBeGreaterThanOrEqual(1);
   expect(container.querySelector('.term-chip')).not.toBeNull();
   expect(container.querySelector('.language-help-phrase-text')).toBeNull();
+  expect(container.querySelector('.language-help-panel')).toBeNull();
   expect(screen.queryByText(/select a word or short phrase/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/look up other text/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /look up selection/i })).not.toBeInTheDocument();
 });
 
 test('underlined surfaces stay intact when they wrap', () => {
@@ -162,7 +165,7 @@ test('shows an honest empty state when disclose returns no spans', () => {
 
 test('hides the Language help control after the session can no longer disclose', () => {
   renderHelp(item(true), { canDisclose: false });
-  expect(screen.queryByRole('button', { name: /language help/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /stuck on a word/i })).not.toBeInTheDocument();
 });
 
 test('wording-hard chip lookup records LANGUAGE_MISTAKE instead of ITEM', async () => {

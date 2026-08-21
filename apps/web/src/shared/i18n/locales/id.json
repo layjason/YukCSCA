@@ -433,9 +433,6 @@
     "entryNotFoundTitle": "Istilah tidak ditemukan",
     "entryNotFoundDescription": "Baris buku catatan ini hilang atau tautannya kedaluwarsa.",
     "chooseMatch": "Pilih padanan",
-    "lookUpSelection": "Cari pilihan",
-    "selectHint": "Pilih kata atau frasa pendek, lalu cari.",
-    "lookUpOther": "Cari teks lain",
     "class": {
       "EXAM_INSTRUCTION": "Kata ujian",
       "LOGICAL_EXPRESSION": "Kata ujian",
@@ -2293,6 +2290,7 @@
     },
     "languageHelp": {
       "open": "Bantuan bahasa",
+      "ask": "Ada kata yang bingung?",
       "opening": "Membuka bantuan bahasa…",
       "regionLabel": "Bantuan bahasa",
       "wordingHard": "Apakah kata-katanya sulit?",
@@ -2303,8 +2301,7 @@
       "disabled": "Bantuan bahasa tidak tersedia untuk soal ini.",
       "openNotebook": "Buka buku catatan istilah",
       "keyPhrases": "Frasa kunci",
-      "emptySpans": "Tidak ada istilah terulas pada soal ini.",
-      "lookUpOther": "Cari teks lain"
+      "emptySpans": "Tidak ada istilah terulas pada soal ini."
     },
     "hints": {
       "regionLabel": "Petunjuk",

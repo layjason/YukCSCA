@@ -9,7 +9,7 @@ import {
   unbookmarkTerm,
 } from '@/shared/api/terminologyStudentApi';
 import { TermGlossBubble } from '@/shared/terminology/TermGlossBubble';
-import { selectedLookupText, uniqueSpansByTermId } from '@/shared/terminology/termPresentation';
+import { uniqueSpansByTermId } from '@/shared/terminology/termPresentation';
 import type { TappableSpan } from '@/shared/terminology/TappableText';
 import type { TermCard, TermLookupRequest } from '@/shared/terminology/types';
 import type {
@@ -34,9 +34,37 @@ interface LanguageHelpPanelProps {
   explanationLanguage: ExplanationLanguage;
   lookupSource?: Extract<TermLookupRequest['source'], 'ITEM' | 'LANGUAGE_MISTAKE'>;
   canDisclose?: boolean;
+  /** When false, the parent chrome owns the “stuck on a word?” control. */
+  showAskControl?: boolean;
   busy: boolean;
   onDisclose: (trigger: LanguageHelpTrigger) => Promise<void>;
   renderStem?: (help: LanguageHelpStemProps) => React.ReactNode;
+}
+
+export function LanguageHelpAskControl({
+  busy,
+  disabled,
+  onClick,
+}: {
+  busy: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const label = busy ? t('assessment.languageHelp.opening') : t('assessment.languageHelp.ask');
+  return (
+    <button
+      type="button"
+      className="language-help-ask"
+      disabled={disabled || busy}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+    >
+      <BookOpenText size={18} aria-hidden="true" />
+      <span>{label}</span>
+    </button>
+  );
 }
 
 export function LanguageHelpPanel({
@@ -46,6 +74,7 @@ export function LanguageHelpPanel({
   explanationLanguage,
   lookupSource = 'ITEM',
   canDisclose = true,
+  showAskControl = true,
   busy,
   onDisclose,
   renderStem,
@@ -60,7 +89,6 @@ export function LanguageHelpPanel({
   } | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [notInBank, setNotInBank] = useState(false);
-  const [lookupOpen, setLookupOpen] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const hideTimer = useRef<number>(0);
@@ -159,13 +187,6 @@ export function LanguageHelpPanel({
     }
   }
 
-  function handleSelectionLookup(): void {
-    const raw = window.getSelection()?.toString() ?? '';
-    const text = selectedLookupText(raw);
-    if (!text) return;
-    void loadCard(undefined, text);
-  }
-
   async function handleToggleBookmark(termId: string): Promise<void> {
     if (bookmarkBusy) return;
     setBookmarkBusy(true);
@@ -203,7 +224,6 @@ export function LanguageHelpPanel({
     }
   }
 
-  const openLabel = busy ? t('assessment.languageHelp.opening') : t('assessment.languageHelp.open');
   const gloss = active;
   const activeCard = gloss ? cards[gloss.span.termId] : null;
 
@@ -224,46 +244,16 @@ export function LanguageHelpPanel({
         </div>
       ) : null}
 
-      {(!disclosed && canDisclose) || disclosed || notInBank || lookupError ? (
-        <section
-          className={disclosed ? 'language-help-panel' : 'language-help-idle'}
-          aria-label={t('assessment.languageHelp.regionLabel')}
-        >
-          {!disclosed && canDisclose ? (
-            <button
-              type="button"
-              className="language-help-icon"
-              disabled={busy}
-              aria-label={openLabel}
-              title={openLabel}
-              onClick={() => void onDisclose('STUDENT_REQUEST')}
-            >
-              <BookOpenText size={20} aria-hidden="true" />
-            </button>
-          ) : null}
-
-          {disclosed ? (
-            <div className="language-help-lookup-wrap">
-              {phrases.length === 0 ? (
-                <p className="language-help-hint">{t('assessment.languageHelp.emptySpans')}</p>
-              ) : null}
-              <details
-                className="language-help-lookup"
-                open={lookupOpen}
-                onToggle={(event) => setLookupOpen(event.currentTarget.open)}
-              >
-                <summary>{t('assessment.languageHelp.lookUpOther')}</summary>
-                <button type="button" className="btn-secondary" onClick={handleSelectionLookup}>
-                  {t('terminology.lookUpSelection')}
-                </button>
-              </details>
-            </div>
-          ) : null}
-
-          {notInBank ? <p role="status">{t('terminology.notInBank')}</p> : null}
-          {lookupError ? <p role="alert">{lookupError}</p> : null}
-        </section>
+      {!disclosed && canDisclose && showAskControl ? (
+        <LanguageHelpAskControl busy={busy} onClick={() => void onDisclose('STUDENT_REQUEST')} />
       ) : null}
+
+      {disclosed && phrases.length === 0 ? (
+        <p className="language-help-hint">{t('assessment.languageHelp.emptySpans')}</p>
+      ) : null}
+
+      {notInBank ? <p role="status">{t('terminology.notInBank')}</p> : null}
+      {lookupError ? <p role="alert">{lookupError}</p> : null}
 
       {gloss && activeCard ? (
         <TermGlossBubble

@@ -433,9 +433,6 @@
     "entryNotFoundTitle": "未找到术语",
     "entryNotFoundDescription": "该笔记本行已不存在，或链接已过期。",
     "chooseMatch": "选择对应项",
-    "lookUpSelection": "查阅选中内容",
-    "selectHint": "选中一个词或短语后再查阅。",
-    "lookUpOther": "查阅其他文字",
     "class": {
       "EXAM_INSTRUCTION": "试卷用语",
       "LOGICAL_EXPRESSION": "试卷用语",
@@ -2293,6 +2290,7 @@
     },
     "languageHelp": {
       "open": "语言帮助",
+      "ask": "有词看不懂？",
       "opening": "正在打开语言帮助…",
       "regionLabel": "语言帮助",
       "wordingHard": "是不是措辞难懂？",
@@ -2303,8 +2301,7 @@
       "disabled": "本题没有语言帮助。",
       "openNotebook": "打开术语笔记本",
       "keyPhrases": "关键短语",
-      "emptySpans": "本题没有已审术语。",
-      "lookUpOther": "查阅其他文字"
+      "emptySpans": "本题没有已审术语。"
     },
     "hints": {
       "regionLabel": "提示",
