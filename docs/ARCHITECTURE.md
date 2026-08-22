@@ -275,8 +275,8 @@ from checkpoint `VS-009-R8-accepted` and are `DONE` after product-owner
 acceptance of the checkpoint, topic-practice, and mistake→remediation→revalidation
 journeys. VS-010A backend student terminology and Language-help APIs and the
 production Learn/Practice/admin terminology UI are implemented from accepted
-checkpoint `VS-010A-R10-accepted`. The slice remains `CONTRACT_READY` until
-product-owner journey acceptance; it is not claimed `DONE` here. Admin
+checkpoint `VS-010A-R10-accepted` and are `DONE` after product-owner acceptance
+of the terminology journeys and visual review on 2026-08-22. Admin
 authoring of `draft.terms[]`, lesson `requiredTermIds`, and `authoredTermAttachments`
 is on the existing package editor (`features/academic-admin`). Student preview
 and the lesson rail use that lesson’s `requiredTermIds`, not a shared
