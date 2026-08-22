@@ -263,7 +263,7 @@ paths:
   /api/v1/academic/packages/{subject}/lessons/{resourceId}/progress:
     put:
       operationId: AcademicStudentApi_upsertContentProgress
-      description: Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint.
+      description: Creates or replaces the authenticated student's content progress for one LESSON. Reviewed-video playback positions ride the same write; watching never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint.
       parameters:
         - name: subject
           in: path
@@ -1313,6 +1313,122 @@ paths:
                 $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
+  /api/v1/academic/videos/{videoAssetId}/captions:
+    get:
+      operationId: AcademicStudentApi_getPublishedVideoCaptions
+      description: Returns the WebVTT captions of one published reviewed short video. The narration text is authoritative; clients may render the transcript from cues. Same published-reference gate as playback.
+      parameters:
+        - name: videoAssetId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: WebVTT captions of a published reviewed short video. Client-side cue extraction is the single transcript mechanism in this slice (no separate transcript endpoint); the narration text is authoritative.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - private, max-age=31536000, immutable
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            text/vtt:
+              schema:
+                contentMediaType: text/vtt
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/videos/{videoAssetId}/play:
+    get:
+      operationId: AcademicStudentApi_playPublishedVideo
+      description: Returns a short-lived presigned range-capable playback URL for one published reviewed short video referenced by the active published revision; the client assigns it to a video element src. 404 when the asset exists in any other state or is not referenced by the active revision, so non-published assets never leak.
+      parameters:
+        - name: videoAssetId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: Short-lived presigned playback grant. The client fetches this endpoint with the bearer token, then assigns url to a video element src so native Range requests, seeking, and resume work without any credential reaching storage. Refresh before expiresAt to avoid opaque media errors; the target content itself is immutable. Deployment must allow the storage origin in CSP media-src.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.VideoPlaybackGrant'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
   /api/v1/admin/academic-images:
     post:
       operationId: AcademicAdminApi_uploadAcademicImage
@@ -1932,6 +2048,861 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AcademicAdmin.PublishAcademicPackageRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-video-slots:
+    post:
+      operationId: AcademicAdminApi_createVideoUploadSlot
+      description: Creates a short-lived presigned upload slot for one finished short video in one explanation language. The client uploads bytes directly to object storage; nothing is attached to content until the asset is referenced from a draft.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.VideoUploadSlot'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.CreateVideoUploadSlotRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-video-slots/{slotId}:confirm:
+    post:
+      operationId: AcademicAdminApi_confirmVideoUpload
+      description: 'Confirms an uploaded finished video with its provenance and queues asynchronous probing (container, duration, resolution, size) on the isolated worker. Idempotent: once a confirm has succeeded, replaying it returns the same 202 and the same asset even after slot expiry, so a browser retry after a lost response never forces a re-upload. 409 code SLOT_PENDING when the slot has no uploaded bytes; SLOT_EXPIRED for a first confirm after expiry. A valid probe yields a DRAFT asset; a rejected probe yields REJECTED with reasons. Neither state blocks any content publication.'
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '202':
+          description: Accepted for asynchronous probing on the isolated worker; the returned asset starts AWAITING_VALIDATION.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicVideoAsset'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.ConfirmVideoUploadRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-videos/{id}:
+    get:
+      operationId: AcademicAdminApi_getAcademicVideo
+      description: Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, and provenance.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicVideoAsset'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-videos/{id}/captions:
+    get:
+      operationId: AcademicAdminApi_getAcademicVideoCaptions
+      description: Returns the WebVTT captions of one video asset for administrator review. 404 when captions do not exist (captionsAvailable false); captions never exist for AWAITING_VALIDATION or REJECTED assets.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: Draft captions may change before review, so they are never cached.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            text/vtt:
+              schema:
+                contentMediaType: text/vtt
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    put:
+      operationId: AcademicAdminApi_putAcademicVideoCaptions
+      description: Supplies or replaces the captions for one UPLOADED DRAFT asset with validated bytes. 409 code CAPTIONS_DERIVED_FROM_NARRATION for PRODUCED assets (captions derive from narration segments); CAPTIONS_IMMUTABLE for REVIEWED and RETIRED assets — caption corrections after review go through the replacement flow with their own provenance and review; CAPTIONS_NOT_EDITABLE for AWAITING_VALIDATION and REJECTED assets.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicVideoAsset'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.PutVideoCaptionsRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-videos/{id}/play:
+    get:
+      operationId: AcademicAdminApi_getAcademicVideoPlay
+      description: Returns a short-lived presigned range-capable playback URL for administrator review of one DRAFT or REVIEWED asset; the client assigns it to a video element src. 404 while bytes are not yet validated (AWAITING_VALIDATION); 409 code VIDEO_NOT_PLAYABLE for REJECTED and RETIRED assets.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: Review playback grant for one DRAFT or REVIEWED asset.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.VideoPlaybackGrant'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-videos/{id}:review:
+    post:
+      operationId: AcademicAdminApi_reviewAcademicVideo
+      description: Marks the playable result, captions, language version, and provenance human-reviewed after the administrator has watched the Draft. Requires a DRAFT asset with validated bytes and captions; violations of those preconditions (including an already-REVIEWED asset) return 409 code REVIEW_PRECONDITION_UNMET. Only REVIEWED assets project into a published revision. A model never performs this transition.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicVideoAsset'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/render-jobs:
+    post:
+      operationId: AcademicAdminApi_createRenderJob
+      description: Enqueues production of one scene specification on the isolated worker (gTTS narration, reviewed templates, FFmpeg muxing). One active job per specification; concurrent enqueue returns 409 RENDER_JOB_ACTIVE with the active job embedded so a lost response is recoverable. The text/formula/image unit is never blocked by production.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.RenderJobConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.CreateRenderJobRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/render-jobs/{jobId}:
+    get:
+      operationId: AcademicAdminApi_getRenderJob
+      description: Returns one render or upload-validation job with state, attempts, and bounded failure detail.
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/scene-specifications:
+    post:
+      operationId: AcademicAdminApi_createSceneSpecification
+      description: Creates a template-bound scene specification from the admin script. Validation failures identify the offending path using the grammar segments[i], segments[i].templateActionId, segments[i].params.<paramId>, segments[i].narrationText, plus segments and explanationLanguage for collection-level bounds; nothing is rendered yet.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.SceneSpecification'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.SceneSpecificationInput'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/scene-specifications/{id}:
+    put:
+      operationId: AcademicAdminApi_replaceSceneSpecification
+      description: Replaces one scene specification; validation uses the same segment path grammar as creation. A finished render is unaffected; re-enqueueing creates a new render job against the replaced script.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.SceneSpecification'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicAdmin.SceneSpecificationInput'
+      security:
+        - BearerAuth: []
+    get:
+      operationId: AcademicAdminApi_getSceneSpecification
+      description: Returns one stored scene specification with its segments.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.SceneSpecification'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/scene-templates:
+    get:
+      operationId: AcademicAdminApi_listSceneTemplates
+      description: Lists the reviewed render-template actions available to the script editor for the current registry version.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.SceneTemplateRegistry'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
   /api/v1/assessment/mistakes:
@@ -3676,6 +4647,12 @@ components:
                   $ref: '#/components/schemas/uuid'
                 maxItems: 64
                 description: Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.
+              videos:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.ResourceVideoAttachment'
+                maxItems: 3
+                description: Optional reviewed short-video attachments, at most one per explanation language. Projected only on LESSON and REMEDIATION kinds; a TERMINOLOGY draft carrying an attachment is rejected by application validation, and an attachment with both videoAssetId and sceneSpecificationId absent is rejected as an incomplete handle. The attachment language must equal the referenced asset's explanationLanguage and, on the production path, the scene specification's explanationLanguage; mismatches are draft-save validation violations (INCOMPATIBLE) on resources[i].videos[j].language. Only assets in REVIEWED status at publish time project into the published revision; attachments referencing other states are excluded without blocking publication of the complete text, formula, and image unit. Each replacement references a new asset id and records its own provenance.
         questions:
           type: array
           items:
@@ -3820,6 +4797,12 @@ components:
                   $ref: '#/components/schemas/uuid'
                 maxItems: 64
                 description: Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.
+              videos:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.ResourceVideoAttachment'
+                maxItems: 3
+                description: Optional reviewed short-video attachments, at most one per explanation language. Projected only on LESSON and REMEDIATION kinds; a TERMINOLOGY draft carrying an attachment is rejected by application validation, and an attachment with both videoAssetId and sceneSpecificationId absent is rejected as an incomplete handle. The attachment language must equal the referenced asset's explanationLanguage and, on the production path, the scene specification's explanationLanguage; mismatches are draft-save validation violations (INCOMPATIBLE) on resources[i].videos[j].language. Only assets in REVIEWED status at publish time project into the published revision; attachments referencing other states are excluded without blocking publication of the complete text, formula, and image unit. Each replacement references a new asset id and records its own provenance.
         questions:
           type: array
           items:
@@ -3986,6 +4969,91 @@ components:
           maxLength: 500
         code:
           $ref: '#/components/schemas/AcademicAdmin.AcademicValidationCode'
+    AcademicAdmin.AcademicVideoAsset:
+      type: object
+      required:
+        - id
+        - source
+        - status
+        - explanationLanguage
+        - mediaType
+        - byteSize
+        - durationSeconds
+        - width
+        - height
+        - sha256
+        - captionsAvailable
+        - rejection
+        - provenance
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        source:
+          $ref: '#/components/schemas/AcademicAdmin.VideoAssetSource'
+        status:
+          $ref: '#/components/schemas/AcademicAdmin.VideoAssetStatus'
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        mediaType:
+          type: string
+          enum:
+            - video/mp4
+        byteSize:
+          anyOf:
+            - type: integer
+              format: int64
+            - type: 'null'
+          minimum: 1
+          maximum: 209715200
+          description: Null until bytes are validated.
+        durationSeconds:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 1
+          maximum: 600
+          description: Null until bytes are validated. Bounded by the short-video duration policy (max 10 minutes).
+        width:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 1
+          maximum: 3840
+        height:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 1
+          maximum: 2160
+        sha256:
+          anyOf:
+            - type: string
+            - type: 'null'
+          pattern: ^[a-f0-9]{64}$
+        captionsAvailable:
+          type: boolean
+          description: 'True once WebVTT captions exist: supplied by the admin for UPLOADED assets, derived from narration segments for PRODUCED assets. Required before review.'
+        rejection:
+          anyOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/AcademicAdmin.AcademicValidationViolation'
+            - type: 'null'
+          description: Upload-probe rejection reasons. Null unless status is REJECTED; production failures never create an asset and surface on the render job instead.
+        provenance:
+          $ref: '#/components/schemas/AcademicAdmin.ProvenanceRecord'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: One optional reviewed short-video asset with its lifecycle, playable-shape metadata, and provenance.
     AcademicAdmin.ArchiveAcademicPackageRequest:
       type: object
       required:
@@ -4100,6 +5168,13 @@ components:
       enum:
         - ALL_CORRECT_NO_STRONG_ASSISTANCE
       description: Checkpoint pass policy. Pilot uses all-correct with no strong assistance; enum is extensible for later thresholds.
+    AcademicAdmin.ConfirmVideoUploadRequest:
+      type: object
+      required:
+        - provenance
+      properties:
+        provenance:
+          $ref: '#/components/schemas/AcademicAdmin.ProvenanceInput'
     AcademicAdmin.ContentBlock:
       anyOf:
         - $ref: '#/components/schemas/AcademicAdmin.TextContentBlock'
@@ -4118,6 +5193,20 @@ components:
       properties:
         subject:
           $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+    AcademicAdmin.CreateRenderJobRequest:
+      type: object
+      required:
+        - sceneSpecificationId
+      properties:
+        sceneSpecificationId:
+          $ref: '#/components/schemas/uuid'
+    AcademicAdmin.CreateVideoUploadSlotRequest:
+      type: object
+      required:
+        - explanationLanguage
+      properties:
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
     AcademicAdmin.DraftProvenanceInput:
       type: object
       properties:
@@ -4488,6 +5577,16 @@ components:
           format: date-time
         publishedByUserId:
           $ref: '#/components/schemas/uuid'
+    AcademicAdmin.PutVideoCaptionsRequest:
+      type: object
+      required:
+        - captions
+      properties:
+        captions:
+          type: string
+          minLength: 1
+          maxLength: 65536
+          description: WebVTT source for one UPLOADED video asset. Bounded and syntax-validated; cue timing beyond the asset duration is rejected.
     AcademicAdmin.QuestionDifficulty:
       type: string
       enum:
@@ -4509,6 +5608,118 @@ components:
           items:
             $ref: '#/components/schemas/AcademicAdmin.ContentBlock'
           minItems: 1
+    AcademicAdmin.RenderJob:
+      type: object
+      required:
+        - id
+        - kind
+        - state
+        - sceneSpecificationId
+        - videoAssetId
+        - attempts
+        - error
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        kind:
+          $ref: '#/components/schemas/AcademicAdmin.RenderJobKind'
+        state:
+          $ref: '#/components/schemas/AcademicAdmin.RenderJobState'
+        sceneSpecificationId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: Set for RENDER_SCENE jobs.
+        videoAssetId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: 'For RENDER_SCENE: the produced asset once SUCCEEDED. For VALIDATE_UPLOAD: the confirmed asset under validation, set when the job is created.'
+        attempts:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 5
+        error:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.RenderJobError'
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: "One asynchronous render or upload-validation job. A job snapshots the scene specification and its registry version at enqueue; replacing the specification does not affect an in-flight job — clients detect a stale render by comparing createdAt with the specification's updatedAt. Workers claim through a visibility-timeout poll; a claim that expires without completion is retried within the attempts bound and then fails terminally. Suggested client poll interval: 5 seconds."
+    AcademicAdmin.RenderJobConflictProblem:
+      type: object
+      required:
+        - code
+        - job
+      properties:
+        code:
+          type: string
+          enum:
+            - RENDER_JOB_ACTIVE
+        job:
+          $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: One active job already exists for this scene specification. The embedded job recovers the job id after a lost response without any listing.
+    AcademicAdmin.RenderJobError:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          $ref: '#/components/schemas/AcademicAdmin.RenderJobErrorCode'
+        detail:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 500
+      description: Terminal job failure detail. Never carries narration text or scene content.
+    AcademicAdmin.RenderJobErrorCode:
+      type: string
+      enum:
+        - VALIDATION_FAILED
+        - RENDER_TIMEOUT
+        - DURATION_POLICY
+        - SPEECH_SYNTHESIS_FAILED
+        - INTERNAL
+      description: Terminal failure classification surfaced to the administrator.
+    AcademicAdmin.RenderJobKind:
+      type: string
+      enum:
+        - VALIDATE_UPLOAD
+        - RENDER_SCENE
+      description: Asynchronous job kind executed by the isolated Python render worker on the PostgreSQL-polled queue.
+    AcademicAdmin.RenderJobState:
+      type: string
+      enum:
+        - QUEUED
+        - RUNNING
+        - SUCCEEDED
+        - FAILED
+      description: Render/validation job state. SUCCEEDED and FAILED are terminal; retries stay inside RUNNING attempts.
+    AcademicAdmin.ResourceVideoAttachment:
+      type: object
+      required:
+        - language
+      properties:
+        language:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        videoAssetId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        sceneSpecificationId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+      description: 'Optional reviewed-video attachment on one explanation-language version of a study resource; the durable draft handle that survives reloads. Upload path: videoAssetId is set at slot confirmation and kept through AWAITING_VALIDATION and later states. Production path: sceneSpecificationId is set at script creation and retained through review so the script stays reopenable (transcript from segments, replace, re-enqueue); videoAssetId is added when the render job reaches SUCCEEDED. At least one of the two ids must be present; both are present on the produced path after success. videoAssetId is the sole publish/projection reference. Drafts are saved immediately after each id is obtained, so recovery after reload needs only the package draft.'
     AcademicAdmin.SaveAcademicPackageDraftRequest:
       type: object
       required:
@@ -4521,6 +5732,155 @@ components:
           minimum: 0
         draft:
           $ref: '#/components/schemas/AcademicAdmin.AcademicPackageDraftInput'
+    AcademicAdmin.SceneSegment:
+      type: object
+      required:
+        - templateActionId
+        - narrationText
+      properties:
+        templateActionId:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9-]{0,63}$
+        params:
+          description: 'Template-specific parameters: an arbitrary JSON object, carried as an untyped wire boundary because its shape is per-template. Clients author it from the SceneTemplateAction param descriptors and narrow it immediately; the server semantically validates keys and values against the reviewed template schema, surfacing violations with the offending segment path.'
+        narrationText:
+          type: string
+          minLength: 1
+          maxLength: 600
+      description: 'One template-bound scene segment authored in the admin script: a reviewed visual action plus its narration text. Never executable scene code.'
+    AcademicAdmin.SceneSpecification:
+      type: object
+      required:
+        - id
+        - registryVersion
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        registryVersion:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: Registry version this specification was last validated against. A registry bump that invalidates an old script surfaces as VALIDATION_FAILED at render; the editor warns before re-render by comparing with the current registry version.
+        latestRenderJob:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+            - type: 'null'
+          description: Latest render job for this specification, embedded on responses so reload recovery needs no job listing. Null when never enqueued.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      allOf:
+        - $ref: '#/components/schemas/AcademicAdmin.SceneSpecificationInput'
+      description: Stored admin script compiled to a template-bound scene specification. The render worker consumes only this schema-validated data.
+    AcademicAdmin.SceneSpecificationInput:
+      type: object
+      required:
+        - explanationLanguage
+        - segments
+      properties:
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.SceneSegment'
+          minItems: 1
+          maxItems: 60
+    AcademicAdmin.SceneTemplateAction:
+      type: object
+      required:
+        - id
+        - displayName
+        - params
+      properties:
+        id:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9-]{0,63}$
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Canonical authoring name; server-provided registry metadata in one canonical language for the pilot, not student-facing content. Clients may layer localization by action id later.
+        params:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.SceneTemplateParamDescriptor'
+          maxItems: 16
+          description: Structured parameter descriptors the script editor renders inputs from. Empty when the action takes no parameters.
+      description: One reviewed visual action available to the admin script editor.
+    AcademicAdmin.SceneTemplateParamDescriptor:
+      type: object
+      required:
+        - id
+        - kind
+      properties:
+        id:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9-]{0,63}$
+        kind:
+          $ref: '#/components/schemas/AcademicAdmin.SceneTemplateParamKind'
+        label:
+          anyOf:
+            - type: string
+            - type: 'null'
+          minLength: 1
+          maxLength: 160
+          description: Canonical authoring label; server-provided registry metadata in one canonical language for the pilot, not student-facing content. Clients may layer localization by action and param id later.
+        required:
+          anyOf:
+            - type: boolean
+            - type: 'null'
+        min:
+          anyOf:
+            - type: number
+              format: decimal
+            - type: 'null'
+          description: Inclusive lower bound; INTEGER and DECIMAL kinds only.
+        max:
+          anyOf:
+            - type: number
+              format: decimal
+            - type: 'null'
+          description: Inclusive upper bound; INTEGER and DECIMAL kinds only.
+        maxLength:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 1
+          maximum: 2000
+          description: Maximum text length; STRING, MULTILINE_TEXT, and MATH_EXPRESSION kinds only.
+      description: Data-only descriptor of one template-action parameter. Bounded values; never executable content.
+    AcademicAdmin.SceneTemplateParamKind:
+      type: string
+      enum:
+        - STRING
+        - MULTILINE_TEXT
+        - INTEGER
+        - DECIMAL
+        - MATH_EXPRESSION
+      description: Input kind of one template-action parameter; drives the structured control the script editor renders. Semantic validation stays server-side against the same reviewed schema.
+    AcademicAdmin.SceneTemplateRegistry:
+      type: object
+      required:
+        - version
+        - actions
+      properties:
+        version:
+          type: string
+          minLength: 1
+          maxLength: 40
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.SceneTemplateAction'
+          minItems: 1
+      description: Current reviewed render-template registry versioned with the worker.
     AcademicAdmin.SourcePosition:
       type: object
       properties:
@@ -4666,6 +6026,62 @@ components:
       required:
         - file
         - provenance
+    AcademicAdmin.VideoAssetSource:
+      type: string
+      enum:
+        - UPLOADED
+        - PRODUCED
+      description: How a reviewed-video asset came to exist.
+    AcademicAdmin.VideoAssetStatus:
+      type: string
+      enum:
+        - AWAITING_VALIDATION
+        - DRAFT
+        - REVIEWED
+        - REJECTED
+        - RETIRED
+      description: Lifecycle of an optional reviewed-video asset. UPLOADED assets are created at slot confirmation in AWAITING_VALIDATION; PRODUCED assets are created by a succeeded render directly in DRAFT (a failed render creates no asset — the failure lives on the render job). Only REVIEWED assets project into a published revision; students never observe any other state. RETIRED is system-managed when a replacement publishes.
+    AcademicAdmin.VideoPlaybackGrant:
+      type: object
+      required:
+        - url
+        - expiresAt
+      properties:
+        url:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        expiresAt:
+          type: string
+          format: date-time
+      description: Short-lived presigned playback grant. The client assigns url to a video element src, so native Range streaming and resume go straight to object storage with no credentials attached; deployment must therefore allow the storage origin in CSP media-src. Grants are never cached and are refreshed from this API before expiresAt.
+    AcademicAdmin.VideoUploadSlot:
+      type: object
+      required:
+        - id
+        - explanationLanguage
+        - uploadUrl
+        - maxByteSize
+        - expiresAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        uploadUrl:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        maxByteSize:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 209715200
+          description: Upload size bound for the pre-upload client check; server-side probing enforces the same bound.
+        expiresAt:
+          type: string
+          format: date-time
+      description: Short-lived presigned slot for direct-to-storage upload of one finished short video. uploadUrl accepts exactly one HTTP PUT whose body is the raw video bytes; send no Content-Type or other headers beyond those covered by the presign. The storage bucket must allow the web origin for the presigned PUT (CORS preflight plus exposed ETag) — a deployment invariant of this slice.
     AcademicStudent.BookmarkLessonTermsRequest:
       type: object
       required:
@@ -4767,6 +6183,11 @@ components:
             - type: 'null'
           minimum: 0
           description: Zero-based resume index into the blocks of the explanation-language version the student was reading. Null when not started or when no block position is recorded.
+        video:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.VideoPlaybackPosition'
+            - type: 'null'
+          description: "Last saved reviewed-video playback position on this resource. Null when no position was saved; restored positions are clamped to the currently published asset's duration. One position per resource (pilot behavior): watching in a different explanation language overwrites it. Watching is never mastery evidence."
         updatedAt:
           anyOf:
             - type: string
@@ -4776,7 +6197,7 @@ components:
         updatedSinceCompleted:
           type: boolean
           description: True when status is CONTENT_COMPLETE and this study resource's student-visible content (title, outline/objective links, language versions, blocks) differs between the package revision recorded when the student last marked complete and the active published revision. Unrelated package changes (edition labels, other lessons, assessment questions) do not set this flag. Soft signal only; never demotes content complete or implies mastery.
-      description: Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED.
+      description: Per-student content progress on one LESSON or REMEDIATION resource. Absent storage projects as NOT_STARTED.
     AcademicStudent.ContentProgressStatus:
       type: string
       enum:
@@ -5165,6 +6586,11 @@ components:
             - $ref: '#/components/schemas/AcademicStudent.LessonTerminology'
             - type: 'null'
           description: Null or omitted when this lesson has no published Chinese exam-language terms. Clients must hide terminology chrome when absent.
+        video:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.PublishedVideoRef'
+            - type: 'null'
+          description: Published reviewed short video for the requested explanation language. Null or omitted when no REVIEWED video was attached for this language at publish time, and null whenever body is LANGUAGE_UNAVAILABLE because an attachment is bound to an authored language version; clients render no playable control. Watching is never mastery.
       description: Student LESSON read projection for the active published revision.
     AcademicStudent.PublishedPackageBrowse:
       type: object
@@ -5257,7 +6683,27 @@ components:
           items:
             $ref: '#/components/schemas/uuid'
           maxItems: 32
+        video:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.PublishedVideoRef'
+            - type: 'null'
+          description: Published reviewed short video for the requested explanation language. Null or omitted when no REVIEWED video was attached for this language at publish time, and null whenever body is LANGUAGE_UNAVAILABLE because an attachment is bound to an authored language version; clients render no playable control. Watching is never mastery.
       description: Student REMEDIATION read projection for the active published revision. Same block model as LESSON; kind is always REMEDIATION.
+    AcademicStudent.PublishedVideoRef:
+      type: object
+      required:
+        - videoAssetId
+        - durationSeconds
+      properties:
+        videoAssetId:
+          $ref: '#/components/schemas/uuid'
+        durationSeconds:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 600
+          description: Validated playable duration. Bounded by the short-video duration policy (max 10 minutes); restored playback positions are clamped to it.
+      description: Reference to the published reviewed short video attached to the requested explanation-language version. Null whenever the lesson body is LANGUAGE_UNAVAILABLE, because an attachment is bound to an authored language version. No poster artwork in the pilot; players show the asset's first frame via preload metadata.
     AcademicStudent.ReviewOption:
       type: object
       required:
@@ -5745,11 +7191,16 @@ components:
               format: int32
             - type: 'null'
           minimum: 0
-          description: Zero-based resume block index within the language version the student is reading. Required when status is IN_PROGRESS; optional when CONTENT_COMPLETE.
+          description: Zero-based resume block index within the language version the student is reading. When status is IN_PROGRESS, at least one of resumeBlockIndex or video must be present; both may be sent. Optional when CONTENT_COMPLETE.
+        video:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.VideoPlaybackPosition'
+            - type: 'null'
+          description: "Reviewed-video playback position to persist. The write replaces any stored position on this resource: send the current position on every IN_PROGRESS write, or null to clear it. Rejected with a validation violation when videoAssetId is not the published reviewed video currently referenced by this resource (path video.videoAssetId, code INVALID_VIDEO_ASSET) or when positionSeconds exceeds that asset's published duration (path video.positionSeconds, code POSITION_OUT_OF_RANGE); the client re-reads the lesson and resumes from the clamped value."
         expectedPackageRevisionId:
           $ref: '#/components/schemas/uuid'
           description: Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field.
-      description: Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource).
+      description: Upsert content progress for the authenticated student on one LESSON or REMEDIATION. Idempotent by (account, package, resource).
     AcademicStudent.UpsertPreviewProgressRequest:
       type: object
       required:
@@ -5760,6 +7211,21 @@ components:
         expectedPackageRevisionId:
           $ref: '#/components/schemas/uuid'
           description: Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches.
+    AcademicStudent.VideoPlaybackPosition:
+      type: object
+      required:
+        - videoAssetId
+        - positionSeconds
+      properties:
+        videoAssetId:
+          $ref: '#/components/schemas/uuid'
+        positionSeconds:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 600
+          description: Last player position. Bounded by the short-video duration policy; restored values are clamped to the currently published asset's duration.
+      description: Per-student reviewed-video playback position on one resource, saved through content progress. Playback position is private student state and never mastery evidence.
     AcademicStudent.WritableContentProgressStatus:
       type: string
       enum:

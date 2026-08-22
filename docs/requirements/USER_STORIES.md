@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.3.5
-**Updated:** 2026-08-14
+**Backlog version:** 0.3.7
+**Updated:** 2026-08-22
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.
@@ -1545,6 +1545,7 @@ After a text answer, the student may watch a derived narrated video, see that it
 - Given a contextual question, then the text answer is returned without waiting for video production.
 - Given a derived video is shown, then it is labelled as a derived explanation and is not presented as official or reviewed-source course content.
 - Given the clip would become a shared course resource, then it follows the same Draft → human review → Published path as `US-ADM-08` and is not auto-published.
+- Given the agent scripts a video answer, then its output is a scene specification validated against the same reviewed templates as `US-ADM-08` before any rendering starts.
 - Given formal timed mock mode, then video-answer tools are unavailable until submission.
 
 **Not included in this story:** The first grounded text Q&A (`US-AGENT-04`), admin course-video production (`US-ADM-08`), or mock-exam execution (`US-MOCK-01`–`03`).
@@ -2562,7 +2563,7 @@ The platform admin can view aggregated funnel, learning, commerce, and service m
 
 **User story**
 
-> As the first platform admin, I want to attach a finished short video or a scene/script that produces a narrated video so that students can watch an optional reviewed explanation without blocking a complete text unit.
+> As the first platform admin, I want to attach a finished short video or author a template-bound scene specification that produces a narrated video on a lesson, remediation unit, or question explanation so that students can watch an optional reviewed explanation without blocking a complete text unit.
 
 **Closed-loop outcome**
 
@@ -2571,14 +2572,16 @@ A reviewed short video is Published on a lesson or remediation unit and students
 **Main flow**
 
 1. Open a draft lesson or remediation unit.
-2. Upload a finished video, or upload a scene/script that produces synchronized narration.
+2. Upload a finished video, or author a scene specification that reviewed templates render with synchronized narration.
 3. Review the playable result, captions or transcript, explanation language, and source record when production finishes.
 4. Publish the unit when the complete text alternative still exists, or leave the video in Draft.
 
 **Acceptance Criteria**
 
 - Given a finished video with captions or transcript and required provenance, then it can be attached as Draft and published after human review.
-- Given a scene/script, then any produced video stays Draft until a human reviews the playable result.
+- Given a scene specification, then any produced video stays Draft until a human reviews the playable result.
+- Given a scene specification that fails template or schema validation, then production is rejected with a bounded validation error and the unit keeps its complete text, formula, and image publication path.
+- Given a question-explanation video, then it is visible only where the reviewed explanation itself is visible and never during a formal timed mock attempt.
 - Given a complete text, formula, and image alternative, then missing or failed video does not block publication.
 - Given unpublished, failed, or still-rendering video, then students do not see a playable control.
 - Given a published video is later replaced, then the replacement records its own source and permission information.

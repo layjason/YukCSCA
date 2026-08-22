@@ -239,7 +239,9 @@ security/privacy, prototype isolation, and product-owner journey evidence
 (2026-08-14). KaTeX is used for admin formula preview, student LESSON MATH
 blocks, and bounded `\(...\)` inline math inside TEXT-like prose
 (lessons, questions, remediation, and term definition/example/English equivalent). Short video, object storage, and any scene-render worker remain
-unimplemented (`VS-010B` is proposed only). Multi-subject content seeding and
+unimplemented (`VS-010B` is `CONTRACT_READY` with accepted checkpoint
+`VS-010B-R4-accepted`; backend and frontend implementation are starting in
+parallel). Multi-subject content seeding and
 mock student flows remain later slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields

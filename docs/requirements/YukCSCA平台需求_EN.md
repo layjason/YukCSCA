@@ -1,7 +1,7 @@
 # YukCSCA Platform Requirements Summary
 
-**Version:** V1.6
-**Date:** 2026-08-14
+**Version:** V1.8
+**Date:** 2026-08-22
 **Target Market:** Indonesian high school students planning to pursue undergraduate study in China, and their families
 
 > **NORMATIVE PRODUCT AUTHORITY:** This document and its paired Chinese version are the sole authoritative product requirements for YukCSCA. Architecture descriptions, implementation plans, contracts, issues, and code may implement or propose a subset, but they do not amend or override these requirements. Both language versions must change together.
@@ -10,6 +10,8 @@
 
 | Version | Date       | Change                                                                                  |
 | ------- | ---------- | --------------------------------------------------------------------------------------- |
+| V1.8    | 2026-08-22 | Extended optional reviewed short video to question explanations: attachable to a lesson, remediation unit, or question explanation; a question-explanation video is visible only where the reviewed explanation is already visible and never during formal timed mock attempts. |
+| V1.7    | 2026-08-22 | Defined the lesson-video scene/script artifact: a scene specification is template-bound, schema-validated structured data rendered by reviewed templates and never executable scene code; model-generated scene specifications follow the same validation, rendering, and Draft → human review path. |
 | V1.6    | 2026-08-14 | Clarified optional reviewed short video: admin may upload a finished video or a scene/script that produces synchronized narration; students play only Published video; first contextual Q&A remains text; a later derived video must not replace the text answer or auto-publish. |
 | V1.5    | 2026-08-07 | Official syllabus records may store one or two language-edition PDF locators (en and/or zh-CN) under one compact source panel; outline summaries remain YukCSCA-authored in id/en/zh-CN. |
 | V1.4    | 2026-07-31 | Replaced publication of copied official-syllabus wording with localized YukCSCA summaries linked to the official source, including Bahasa Indonesia. |
@@ -500,7 +502,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 - A focused learning unit targets one assessable platform learning objective and may use structured text, formulas, diagrams, worked examples, terminology cards, short video, interactive blocks, or a reviewed combination.
 - Video is optional and must not block publication when an accessible, academically complete alternative exists.
-- The admin may attach a finished short video, or a scene/script that produces a narrated video, to an explanation-language version of a lesson or remediation unit.
+- The admin may attach a finished short video, or a scene specification that produces a narrated video, to an explanation-language version of a lesson, remediation unit, or question explanation; a question-explanation video is visible only where the reviewed explanation itself is already visible and never during a formal timed mock attempt. A scene specification is template-bound, schema-validated structured data rendered by reviewed templates; it is never executable scene code, and model-generated scene specifications follow the same validation and rendering path.
 - A produced or uploaded video remains Draft until a human reviews the playable result, captions or transcript, language version, and source record. Students play only Published video.
 - Content variants use the student's explanation language where available while retaining canonical formulas, definitions, objective identity, and exam-language terminology.
 - Missing explanation-language or exam-language variants are explicit; the system must not silently substitute a different exam language.
@@ -1000,7 +1002,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Content uses stable IDs and reusable fields so the same data can later be used by the web app, a mobile app, or another YukCSCA client. Frontend routes, page layout, and temporary interface state are not stored as academic content.
 - Content has three simple states: Draft, Published, and Archived. The admin can create and edit content directly. A basic CSV or JSON import may be added when it clearly saves time, but it is not required for the first release.
 - Before publication, the platform checks required links, supported languages, formulas or files, question answers and scoring, and source or permission information. Invalid content remains in Draft, while existing Published content stays available.
-- A lesson or remediation unit may include an optional short-video asset from an uploaded finished video or from a scene/script that yields synchronized narration. The playable result stays Draft until human review. Missing or failed video must not block publication of a complete text, formula, and image unit.
+- A lesson, remediation unit, or question explanation may include an optional short-video asset from an uploaded finished video or from a template-bound scene specification that yields synchronized narration when rendered by reviewed templates. Scene specifications are schema-validated structured data, not executable scene code. The playable result stays Draft until human review. Missing or failed video must not block publication of a complete text, formula, and image unit.
 - When published content is corrected, completed attempts and reports continue to use the exact content that was shown at the time.
 
 ### 14.5 Question and Mock-Paper Management (P0)
@@ -1047,7 +1049,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Review AI accuracy and complaints by explanation language, exam language, subject, and knowledge point, avoiding evaluation in only one language.
 - Admins or academic reviewers can correct reference content, terminology definitions, language content, and reviewed media; the platform records what changed and when.
 - AI answering can be temporarily disabled or routed to human handling for high-risk or repeatedly incorrect content.
-- A model-generated scene, narration, or video remains Draft until a human reviews the playable result. A model may not generate and approve high-impact academic video.
+- A model-generated scene specification, narration, or video remains Draft until a human reviews the playable result. A model may not generate and approve high-impact academic video.
 
 ### 14.10 Operating Analytics (P0)
 
