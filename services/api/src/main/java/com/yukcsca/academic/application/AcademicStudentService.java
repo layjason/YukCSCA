@@ -45,6 +45,7 @@ public class AcademicStudentService {
   private final PublishedPackageProjector projector;
   private final ContentAccessPolicy accessPolicy;
   private final CurrentAuthenticationService authentication;
+  private final AcademicTerminologyService terminology;
   private final Clock clock;
 
   public AcademicStudentService(
@@ -55,6 +56,7 @@ public class AcademicStudentService {
       PublishedPackageProjector projector,
       ContentAccessPolicy accessPolicy,
       CurrentAuthenticationService authentication,
+      AcademicTerminologyService terminology,
       Clock clock) {
     this.packages = packages;
     this.revisions = revisions;
@@ -63,6 +65,7 @@ public class AcademicStudentService {
     this.projector = projector;
     this.accessPolicy = accessPolicy;
     this.authentication = authentication;
+    this.terminology = terminology;
     this.clock = clock;
   }
 
@@ -96,11 +99,19 @@ public class AcademicStudentService {
     Map<UUID, JsonNode> historicalContent =
         loadHistoricalRevisionContent(progressRows, activeRevisionId);
     List<OutlineNodeProjection> outline =
-        projector.outline(
-            content, lessons, progressByResource, activeRevisionId, historicalContent);
+        attachTerminologyPreviews(
+            actorId,
+            academicPackage.getId(),
+            content,
+            projector.outline(
+                content, lessons, progressByResource, activeRevisionId, historicalContent));
     LessonSummaryProjection continueLesson =
-        projector.continueLesson(
-            lessons, progressRows, activeRevisionId, content, historicalContent);
+        attachTerminologyPreview(
+            actorId,
+            academicPackage.getId(),
+            content,
+            projector.continueLesson(
+                lessons, progressRows, activeRevisionId, content, historicalContent));
     LOGGER.info(
         "academic.student.browse subject={} packageId={} revisionId={}",
         academicPackage.getSubject(),
@@ -231,6 +242,18 @@ public class AcademicStudentService {
         academicPackage.getSubject(),
         resourceId,
         explanationLanguage);
+    AcademicTerminologyService.LessonTerminologyView lessonTerminology = null;
+    if ("LESSON".equals(kind)) {
+      lessonTerminology =
+          terminology.lessonTerminology(
+              actorId,
+              academicPackage,
+              revision,
+              content,
+              resource.id(),
+              explanationLanguage,
+              available ? blocks : List.of());
+    }
     return new PublishedLessonResult(
         academicPackage.getId(),
         revision.getId(),
@@ -241,7 +264,45 @@ public class AcademicStudentService {
         explanationLanguage,
         available,
         available ? blocks : null,
-        progressProjection);
+        progressProjection,
+        lessonTerminology);
+  }
+
+  private List<OutlineNodeProjection> attachTerminologyPreviews(
+      UUID actorId, UUID packageId, JsonNode content, List<OutlineNodeProjection> outline) {
+    return outline.stream()
+        .map(
+            node ->
+                new OutlineNodeProjection(
+                    node.id(),
+                    node.parentId(),
+                    node.order(),
+                    node.summary(),
+                    node.productCoverage(),
+                    node.lessons().stream()
+                        .map(
+                            lesson -> attachTerminologyPreview(actorId, packageId, content, lesson))
+                        .toList()))
+        .toList();
+  }
+
+  private LessonSummaryProjection attachTerminologyPreview(
+      UUID actorId, UUID packageId, JsonNode content, LessonSummaryProjection lesson) {
+    if (lesson == null) return null;
+    AcademicTerminologyService.PreviewRefView ref =
+        terminology.lessonPreviewRef(actorId, packageId, content, lesson.resourceId());
+    if (ref == null) return lesson;
+    return new LessonSummaryProjection(
+        lesson.resourceId(),
+        lesson.title(),
+        lesson.outlineItemIds(),
+        lesson.contentProgress(),
+        new PublishedPackageProjector.TerminologyPreviewRefProjection(
+            ref.resourceId(),
+            new PublishedPackageProjector.PreviewProgressProjection(
+                ref.progress().status(),
+                ref.progress().updatedAt(),
+                ref.progress().requiredSetUpdatedSinceCompleted())));
   }
 
   private PublishedPackageProjector.StudyResourceProjection loadStudyResource(
@@ -481,7 +542,8 @@ public class AcademicStudentService {
       String requestedExplanationLanguage,
       boolean languageAvailable,
       List<JsonNode> blocks,
-      ContentProgressProjection contentProgress) {}
+      ContentProgressProjection contentProgress,
+      AcademicTerminologyService.LessonTerminologyView terminology) {}
 
   public record PublishedRemediationResult(
       UUID packageId,

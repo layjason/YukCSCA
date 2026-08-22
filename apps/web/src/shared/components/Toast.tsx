@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -32,14 +32,15 @@ export function Toast({
 }: ToastProps): React.JSX.Element {
   const { t } = useTranslation();
   const ToneIcon = TONE_ICON[tone];
+  const onAutoDismiss = useEffectEvent(onDismiss);
 
   useEffect(() => {
     if (durationMs <= 0) return;
     const timer = window.setTimeout(() => {
-      onDismiss();
+      onAutoDismiss();
     }, durationMs);
     return () => window.clearTimeout(timer);
-  }, [message, durationMs, onDismiss]);
+  }, [message, durationMs]);
 
   return createPortal(
     <div className="toast-container" aria-live="polite">

@@ -47,6 +47,10 @@ public class AssessmentItemAttempt {
   @Column(name = "question_copy_json", nullable = false, columnDefinition = "jsonb")
   private String questionCopyJson;
 
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "language_help_json", columnDefinition = "jsonb")
+  private String languageHelpJson;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -76,9 +80,17 @@ public class AssessmentItemAttempt {
     this.strongAssistance = false;
     this.disclosedTierCount = 0;
     this.questionCopyJson = questionCopyJson;
+    this.languageHelpJson = null;
     this.createdAt = now;
     this.updatedAt = now;
     this.lockedAt = null;
+  }
+
+  public void discloseLanguageHelp(String languageHelpJson, Instant now) {
+    if (this.languageHelpJson == null) {
+      this.languageHelpJson = languageHelpJson;
+    }
+    this.updatedAt = now;
   }
 
   public void discloseTier(int tierIndex, boolean strong, Instant now) {
@@ -141,6 +153,10 @@ public class AssessmentItemAttempt {
 
   public String getQuestionCopyJson() {
     return questionCopyJson;
+  }
+
+  public String getLanguageHelpJson() {
+    return languageHelpJson;
   }
 
   public Instant getCreatedAt() {

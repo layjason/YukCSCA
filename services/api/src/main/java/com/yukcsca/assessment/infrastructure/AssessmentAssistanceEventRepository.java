@@ -17,5 +17,12 @@ public interface AssessmentAssistanceEventRepository
       UUID itemAttemptId, int tierIndex);
 
   @Override
+  Optional<AssessmentAssistanceEvent> findByItemAttemptIdAndKindAndTierIndex(
+      UUID itemAttemptId, String kind, int tierIndex);
+
+  @Override
   long countBySessionId(UUID sessionId);
+
+  @Override
+  long countBySessionIdAndKind(UUID sessionId, String kind);
 }

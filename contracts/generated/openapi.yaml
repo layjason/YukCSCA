@@ -494,6 +494,825 @@ paths:
               $ref: '#/components/schemas/AcademicStudent.UpsertContentProgressRequest'
       security:
         - BearerAuth: []
+  /api/v1/academic/packages/{subject}/terminology/{resourceId}:
+    get:
+      operationId: AcademicStudentApi_getTerminologyPreview
+      description: "Returns this LESSON's terminology preview: ordered required term cards for the requested explanation language. resourceId is the LESSON id. Missing glosses are explicit. GET and PUT progress never write the notebook. Not mastery."
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: explanationLanguage
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyPreview'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/terminology/{resourceId}/bookmarks:
+    post:
+      operationId: AcademicStudentApi_bookmarkLessonTerms
+      description: Bookmarks this LESSON's required list, or a subset of those ids. Opening or completing preview does not bookmark. Formal-mock sessions receive 403.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.BookmarkLessonTermsResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.BookmarkLessonTermsRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/terminology/{resourceId}/checks:
+    post:
+      operationId: AcademicStudentApi_submitPreviewCheck
+      description: Records the optional preview matching-pairs check. Does not lock Continue to lesson and never writes CHECKPOINT_PASSED.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.PreviewCheckResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.SubmitPreviewCheckRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/packages/{subject}/terminology/{resourceId}/progress:
+    put:
+      operationId: AcademicStudentApi_upsertPreviewProgress
+      description: Creates or replaces preview progress for this LESSON. Does not write the notebook. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.
+      parameters:
+        - name: subject
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.PreviewProgress'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.UpsertPreviewProgressRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/term-lookups:
+    post:
+      operationId: AcademicStudentApi_resolveTermLookup
+      description: Resolves a chip tap or selected phrase to a reviewed term card, or NOT_IN_BANK. Does not write the notebook. Unmatched text is not logged and is not a student-authored term. Formal-mock sessions receive 403.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TermLookupResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.TermLookupRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/terminology-notebook:
+    get:
+      operationId: AcademicStudentApi_listTerminologyNotebook
+      description: Lists the authenticated student's terminology notebook. One list; Due and class group are filters, not separate homes. Optional subject filter keeps later Chinese Physics/Chemistry on the same resource.
+      parameters:
+        - name: explanationLanguage
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          explode: false
+        - name: dueOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+          explode: false
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+          explode: false
+        - name: classGroup
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicStudent.TermClassGroup'
+          explode: false
+        - name: subject
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+          explode: false
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.NotebookListResponseBody'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/terminology-notebook/{termId}:
+    get:
+      operationId: AcademicStudentApi_getTerminologyNotebookEntry
+      description: Returns one owner notebook entry and its term card.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: explanationLanguage
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.NotebookEntryDetail'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+    put:
+      operationId: AcademicStudentApi_bookmarkTerm
+      description: Adds one reviewed term to the notebook. Idempotent on (account, termId). Formal-mock sessions receive 403.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.BookmarkTermResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.BookmarkTermRequest'
+      security:
+        - BearerAuth: []
+    delete:
+      operationId: AcademicStudentApi_unbookmarkTerm
+      description: Removes the term from the notebook. Idempotent when the row is already absent. Means the student already knows this and does not want it in review. Formal-mock sessions receive 403.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/terminology-notebook/{termId}/reviews:
+    post:
+      operationId: AcademicStudentApi_submitTermReview
+      description: Submits one due recognition or contextual-use review. Familiarity and next due follow the result. Never writes CHECKPOINT_PASSED. Formal-mock sessions receive 403.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TermReviewResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicStudent.TerminologyValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicStudent.SubmitTermReviewRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/academic/terms/{termId}/audio:
+    get:
+      operationId: AcademicStudentApi_getTermPronunciation
+      description: Returns the pre-rendered pronunciation clip for one published surface form. Never synthesizes. 404 when no clip exists.
+      parameters:
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: surfaceForm
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 40
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - private, max-age=31536000, immutable
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            audio/mpeg:
+              schema:
+                contentMediaType: audio/mpeg
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
   /api/v1/admin/academic-images:
     post:
       operationId: AcademicAdminApi_uploadAcademicImage
@@ -882,6 +1701,79 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AcademicAdmin.SaveAcademicPackageDraftRequest'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-packages/{id}/terms/{termId}/audio:
+    get:
+      operationId: AcademicAdminApi_getPublishedTermPronunciation
+      description: Returns the stored pronunciation clip from the package's active published revision — the audio students hear. Never synthesizes. 404 when the package has no active revision or no clip.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: termId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: surfaceForm
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 40
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - private, max-age=31536000, immutable
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - nosniff
+          content:
+            audio/mpeg:
+              schema:
+                contentMediaType: audio/mpeg
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
   /api/v1/admin/academic-packages/{id}:archive:
@@ -1909,6 +2801,92 @@ paths:
                 $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
+  /api/v1/assessment/sessions/{sessionId}/items/{itemId}/language-help:
+    post:
+      operationId: AssessmentStudentApi_discloseLanguageHelp
+      description: 'Opens Language help on a scored item: returns admin-preset and auto-matched word/phrase spans. Clients decide first-paint chrome from SessionItemView.languageHelpAvailable; do not infer from examLanguage and do not probe this operation. First paint stays a clean Chinese stem. WORD/PHRASE does not set languageAssistUsed. English-only items and packages with no term bank return 409 LANGUAGE_ASSIST_DISABLED. Formal-mock sessions return 403 FORMAL_ASSISTANCE_DISABLED. Duplicate disclose is idempotent.'
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.DiscloseLanguageHelpResult'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentValidationProblem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AssessmentStudent.AssessmentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentStudent.DiscloseLanguageHelpRequest'
+      security:
+        - BearerAuth: []
   /api/v1/assessment/sessions/{sessionId}/submit:
     post:
       operationId: AssessmentStudentApi_submitSession
@@ -2692,6 +3670,12 @@ components:
                   $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
               provenance:
                 $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceRecord'
+              requiredTermIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+                maxItems: 64
+                description: Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.
         questions:
           type: array
           items:
@@ -2745,6 +3729,12 @@ components:
                   $ref: '#/components/schemas/uuid'
                 maxItems: 8
                 description: Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.
+              authoredTermAttachments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.AuthoredTermAttachment'
+                maxItems: 32
+                description: Optional admin-preset term attachments. Auto-match of required and instruction/logic surface forms still applies. Do not mark every character.
               outlineItemIds:
                 type: array
                 items:
@@ -2761,6 +3751,12 @@ components:
             $ref: '#/components/schemas/AcademicAdmin.AssessmentSet'
           maxItems: 64
           description: Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.TermDraft'
+          maxItems: 500
+          description: Reviewed Chinese exam-language term bank saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.
         mocks:
           type: array
           items:
@@ -2818,6 +3814,12 @@ components:
                   $ref: '#/components/schemas/AcademicAdmin.LocalizedContent'
               provenance:
                 $ref: '#/components/schemas/AcademicAdmin.DraftProvenanceInput'
+              requiredTermIds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/uuid'
+                maxItems: 64
+                description: Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.
         questions:
           type: array
           items:
@@ -2871,6 +3873,12 @@ components:
                   $ref: '#/components/schemas/uuid'
                 maxItems: 8
                 description: Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.
+              authoredTermAttachments:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicAdmin.AuthoredTermAttachment'
+                maxItems: 32
+                description: Optional admin-preset term attachments. Auto-match of required and instruction/logic surface forms still applies. Do not mark every character.
               outlineItemIds:
                 type: array
                 items:
@@ -2887,6 +3895,12 @@ components:
             $ref: '#/components/schemas/AcademicAdmin.AssessmentSet'
           maxItems: 64
           description: Assessment sets (checkpoint and topic practice). Empty array when none authored.
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.TermDraft'
+          maxItems: 500
+          description: Reviewed Chinese exam-language term bank for this package. Subject-agnostic; first published use is Chinese Mathematics. Omitted or empty when none authored.
         mocks:
           type: array
           items:
@@ -3066,6 +4080,21 @@ components:
         - CHECKPOINT
         - TOPIC_PRACTICE
       description: Published assessment-set purpose. CHECKPOINT is lesson-gated formative; TOPIC_PRACTICE is free practice. Mock papers remain a separate package object.
+    AcademicAdmin.AuthoredTermAttachment:
+      type: object
+      required:
+        - termId
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        surfaceForm:
+          anyOf:
+            - type: string
+            - type: 'null'
+          minLength: 1
+          maxLength: 40
+          description: Optional exact surface form when the term has aliases. Omit to allow every published surface form.
+      description: Optional admin-preset attachment of a reviewed term to a question. The platform still auto-matches required and instruction/logic surface forms.
     AcademicAdmin.CheckpointPassPolicy:
       type: string
       enum:
@@ -3269,7 +4298,7 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
-          description: A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported.
+          description: A bounded KaTeX-compatible LaTeX expression for a standalone formula. Use displayMode true for centered display; false for a standalone inline-sized formula. Mixed sentence math belongs in TEXT with \(...\). Raw HTML and arbitrary macros are not supported.
         displayMode:
           type: boolean
     AcademicAdmin.MockPaper:
@@ -3533,6 +4562,75 @@ components:
           $ref: '#/components/schemas/AcademicAdmin.SourcePosition'
         summary:
           $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+    AcademicAdmin.TermClass:
+      type: string
+      enum:
+        - EXAM_INSTRUCTION
+        - LOGICAL_EXPRESSION
+        - TOPIC_TERM
+      description: Exam-language role of a reviewed term. Not a syllabus topic and not a subject. Algebra/calculus/physics live on outline bindings and the package subject.
+    AcademicAdmin.TermDraft:
+      type: object
+      required:
+        - id
+        - termClass
+        - surfaceForms
+        - definitions
+        - englishEquivalent
+        - outlineItemIds
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        termClass:
+          $ref: '#/components/schemas/AcademicAdmin.TermClass'
+        surfaceForms:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.TermSurfaceFormInput'
+          minItems: 1
+          maxItems: 8
+        definitions:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+          description: Explanation-language glosses. May include the same \(...\) inline KaTeX as TEXT blocks. Missing languages are allowed and must be flagged to students; they do not fork identity.
+        englishEquivalent:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Short English equivalent. May include \(...\) inline KaTeX.
+        symbols:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 80
+          description: Optional notation as bounded KaTeX (no \(...\) wrappers). Raw HTML and arbitrary macros are not supported.
+        example:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 500
+          description: Optional authentic example. May include the same \(...\) inline KaTeX as TEXT blocks.
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+          description: TOPIC_TERM should bind at least one outline item at publish. Exam-wording classes may be empty and reused across topics.
+      description: Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package.
+    AcademicAdmin.TermSurfaceFormInput:
+      type: object
+      required:
+        - text
+        - pinyin
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 40
+        pinyin:
+          type: string
+          minLength: 1
+          maxLength: 80
+      description: One Chinese surface form of a reviewed term. Audio is rendered at publish, not authored here.
     AcademicAdmin.TextContentBlock:
       type: object
       required:
@@ -3547,6 +4645,7 @@ components:
           type: string
           minLength: 1
           maxLength: 12000
+          description: Prose that may include bounded inline KaTeX between \(...\). Display-mode formulas stay MATH blocks. Terminology span offsets are UTF-16 code units into this source string, including delimiters, and must not overlap inline math. Raw HTML and arbitrary macros are not supported.
     AcademicAdmin.TopicMapping:
       type: object
       required:
@@ -3567,6 +4666,90 @@ components:
       required:
         - file
         - provenance
+    AcademicStudent.BookmarkLessonTermsRequest:
+      type: object
+      required:
+        - explanationLanguage
+      properties:
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        termIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 64
+          description: Subset of this lesson's required term ids. Omit or empty to bookmark the whole lesson list.
+      description: Bookmarks this lesson's required list (or a subset). Ids not on the lesson are rejected. Formal-mock sessions receive 403.
+    AcademicStudent.BookmarkLessonTermsResult:
+      type: object
+      required:
+        - termIds
+      properties:
+        termIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 64
+    AcademicStudent.BookmarkTermRequest:
+      type: object
+      required:
+        - subject
+        - explanationLanguage
+        - source
+      properties:
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        source:
+          $ref: '#/components/schemas/AcademicStudent.TermLookupSource'
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id.
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is ITEM.
+        itemId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is ITEM.
+      description: Opt-in bookmark of one reviewed term. Validates the same source/resource rules as lookup. Formal-mock sessions receive 403.
+    AcademicStudent.BookmarkTermResult:
+      type: object
+      required:
+        - card
+        - alreadyInNotebook
+        - entry
+      properties:
+        card:
+          $ref: '#/components/schemas/AcademicStudent.TermCard'
+        alreadyInNotebook:
+          type: boolean
+          enum:
+            - true
+        entry:
+          $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+    AcademicStudent.ClozeReviewPrompt:
+      type: object
+      required:
+        - kind
+        - snippet
+        - options
+      properties:
+        kind:
+          type: string
+          enum:
+            - CONTEXT_CLOZE
+        snippet:
+          type: string
+          minLength: 1
+          maxLength: 400
+          description: Short published fragment with the target replaced by a placeholder. Never a full item, answer key, or student response.
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.ReviewOption'
+          minItems: 2
+          maxItems: 6
     AcademicStudent.ContentProgress:
       type: object
       required:
@@ -3682,7 +4865,138 @@ components:
           minItems: 0
         contentProgress:
           $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+        terminologyPreview:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.TerminologyPreviewRef'
+            - type: 'null'
+          description: This lesson's terminology preview when the LESSON has a non-empty required term list. resourceId is the LESSON id. Null or omitted when this lesson has no required terms. Several lessons may share one outline node; each lesson only surfaces its own list.
       description: LESSON summary for outline browse and continue chips. Kind is always LESSON; other resource kinds are omitted.
+    AcademicStudent.LessonTerminology:
+      type: object
+      required:
+        - previewResourceId
+        - rail
+        - spans
+      properties:
+        previewResourceId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: This LESSON id when the lesson has a required term list; otherwise null. Preview is per lesson, not a shared outline TERMINOLOGY resource.
+        rail:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.TermCard'
+          maxItems: 64
+          description: Required terms bound on this lesson, in preview order.
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.TermSpan'
+          maxItems: 200
+          description: Required and instruction/logic surface forms that occur in TEXT blocks of the requested lesson body.
+      description: Lesson rail and tappable spans. Absent from the lesson when the package has no published Chinese terms.
+    AcademicStudent.MatchPairsReviewPrompt:
+      type: object
+      required:
+        - kind
+        - promptSurface
+        - options
+      properties:
+        kind:
+          type: string
+          enum:
+            - MATCH_PAIRS
+        promptSurface:
+          type: string
+          minLength: 1
+          maxLength: 40
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.ReviewOption'
+          minItems: 2
+          maxItems: 6
+    AcademicStudent.NotebookEntry:
+      type: object
+      required:
+        - termId
+        - subject
+        - packageId
+        - termClass
+        - primarySurface
+        - familiarity
+        - due
+        - lastReviewAt
+        - sources
+        - metIn
+        - pendingReview
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        termClass:
+          $ref: '#/components/schemas/AcademicAdmin.TermClass'
+        primarySurface:
+          $ref: '#/components/schemas/AcademicStudent.TermSurfaceForm'
+        familiarity:
+          $ref: '#/components/schemas/AcademicStudent.TermFamiliarity'
+        due:
+          type: boolean
+        lastReviewAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.NotebookSource'
+          minItems: 1
+          maxItems: 3
+        metIn:
+          $ref: '#/components/schemas/AcademicStudent.TermMetIn'
+        pendingReview:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.TermReviewPrompt'
+            - type: 'null'
+          description: Present when due so the client can start review without a second fetch. Null when not due.
+      description: One notebook row. Bookmarking is opt-in; viewing a preview or card is not topic mastery.
+    AcademicStudent.NotebookEntryDetail:
+      type: object
+      required:
+        - entry
+        - card
+      properties:
+        entry:
+          $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+        card:
+          $ref: '#/components/schemas/AcademicStudent.TermCard'
+    AcademicStudent.NotebookListResponseBody:
+      type: object
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Opaque cursor for the next page; null when no further items.
+    AcademicStudent.NotebookSource:
+      type: string
+      enum:
+        - REQUIRED_COURSE
+        - CLICKED
+        - LANGUAGE_MISTAKE
+      description: How a notebook row was collected. One row per account and term; sources accumulate. REQUIRED_COURSE remains for rows written before opt-in bookmarking; new writes use CLICKED or LANGUAGE_MISTAKE.
     AcademicStudent.OfficialSourcePanel:
       type: object
       required:
@@ -3722,6 +5036,87 @@ components:
         permittedUse:
           $ref: '#/components/schemas/AcademicAdmin.PermittedUse'
       description: 'Student-safe official CSCA source panel: open actions per configured language edition only.'
+    AcademicStudent.PreviewCheckPair:
+      type: object
+      required:
+        - termId
+        - selectedMatchKey
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        selectedMatchKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+    AcademicStudent.PreviewCheckResult:
+      type: object
+      required:
+        - kind
+        - correctCount
+        - totalCount
+        - previewProgress
+      properties:
+        kind:
+          type: string
+          enum:
+            - MATCH_PAIRS
+        correctCount:
+          type: integer
+          format: int32
+          minimum: 0
+        totalCount:
+          type: integer
+          format: int32
+          minimum: 0
+        previewProgress:
+          $ref: '#/components/schemas/AcademicStudent.PreviewProgress'
+    AcademicStudent.PreviewMatchTarget:
+      type: object
+      required:
+        - termId
+        - matchKey
+        - promptSurface
+        - matchLabel
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        matchKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+        promptSurface:
+          type: string
+          minLength: 1
+          maxLength: 40
+        matchLabel:
+          type: string
+          minLength: 1
+          maxLength: 200
+    AcademicStudent.PreviewProgress:
+      type: object
+      required:
+        - status
+        - updatedAt
+        - requiredSetUpdatedSinceCompleted
+      properties:
+        status:
+          $ref: '#/components/schemas/AcademicStudent.PreviewProgressStatus'
+        updatedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          description: Last progress write time. Null when status is NOT_STARTED.
+        requiredSetUpdatedSinceCompleted:
+          type: boolean
+          description: True when PREVIEW_COMPLETE and the published required set differs from the set recorded at last completion. Soft signal only; never wipes the notebook or implies mastery.
+    AcademicStudent.PreviewProgressStatus:
+      type: string
+      enum:
+        - NOT_STARTED
+        - IN_PROGRESS
+        - PREVIEW_COMPLETE
+      description: Persisted preview progress. Not content-complete and never mastery.
     AcademicStudent.ProductCoverage:
       type: string
       enum:
@@ -3765,6 +5160,11 @@ components:
           $ref: '#/components/schemas/AcademicStudent.LessonBody'
         contentProgress:
           $ref: '#/components/schemas/AcademicStudent.ContentProgress'
+        terminology:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.LessonTerminology'
+            - type: 'null'
+          description: Null or omitted when this lesson has no published Chinese exam-language terms. Clients must hide terminology chrome when absent.
       description: Student LESSON read projection for the active published revision.
     AcademicStudent.PublishedPackageBrowse:
       type: object
@@ -3858,6 +5258,20 @@ components:
             $ref: '#/components/schemas/uuid'
           maxItems: 32
       description: Student REMEDIATION read projection for the active published revision. Same block model as LESSON; kind is always REMEDIATION.
+    AcademicStudent.ReviewOption:
+      type: object
+      required:
+        - key
+        - label
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 40
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
     AcademicStudent.StudentPublishedRevisionSummary:
       type: object
       required:
@@ -3875,6 +5289,30 @@ components:
           type: string
           format: date-time
       description: Active published revision identity visible to students (no publisher user id).
+    AcademicStudent.SubmitPreviewCheckRequest:
+      type: object
+      required:
+        - pairs
+      properties:
+        pairs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.PreviewCheckPair'
+          minItems: 1
+          maxItems: 64
+      description: Records the optional preview matching-pairs check. Viewing and check results are not mastery and never write CHECKPOINT_PASSED.
+    AcademicStudent.SubmitTermReviewRequest:
+      type: object
+      required:
+        - kind
+        - selectedOptionKey
+      properties:
+        kind:
+          $ref: '#/components/schemas/AcademicStudent.TermReviewKind'
+        selectedOptionKey:
+          type: string
+          minLength: 1
+          maxLength: 40
     AcademicStudent.SyllabusOutlineNode:
       type: object
       required:
@@ -3905,6 +5343,395 @@ components:
             $ref: '#/components/schemas/AcademicStudent.LessonSummary'
           description: LESSON resources that reference this outline item in the active published revision.
       description: Outline node with product coverage and linked LESSON summaries for the active published revision.
+    AcademicStudent.TermCard:
+      type: object
+      required:
+        - termId
+        - subject
+        - packageId
+        - termClass
+        - alreadyInNotebook
+        - primarySurface
+        - aliases
+        - definition
+        - englishEquivalent
+        - symbols
+        - example
+        - outlineItemIds
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        termClass:
+          $ref: '#/components/schemas/AcademicAdmin.TermClass'
+        alreadyInNotebook:
+          type: boolean
+          description: True when this authenticated student already has the term in the notebook. Preview and rail use it for bookmark chrome. Lookup does not write the notebook.
+        primarySurface:
+          $ref: '#/components/schemas/AcademicStudent.TermSurfaceForm'
+        aliases:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.TermSurfaceForm'
+          maxItems: 7
+        definition:
+          $ref: '#/components/schemas/AcademicStudent.TermDefinition'
+        englishEquivalent:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Short English equivalent. May include bounded \(...\) inline KaTeX.
+        symbols:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Optional notation as bounded KaTeX without \(...\) wrappers.
+        example:
+          anyOf:
+            - type: string
+            - type: 'null'
+          description: Optional authentic example. May include bounded \(...\) inline KaTeX.
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+      description: Student-safe reviewed term card. Identity is termId; missing explanation-language gloss is explicit.
+    AcademicStudent.TermClassGroup:
+      type: string
+      enum:
+        - EXAM_WORDING
+        - TOPIC_TERM
+      description: Optional notebook secondary filter. Exam wording groups EXAM_INSTRUCTION and LOGICAL_EXPRESSION.
+    AcademicStudent.TermDefinition:
+      anyOf:
+        - $ref: '#/components/schemas/AcademicStudent.TermDefinitionAvailable'
+        - $ref: '#/components/schemas/AcademicStudent.TermDefinitionUnavailable'
+    AcademicStudent.TermDefinitionAvailable:
+      type: object
+      required:
+        - availability
+        - language
+        - text
+      properties:
+        availability:
+          type: string
+          enum:
+            - AVAILABLE
+        language:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Explanation-language gloss. May include bounded \(...\) inline KaTeX.
+    AcademicStudent.TermDefinitionUnavailable:
+      type: object
+      required:
+        - availability
+        - requestedLanguage
+      properties:
+        availability:
+          type: string
+          enum:
+            - LANGUAGE_UNAVAILABLE
+        requestedLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+    AcademicStudent.TermEncounterPlace:
+      type: string
+      enum:
+        - PREVIEW
+        - LESSON
+        - CHECKPOINT
+        - PRACTICE
+        - NOTEBOOK
+      description: Latest student-visible place the term was met.
+    AcademicStudent.TermFamiliarity:
+      type: string
+      enum:
+        - NEW
+        - LEARNING
+        - FAMILIAR
+      description: Evidence-backed review state for one student and one term. Not topic mastery.
+    AcademicStudent.TermLookupMatched:
+      type: object
+      required:
+        - outcome
+        - card
+        - alreadyInNotebook
+        - entry
+      properties:
+        outcome:
+          type: string
+          enum:
+            - MATCHED
+        card:
+          $ref: '#/components/schemas/AcademicStudent.TermCard'
+        alreadyInNotebook:
+          type: boolean
+        entry:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+            - type: 'null'
+          description: Present when the term is already in the notebook. Lookup never writes a notebook row.
+    AcademicStudent.TermLookupNotInBank:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          enum:
+            - NOT_IN_BANK
+      description: Selected text is not in the reviewed term bank. No invented definition and no notebook write.
+    AcademicStudent.TermLookupRequest:
+      type: object
+      required:
+        - subject
+        - explanationLanguage
+        - source
+      properties:
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        source:
+          $ref: '#/components/schemas/AcademicStudent.TermLookupSource'
+        termId:
+          $ref: '#/components/schemas/uuid'
+          description: Known chip or rail tap. Provide exactly one of termId or selectedText.
+        selectedText:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: Student-selected text after Language help is open, or a tappable lesson form. Max phrase length; not a sentence.
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is LESSON or PREVIEW. For PREVIEW this is the LESSON id.
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is ITEM.
+        itemId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when source is ITEM.
+    AcademicStudent.TermLookupResult:
+      anyOf:
+        - $ref: '#/components/schemas/AcademicStudent.TermLookupMatched'
+        - $ref: '#/components/schemas/AcademicStudent.TermLookupNotInBank'
+    AcademicStudent.TermLookupSource:
+      type: string
+      enum:
+        - PREVIEW
+        - LESSON
+        - ITEM
+        - NOTEBOOK
+        - LANGUAGE_MISTAKE
+      description: Where a term lookup originated. Formal-mock sessions deny lookup.
+    AcademicStudent.TermMetIn:
+      type: object
+      required:
+        - source
+        - place
+        - topicTitle
+        - outlineItemId
+        - at
+      properties:
+        source:
+          $ref: '#/components/schemas/AcademicStudent.NotebookSource'
+        place:
+          $ref: '#/components/schemas/AcademicStudent.TermEncounterPlace'
+        topicTitle:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+            - type: 'null'
+        outlineItemId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+        at:
+          type: string
+          format: date-time
+    AcademicStudent.TermReviewKind:
+      type: string
+      enum:
+        - CONTEXT_CLOZE
+        - MATCH_PAIRS
+      description: Due-review activity. Contextual cloze is preferred when a published snippet exists; otherwise matching pairs.
+    AcademicStudent.TermReviewPrompt:
+      anyOf:
+        - $ref: '#/components/schemas/AcademicStudent.ClozeReviewPrompt'
+        - $ref: '#/components/schemas/AcademicStudent.MatchPairsReviewPrompt'
+    AcademicStudent.TermReviewResult:
+      type: object
+      required:
+        - termId
+        - kind
+        - correct
+        - correctOptionKey
+        - familiarity
+        - due
+        - entry
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        kind:
+          $ref: '#/components/schemas/AcademicStudent.TermReviewKind'
+        correct:
+          type: boolean
+        correctOptionKey:
+          type: string
+          minLength: 1
+          maxLength: 40
+        familiarity:
+          $ref: '#/components/schemas/AcademicStudent.TermFamiliarity'
+        due:
+          type: boolean
+        entry:
+          $ref: '#/components/schemas/AcademicStudent.NotebookEntry'
+    AcademicStudent.TermSpan:
+      type: object
+      required:
+        - termId
+        - surfaceForm
+        - blockIndex
+        - startOffset
+        - endOffset
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        surfaceForm:
+          type: string
+          minLength: 1
+          maxLength: 40
+        blockIndex:
+          type: integer
+          format: int32
+          minimum: 0
+        startOffset:
+          type: integer
+          format: int32
+          minimum: 0
+        endOffset:
+          type: integer
+          format: int32
+          minimum: 0
+      description: Character span inside one TEXT content block. Offsets are UTF-16 code units into that block's source text, including any \(...\) delimiters. Spans must not overlap inline math regions.
+    AcademicStudent.TermSurfaceForm:
+      type: object
+      required:
+        - text
+        - pinyin
+        - audioAvailable
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 40
+        pinyin:
+          type: string
+          minLength: 1
+          maxLength: 80
+        audioAvailable:
+          type: boolean
+    AcademicStudent.TerminologyPreview:
+      type: object
+      required:
+        - packageId
+        - packageRevisionId
+        - subject
+        - resourceId
+        - title
+        - outlineItemIds
+        - lessonResourceIds
+        - requestedExplanationLanguage
+        - terms
+        - matchingPairsAvailable
+        - matchTargets
+        - previewProgress
+      properties:
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+          description: The LESSON resource id this preview belongs to.
+        title:
+          $ref: '#/components/schemas/AcademicAdmin.LocalizedText'
+        outlineItemIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 32
+        lessonResourceIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/uuid'
+          maxItems: 8
+          description: The LESSON this preview introduces. Continue-to-lesson uses this id; the preview never locks it. Length is 1.
+        requestedExplanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.TermCard'
+          maxItems: 64
+        matchingPairsAvailable:
+          type: boolean
+        matchTargets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.PreviewMatchTarget'
+          maxItems: 64
+          description: Match targets for the optional preview pairs activity. Empty when matchingPairsAvailable is false.
+        previewProgress:
+          $ref: '#/components/schemas/AcademicStudent.PreviewProgress'
+      description: "Per-lesson terminology preview: this LESSON's ordered required cards plus optional matching-pairs material. Not an AssessmentSet and not a shared outline dictionary."
+    AcademicStudent.TerminologyPreviewRef:
+      type: object
+      required:
+        - resourceId
+        - progress
+      properties:
+        resourceId:
+          $ref: '#/components/schemas/uuid'
+        progress:
+          $ref: '#/components/schemas/AcademicStudent.PreviewProgress'
+    AcademicStudent.TerminologyValidationProblem:
+      type: object
+      required:
+        - code
+        - violations
+      properties:
+        code:
+          type: string
+          enum:
+            - TERMINOLOGY_VALIDATION_FAILED
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicStudent.TerminologyValidationViolation'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AcademicStudent.TerminologyValidationViolation:
+      type: object
+      required:
+        - path
+        - code
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 200
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
     AcademicStudent.UpsertContentProgressRequest:
       type: object
       required:
@@ -3923,12 +5750,28 @@ components:
           $ref: '#/components/schemas/uuid'
           description: Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field.
       description: Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource).
+    AcademicStudent.UpsertPreviewProgressRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/AcademicStudent.WritablePreviewProgressStatus'
+        expectedPackageRevisionId:
+          $ref: '#/components/schemas/uuid'
+          description: Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches.
     AcademicStudent.WritableContentProgressStatus:
       type: string
       enum:
         - IN_PROGRESS
         - CONTENT_COMPLETE
       description: Writable content-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
+    AcademicStudent.WritablePreviewProgressStatus:
+      type: string
+      enum:
+        - IN_PROGRESS
+        - PREVIEW_COMPLETE
+      description: Writable preview-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
     AssessmentStudent.AssessmentConflictProblem:
       type: object
       required:
@@ -3945,6 +5788,7 @@ components:
             - HINT_EXHAUSTED
             - ITEM_ALREADY_LOCKED
             - SET_NOT_AVAILABLE
+            - LANGUAGE_ASSIST_DISABLED
       allOf:
         - $ref: '#/components/schemas/Problem'
       description: Conflict problem for assessment lifecycle. code is one of AssessmentProblemCode string values.
@@ -4018,6 +5862,7 @@ components:
         - ASSESSMENT_VALIDATION_FAILED
         - ITEM_ALREADY_LOCKED
         - SET_NOT_AVAILABLE
+        - LANGUAGE_ASSIST_DISABLED
       description: Stable assessment problem codes returned in application/problem+json.
     AssessmentStudent.AssessmentSession:
       type: object
@@ -4296,7 +6141,15 @@ components:
           type: boolean
         languageAssistUsed:
           type: boolean
-          description: Always false in VS-009; reserved for VS-010 language-assist.
+          description: Always false for WORD/PHRASE in VS-010A. Reserved for a later Translate/full-meaning control.
+        maxLanguageTier:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.LanguageAssistTier'
+            - type: 'null'
+          description: Highest word or phrase language-assist tier recorded in this session. Null or omitted when none. Does not set languageAssistUsed.
+        languageHelpDisclosed:
+          type: boolean
+          description: True after Language help has been disclosed on at least one item in this session.
       description: Assistance summary safe for UI and future agent context. Never includes hint bodies.
     AssessmentStudent.CheckpointEdition:
       type: object
@@ -4403,6 +6256,27 @@ components:
         sessionAssistanceSummary:
           $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
       description: Result of disclosing the next mathematical hint tier.
+    AssessmentStudent.DiscloseLanguageHelpRequest:
+      type: object
+      required:
+        - trigger
+      properties:
+        trigger:
+          $ref: '#/components/schemas/AssessmentStudent.LanguageHelpTrigger'
+    AssessmentStudent.DiscloseLanguageHelpResult:
+      type: object
+      required:
+        - item
+        - languageHelp
+        - sessionAssistanceSummary
+      properties:
+        item:
+          $ref: '#/components/schemas/AssessmentStudent.SessionItemView'
+        languageHelp:
+          $ref: '#/components/schemas/AssessmentStudent.LanguageHelpView'
+        sessionAssistanceSummary:
+          $ref: '#/components/schemas/AssessmentStudent.AssistanceSummary'
+      description: Result of opening Language help. languageAssistUsed stays false for WORD/PHRASE.
     AssessmentStudent.DisclosedHintTier:
       type: object
       required:
@@ -4496,6 +6370,68 @@ components:
           maxItems: 8
           description: Navigable related LESSON/REMEDIATION links with kind and title. Empty when none authored or none resolve in the active/pinned revision.
       description: Post-lock or post-set-submit feedback. Includes correct key only after the item is locked for feedback.
+    AssessmentStudent.LanguageAssistTier:
+      type: string
+      enum:
+        - WORD
+        - PHRASE
+      description: Word/phrase language-assist tier recorded on an item. SENTENCE and full Translate remain later slices.
+    AssessmentStudent.LanguageHelpSpan:
+      type: object
+      required:
+        - termId
+        - surfaceForm
+        - blockIndex
+        - startOffset
+        - endOffset
+        - alreadyInNotebook
+      properties:
+        termId:
+          $ref: '#/components/schemas/uuid'
+        surfaceForm:
+          type: string
+          minLength: 1
+          maxLength: 40
+        blockIndex:
+          type: integer
+          format: int32
+          minimum: 0
+        startOffset:
+          type: integer
+          format: int32
+          minimum: 0
+        endOffset:
+          type: integer
+          format: int32
+          minimum: 0
+        alreadyInNotebook:
+          type: boolean
+      description: One admin-preset or auto-matched word/phrase span revealed after Language help is opened.
+    AssessmentStudent.LanguageHelpTrigger:
+      type: string
+      enum:
+        - STUDENT_REQUEST
+        - WORDING_HARD
+      description: Why Language help was opened. WORDING_HARD may set TERMINOLOGY_MISUNDERSTANDING; it does not open Translate.
+    AssessmentStudent.LanguageHelpView:
+      type: object
+      required:
+        - disclosed
+        - trigger
+        - spans
+      properties:
+        disclosed:
+          type: boolean
+          enum:
+            - true
+        trigger:
+          $ref: '#/components/schemas/AssessmentStudent.LanguageHelpTrigger'
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentStudent.LanguageHelpSpan'
+          maxItems: 64
+      description: Language-help chip list. Never includes a full-question translation.
     AssessmentStudent.LearningEvidenceSignal:
       type: string
       enum:
@@ -4843,6 +6779,7 @@ components:
         - feedback
         - outlineItemIds
         - objectiveIds
+        - languageHelpAvailable
       properties:
         itemId:
           $ref: '#/components/schemas/uuid'
@@ -4910,7 +6847,15 @@ components:
           items:
             $ref: '#/components/schemas/uuid'
           maxItems: 32
-      description: One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only.
+        languageHelpAvailable:
+          type: boolean
+          description: 'True when Language help may be disclosed on this item: zh-CN exam-language item, published term bank on the package, and the session is not formal-disabled. False for English-only items, packages with no published terms, and reserved formal-mock. First paint uses this flag only; do not infer from examLanguage and do not probe disclose. Chips stay in languageHelp after disclose.'
+        languageHelp:
+          anyOf:
+            - $ref: '#/components/schemas/AssessmentStudent.LanguageHelpView'
+            - type: 'null'
+          description: Present only after the student discloses Language help on this item. Null or omitted on first paint so the stem stays clean.
+      description: One session item. Pre-submit payloads omit correct keys and undisclosed hint bodies; hintLadder exposes strength metadata only; languageHelpAvailable is first-paint Language-help chrome metadata.
     AssessmentStudent.SessionResult:
       type: object
       required:
@@ -5177,6 +7122,18 @@ components:
         - PARENT
         - TUTOR
         - ADMIN
+    FormalAssistanceDisabledProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - FORMAL_ASSISTANCE_DISABLED
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: Reserved deny when a formal timed mock is active. Language help and notebook writes stay off.
     Problem:
       type: object
       required:

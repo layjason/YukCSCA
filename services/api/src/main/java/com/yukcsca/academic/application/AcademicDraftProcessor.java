@@ -35,6 +35,8 @@ public class AcademicDraftProcessor {
   private static final Set<String> ASSESSMENT_SET_PURPOSES = Set.of("CHECKPOINT", "TOPIC_PRACTICE");
   private static final Set<String> FEEDBACK_MODES = Set.of("IMMEDIATE", "SET_END");
   private static final Set<String> PASS_POLICIES = Set.of("ALL_CORRECT_NO_STRONG_ASSISTANCE");
+  private static final Set<String> TERM_CLASSES =
+      Set.of("EXAM_INSTRUCTION", "LOGICAL_EXPRESSION", "TOPIC_TERM");
 
   private final JsonMapper json;
 
@@ -63,6 +65,7 @@ public class AcademicDraftProcessor {
     draft.putArray("resources");
     draft.putArray("questions");
     draft.putArray("assessmentSets");
+    draft.putArray("terms");
     draft.putArray("mocks");
     return serialize(draft);
   }
@@ -104,10 +107,13 @@ public class AcademicDraftProcessor {
         List.of("outlineItems", "learningObjectives", "resources", "questions", "mocks")) {
       requireArray(submittedObject, field, "draft." + field, violations);
     }
-    // assessmentSets is additive: omit means empty; if present must be an array.
+    // assessmentSets and terms are additive: omit means empty; if present must be an array.
     if (submittedObject.has("assessmentSets")
         && !submittedObject.path("assessmentSets").isArray()) {
       violations.add(new AcademicViolation("draft.assessmentSets", AcademicViolationCode.INVALID));
+    }
+    if (submittedObject.has("terms") && !submittedObject.path("terms").isArray()) {
+      violations.add(new AcademicViolation("draft.terms", AcademicViolationCode.INVALID));
     }
     JsonNode mocks = submittedObject.get("mocks");
     if (mocks != null && mocks.isArray() && mocks.size() > 1) {
@@ -120,6 +126,10 @@ public class AcademicDraftProcessor {
     if (!normalized.has("assessmentSets") || !normalized.path("assessmentSets").isArray()) {
       normalized.putArray("assessmentSets");
     }
+    if (!normalized.has("terms") || !normalized.path("terms").isArray()) {
+      normalized.putArray("terms");
+    }
+    dropStaleTermReferences(normalized);
     // Package identity owns subject; drafts cannot reassign a package to another subject.
     ObjectNode syllabus =
         normalized.get("officialSyllabus") instanceof ObjectNode existing
@@ -152,14 +162,18 @@ public class AcademicDraftProcessor {
   }
 
   public void validateForPublication(ObjectNode draft, Set<UUID> availableImageIds) {
+    dropStaleTermReferences(draft);
     List<AcademicViolation> violations = new ArrayList<>();
     ExamStructureSnapshot structure =
         validateOfficialSyllabus(draft.path("officialSyllabus"), violations);
     Set<UUID> outlineIds = validateOutline(draft.path("outlineItems"), violations);
     Set<UUID> objectiveIds =
         validateObjectives(draft.path("learningObjectives"), outlineIds, violations);
+    Set<UUID> termIds = uniqueIds(draft.path("terms"), "draft.terms", violations);
+    Map<UUID, Set<String>> termSurfaces = termSurfaceIndex(draft.path("terms"));
     validateResources(
-        draft.path("resources"), outlineIds, objectiveIds, availableImageIds, violations);
+        draft.path("resources"), outlineIds, objectiveIds, availableImageIds, termIds, violations);
+    validateTerms(draft.path("terms"), outlineIds, violations);
     Map<UUID, QuestionSnapshot> questions =
         validateQuestions(
             draft.path("questions"),
@@ -167,6 +181,8 @@ public class AcademicDraftProcessor {
             objectiveIds,
             availableImageIds,
             structure,
+            termIds,
+            termSurfaces,
             violations);
     Set<UUID> resourceIds = uniqueIds(draft.path("resources"), "draft.resources", violations);
     Map<UUID, String> resourceKinds = resourceKinds(draft.path("resources"));
@@ -187,6 +203,7 @@ public class AcademicDraftProcessor {
     validateItemShape(draft.path("resources"), "draft.resources", violations);
     validateItemShape(draft.path("questions"), "draft.questions", violations);
     validateItemShape(draft.path("assessmentSets"), "draft.assessmentSets", violations);
+    validateItemShape(draft.path("terms"), "draft.terms", violations);
     validateItemShape(draft.path("mocks"), "draft.mocks", violations);
   }
 
@@ -338,6 +355,7 @@ public class AcademicDraftProcessor {
       Set<UUID> outlineIds,
       Set<UUID> objectiveIds,
       Set<UUID> imageIds,
+      Set<UUID> termIds,
       List<AcademicViolation> violations) {
     uniqueIds(resources, "draft.resources", violations);
     Set<String> kinds = new HashSet<>();
@@ -356,6 +374,7 @@ public class AcademicDraftProcessor {
       validateReferences(
           resource.path("objectiveIds"), objectiveIds, path + ".objectiveIds", violations);
       validateLocalizedContent(resource.path("versions"), path + ".versions", imageIds, violations);
+      validateRequiredTermIds(resource.path("requiredTermIds"), kind, termIds, path, violations);
       validateProvenance(resource.path("provenance"), path + ".provenance", violations);
     }
     for (String requiredKind : RESOURCE_KINDS) {
@@ -372,6 +391,8 @@ public class AcademicDraftProcessor {
       Set<UUID> objectiveIds,
       Set<UUID> imageIds,
       ExamStructureSnapshot structure,
+      Set<UUID> termIds,
+      Map<UUID, Set<String>> termSurfaces,
       List<AcademicViolation> violations) {
     uniqueIds(questions, "draft.questions", violations);
     Map<UUID, QuestionSnapshot> snapshots = new HashMap<>();
@@ -434,6 +455,12 @@ public class AcademicDraftProcessor {
           path + ".relatedResourceIds",
           8,
           allResourceIds,
+          violations);
+      validateAuthoredTermAttachments(
+          question.path("authoredTermAttachments"),
+          path + ".authoredTermAttachments",
+          termIds,
+          termSurfaces,
           violations);
       validateProvenance(question.path("provenance"), path + ".provenance", violations);
       if (id != null && language != null && EXAM_LANGUAGES.contains(language)) {
@@ -841,10 +868,13 @@ public class AcademicDraftProcessor {
       JsonNode block = blocks.get(index);
       String blockPath = path + "[" + index + "]";
       switch (text(block, "kind")) {
-        case "TEXT" -> requireText(block, "text", blockPath + ".text", 12000, violations);
+        case "TEXT" -> {
+          String body = requireText(block, "text", blockPath + ".text", 12000, violations);
+          validateInlineLatex(body, blockPath + ".text", violations);
+        }
         case "MATH" -> {
           String latex = requireText(block, "latex", blockPath + ".latex", 4000, violations);
-          if (latex != null && !safeLatex(latex)) {
+          if (latex != null && !InlineLatex.isSafe(latex)) {
             violations.add(
                 new AcademicViolation(blockPath + ".latex", AcademicViolationCode.UNSUPPORTED));
           }
@@ -886,6 +916,293 @@ public class AcademicDraftProcessor {
             || blank(text(provenance, "permissionReference")))) {
       violations.add(new AcademicViolation(path, AcademicViolationCode.MISSING_PERMISSION));
     }
+  }
+
+  private void validateTerms(
+      JsonNode terms, Set<UUID> outlineIds, List<AcademicViolation> violations) {
+    if (terms == null || terms.isMissingNode() || terms.isNull()) {
+      return;
+    }
+    if (!terms.isArray()) {
+      violations.add(new AcademicViolation("draft.terms", AcademicViolationCode.INVALID));
+      return;
+    }
+    if (terms.size() > 500) {
+      violations.add(new AcademicViolation("draft.terms", AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    for (int index = 0; index < terms.size(); index++) {
+      JsonNode term = terms.get(index);
+      String path = "draft.terms[" + index + "]";
+      if (!term.isObject()) {
+        violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+        continue;
+      }
+      String termClass = text(term, "termClass");
+      if (!TERM_CLASSES.contains(termClass)) {
+        violations.add(
+            new AcademicViolation(path + ".termClass", AcademicViolationCode.UNSUPPORTED));
+      }
+      JsonNode surfaces = term.path("surfaceForms");
+      if (!surfaces.isArray() || surfaces.isEmpty() || surfaces.size() > 8) {
+        violations.add(
+            new AcademicViolation(
+                path + ".surfaceForms",
+                surfaces.isArray() && surfaces.isEmpty()
+                    ? AcademicViolationCode.REQUIRED
+                    : AcademicViolationCode.OUT_OF_RANGE));
+      } else {
+        for (int s = 0; s < surfaces.size(); s++) {
+          JsonNode surface = surfaces.get(s);
+          String surfacePath = path + ".surfaceForms[" + s + "]";
+          requireText(surface, "text", surfacePath + ".text", 40, violations);
+          requireText(surface, "pinyin", surfacePath + ".pinyin", 80, violations);
+        }
+      }
+      validateOptionalDefinitions(term.path("definitions"), path + ".definitions", violations);
+      String englishEquivalent =
+          requireText(term, "englishEquivalent", path + ".englishEquivalent", 200, violations);
+      validateInlineLatex(englishEquivalent, path + ".englishEquivalent", violations);
+      String symbols = text(term, "symbols");
+      optionalTextMax(symbols, 80, path + ".symbols", violations);
+      if (symbols != null && !symbols.isBlank() && !InlineLatex.isSafe(symbols)) {
+        violations.add(new AcademicViolation(path + ".symbols", AcademicViolationCode.UNSUPPORTED));
+      }
+      String example = text(term, "example");
+      optionalTextMax(example, 500, path + ".example", violations);
+      validateInlineLatex(example, path + ".example", violations);
+      JsonNode outline = term.path("outlineItemIds");
+      if (outline.isMissingNode() || outline.isNull()) {
+        if ("TOPIC_TERM".equals(termClass)) {
+          violations.add(
+              new AcademicViolation(path + ".outlineItemIds", AcademicViolationCode.REQUIRED));
+        }
+      } else if (!outline.isArray()) {
+        violations.add(
+            new AcademicViolation(path + ".outlineItemIds", AcademicViolationCode.INVALID));
+      } else if (outline.size() > 32) {
+        violations.add(
+            new AcademicViolation(path + ".outlineItemIds", AcademicViolationCode.OUT_OF_RANGE));
+      } else if (outline.isEmpty()) {
+        if ("TOPIC_TERM".equals(termClass)) {
+          violations.add(
+              new AcademicViolation(path + ".outlineItemIds", AcademicViolationCode.REQUIRED));
+        }
+      } else {
+        validateOptionalKnownIds(outline, outlineIds, path + ".outlineItemIds", 32, violations);
+      }
+    }
+  }
+
+  private void validateOptionalDefinitions(
+      JsonNode definitions, String path, List<AcademicViolation> violations) {
+    if (definitions == null || definitions.isMissingNode() || definitions.isNull()) {
+      return;
+    }
+    if (!definitions.isObject()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+      return;
+    }
+    String indonesian = text(definitions, "indonesian");
+    optionalTextMax(indonesian, 4000, path + ".indonesian", violations);
+    validateInlineLatex(indonesian, path + ".indonesian", violations);
+    String english = text(definitions, "english");
+    optionalTextMax(english, 4000, path + ".english", violations);
+    validateInlineLatex(english, path + ".english", violations);
+    String simplifiedChinese = text(definitions, "simplifiedChinese");
+    optionalTextMax(simplifiedChinese, 4000, path + ".simplifiedChinese", violations);
+    validateInlineLatex(simplifiedChinese, path + ".simplifiedChinese", violations);
+  }
+
+  /**
+   * Term-bank edits are not a transactional rewrite of every resource/question pointer. Unknown
+   * {@code requiredTermIds} and attachments are dropped so a deleted term cannot block publish.
+   * Remaining ids are still validated against the live bank.
+   */
+  void dropStaleTermReferences(ObjectNode draft) {
+    Set<UUID> termIds = new LinkedHashSet<>();
+    JsonNode terms = draft.path("terms");
+    if (terms.isArray()) {
+      for (JsonNode term : terms) {
+        UUID id = parseUuid(text(term, "id"));
+        if (id != null) {
+          termIds.add(id);
+        }
+      }
+    }
+    JsonNode resources = draft.path("resources");
+    if (resources.isArray()) {
+      for (JsonNode resource : resources) {
+        if (!(resource instanceof ObjectNode node)) {
+          continue;
+        }
+        JsonNode required = node.get("requiredTermIds");
+        if (required == null || required.isNull() || required.isMissingNode()) {
+          continue;
+        }
+        String kind = text(node, "kind");
+        if (!required.isArray() || !("TERMINOLOGY".equals(kind) || "LESSON".equals(kind))) {
+          node.remove("requiredTermIds");
+          continue;
+        }
+        node.set("requiredTermIds", keepKnownIds(required, termIds));
+      }
+    }
+    JsonNode questions = draft.path("questions");
+    if (questions.isArray()) {
+      for (JsonNode question : questions) {
+        if (!(question instanceof ObjectNode node)) {
+          continue;
+        }
+        JsonNode attachments = node.get("authoredTermAttachments");
+        if (attachments == null || attachments.isNull() || attachments.isMissingNode()) {
+          continue;
+        }
+        if (!attachments.isArray()) {
+          node.remove("authoredTermAttachments");
+          continue;
+        }
+        ArrayNode kept = json.createArrayNode();
+        for (JsonNode attachment : attachments) {
+          if (!attachment.isObject()) {
+            continue;
+          }
+          UUID termId = parseUuid(text(attachment, "termId"));
+          if (termId == null || !termIds.contains(termId)) {
+            continue;
+          }
+          kept.add(attachment);
+        }
+        node.set("authoredTermAttachments", kept);
+      }
+    }
+  }
+
+  private ArrayNode keepKnownIds(JsonNode values, Set<UUID> known) {
+    ArrayNode kept = json.createArrayNode();
+    Set<UUID> unique = new LinkedHashSet<>();
+    for (JsonNode value : values) {
+      UUID id = parseUuid(value.asText());
+      if (id == null || !known.contains(id) || !unique.add(id)) {
+        continue;
+      }
+      kept.add(id.toString());
+    }
+    return kept;
+  }
+
+  private void validateRequiredTermIds(
+      JsonNode requiredTermIds,
+      String kind,
+      Set<UUID> termIds,
+      String path,
+      List<AcademicViolation> violations) {
+    if (requiredTermIds == null || requiredTermIds.isMissingNode() || requiredTermIds.isNull()) {
+      return;
+    }
+    if (!requiredTermIds.isArray()) {
+      violations.add(
+          new AcademicViolation(path + ".requiredTermIds", AcademicViolationCode.INVALID));
+      return;
+    }
+    if (!"TERMINOLOGY".equals(kind) && !"LESSON".equals(kind)) {
+      if (!requiredTermIds.isEmpty()) {
+        violations.add(
+            new AcademicViolation(path + ".requiredTermIds", AcademicViolationCode.INVALID));
+      }
+      return;
+    }
+    if (requiredTermIds.size() > 64) {
+      violations.add(
+          new AcademicViolation(path + ".requiredTermIds", AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    validateOptionalKnownIds(requiredTermIds, termIds, path + ".requiredTermIds", 64, violations);
+  }
+
+  private void validateAuthoredTermAttachments(
+      JsonNode attachments,
+      String path,
+      Set<UUID> termIds,
+      Map<UUID, Set<String>> termSurfaces,
+      List<AcademicViolation> violations) {
+    if (attachments == null || attachments.isMissingNode() || attachments.isNull()) {
+      return;
+    }
+    if (!attachments.isArray()) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+      return;
+    }
+    if (attachments.size() > 32) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    for (int index = 0; index < attachments.size(); index++) {
+      JsonNode attachment = attachments.get(index);
+      String itemPath = path + "[" + index + "]";
+      if (!attachment.isObject()) {
+        violations.add(new AcademicViolation(itemPath, AcademicViolationCode.INVALID));
+        continue;
+      }
+      UUID termId = parseUuid(text(attachment, "termId"));
+      if (termId == null || !termIds.contains(termId)) {
+        violations.add(
+            new AcademicViolation(itemPath + ".termId", AcademicViolationCode.INCOMPATIBLE));
+        continue;
+      }
+      String surface = text(attachment, "surfaceForm");
+      if (surface != null) {
+        if (surface.length() > 40) {
+          violations.add(
+              new AcademicViolation(itemPath + ".surfaceForm", AcademicViolationCode.OUT_OF_RANGE));
+        } else if (!termSurfaces.getOrDefault(termId, Set.of()).contains(surface)) {
+          violations.add(
+              new AcademicViolation(itemPath + ".surfaceForm", AcademicViolationCode.INCOMPATIBLE));
+        }
+      }
+    }
+  }
+
+  private void validateOptionalKnownIds(
+      JsonNode values,
+      Set<UUID> known,
+      String path,
+      int maxItems,
+      List<AcademicViolation> violations) {
+    if (values.size() > maxItems) {
+      violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+      return;
+    }
+    Set<UUID> unique = new HashSet<>();
+    for (int index = 0; index < values.size(); index++) {
+      UUID id = parseUuid(values.get(index).asText());
+      if (id == null || !known.contains(id)) {
+        violations.add(
+            new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.INCOMPATIBLE));
+      } else if (!unique.add(id)) {
+        violations.add(
+            new AcademicViolation(path + "[" + index + "]", AcademicViolationCode.DUPLICATE));
+      }
+    }
+  }
+
+  private static Map<UUID, Set<String>> termSurfaceIndex(JsonNode terms) {
+    Map<UUID, Set<String>> index = new HashMap<>();
+    if (terms == null || !terms.isArray()) return index;
+    for (JsonNode term : terms) {
+      UUID id = parseUuid(text(term, "id"));
+      if (id == null) continue;
+      Set<String> surfaces = new LinkedHashSet<>();
+      JsonNode forms = term.path("surfaceForms");
+      if (forms.isArray()) {
+        for (JsonNode form : forms) {
+          String value = text(form, "text");
+          if (value != null) surfaces.add(value);
+        }
+      }
+      index.put(id, surfaces);
+    }
+    return index;
   }
 
   private void validateLocalizedText(
@@ -1156,12 +1473,9 @@ public class AcademicDraftProcessor {
     }
   }
 
-  private static boolean safeLatex(String value) {
-    String normalized = value.toLowerCase(java.util.Locale.ROOT);
-    if (normalized.indexOf('<') >= 0 || normalized.indexOf('>') >= 0) return false;
-    return java.util.stream.Stream.of(
-            "\\html", "\\href", "\\url", "\\includegraphics", "\\def", "\\gdef", "\\newcommand")
-        .noneMatch(normalized::contains);
+  private void validateInlineLatex(String value, String path, List<AcademicViolation> violations) {
+    if (value == null || InlineLatex.isValidMixed(value)) return;
+    violations.add(new AcademicViolation(path, AcademicViolationCode.UNSUPPORTED));
   }
 
   private static String text(JsonNode parent, String field) {

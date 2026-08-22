@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+import { useTranslation } from 'react-i18next';
+import { KatexFormula } from '@/shared/content/KatexFormula';
 
 interface KaTeXPreviewProps {
   latex: string;
@@ -13,47 +12,15 @@ export function KaTeXPreview({
   displayMode = false,
   className = '',
 }: KaTeXPreviewProps): React.JSX.Element {
-  const rendered = useMemo(() => {
-    try {
-      return {
-        html: katex.renderToString(latex || '', {
-          displayMode,
-          throwOnError: false,
-          output: 'html',
-        }),
-        error: null,
-      };
-    } catch (err) {
-      return {
-        html: null,
-        error: err instanceof Error ? err.message : 'Invalid LaTeX equation',
-      };
-    }
-  }, [latex, displayMode]);
-
-  if (rendered.error) {
-    return (
-      <div className={`field-error ${className}`} role="alert">
-        <span>LaTeX Error: {rendered.error}</span>
-      </div>
-    );
-  }
-
-  if (displayMode) {
-    return (
-      <div
-        className={`katex-box katex-box-display ${className}`}
-        aria-label={`Math formula: ${latex}`}
-        dangerouslySetInnerHTML={{ __html: rendered.html || '' }}
-      />
-    );
-  }
-
+  const { t } = useTranslation();
+  const boxClass = displayMode ? 'katex-box katex-box-display' : 'katex-box';
   return (
-    <span
-      className={`katex-box ${className}`}
-      aria-label={`Math formula: ${latex}`}
-      dangerouslySetInnerHTML={{ __html: rendered.html || '' }}
+    <KatexFormula
+      latex={latex}
+      displayMode={displayMode}
+      className={`${boxClass} ${className}`.trim()}
+      ariaLabel={t('content.inlineMathAria', { latex })}
+      errorLabel={t('content.inlineMathError')}
     />
   );
 }

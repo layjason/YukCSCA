@@ -9,6 +9,7 @@ import { StudyResourcesEditor } from './StudyResourcesEditor';
 import { QuestionEditor } from './QuestionEditor';
 import { AssessmentSetsEditor } from './AssessmentSetsEditor';
 import { MockPaperEditor } from './MockPaperEditor';
+import { TermBankEditor } from './TermBankEditor';
 import { ArchiveModal } from './ArchiveModal';
 import {
   saveAcademicPackageDraft,
@@ -83,6 +84,7 @@ function withNormalizedDraft(pkg: AcademicPackage): AcademicPackage {
     ...pkg,
     draft: {
       ...pkg.draft,
+      terms: pkg.draft.terms ?? [],
       officialSyllabus,
       // Persist-ready single mock shell so publish path is reachable without a silent empty mocks[].
       mocks: ensureSingleMockShell(pkg.draft.mocks ?? [], examStructure),
@@ -243,6 +245,7 @@ export function AcademicPackageEditor({
       officialSyllabus,
       outlineItems: draft.outlineItems,
       learningObjectives: draft.learningObjectives,
+      terms: draft.terms ?? [],
       resources: draft.resources.map((r) => ({
         id: r.id,
         ...(r.kind ? { kind: r.kind } : {}),
@@ -251,6 +254,9 @@ export function AcademicPackageEditor({
         objectiveIds: r.objectiveIds,
         // Only send filled language versions (backend requires ≥1; empty optional langs omitted).
         versions: pruneEmptyLocalizedVersions(r.versions ?? []),
+        ...(r.kind === 'TERMINOLOGY' || r.kind === 'LESSON'
+          ? { requiredTermIds: r.requiredTermIds ?? [] }
+          : {}),
         provenance: toDraftProvenanceInput(toEditableProvenance(r.provenance)),
       })),
       questions: draft.questions.map((q) => ({
@@ -268,6 +274,7 @@ export function AcademicPackageEditor({
         ...(q.hintTiers != null ? { hintTiers: q.hintTiers } : {}),
         ...(q.commonMistakeNotes != null ? { commonMistakeNotes: q.commonMistakeNotes } : {}),
         ...(q.relatedResourceIds != null ? { relatedResourceIds: q.relatedResourceIds } : {}),
+        authoredTermAttachments: q.authoredTermAttachments ?? [],
         provenance: toDraftProvenanceInput(toEditableProvenance(q.provenance)),
       })),
       mocks: mocks.map((m) => ({
@@ -406,6 +413,11 @@ export function AcademicPackageEditor({
       id: 'objectives',
       label: t('admin.academic.tabs.objectives'),
       count: draft.learningObjectives.length,
+    },
+    {
+      id: 'terms',
+      label: t('admin.academic.tabs.terms'),
+      count: (draft.terms ?? []).length,
     },
     {
       id: 'resources',
@@ -629,6 +641,24 @@ export function AcademicPackageEditor({
             </div>
           )}
 
+          {activeTab === 'terms' && (
+            <div className="admin-section-with-errors">
+              <FieldErrorList messages={fieldErrors.terms} />
+              <TermBankEditor
+                terms={draft.terms ?? []}
+                outlineItems={draft.outlineItems}
+                disabled={isArchived}
+                publishedPackageId={pkg.activeRevision ? pkg.id : null}
+                onChange={(updated) =>
+                  applyPackageUpdate({
+                    ...pkg,
+                    draft: { ...draft, terms: updated },
+                  })
+                }
+              />
+            </div>
+          )}
+
           {activeTab === 'resources' && (
             <div className="admin-section-with-errors">
               <FieldErrorList messages={fieldErrors.resources} />
@@ -636,6 +666,7 @@ export function AcademicPackageEditor({
                 resources={draft.resources}
                 outlineItems={draft.outlineItems}
                 objectives={draft.learningObjectives}
+                terms={draft.terms ?? []}
                 disabled={isArchived}
                 onChange={(updated) =>
                   applyPackageUpdate({
@@ -655,6 +686,7 @@ export function AcademicPackageEditor({
                 outlineItems={draft.outlineItems}
                 objectives={draft.learningObjectives}
                 resources={draft.resources}
+                terms={draft.terms ?? []}
                 disabled={isArchived}
                 onChange={(updatedQuestions) =>
                   applyPackageUpdate({

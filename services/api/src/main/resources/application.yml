@@ -88,3 +88,8 @@ yukcsca:
     session-maintenance:
       cleanup-interval: ${YUKCSCA_SESSION_CLEANUP_INTERVAL:1h}
       retention: ${YUKCSCA_SESSION_RETENTION:30d}
+  speech:
+    enabled: ${YUKCSCA_SPEECH_ENABLED:false}
+    voice: ${YUKCSCA_SPEECH_VOICE:zh-CN-XiaoxiaoNeural}
+    timeout: ${YUKCSCA_SPEECH_TIMEOUT:8s}
+    max-clips-per-publish: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:200}

@@ -20,6 +20,7 @@ function item(partial: Partial<SessionItemView> = {}): SessionItemView {
     feedback: null,
     outlineItemIds: [],
     objectiveIds: [],
+    languageHelpAvailable: false,
     ...partial,
   };
 }

@@ -1,14 +1,18 @@
 package com.yukcsca.assessment.application;
 
 import com.yukcsca.academic.application.ContentAccessPolicy;
+import com.yukcsca.academic.application.FormalAssistanceDisabledException;
+import com.yukcsca.academic.application.FormalAssistancePolicy;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.AssessmentSetView;
+import com.yukcsca.academic.application.PublishedAssessmentCatalog.AuthoredTermAttachmentView;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.HintTierView;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.LocalizedTextView;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.OptionView;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.PublishedPackageAssessmentView;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.QuestionView;
 import com.yukcsca.academic.application.PublishedAssessmentCatalog.StudyResourceView;
+import com.yukcsca.academic.application.PublishedTerminologyCatalog;
 import com.yukcsca.academic.application.StudentContentProgressQuery;
 import com.yukcsca.assessment.domain.AssessmentAssistanceEvent;
 import com.yukcsca.assessment.domain.AssessmentItemAttempt;
@@ -54,6 +58,8 @@ public class AssessmentStudentService {
   private static final Set<String> EXAM_LANGUAGES = Set.of("en", "zh-CN");
 
   private final PublishedAssessmentCatalog catalog;
+  private final PublishedTerminologyCatalog terminology;
+  private final FormalAssistancePolicy formalPolicy;
   private final StudentContentProgressQuery progressQuery;
   private final ContentAccessPolicy accessPolicy;
   private final CurrentAuthenticationService authentication;
@@ -68,6 +74,8 @@ public class AssessmentStudentService {
 
   public AssessmentStudentService(
       PublishedAssessmentCatalog catalog,
+      PublishedTerminologyCatalog terminology,
+      FormalAssistancePolicy formalPolicy,
       StudentContentProgressQuery progressQuery,
       ContentAccessPolicy accessPolicy,
       CurrentAuthenticationService authentication,
@@ -80,6 +88,8 @@ public class AssessmentStudentService {
       Clock clock,
       PlatformTransactionManager transactionManager) {
     this.catalog = catalog;
+    this.terminology = terminology;
+    this.formalPolicy = formalPolicy;
     this.progressQuery = progressQuery;
     this.accessPolicy = accessPolicy;
     this.authentication = authentication;
@@ -485,7 +495,7 @@ public class AssessmentStudentService {
     }
     Instant now = now();
     Optional<AssessmentAssistanceEvent> existing =
-        assistance.findByItemAttemptIdAndTierIndex(item.getId(), nextIndex);
+        assistance.findByItemAttemptIdAndKindAndTierIndex(item.getId(), "MATH_HINT", nextIndex);
     if (existing.isEmpty()) {
       assistance.save(
           new AssessmentAssistanceEvent(
@@ -505,11 +515,92 @@ public class AssessmentStudentService {
         items.findBySessionIdOrderByItemOrderAsc(session.getId());
     ItemView itemView =
         toItemView(
-            item, "IMMEDIATE".equals(session.getFeedbackMode()), session.isStrongHintsDisabled());
+            session,
+            item,
+            "IMMEDIATE".equals(session.getFeedbackMode()),
+            session.isStrongHintsDisabled());
     return new DiscloseHintView(
         itemView,
         new DisclosedHintView(nextIndex, strength, projectBlocks(tier.path("blocks"))),
         assistanceSummary(session));
+  }
+
+  @Transactional
+  public DiscloseLanguageHelpView discloseLanguageHelp(
+      UUID actorId, UUID sessionId, UUID itemId, String trigger) {
+    requireStudent(actorId);
+    if (!"STUDENT_REQUEST".equals(trigger) && !"WORDING_HARD".equals(trigger)) {
+      throw new AssessmentValidationException(
+          List.of(new AssessmentViolation("trigger", "INVALID")));
+    }
+    if (formalPolicy.isDisabled(actorId)) {
+      throw new FormalAssistanceDisabledException();
+    }
+    AssessmentSession session = requireOwnedInProgress(actorId, sessionId);
+    AssessmentItemAttempt item =
+        items
+            .findByIdAndSessionId(itemId, sessionId)
+            .orElseThrow(() -> new AssessmentNotFoundException("Item not found."));
+    ObjectNode copy = parseObject(item.getQuestionCopyJson());
+    boolean available = languageHelpAvailable(session, copy);
+    if (!available) {
+      throw new AssessmentConflictException(
+          "LANGUAGE_ASSIST_DISABLED", "Language help is not available for this item.");
+    }
+    Instant now = now();
+    LanguageHelpView view;
+    if (item.getLanguageHelpJson() != null) {
+      view = readLanguageHelp(item.getLanguageHelpJson());
+    } else {
+      PublishedTerminologyCatalog.LanguageHelpProjection projection =
+          terminology.languageHelpForQuestion(
+              session.getPackageRevisionId(),
+              item.getQuestionId(),
+              projectBlocks(copy.path("stem")),
+              actorId,
+              session.getLessonResourceId());
+      String strength = languageTier(projection);
+      view =
+          new LanguageHelpView(
+              true,
+              trigger,
+              projection.spans().stream()
+                  .map(
+                      span ->
+                          new LanguageHelpSpanView(
+                              span.termId(),
+                              span.surfaceForm(),
+                              span.blockIndex(),
+                              span.startOffset(),
+                              span.endOffset(),
+                              span.alreadyInNotebook()))
+                  .toList());
+      item.discloseLanguageHelp(writeLanguageHelp(view), now);
+      items.save(item);
+      if (assistance
+          .findByItemAttemptIdAndKindAndTierIndex(item.getId(), "LANGUAGE_ASSIST", 0)
+          .isEmpty()) {
+        assistance.save(
+            new AssessmentAssistanceEvent(
+                session.getId(), item.getId(), actorId, "LANGUAGE_ASSIST", 0, strength, now));
+      }
+      session.touch(now);
+      sessions.save(session);
+      LOGGER.info(
+          "assessment.language_help.disclosed sessionId={} itemId={} trigger={} strength={} spans={}",
+          sessionId,
+          itemId,
+          trigger,
+          strength,
+          view.spans().size());
+    }
+    ItemView itemView =
+        toItemView(
+            session,
+            item,
+            "IMMEDIATE".equals(session.getFeedbackMode()),
+            session.isStrongHintsDisabled());
+    return new DiscloseLanguageHelpView(itemView, view, assistanceSummary(session));
   }
 
   @Transactional
@@ -540,13 +631,15 @@ public class AssessmentStudentService {
       session.touch(now);
       sessions.save(session);
       return new ItemAnswerView(
-          toItemView(item, false, session.isStrongHintsDisabled()), assistanceSummary(session));
+          toItemView(session, item, false, session.isStrongHintsDisabled()),
+          assistanceSummary(session));
     }
     // IMMEDIATE: lock on answer
     if (item.getStatus() == ItemAttemptStatus.LOCKED) {
       if (selectedOptionKey.equals(item.getSelectedOptionKey())) {
         return new ItemAnswerView(
-            toItemView(item, true, session.isStrongHintsDisabled()), assistanceSummary(session));
+            toItemView(session, item, true, session.isStrongHintsDisabled()),
+            assistanceSummary(session));
       }
       throw new AssessmentConflictException("ITEM_ALREADY_LOCKED", "Item is already locked.");
     }
@@ -562,7 +655,8 @@ public class AssessmentStudentService {
         isCorrect,
         item.isStrongAssistance());
     return new ItemAnswerView(
-        toItemView(item, true, session.isStrongHintsDisabled()), assistanceSummary(session));
+        toItemView(session, item, true, session.isStrongHintsDisabled()),
+        assistanceSummary(session));
   }
 
   @Transactional
@@ -918,7 +1012,7 @@ public class AssessmentStudentService {
         mistakes
             .findById(session.getMistakeId())
             .orElseThrow(() -> new AssessmentNotFoundException("Mistake not found."));
-    boolean anyAssistance = assistance.countBySessionId(session.getId()) > 0;
+    boolean anyAssistance = assistance.countBySessionIdAndKind(session.getId(), "MATH_HINT") > 0;
     AssessmentItemAttempt item = attempts.isEmpty() ? null : attempts.getFirst();
     boolean itemCorrect =
         item != null && attempts.size() == 1 && Boolean.TRUE.equals(item.getCorrect());
@@ -967,7 +1061,7 @@ public class AssessmentStudentService {
             AssessmentSessionStatus.SUBMITTED);
     Set<UUID> excluded = new LinkedHashSet<>();
     for (AssessmentSession priorSession : prior) {
-      if (assistance.countBySessionId(priorSession.getId()) <= 0) {
+      if (assistance.countBySessionIdAndKind(priorSession.getId(), "MATH_HINT") <= 0) {
         continue;
       }
       for (AssessmentItemAttempt priorItem :
@@ -1255,6 +1349,7 @@ public class AssessmentStudentService {
             .map(
                 item ->
                     toItemView(
+                        session,
                         item,
                         reveal && item.getStatus() == ItemAttemptStatus.LOCKED,
                         session.isStrongHintsDisabled()))
@@ -1309,7 +1404,7 @@ public class AssessmentStudentService {
     }
     List<ItemView> itemViews =
         attempts.stream()
-            .map(item -> toItemView(item, true, session.isStrongHintsDisabled()))
+            .map(item -> toItemView(session, item, true, session.isStrongHintsDisabled()))
             .toList();
     return new SessionResultView(
         session.getId(),
@@ -1327,7 +1422,10 @@ public class AssessmentStudentService {
   }
 
   private ItemView toItemView(
-      AssessmentItemAttempt item, boolean revealFeedback, boolean strongDisabled) {
+      AssessmentSession session,
+      AssessmentItemAttempt item,
+      boolean revealFeedback,
+      boolean strongDisabled) {
     ObjectNode copy = parseObject(item.getQuestionCopyJson());
     ArrayNode tiers = (ArrayNode) copy.path("hintTiers");
     List<HintMetaView> ladder = new ArrayList<>();
@@ -1347,6 +1445,8 @@ public class AssessmentStudentService {
       correct = item.getCorrect();
       feedback = buildFeedback(copy, Boolean.TRUE.equals(correct));
     }
+    LanguageHelpView languageHelp =
+        item.getLanguageHelpJson() == null ? null : readLanguageHelp(item.getLanguageHelpJson());
     return new ItemView(
         item.getId(),
         item.getItemOrder(),
@@ -1363,7 +1463,62 @@ public class AssessmentStudentService {
         correct,
         feedback,
         uuidArray(copy.path("outlineItemIds")),
-        uuidArray(copy.path("objectiveIds")));
+        uuidArray(copy.path("objectiveIds")),
+        languageHelpAvailable(session, copy),
+        languageHelp);
+  }
+
+  private boolean languageHelpAvailable(AssessmentSession session, ObjectNode copy) {
+    if (formalPolicy.isDisabled(session.getAccountId())) return false;
+    String examLanguage = text(copy, "examLanguage");
+    if (examLanguage == null) examLanguage = session.getExamLanguage();
+    return "zh-CN".equals(examLanguage)
+        && terminology.hasPublishedTermBank(session.getPackageRevisionId());
+  }
+
+  private String languageTier(PublishedTerminologyCatalog.LanguageHelpProjection projection) {
+    boolean phrase =
+        projection.spans().stream()
+            .anyMatch(span -> span.surfaceForm() != null && span.surfaceForm().length() > 2);
+    return phrase ? "PHRASE" : "WORD";
+  }
+
+  private String writeLanguageHelp(LanguageHelpView view) {
+    ObjectNode node = json.createObjectNode();
+    node.put("disclosed", true);
+    node.put("trigger", view.trigger());
+    ArrayNode spans = node.putArray("spans");
+    for (LanguageHelpSpanView span : view.spans()) {
+      ObjectNode row = spans.addObject();
+      row.put("termId", span.termId().toString());
+      row.put("surfaceForm", span.surfaceForm());
+      row.put("blockIndex", span.blockIndex());
+      row.put("startOffset", span.startOffset());
+      row.put("endOffset", span.endOffset());
+      row.put("alreadyInNotebook", span.alreadyInNotebook());
+    }
+    return write(node);
+  }
+
+  private LanguageHelpView readLanguageHelp(String raw) {
+    ObjectNode node = parseObject(raw);
+    List<LanguageHelpSpanView> spans = new ArrayList<>();
+    JsonNode spanNodes = node.path("spans");
+    if (spanNodes.isArray()) {
+      for (JsonNode span : spanNodes) {
+        UUID termId = parseUuid(span.path("termId").asText(null));
+        if (termId == null) continue;
+        spans.add(
+            new LanguageHelpSpanView(
+                termId,
+                text(span, "surfaceForm"),
+                span.path("blockIndex").asInt(0),
+                span.path("startOffset").asInt(0),
+                span.path("endOffset").asInt(0),
+                span.path("alreadyInNotebook").asBoolean(false)));
+      }
+    }
+    return new LanguageHelpView(true, text(node, "trigger"), spans);
   }
 
   private ItemFeedbackView buildFeedback(ObjectNode copy, boolean correct) {
@@ -1404,8 +1559,25 @@ public class AssessmentStudentService {
   }
 
   private AssistanceSummaryView assistanceSummary(AssessmentSession session) {
+    List<AssessmentAssistanceEvent> events =
+        assistance.findBySessionIdOrderByOccurredAtAsc(session.getId());
+    String maxLanguageTier = null;
+    boolean languageHelpDisclosed = false;
+    for (AssessmentAssistanceEvent event : events) {
+      if (!"LANGUAGE_ASSIST".equals(event.getKind())) continue;
+      languageHelpDisclosed = true;
+      if ("PHRASE".equals(event.getStrength())) {
+        maxLanguageTier = "PHRASE";
+      } else if ("WORD".equals(event.getStrength()) && maxLanguageTier == null) {
+        maxLanguageTier = "WORD";
+      }
+    }
     return new AssistanceSummaryView(
-        session.getMaxTierDisclosed(), session.isStrongUsed(), session.isLanguageAssistUsed());
+        session.getMaxTierDisclosed(),
+        session.isStrongUsed(),
+        session.isLanguageAssistUsed(),
+        maxLanguageTier,
+        languageHelpDisclosed ? Boolean.TRUE : null);
   }
 
   private ContextSummaryView contextSummary(
@@ -1488,7 +1660,11 @@ public class AssessmentStudentService {
         preview,
         mistake.getErrorCount(),
         new AssistanceSummaryView(
-            mistake.getMaxTierDisclosed(), mistake.isStrongUsed(), mistake.isLanguageAssistUsed()),
+            mistake.getMaxTierDisclosed(),
+            mistake.isStrongUsed(),
+            mistake.isLanguageAssistUsed(),
+            null,
+            null),
         isRevalidationEligible(mistake),
         mistake.getLastSessionId(),
         mistake.getUpdatedAt());
@@ -1540,7 +1716,11 @@ public class AssessmentStudentService {
         mistake.getPrivateNote(),
         mistake.getErrorCount(),
         new AssistanceSummaryView(
-            mistake.getMaxTierDisclosed(), mistake.isStrongUsed(), mistake.isLanguageAssistUsed()),
+            mistake.getMaxTierDisclosed(),
+            mistake.isStrongUsed(),
+            mistake.isLanguageAssistUsed(),
+            null,
+            null),
         isRevalidationEligible(mistake),
         mistake.getLastAttemptId(),
         mistake.getLastSessionId(),
@@ -1617,6 +1797,16 @@ public class AssessmentStudentService {
       title.put("indonesian", resource.title().indonesian());
       title.put("english", resource.title().english());
       title.put("simplifiedChinese", resource.title().simplifiedChinese());
+    }
+    ArrayNode attachments = copy.putArray("authoredTermAttachments");
+    if (question.authoredTermAttachments() != null) {
+      for (AuthoredTermAttachmentView attachment : question.authoredTermAttachments()) {
+        ObjectNode node = attachments.addObject();
+        node.put("termId", attachment.termId().toString());
+        if (attachment.surfaceForm() != null) {
+          node.put("surfaceForm", attachment.surfaceForm());
+        }
+      }
     }
     copy.set("outlineItemIds", uuidArrayNode(question.outlineItemIds()));
     copy.set("objectiveIds", uuidArrayNode(question.objectiveIds()));
@@ -1851,7 +2041,11 @@ public class AssessmentStudentService {
   // --- view records ---
 
   public record AssistanceSummaryView(
-      int maxTierDisclosed, boolean strongUsed, boolean languageAssistUsed) {}
+      int maxTierDisclosed,
+      boolean strongUsed,
+      boolean languageAssistUsed,
+      String maxLanguageTier,
+      Boolean languageHelpDisclosed) {}
 
   public record LocalizedContentView(String language, List<JsonNode> blocks) {}
 
@@ -1886,7 +2080,25 @@ public class AssessmentStudentService {
       Boolean correct,
       ItemFeedbackView feedback,
       List<UUID> outlineItemIds,
-      List<UUID> objectiveIds) {}
+      List<UUID> objectiveIds,
+      boolean languageHelpAvailable,
+      LanguageHelpView languageHelp) {}
+
+  public record LanguageHelpSpanView(
+      UUID termId,
+      String surfaceForm,
+      int blockIndex,
+      int startOffset,
+      int endOffset,
+      boolean alreadyInNotebook) {}
+
+  public record LanguageHelpView(
+      boolean disclosed, String trigger, List<LanguageHelpSpanView> spans) {}
+
+  public record DiscloseLanguageHelpView(
+      ItemView item,
+      LanguageHelpView languageHelp,
+      AssistanceSummaryView sessionAssistanceSummary) {}
 
   public record ContextSummaryView(
       String subject,

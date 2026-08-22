@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import { StudyResourcesEditor } from './StudyResourcesEditor';
-import type { LearningObjective, StudyResource, SyllabusOutlineItem } from '../types';
+import type { LearningObjective, StudyResource, SyllabusOutlineItem, TermDraft } from '../types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -27,6 +27,8 @@ vi.mock('react-i18next', () => ({
         'admin.academic.outline.summaryZh': 'Chinese',
         'admin.academic.toasts.duplicated': `${opts?.name ?? ''} duplicated.`,
         'admin.academic.toasts.names.resource': 'Study resource',
+        'admin.academic.terms.requiredSet': 'Required terms for this preview',
+        'admin.academic.terms.untitled': `Untitled term ${opts?.index ?? 1}`,
       };
       return map[key] ?? key;
     },
@@ -105,5 +107,34 @@ describe('StudyResourcesEditor', () => {
     const group = document.querySelector('.admin-equal-actions');
     expect(group).toHaveAttribute('data-count', '3');
     expect(group?.querySelectorAll('button')).toHaveLength(3);
+  });
+
+  test('lists required preview terms by Chinese surface, not UUID', () => {
+    const termId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    const terms: TermDraft[] = [
+      {
+        id: termId,
+        termClass: 'TOPIC_TERM',
+        surfaceForms: [
+          { text: '导数', pinyin: 'dǎo shù' },
+          { text: '微商', pinyin: 'wēi shāng' },
+        ],
+        definitions: { indonesian: '', english: '', simplifiedChinese: '' },
+        englishEquivalent: 'derivative',
+        outlineItemIds: ['out-1'],
+      },
+    ];
+    render(
+      <StudyResourcesEditor
+        resources={[lessonResource({ kind: 'TERMINOLOGY', requiredTermIds: [termId] })]}
+        outlineItems={outlineItems}
+        objectives={objectives}
+        terms={terms}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: '导数 (微商)' })).toBeChecked();
+    expect(screen.queryByText(termId)).not.toBeInTheDocument();
   });
 });

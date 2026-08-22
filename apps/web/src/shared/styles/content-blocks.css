@@ -19,14 +19,28 @@
   white-space: pre-wrap;
 }
 
-.learn-math {
-  display: inline-block;
+/*
+ * Inline KaTeX must stay in the text line box. `inline-block` + overflow on the
+ * wrapper uses the box bottom as the baseline, so CJK and math sit on different
+ * rows. Keep overflow on display math only; let `.katex` own the strut.
+ */
+.learn-math:not(.learn-math-display) {
+  display: inline;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: visible;
+  vertical-align: baseline;
+}
+
+.learn-math:not(.learn-math-display) .katex {
+  font-size: 1.1em;
+  line-height: 1;
+  vertical-align: baseline;
 }
 
 .learn-math-display {
   display: block;
+  max-width: 100%;
+  overflow-x: auto;
   padding: var(--space-md);
   margin: var(--space-sm) 0;
   border-radius: var(--radius-md);

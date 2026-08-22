@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KaTeXPreview } from './KaTeXPreview';
+import { AdminInlineLatexPreview } from './AdminInlineLatexPreview';
 import { ImageUploader } from './ImageUploader';
 import { AcademicImageThumb } from './AcademicImageThumb';
 import { AdminRemoveButton } from './AdminRemoveButton';
@@ -93,14 +94,21 @@ export function ContentBlockEditor({
           </div>
 
           {block.kind === 'TEXT' && (
-            <textarea
-              className="text-input admin-field-control-resize-only"
-              rows={compact ? 2 : 3}
-              value={block.text}
-              maxLength={12000}
-              placeholder={t('admin.academic.blocks.textPlaceholder')}
-              onChange={(e) => handleUpdateBlock(index, { kind: 'TEXT', text: e.target.value })}
-            />
+            <div className="admin-stack-xs">
+              <textarea
+                className="text-input admin-field-control-resize-only"
+                rows={compact ? 2 : 3}
+                value={block.text}
+                maxLength={12000}
+                placeholder={t('admin.academic.blocks.textPlaceholder')}
+                aria-describedby={`text-inline-latex-hint-${index}`}
+                onChange={(e) => handleUpdateBlock(index, { kind: 'TEXT', text: e.target.value })}
+              />
+              <p id={`text-inline-latex-hint-${index}`} className="admin-hint">
+                {t('content.inlineLatexHint')}
+              </p>
+              <AdminInlineLatexPreview text={block.text} />
+            </div>
           )}
 
           {block.kind === 'MATH' && (

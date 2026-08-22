@@ -33,7 +33,7 @@ web:
 	pnpm dev:web
 
 api:
-	cd services/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+	set -a && [ -f .env ] && . ./.env && set +a; cd services/api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
 format:
 	pnpm format

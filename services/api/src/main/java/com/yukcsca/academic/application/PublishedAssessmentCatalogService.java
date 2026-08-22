@@ -164,6 +164,7 @@ public class PublishedAssessmentCatalogService implements PublishedAssessmentCat
               List.copyOf(hints),
               List.copyOf(notes),
               uuidList(question.path("relatedResourceIds")),
+              authoredAttachments(question.path("authoredTermAttachments")),
               uuidList(question.path("outlineItemIds")),
               uuidList(question.path("objectiveIds"))));
     }
@@ -211,6 +212,18 @@ public class PublishedAssessmentCatalogService implements PublishedAssessmentCat
       if (copy != null) projected.add(copy);
     }
     return List.copyOf(projected);
+  }
+
+  private static List<AuthoredTermAttachmentView> authoredAttachments(JsonNode values) {
+    if (values == null || !values.isArray()) return List.of();
+    List<AuthoredTermAttachmentView> attachments = new ArrayList<>();
+    for (JsonNode value : values) {
+      UUID termId = uuid(value.path("termId"));
+      if (termId == null) continue;
+      String surface = text(value, "surfaceForm");
+      attachments.add(new AuthoredTermAttachmentView(termId, surface));
+    }
+    return List.copyOf(attachments);
   }
 
   private static LocalizedTextView localized(JsonNode node) {

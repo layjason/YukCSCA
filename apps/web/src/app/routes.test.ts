@@ -6,7 +6,7 @@ describe('route manifest', () => {
     const ids = routeManifest.map((route) => route.id);
     const paths = routeManifest.map((route) => route.path);
 
-    expect(routeManifest).toHaveLength(74);
+    expect(routeManifest).toHaveLength(77);
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(paths).size).toBe(paths.length);
   });
@@ -61,5 +61,24 @@ describe('route manifest', () => {
     expect(checkpoint.path).toBe('/app/learn/:subject/lessons/:resourceId/checkpoint');
     expect(remediation.path).toBe('/app/learn/:subject/remediation/:resourceId');
     expect(isRouteActive(practice, '/app/practice/mistakes')).toBe(true);
+  });
+
+  it('registers production terminology preview and notebook routes', () => {
+    const preview = getRouteById('learn-terminology');
+    const notebook = getRouteById('learn-terms');
+    const entry = getRouteById('learn-term-detail');
+    const learn = getRouteById('learn');
+
+    for (const route of [preview, notebook, entry]) {
+      expect(route.availability).toBe('implemented');
+      expect(route.access).toBe('student-settings');
+      expect(route.prototypeOnly).toBeUndefined();
+    }
+
+    expect(preview.path).toBe('/app/learn/:subject/terminology/:resourceId');
+    expect(notebook.path).toBe('/app/learn/terms');
+    expect(entry.path).toBe('/app/learn/terms/:termId');
+    expect(isRouteActive(learn, '/app/learn/terms')).toBe(true);
+    expect(isRouteActive(learn, '/app/learn/MATHEMATICS/terminology/abc')).toBe(true);
   });
 });

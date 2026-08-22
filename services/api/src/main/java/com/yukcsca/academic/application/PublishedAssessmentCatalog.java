@@ -51,8 +51,11 @@ public interface PublishedAssessmentCatalog {
       List<HintTierView> hintTiers,
       List<LocalizedTextView> commonMistakeNotes,
       List<UUID> relatedResourceIds,
+      List<AuthoredTermAttachmentView> authoredTermAttachments,
       List<UUID> outlineItemIds,
       List<UUID> objectiveIds) {}
+
+  record AuthoredTermAttachmentView(UUID termId, String surfaceForm) {}
 
   record OptionView(String key, List<JsonNode> blocks) {}
 

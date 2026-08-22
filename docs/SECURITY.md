@@ -93,7 +93,7 @@ Minor-user identity and relationships, learning conversations, assessment answer
 ### Repository and delivery
 
 - Secrets and real user/student data are prohibited from the repository and logs.
-- GitHub Actions are SHA-pinned. Dependency upgrades are proposed and validated as isolated maintainer-reviewed changes; no automated dependency-update pull requests are configured. Gitleaks scans pushes, pull requests, and the weekly schedule.
+- GitHub Actions are SHA-pinned. Dependency upgrades are proposed and validated as isolated maintainer-reviewed changes; no automated dependency-update pull requests are configured. Gitleaks scans pushes, pull requests, and the weekly schedule using the repository configuration in `.gitleaks.toml`, which extends the default rules with a narrow documented allowlist for the published Edge read-aloud protocol constant in `EdgeTtsProtocol.java` (not a credential).
 - CodeQL, dependency review, and GitHub native secret scanning are not active for the current private repository because the required GitHub security entitlements are not enabled.
 - Containers expose health checks; the API runs as a non-root user.
 
@@ -136,6 +136,12 @@ These controls must ship with the first feature that needs them:
 - Content records provenance, licensing/authorization, author, reviewer, version, and publication state.
 - Scored items and answer keys require human review and immutable version references.
 - Leaked, scraped, or unauthorized official questions are prohibited.
+
+### Term pronunciation and language lookup
+
+- Term audio is synthesized only at package publish through `SpeechSynthesisPort` (Edge TTS / `edge_tts` protocol). The student GET and the administrator published-revision GET serve stored `audio/mpeg` bytes and never synthesize. Missing clips are 404; pinyin remains on the card. Draft authoring has no live preview.
+- SSML, surface text, selected unmatched lookup text, definitions, stems, and answer keys are excluded from logs. Publish logs `termId`, clip status, and byte length only.
+- Unmatched selected text returns HTTP 200 `NOT_IN_BANK` and writes nothing. Formal-mock policy (reserved, always false until a formal session exists) denies lookup, preview writes, review, and Language-help disclose with `403 FORMAL_ASSISTANCE_DISABLED`.
 
 ### Files and provider integrations
 

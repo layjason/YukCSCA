@@ -223,7 +223,8 @@ public class PublishedPackageProjector {
             activeRevisionId,
             lesson.id(),
             activeContent,
-            historicalContentByRevisionId));
+            historicalContentByRevisionId),
+        null);
   }
 
   /**
@@ -605,7 +606,14 @@ public class PublishedPackageProjector {
       UUID resourceId,
       LocalizedTextProjection title,
       List<UUID> outlineItemIds,
-      ContentProgressProjection contentProgress) {}
+      ContentProgressProjection contentProgress,
+      TerminologyPreviewRefProjection terminologyPreview) {}
+
+  public record TerminologyPreviewRefProjection(
+      UUID resourceId, PreviewProgressProjection progress) {}
+
+  public record PreviewProgressProjection(
+      String status, Instant updatedAt, boolean requiredSetUpdatedSinceCompleted) {}
 
   public record OutlineNodeProjection(
       UUID id,

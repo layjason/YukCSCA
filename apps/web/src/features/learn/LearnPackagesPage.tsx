@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, CalendarDays } from 'lucide-react';
 import { DestPageHero } from '@/shared/components/DestPageHero';
+import { LearnNotebookEntry } from './components/LearnNotebookEntry';
 import { personalDestTitle, usePreferredGivenName } from '@/shared/identity/preferredGivenName';
 import { ApiError } from '@/shared/api/httpClient';
 import { listPublishedPackages } from './api/learnApi';
@@ -77,6 +78,7 @@ export function LearnPackagesPage(): React.JSX.Element {
     return (
       <div className="page-content learn-page learn-page-fill">
         <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
+        <LearnNotebookEntry />
         <section className="empty-state state-notice state-notice-info" aria-live="polite">
           <h2>{t('learn.emptyPackagesTitle')}</h2>
           <p>{t('learn.emptyPackagesDescription')}</p>
@@ -88,6 +90,7 @@ export function LearnPackagesPage(): React.JSX.Element {
   return (
     <div className="page-content learn-page learn-page-fill learn-packages-page">
       <DestPageHero tone="lilac" icon={BookOpen} title={lessonsTitle} />
+      <LearnNotebookEntry />
 
       <ul className="learn-package-list" role="list">
         {packages.map((pkg, index) => {

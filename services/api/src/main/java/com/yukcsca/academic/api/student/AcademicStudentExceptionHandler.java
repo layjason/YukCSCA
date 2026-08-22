@@ -3,15 +3,20 @@ package com.yukcsca.academic.api.student;
 import com.yukcsca.academic.application.AcademicAccessDeniedException;
 import com.yukcsca.academic.application.AcademicNotFoundException;
 import com.yukcsca.academic.application.ContentProgressValidationException;
+import com.yukcsca.academic.application.FormalAssistanceDisabledException;
 import com.yukcsca.academic.application.InvalidStudentAcademicRequestException;
+import com.yukcsca.academic.application.TerminologyValidationException;
 import com.yukcsca.identity.application.InvalidCredentialException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -24,6 +29,26 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class AcademicStudentExceptionHandler {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(AcademicStudentExceptionHandler.class);
+
+  @ExceptionHandler(TerminologyValidationException.class)
+  ProblemDetail terminologyValidation(TerminologyValidationException exception) {
+    ProblemDetail problem =
+        problem(
+            HttpStatus.BAD_REQUEST,
+            "TERMINOLOGY_VALIDATION_FAILED",
+            "Terminology request validation failed.");
+    problem.setProperty(
+        "violations",
+        exception.violations().stream()
+            .map(value -> Map.of("path", value.path(), "code", value.code()))
+            .toList());
+    return problem;
+  }
+
+  @ExceptionHandler(FormalAssistanceDisabledException.class)
+  ProblemDetail formalDisabled(FormalAssistanceDisabledException exception) {
+    return problem(HttpStatus.FORBIDDEN, "FORMAL_ASSISTANCE_DISABLED", exception.getMessage());
+  }
 
   @ExceptionHandler(ContentProgressValidationException.class)
   ProblemDetail progressValidation(ContentProgressValidationException exception) {
@@ -41,22 +66,31 @@ public class AcademicStudentExceptionHandler {
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  ProblemDetail invalidRequest(MethodArgumentNotValidException exception) {
+  ProblemDetail invalidRequest(
+      MethodArgumentNotValidException exception, HttpServletRequest request) {
     List<Map<String, String>> violations =
         exception.getBindingResult().getFieldErrors().stream()
             .map(error -> Map.of("path", error.getField(), "code", validationCode(error)))
             .toList();
+    if (isTerminologyPath(request.getRequestURI())) {
+      return terminologyValidationProblem(violations);
+    }
     return progressValidationProblem(violations);
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
-  ProblemDetail constraintViolation(ConstraintViolationException exception) {
-    return progressValidationProblem(
+  ProblemDetail constraintViolation(
+      ConstraintViolationException exception, HttpServletRequest request) {
+    List<Map<String, String>> violations =
         exception.getConstraintViolations().stream()
             .map(
                 violation ->
                     Map.of("path", violation.getPropertyPath().toString(), "code", "INVALID"))
-            .toList());
+            .toList();
+    if (isTerminologyPath(request.getRequestURI())) {
+      return terminologyValidationProblem(violations);
+    }
+    return progressValidationProblem(violations);
   }
 
   @ExceptionHandler({
@@ -84,16 +118,37 @@ public class AcademicStudentExceptionHandler {
   }
 
   @ExceptionHandler(AcademicNotFoundException.class)
-  ProblemDetail notFound(AcademicNotFoundException exception) {
-    return problem(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage());
+  ResponseEntity<ProblemDetail> notFound(AcademicNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .cacheControl(CacheControl.noStore())
+        .body(problem(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage()));
   }
 
   @ExceptionHandler(Exception.class)
   ProblemDetail internal(Exception exception) {
     LOGGER.error(
-        "Unexpected student academic operation failure ({})", exception.getClass().getName());
+        "Unexpected student academic operation failure ({})",
+        exception.getClass().getName(),
+        exception);
     return problem(
         HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Student academic operation failed.");
+  }
+
+  private static boolean isTerminologyPath(String uri) {
+    return uri != null
+        && (uri.contains("/terminology")
+            || uri.contains("/term-lookups")
+            || uri.contains("/terms/"));
+  }
+
+  private static ProblemDetail terminologyValidationProblem(List<Map<String, String>> violations) {
+    ProblemDetail problem =
+        problem(
+            HttpStatus.BAD_REQUEST,
+            "TERMINOLOGY_VALIDATION_FAILED",
+            "Terminology request validation failed.");
+    problem.setProperty("violations", violations);
+    return problem;
   }
 
   private static ProblemDetail progressValidationProblem(List<Map<String, String>> violations) {

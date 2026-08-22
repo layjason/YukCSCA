@@ -1,6 +1,6 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.3.4
+**Backlog version:** 0.3.5
 **Updated:** 2026-08-14
 **Status:** Supporting decomposition; non-normative
 
@@ -1143,7 +1143,7 @@ The student completes a bounded terminology preview linked to the upcoming topic
 
 1. Open the assigned topic preview.
 2. Study Chinese characters, pinyin, explanation-language definition, English equivalent, and mathematical meaning.
-3. Complete a short recognition check.
+3. Optionally start a short matching-pairs recognition check. The check does not lock the lesson.
 4. Continue to the topic lesson.
 
 **Acceptance Criteria**
@@ -1151,7 +1151,7 @@ The student completes a bounded terminology preview linked to the upcoming topic
 - Given a Chinese Mathematics topic, then its required academic vocabulary, instructions, and logical expressions are available before the lesson.
 - Given each term, then Chinese characters, pinyin, explanation-language definition, English equivalent, and mathematical meaning use one canonical term identity.
 - Given unsupported translation content, then the limitation is explicit and the system does not silently substitute a different mathematical meaning.
-- Given preview completion, then viewing alone does not claim topic mastery, but terminology exposure and check evidence are recorded.
+- Given preview completion, then viewing alone does not claim topic mastery, but terminology exposure is recorded. Check evidence is recorded when the student runs the optional matching-pairs check.
 
 **Not included in this story:** In-question assistance and long-term review scheduling.
 

@@ -49,12 +49,19 @@ test('shows subject hub including sole published package without auto-enter', as
     '/app/learn/MATHEMATICS',
   );
   expect(screen.queryByText('browse-mathematics')).not.toBeInTheDocument();
+  const notebook = screen.getByRole('link', { name: /term notebook/i });
+  expect(notebook).toHaveAttribute('href', '/app/learn/terms');
+  expect(notebook).toHaveTextContent(/viewing them is not mastery/i);
 });
 
 test('shows honest empty state when no packages', async () => {
   vi.spyOn(learnApi, 'listPublishedPackages').mockResolvedValue([]);
   renderPage();
   expect(await screen.findByText(/No published packages yet/i)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /term notebook/i })).toHaveAttribute(
+    'href',
+    '/app/learn/terms',
+  );
 });
 
 test('shows load failure with retry and no fabricated packages', async () => {

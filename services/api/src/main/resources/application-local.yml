@@ -30,3 +30,8 @@ yukcsca:
       terms-version: ${YUKCSCA_TERMS_VERSION:TERMS_V1}
       privacy-notice-version: ${YUKCSCA_PRIVACY_NOTICE_VERSION:PRIVACY_V1}
       mail-from: ${YUKCSCA_VERIFICATION_MAIL_FROM:no-reply@yukcsca.local}
+  speech:
+    enabled: ${YUKCSCA_SPEECH_ENABLED:false}
+    voice: ${YUKCSCA_SPEECH_VOICE:zh-CN-XiaoxiaoNeural}
+    timeout: ${YUKCSCA_SPEECH_TIMEOUT:8s}
+    max-clips-per-publish: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:200}

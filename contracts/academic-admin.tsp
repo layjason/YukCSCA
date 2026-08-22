@@ -39,6 +39,13 @@ enum StudyResourceKind {
   REMEDIATION,
 }
 
+@doc("Exam-language role of a reviewed term. Not a syllabus topic and not a subject. Algebra/calculus/physics live on outline bindings and the package subject.")
+enum TermClass {
+  EXAM_INSTRUCTION,
+  LOGICAL_EXPRESSION,
+  TOPIC_TERM,
+}
+
 enum QuestionDifficulty {
   FOUNDATION,
   STANDARD,
@@ -192,6 +199,7 @@ model LearningObjective {
 model TextContentBlock {
   kind: "TEXT";
 
+  @doc("Prose that may include bounded inline KaTeX between \\(...\\). Display-mode formulas stay MATH blocks. Terminology span offsets are UTF-16 code units into this source string, including delimiters, and must not overlap inline math. Raw HTML and arbitrary macros are not supported.")
   @minLength(1)
   @maxLength(12000)
   text: string;
@@ -200,7 +208,7 @@ model TextContentBlock {
 model MathContentBlock {
   kind: "MATH";
 
-  @doc("A bounded KaTeX-compatible LaTeX expression. Raw HTML and arbitrary macros are not supported.")
+  @doc("A bounded KaTeX-compatible LaTeX expression for a standalone formula. Use displayMode true for centered display; false for a standalone inline-sized formula. Mixed sentence math belongs in TEXT with \\(...\\). Raw HTML and arbitrary macros are not supported.")
   @minLength(1)
   @maxLength(4000)
   latex: string;
@@ -260,6 +268,57 @@ model ProvenanceRecord extends ProvenanceInput {
   reviewedAt: utcDateTime | null;
 }
 
+@doc("One Chinese surface form of a reviewed term. Audio is rendered at publish, not authored here.")
+model TermSurfaceFormInput {
+  @minLength(1)
+  @maxLength(40)
+  text: string;
+
+  @minLength(1)
+  @maxLength(80)
+  pinyin: string;
+}
+
+@doc("Package-scoped reviewed term identity. Same model for any Chinese exam-language subject package.")
+model TermDraft {
+  id: YukCSCA.uuid;
+  termClass: TermClass;
+
+  @minItems(1)
+  @maxItems(8)
+  surfaceForms: TermSurfaceFormInput[];
+
+  @doc("Explanation-language glosses. May include the same \\(...\\) inline KaTeX as TEXT blocks. Missing languages are allowed and must be flagged to students; they do not fork identity.")
+  definitions: LocalizedText;
+
+  @doc("Short English equivalent. May include \\(...\\) inline KaTeX.")
+  @minLength(1)
+  @maxLength(200)
+  englishEquivalent: string;
+
+  @doc("Optional notation as bounded KaTeX (no \\(...\\) wrappers). Raw HTML and arbitrary macros are not supported.")
+  @maxLength(80)
+  symbols?: string | null;
+
+  @doc("Optional authentic example. May include the same \\(...\\) inline KaTeX as TEXT blocks.")
+  @maxLength(500)
+  example?: string | null;
+
+  @doc("TOPIC_TERM should bind at least one outline item at publish. Exam-wording classes may be empty and reused across topics.")
+  @maxItems(32)
+  outlineItemIds: YukCSCA.uuid[];
+}
+
+@doc("Optional admin-preset attachment of a reviewed term to a question. The platform still auto-matches required and instruction/logic surface forms.")
+model AuthoredTermAttachment {
+  termId: YukCSCA.uuid;
+
+  @doc("Optional exact surface form when the term has aliases. Omit to allow every published surface form.")
+  @minLength(1)
+  @maxLength(40)
+  surfaceForm?: string | null;
+}
+
 model StudyResource<Provenance> {
   id: YukCSCA.uuid;
   kind?: StudyResourceKind;
@@ -268,6 +327,10 @@ model StudyResource<Provenance> {
   objectiveIds: YukCSCA.uuid[];
   versions: LocalizedContent[];
   provenance: Provenance;
+
+  @doc("Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION.")
+  @maxItems(64)
+  requiredTermIds?: YukCSCA.uuid[];
 }
 
 model QuestionOption {
@@ -312,6 +375,10 @@ model Question<Provenance> {
   @doc("Optional LESSON or REMEDIATION resource ids linked from post-submit solution UI.")
   @maxItems(8)
   relatedResourceIds?: YukCSCA.uuid[];
+
+  @doc("Optional admin-preset term attachments. Auto-match of required and instruction/logic surface forms still applies. Do not mark every character.")
+  @maxItems(32)
+  authoredTermAttachments?: AuthoredTermAttachment[];
 
   outlineItemIds: YukCSCA.uuid[];
   objectiveIds: YukCSCA.uuid[];
@@ -408,6 +475,10 @@ model AcademicPackageDraftInput {
   @maxItems(64)
   assessmentSets?: AssessmentSet[];
 
+  @doc("Reviewed Chinese exam-language term bank for this package. Subject-agnostic; first published use is Chinese Mathematics. Omitted or empty when none authored.")
+  @maxItems(500)
+  terms?: TermDraft[];
+
   @maxItems(1)
   mocks: MockPaper[];
 }
@@ -422,6 +493,10 @@ model AcademicPackageDraft {
   @doc("Assessment sets saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.")
   @maxItems(64)
   assessmentSets?: AssessmentSet[];
+
+  @doc("Reviewed Chinese exam-language term bank saved on the draft. Omitted or empty when none authored; clients should treat omit as empty.")
+  @maxItems(500)
+  terms?: TermDraft[];
 
   @maxItems(1)
   mocks: MockPaperRecord[];
@@ -573,6 +648,16 @@ model AcademicImageContentResponse {
   @bodyRoot image: AcademicImageUploadFile;
 }
 
+@doc("Pre-rendered short clip for one published Chinese surface form. Admin GET never synthesizes.")
+model TermPronunciationFile extends File<"audio/mpeg", bytes> {}
+
+model TermPronunciationContentResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "private, max-age=31536000, immutable";
+  @header("X-Content-Type-Options") contentTypeOptions: "nosniff";
+  @bodyRoot audio: TermPronunciationFile;
+}
+
 @route("/api/v1/admin")
 interface AcademicAdminApi {
   @doc("Lists the pilot academic packages visible to the authenticated administrator.")
@@ -667,5 +752,20 @@ interface AcademicAdminApi {
     | YukCSCA.ForbiddenResponse
     | YukCSCA.NotFoundResponse
     | YukCSCA.ConflictResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Returns the stored pronunciation clip from the package's active published revision — the audio students hear. Never synthesizes. 404 when the package has no active revision or no clip.")
+  @get
+  @route("/academic-packages/{id}/terms/{termId}/audio")
+  @useAuth(BearerAuth)
+  getPublishedTermPronunciation(
+    @path id: YukCSCA.uuid,
+    @path termId: YukCSCA.uuid,
+    @query @maxLength(40) surfaceForm?: string,
+  ):
+    | TermPronunciationContentResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 }

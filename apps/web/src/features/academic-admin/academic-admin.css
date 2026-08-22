@@ -752,6 +752,25 @@ select.admin-field-control,
   gap: var(--space-xs);
 }
 
+.admin-term-surface-row {
+  align-items: flex-end;
+}
+
+.admin-term-surface-row .admin-field-label {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.admin-term-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: var(--space-xs);
+}
+
 .admin-row-md-wrap {
   display: flex;
   flex-wrap: wrap;
@@ -1227,6 +1246,23 @@ select.admin-field-control,
   display: flex;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+.admin-term-stem-preview {
+  margin: 0 0 var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+}
+
+.admin-term-stem-preview-text {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.admin-term-stem-preview-text .term-chip {
+  cursor: default;
 }
 
 .admin-mapping-card {
@@ -2082,6 +2118,21 @@ select.admin-field-control,
   transition: border-color var(--motion-quick) var(--ease-standard);
   /* Inline math stays left-aligned in the reading flow (KaTeX default). */
   text-align: left;
+}
+
+.admin-mixed-preview {
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-soft);
+  border: 1px solid transparent;
+  margin-top: var(--space-xxs);
+}
+
+.admin-mixed-preview .learn-text-block {
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 0;
 }
 
 .katex-box-display {

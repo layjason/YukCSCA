@@ -40,6 +40,7 @@
   --color-block-pink: #f3dada;
   --color-block-coral: #f6d3c3;
   --color-block-sky: #dceaf6;
+  --color-block-navy: #1f1d3d;
   --color-success: #1f7a45;
   --color-success-soft: #e0f1e6;
   --color-warning: #9a5b13;
@@ -48,6 +49,8 @@
   --color-danger-soft: #f9e1e3;
   --color-info: #315b8a;
   --color-info-soft: #e2edf8;
+  --shell-bottom-nav-offset: 0px;
+  --color-pronunciation: #4aa6e8;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -733,6 +736,10 @@ button {
 
 .app-bottom-nav {
   display: none;
+}
+
+body.app-term-overlay-open .app-bottom-nav {
+  display: none !important;
 }
 
 .app-nav-collapsed .app-nav-name,
@@ -2597,6 +2604,10 @@ button {
 /* ─── Mobile: App Shell ─────────────────────────────────────────────────── */
 
 @media (max-width: 959px) {
+  :root {
+    --shell-bottom-nav-offset: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -2651,7 +2662,7 @@ button {
   }
 
   .app-content-wrapper {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    padding-bottom: var(--shell-bottom-nav-offset);
   }
 
   .app-content {

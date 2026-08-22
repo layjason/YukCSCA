@@ -971,6 +971,34 @@ a.mistakes-row:focus-visible {
 }
 
 /* Player */
+.learn-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 0.9rem;
+  width: fit-content;
+  cursor: pointer;
+}
+
+.learn-back-link:hover {
+  color: var(--color-ink);
+}
+
+.learn-back-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .assessment-player-chrome {
   margin-bottom: var(--space-lg);
 }
@@ -998,8 +1026,17 @@ a.mistakes-row:focus-visible {
   transition: width var(--motion-standard) var(--ease-standard);
 }
 
+.assessment-progress-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+  margin-top: var(--space-xs);
+}
+
 .assessment-progress-label {
-  margin: var(--space-xs) 0 0;
+  margin: 0;
   font-size: 0.85rem;
   color: var(--color-ink-muted);
   font-weight: 600;
@@ -1019,6 +1056,7 @@ a.mistakes-row:focus-visible {
 .assessment-stem {
   font-size: 1.1rem;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -1582,6 +1620,11 @@ a.mistakes-row:focus-visible {
   animation: assessment-enter var(--motion-standard) var(--ease-standard);
 }
 
+.learn-reader-actions .assessment-checkpoint-cta {
+  animation: none;
+  overflow-anchor: none;
+}
+
 .assessment-checkpoint-cta.is-locked {
   background: var(--color-surface-soft);
 }
@@ -1794,4 +1837,112 @@ a.mistakes-row:focus-visible {
   .session-player .assessment-item-card {
     padding: var(--space-xl);
   }
+}
+
+.language-help-wording {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-block-sky);
+  border: 1px solid color-mix(in srgb, var(--color-block-sky) 35%, var(--color-border));
+}
+
+.language-help-ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-help-ask:hover:not(:disabled) {
+  background: var(--color-block-sky);
+}
+
+.language-help-ask:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.language-help-ask:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.language-help-phrases-kicker {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-info);
+}
+
+.language-help-phrase-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.language-help-phrase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-sm);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-xs) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: normal;
+}
+
+.language-help-phrase:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.language-help-phrase-text {
+  flex: 0 1 auto;
+  max-width: 100%;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.language-help-phrase-leader {
+  flex: 1 0 1.5rem;
+  min-width: 1.5rem;
+  height: 0;
+  align-self: flex-end;
+  margin-bottom: 0.35em;
+  border-bottom: 2px dotted color-mix(in srgb, var(--color-pronunciation) 70%, var(--color-border));
+}
+
+.language-help-open,
+.language-help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.language-help-hint {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-ink-muted);
 }
