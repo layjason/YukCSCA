@@ -1,0 +1,17 @@
+# Gitleaks configuration for YukCSCA.
+# Extends the default rule set. Allow entries must stay narrow and document why
+# the value is provably public; credentials are never allowlisted.
+#
+# NOTE: gitleaks 8.24.x (the version pinned by .github/workflows/security.yml)
+# parses only the legacy [allowlist] table with plural keys; the newer
+# [[allowlists]] array form and singular regex/path keys are silently ignored.
+
+title = "yukcsca-gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Microsoft Edge read-aloud TTS trusted client token: a published protocol constant, identical for every caller and shipped with the open-source edge-tts client (https://github.com/rany2/edge-tts). Not a credential. Sole in-repo consumer: services/api/src/main/java/com/yukcsca/academic/infrastructure/EdgeTtsProtocol.java."
+regexTarget = "match"
+regexes = ['''6A5AA1D4EAFF4E9FB37E23D68491D6F4''']

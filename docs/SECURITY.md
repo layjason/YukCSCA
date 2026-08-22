@@ -93,7 +93,7 @@ Minor-user identity and relationships, learning conversations, assessment answer
 ### Repository and delivery
 
 - Secrets and real user/student data are prohibited from the repository and logs.
-- GitHub Actions are SHA-pinned. Dependency upgrades are proposed and validated as isolated maintainer-reviewed changes; no automated dependency-update pull requests are configured. Gitleaks scans pushes, pull requests, and the weekly schedule.
+- GitHub Actions are SHA-pinned. Dependency upgrades are proposed and validated as isolated maintainer-reviewed changes; no automated dependency-update pull requests are configured. Gitleaks scans pushes, pull requests, and the weekly schedule using the repository configuration in `.gitleaks.toml`, which extends the default rules with a narrow documented allowlist for the published Edge read-aloud protocol constant in `EdgeTtsProtocol.java` (not a credential).
 - CodeQL, dependency review, and GitHub native secret scanning are not active for the current private repository because the required GitHub security entitlements are not enabled.
 - Containers expose health checks; the API runs as a non-root user.
 

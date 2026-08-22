@@ -17,6 +17,8 @@ import java.util.UUID;
  */
 final class EdgeTtsProtocol {
   static final String VOICE = "zh-CN-XiaoxiaoNeural";
+  // Published Edge protocol constant, identical for every caller (public in edge_tts); not a
+  // credential. Allowlisted in .gitleaks.toml. gitleaks:allow
   static final String TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
   static final String CHROMIUM_FULL_VERSION = "143.0.3650.75";
   static final String SEC_MS_GEC_VERSION = "1-" + CHROMIUM_FULL_VERSION;
