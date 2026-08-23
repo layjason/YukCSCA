@@ -6,14 +6,20 @@ import com.yukcsca.academic.application.PublishedPackageProjector.LessonSummaryP
 import com.yukcsca.academic.application.PublishedPackageProjector.OfficialSourceProjection;
 import com.yukcsca.academic.application.PublishedPackageProjector.OutlineNodeProjection;
 import com.yukcsca.academic.application.PublishedPackageProjector.PublishedPackageSummaryProjection;
+import com.yukcsca.academic.application.PublishedPackageProjector.VideoAttachmentProjection;
+import com.yukcsca.academic.application.PublishedPackageProjector.VideoPositionProjection;
 import com.yukcsca.academic.domain.AcademicImage;
 import com.yukcsca.academic.domain.AcademicPackage;
 import com.yukcsca.academic.domain.AcademicPackageStatus;
 import com.yukcsca.academic.domain.AcademicRevision;
+import com.yukcsca.academic.domain.AcademicVideoAsset;
 import com.yukcsca.academic.domain.StudentContentProgress;
 import com.yukcsca.academic.domain.StudentContentProgressStatus;
+import com.yukcsca.academic.domain.VideoAssetStatus;
+import com.yukcsca.academic.infrastructure.MediaStorageProperties;
 import com.yukcsca.identity.application.CurrentAccount;
 import com.yukcsca.identity.application.CurrentAuthenticationService;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -23,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,6 +45,7 @@ public class AcademicStudentService {
       Set.of(
           StudentContentProgressStatus.IN_PROGRESS.name(),
           StudentContentProgressStatus.CONTENT_COMPLETE.name());
+  private static final int MAX_VIDEO_POSITION_SECONDS = 600;
 
   private final AcademicPackageStore packages;
   private final AcademicRevisionStore revisions;
@@ -46,6 +55,9 @@ public class AcademicStudentService {
   private final ContentAccessPolicy accessPolicy;
   private final CurrentAuthenticationService authentication;
   private final AcademicTerminologyService terminology;
+  private final AcademicVideoStore videoAssets;
+  private final MediaStoragePort mediaStorage;
+  private final MediaStorageProperties storageProperties;
   private final Clock clock;
 
   public AcademicStudentService(
@@ -57,6 +69,9 @@ public class AcademicStudentService {
       ContentAccessPolicy accessPolicy,
       CurrentAuthenticationService authentication,
       AcademicTerminologyService terminology,
+      AcademicVideoStore videoAssets,
+      MediaStoragePort mediaStorage,
+      MediaStorageProperties storageProperties,
       Clock clock) {
     this.packages = packages;
     this.revisions = revisions;
@@ -66,6 +81,9 @@ public class AcademicStudentService {
     this.accessPolicy = accessPolicy;
     this.authentication = authentication;
     this.terminology = terminology;
+    this.videoAssets = videoAssets;
+    this.mediaStorage = mediaStorage;
+    this.storageProperties = storageProperties;
     this.clock = clock;
   }
 
@@ -95,6 +113,8 @@ public class AcademicStudentService {
     List<StudentContentProgress> progressRows =
         progressStore.findByAccountIdAndPackageId(actorId, academicPackage.getId());
     Map<UUID, StudentContentProgress> progressByResource = indexProgress(progressRows);
+    Map<UUID, VideoPositionProjection> videoPositions =
+        videoPositionsByResource(lessons, progressRows);
     UUID activeRevisionId = revision.getId();
     Map<UUID, JsonNode> historicalContent =
         loadHistoricalRevisionContent(progressRows, activeRevisionId);
@@ -104,7 +124,12 @@ public class AcademicStudentService {
             academicPackage.getId(),
             content,
             projector.outline(
-                content, lessons, progressByResource, activeRevisionId, historicalContent));
+                content,
+                lessons,
+                progressByResource,
+                videoPositions,
+                activeRevisionId,
+                historicalContent));
     LessonSummaryProjection continueLesson =
         attachTerminologyPreview(
             actorId,
@@ -156,7 +181,8 @@ public class AcademicStudentService {
         base.blocks(),
         base.contentProgress(),
         resource.outlineItemIds(),
-        resource.objectiveIds());
+        resource.objectiveIds(),
+        base.video());
   }
 
   @Transactional
@@ -166,6 +192,7 @@ public class AcademicStudentService {
       UUID resourceId,
       String status,
       Integer resumeBlockIndex,
+      VideoPositionCommand video,
       UUID expectedPackageRevisionId) {
     return upsertStudyResourceProgress(
         actorId,
@@ -173,6 +200,7 @@ public class AcademicStudentService {
         resourceId,
         status,
         resumeBlockIndex,
+        video,
         expectedPackageRevisionId,
         "LESSON",
         "Lesson not found.");
@@ -185,6 +213,7 @@ public class AcademicStudentService {
       UUID resourceId,
       String status,
       Integer resumeBlockIndex,
+      VideoPositionCommand video,
       UUID expectedPackageRevisionId) {
     return upsertStudyResourceProgress(
         actorId,
@@ -192,6 +221,7 @@ public class AcademicStudentService {
         resourceId,
         status,
         resumeBlockIndex,
+        video,
         expectedPackageRevisionId,
         "REMEDIATION",
         "Remediation not found.");
@@ -228,10 +258,17 @@ public class AcademicStudentService {
         progress == null
             ? Map.of()
             : loadHistoricalRevisionContent(List.of(progress), revision.getId());
+    // A video is bound to an authored language version: null whenever the body is
+    // LANGUAGE_UNAVAILABLE, and null when no REVIEWED attachment was published for the
+    // requested language (AC-05).
+    PublishedVideoRefView videoRef =
+        available ? publishedVideoRef(resource, explanationLanguage) : null;
+    VideoPositionProjection videoPosition = resolveVideoPosition(progress, resource.videos());
     ContentProgressProjection progressProjection =
         projector.contentProgress(
             progress,
             available ? blocks.size() : null,
+            videoPosition,
             revision.getId(),
             resourceId,
             content,
@@ -265,7 +302,8 @@ public class AcademicStudentService {
         available,
         available ? blocks : null,
         progressProjection,
-        lessonTerminology);
+        lessonTerminology,
+        videoRef);
   }
 
   private List<OutlineNodeProjection> attachTerminologyPreviews(
@@ -322,6 +360,7 @@ public class AcademicStudentService {
       UUID resourceId,
       String status,
       Integer resumeBlockIndex,
+      VideoPositionCommand video,
       UUID expectedPackageRevisionId,
       String kind,
       String notFoundMessage) {
@@ -331,10 +370,12 @@ public class AcademicStudentService {
     }
     StudentContentProgressStatus progressStatus = StudentContentProgressStatus.valueOf(status);
     if (progressStatus == StudentContentProgressStatus.IN_PROGRESS) {
-      if (resumeBlockIndex == null) {
+      // Relaxed at-least-one precondition: a video-only watch writes IN_PROGRESS with a
+      // playback position and no block index (CR-02).
+      if (resumeBlockIndex == null && video == null) {
         throw validation("resumeBlockIndex", "REQUIRED");
       }
-      if (resumeBlockIndex < 0) {
+      if (resumeBlockIndex != null && resumeBlockIndex < 0) {
         throw validation("resumeBlockIndex", "OUT_OF_RANGE");
       }
     } else if (resumeBlockIndex != null && resumeBlockIndex < 0) {
@@ -344,11 +385,42 @@ public class AcademicStudentService {
     AcademicPackage academicPackage = requirePublishedPackage(subject);
     AcademicRevision revision = requireActiveRevision(academicPackage);
     JsonNode content = projector.parseContent(revision.getContent());
-    boolean resourceExists =
+    PublishedPackageProjector.StudyResourceProjection resource =
         projector.studyResourcesOfKind(content, kind).stream()
-            .anyMatch(value -> value.id().equals(resourceId));
-    if (!resourceExists) {
-      throw new AcademicNotFoundException(notFoundMessage);
+            .filter(value -> value.id().equals(resourceId))
+            .findFirst()
+            .orElseThrow(() -> new AcademicNotFoundException(notFoundMessage));
+    List<VideoAttachmentProjection> attachments = resource.videos();
+
+    UUID videoAssetId = null;
+    Integer videoPositionSeconds = null;
+    if (video != null) {
+      final UUID requestedAssetId = video.videoAssetId();
+      videoAssetId = requestedAssetId;
+      videoPositionSeconds = video.positionSeconds();
+      if (requestedAssetId == null) {
+        throw validation("video.videoAssetId", "REQUIRED");
+      }
+      if (videoPositionSeconds == null) {
+        throw validation("video.positionSeconds", "REQUIRED");
+      }
+      if (videoPositionSeconds < 0 || videoPositionSeconds > MAX_VIDEO_POSITION_SECONDS) {
+        throw validation("video.positionSeconds", "OUT_OF_RANGE");
+      }
+      attachments.stream()
+          .filter(value -> value.videoAssetId().equals(requestedAssetId))
+          .findFirst()
+          .orElseThrow(() -> validation("video.videoAssetId", "INVALID_VIDEO_ASSET"));
+      AcademicVideoAsset asset =
+          videoAssets
+              .findById(requestedAssetId)
+              .orElseThrow(() -> validation("video.videoAssetId", "INVALID_VIDEO_ASSET"));
+      if (asset.getStatus() != VideoAssetStatus.REVIEWED || asset.getDurationSeconds() == null) {
+        throw validation("video.videoAssetId", "INVALID_VIDEO_ASSET");
+      }
+      if (videoPositionSeconds > asset.getDurationSeconds()) {
+        throw validation("video.positionSeconds", "POSITION_OUT_OF_RANGE");
+      }
     }
 
     Instant now = now();
@@ -389,19 +461,34 @@ public class AcademicStudentService {
     }
     StudentContentProgress saved;
     if (existing == null) {
-      saved =
-          progressStore.save(
-              new StudentContentProgress(
-                  actorId,
-                  academicPackage.getId(),
-                  academicPackage.getSubject(),
-                  resourceId,
-                  progressStatus,
-                  resumeBlockIndex,
-                  lastRevisionId,
-                  now));
+      StudentContentProgress created =
+          new StudentContentProgress(
+              actorId,
+              academicPackage.getId(),
+              academicPackage.getSubject(),
+              resourceId,
+              progressStatus,
+              resumeBlockIndex,
+              lastRevisionId,
+              now);
+      created.replace(
+          progressStatus,
+          resumeBlockIndex,
+          videoAssetId,
+          videoPositionSeconds,
+          lastRevisionId,
+          now);
+      saved = progressStore.save(created);
     } else {
-      existing.replace(progressStatus, resumeBlockIndex, lastRevisionId, now);
+      // The write replaces any stored position: null clears it, clients resend the current
+      // position on every IN_PROGRESS write (CR-02).
+      existing.replace(
+          progressStatus,
+          resumeBlockIndex,
+          videoAssetId,
+          videoPositionSeconds,
+          lastRevisionId,
+          now);
       saved = progressStore.save(existing);
     }
     LOGGER.info(
@@ -412,8 +499,9 @@ public class AcademicStudentService {
         progressStatus);
     Map<UUID, JsonNode> historicalContent =
         loadHistoricalRevisionContent(List.of(saved), activeRevisionId);
+    VideoPositionProjection videoProjection = resolveVideoPosition(saved, attachments);
     return projector.contentProgress(
-        saved, null, activeRevisionId, resourceId, content, historicalContent);
+        saved, null, videoProjection, activeRevisionId, resourceId, content, historicalContent);
   }
 
   /**
@@ -480,6 +568,115 @@ public class AcademicStudentService {
     return new AcademicImageContent(image.getMediaType(), image.getContent());
   }
 
+  /**
+   * Presigned range-capable playback grant for one published reviewed short video. Non-published
+   * states never leak: any asset that is not REVIEWED, or is not referenced by an active published
+   * revision, is an indistinguishable 404 (AC-05).
+   */
+  @Transactional(readOnly = true)
+  public MediaStoragePort.Presigned playPublishedVideo(UUID actorId, UUID videoAssetId) {
+    requireStudent(actorId);
+    AcademicVideoAsset asset = publishedVideoForPlayback(videoAssetId);
+    try {
+      return mediaStorage.presignGet(asset.getStorageKey(), storageProperties.playbackPresignTtl());
+    } catch (RuntimeException exception) {
+      LOGGER.warn(
+          "playback.error assetId={} code={}", videoAssetId, exception.getClass().getSimpleName());
+      throw exception;
+    }
+  }
+
+  /** Immutable published captions; same published-reference gate as playback. */
+  @Transactional(readOnly = true)
+  public PublishedVideoCaptions getPublishedVideoCaptions(UUID actorId, UUID videoAssetId) {
+    requireStudent(actorId);
+    AcademicVideoAsset asset = publishedVideoForPlayback(videoAssetId);
+    if (!asset.isCaptionsAvailable() || asset.getCaptionsKey() == null) {
+      throw new AcademicNotFoundException("Video captions not found.");
+    }
+    byte[] bytes = mediaStorage.get(asset.getCaptionsKey());
+    return new PublishedVideoCaptions(
+        new String(bytes, StandardCharsets.UTF_8), asset.getUpdatedAt());
+  }
+
+  private AcademicVideoAsset publishedVideoForPlayback(UUID videoAssetId) {
+    AcademicVideoAsset asset = videoAssets.findById(videoAssetId).orElse(null);
+    if (asset == null || asset.getStatus() != VideoAssetStatus.REVIEWED) {
+      throw new AcademicNotFoundException("Video not found.");
+    }
+    boolean referenced =
+        packages
+            .findByStatusAndActiveRevisionIdIsNotNullOrderByCreatedAtAsc(
+                AcademicPackageStatus.PUBLISHED)
+            .stream()
+            .anyMatch(
+                academicPackage -> {
+                  AcademicRevision revision = requireActiveRevision(academicPackage);
+                  JsonNode content = projector.parseContent(revision.getContent());
+                  return projector.referencesVideo(content, videoAssetId);
+                });
+    if (!referenced) {
+      throw new AcademicNotFoundException("Video not found.");
+    }
+    return asset;
+  }
+
+  /** Published reviewed-video reference for the requested explanation language, or null. */
+  private PublishedVideoRefView publishedVideoRef(
+      PublishedPackageProjector.StudyResourceProjection resource, String explanationLanguage) {
+    return resource.videos().stream()
+        .filter(attachment -> explanationLanguage.equals(attachment.language()))
+        .map(VideoAttachmentProjection::videoAssetId)
+        .map(videoAssets::findById)
+        .flatMap(java.util.Optional::stream)
+        .filter(asset -> asset.getStatus() == VideoAssetStatus.REVIEWED)
+        .filter(asset -> asset.getDurationSeconds() != null)
+        .findFirst()
+        .map(asset -> new PublishedVideoRefView(asset.getId(), asset.getDurationSeconds()))
+        .orElse(null);
+  }
+
+  /**
+   * Resolves a stored playback position against the resource's currently published attachments:
+   * stale asset ids project as null (re-read semantics), surviving positions clamp to the currently
+   * published asset's duration (CR-02).
+   */
+  private VideoPositionProjection resolveVideoPosition(
+      StudentContentProgress progress, List<VideoAttachmentProjection> attachments) {
+    if (progress == null
+        || progress.getVideoAssetId() == null
+        || progress.getVideoPositionSeconds() == null
+        || attachments.isEmpty()) {
+      return null;
+    }
+    boolean current =
+        attachments.stream()
+            .anyMatch(attachment -> attachment.videoAssetId().equals(progress.getVideoAssetId()));
+    if (!current) return null;
+    AcademicVideoAsset asset = videoAssets.findById(progress.getVideoAssetId()).orElse(null);
+    if (asset == null || asset.getStatus() != VideoAssetStatus.REVIEWED) return null;
+    int duration = asset.getDurationSeconds() == null ? 0 : asset.getDurationSeconds();
+    int position = Math.min(progress.getVideoPositionSeconds(), duration);
+    return new VideoPositionProjection(progress.getVideoAssetId(), position);
+  }
+
+  private Map<UUID, VideoPositionProjection> videoPositionsByResource(
+      List<LessonResourceProjection> lessons, List<StudentContentProgress> progressRows) {
+    Map<UUID, StudentContentProgress> byResource =
+        progressRows.stream()
+            .filter(row -> row.getVideoAssetId() != null)
+            .collect(Collectors.toMap(StudentContentProgress::getResourceId, Function.identity()));
+    if (byResource.isEmpty()) return Map.of();
+    Map<UUID, VideoPositionProjection> positions = new HashMap<>();
+    for (LessonResourceProjection lesson : lessons) {
+      StudentContentProgress progress = byResource.get(lesson.id());
+      if (progress == null) continue;
+      VideoPositionProjection position = resolveVideoPosition(progress, lesson.videos());
+      if (position != null) positions.put(lesson.id(), position);
+    }
+    return positions;
+  }
+
   private CurrentAccount requireStudent(UUID actorId) {
     CurrentAccount account = authentication.requireAccount(actorId);
     if (!accessPolicy.mayReadPublishedContent(account)) {
@@ -532,6 +729,13 @@ public class AcademicStudentService {
       List<OutlineNodeProjection> outline,
       LessonSummaryProjection continueLesson) {}
 
+  public record VideoPositionCommand(UUID videoAssetId, Integer positionSeconds) {}
+
+  /** Student-safe published video reference; no provenance or storage detail. */
+  public record PublishedVideoRefView(UUID videoAssetId, int durationSeconds) {}
+
+  public record PublishedVideoCaptions(String captions, Instant updatedAt) {}
+
   public record PublishedLessonResult(
       UUID packageId,
       UUID packageRevisionId,
@@ -543,7 +747,8 @@ public class AcademicStudentService {
       boolean languageAvailable,
       List<JsonNode> blocks,
       ContentProgressProjection contentProgress,
-      AcademicTerminologyService.LessonTerminologyView terminology) {}
+      AcademicTerminologyService.LessonTerminologyView terminology,
+      PublishedVideoRefView video) {}
 
   public record PublishedRemediationResult(
       UUID packageId,
@@ -557,5 +762,6 @@ public class AcademicStudentService {
       List<JsonNode> blocks,
       ContentProgressProjection contentProgress,
       List<UUID> outlineItemIds,
-      List<UUID> objectiveIds) {}
+      List<UUID> objectiveIds,
+      PublishedVideoRefView video) {}
 }

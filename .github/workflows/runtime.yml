@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - run: docker compose config --quiet
-      - run: docker compose --project-name yukcsca-runtime build web api
+      - run: docker compose --project-name yukcsca-runtime build web api render-worker
       - run: docker compose --project-name yukcsca-runtime up --detach --no-build --wait --wait-timeout 180
       - run: ./scripts/smoke.sh
       - name: Show container logs on failure

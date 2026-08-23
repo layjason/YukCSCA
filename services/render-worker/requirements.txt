@@ -1,0 +1,8 @@
+# VS-010B render worker — pinned dependencies (D-03 / ADR-0003).
+# manim-voiceover is installed WITHOUT the transcribe extra: caption timing is
+# deterministic from segment audio durations, never from speech recognition.
+manim==0.21.0
+manim-voiceover[gtts]==0.4.0
+gtts==2.5.4
+psycopg[binary]==3.3.4
+boto3==1.43.78

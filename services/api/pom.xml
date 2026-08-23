@@ -23,6 +23,7 @@
     <jacoco.version>0.8.15</jacoco.version>
     <spotless.version>3.8.0</spotless.version>
     <bouncycastle.version>1.84</bouncycastle.version>
+    <awssdk.version>2.31.30</awssdk.version>
   </properties>
 
   <dependencies>
@@ -72,6 +73,13 @@
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- VS-010B: S3-compatible object storage for reviewed-video bytes (D-02);
+         first use is presigned upload slots, range-capable playback grants, and
+         caption byte storage against MinIO in dev/test. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -99,6 +107,18 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${awssdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <plugins>

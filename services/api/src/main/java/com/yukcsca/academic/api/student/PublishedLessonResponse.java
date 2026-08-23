@@ -16,7 +16,8 @@ public record PublishedLessonResponse(
     String requestedExplanationLanguage,
     Map<String, Object> body,
     ContentProgressResponse contentProgress,
-    @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> terminology) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> terminology,
+    @JsonInclude(JsonInclude.Include.NON_NULL) VideoRefResponse video) {
   static PublishedLessonResponse from(PublishedLessonResult value) {
     return new PublishedLessonResponse(
         value.packageId(),
@@ -28,7 +29,8 @@ public record PublishedLessonResponse(
         value.requestedExplanationLanguage(),
         body(value),
         ContentProgressResponse.from(value.contentProgress()),
-        TerminologyResponses.lessonTerminology(value.terminology()));
+        TerminologyResponses.lessonTerminology(value.terminology()),
+        VideoRefResponse.from(value.video()));
   }
 
   private static Map<String, Object> body(PublishedLessonResult value) {

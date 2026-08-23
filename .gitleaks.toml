@@ -5,13 +5,13 @@
 # NOTE: gitleaks 8.24.x (the version pinned by .github/workflows/security.yml)
 # parses only the legacy [allowlist] table with plural keys; the newer
 # [[allowlists]] array form and singular regex/path keys are silently ignored.
+#
+# No allowlist entries are currently needed: the Microsoft Edge read-aloud
+# trusted-client token constant was retired together with the Edge TTS adapter
+# in VS-010B (ADR-0003 moved all speech synthesis to gTTS, whose pinned wire
+# protocol carries no token or credential).
 
 title = "yukcsca-gitleaks"
 
 [extend]
 useDefault = true
-
-[allowlist]
-description = "Microsoft Edge read-aloud TTS trusted client token: a published protocol constant, identical for every caller and shipped with the open-source edge-tts client (https://github.com/rany2/edge-tts). Not a credential. Sole in-repo consumer: services/api/src/main/java/com/yukcsca/academic/infrastructure/EdgeTtsProtocol.java."
-regexTarget = "match"
-regexes = ['''6A5AA1D4EAFF4E9FB37E23D68491D6F4''']

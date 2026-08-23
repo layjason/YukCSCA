@@ -97,7 +97,8 @@ public class PublishedPackageProjector {
                     resource.title(),
                     resource.outlineItemIds(),
                     resource.availableExplanationLanguages(),
-                    resource.blocksByLanguage()))
+                    resource.blocksByLanguage(),
+                    resource.videos()))
         .toList();
   }
 
@@ -142,15 +143,58 @@ public class PublishedPackageProjector {
               outlineItemIds,
               objectiveIds,
               languages,
-              blocksByLanguage));
+              blocksByLanguage,
+              videoAttachments(resource)));
     }
     return List.copyOf(resources);
+  }
+
+  /** Published reviewed-video attachments of one resource, keyed by explanation language. */
+  public List<VideoAttachmentProjection> videoAttachments(JsonNode resource) {
+    List<VideoAttachmentProjection> attachments = new ArrayList<>();
+    JsonNode videos = resource.path("videos");
+    if (!videos.isArray()) return List.of();
+    for (JsonNode attachment : videos) {
+      String language = text(attachment, "language");
+      UUID assetId = uuid(attachment.path("videoAssetId"));
+      if (language == null || assetId == null) continue;
+      attachments.add(new VideoAttachmentProjection(language, assetId));
+    }
+    return List.copyOf(attachments);
+  }
+
+  /** Whether any published resource in this revision content references the video asset. */
+  public boolean referencesVideo(JsonNode content, UUID videoAssetId) {
+    JsonNode resources = content.path("resources");
+    if (!resources.isArray()) return false;
+    for (JsonNode resource : resources) {
+      for (VideoAttachmentProjection attachment : videoAttachments(resource)) {
+        if (attachment.videoAssetId().equals(videoAssetId)) return true;
+      }
+    }
+    return false;
   }
 
   public List<OutlineNodeProjection> outline(
       JsonNode content,
       List<LessonResourceProjection> lessons,
       Map<UUID, StudentContentProgress> progressByResource,
+      UUID activeRevisionId,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
+    return outline(
+        content,
+        lessons,
+        progressByResource,
+        Map.of(),
+        activeRevisionId,
+        historicalContentByRevisionId);
+  }
+
+  public List<OutlineNodeProjection> outline(
+      JsonNode content,
+      List<LessonResourceProjection> lessons,
+      Map<UUID, StudentContentProgress> progressByResource,
+      Map<UUID, VideoPositionProjection> videoPositionsByResource,
       UUID activeRevisionId,
       Map<UUID, JsonNode> historicalContentByRevisionId) {
     JsonNode items = content.path("outlineItems");
@@ -191,6 +235,7 @@ public class PublishedPackageProjector {
                       lessonSummary(
                           lesson,
                           progressByResource.get(lesson.id()),
+                          videoPositionsByResource.get(lesson.id()),
                           activeRevisionId,
                           content,
                           historicalContentByRevisionId))
@@ -213,6 +258,17 @@ public class PublishedPackageProjector {
       UUID activeRevisionId,
       JsonNode activeContent,
       Map<UUID, JsonNode> historicalContentByRevisionId) {
+    return lessonSummary(
+        lesson, progress, null, activeRevisionId, activeContent, historicalContentByRevisionId);
+  }
+
+  public LessonSummaryProjection lessonSummary(
+      LessonResourceProjection lesson,
+      StudentContentProgress progress,
+      VideoPositionProjection video,
+      UUID activeRevisionId,
+      JsonNode activeContent,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
     return new LessonSummaryProjection(
         lesson.id(),
         lesson.title(),
@@ -220,6 +276,7 @@ public class PublishedPackageProjector {
         contentProgress(
             progress,
             null,
+            video,
             activeRevisionId,
             lesson.id(),
             activeContent,
@@ -244,8 +301,30 @@ public class PublishedPackageProjector {
       UUID resourceId,
       JsonNode activeContent,
       Map<UUID, JsonNode> historicalContentByRevisionId) {
+    return contentProgress(
+        progress,
+        clampToBlockCount,
+        null,
+        activeRevisionId,
+        resourceId,
+        activeContent,
+        historicalContentByRevisionId);
+  }
+
+  /**
+   * Full projection including the saved video playback position, already resolved and clamped by
+   * the caller against the resource's currently published reviewed video (CR-02).
+   */
+  public ContentProgressProjection contentProgress(
+      StudentContentProgress progress,
+      Integer clampToBlockCount,
+      VideoPositionProjection video,
+      UUID activeRevisionId,
+      UUID resourceId,
+      JsonNode activeContent,
+      Map<UUID, JsonNode> historicalContentByRevisionId) {
     if (progress == null) {
-      return new ContentProgressProjection(PROGRESS_NOT_STARTED, null, null, false);
+      return new ContentProgressProjection(PROGRESS_NOT_STARTED, null, null, null, false);
     }
     Integer resume = progress.getResumeBlockIndex();
     if (resume != null && clampToBlockCount != null) {
@@ -261,7 +340,7 @@ public class PublishedPackageProjector {
         computeUpdatedSinceCompleted(
             progress, activeRevisionId, resourceId, activeContent, historicalContentByRevisionId);
     return new ContentProgressProjection(
-        progress.getStatus().name(), resume, progress.getUpdatedAt(), updatedSinceCompleted);
+        progress.getStatus().name(), resume, video, progress.getUpdatedAt(), updatedSinceCompleted);
   }
 
   private boolean computeUpdatedSinceCompleted(
@@ -599,8 +678,15 @@ public class PublishedPackageProjector {
       RevisionSummaryProjection activeRevision,
       List<String> examLanguages) {}
 
+  /** Restored playback position, already clamped to the currently published asset duration. */
+  public record VideoPositionProjection(UUID videoAssetId, int positionSeconds) {}
+
   public record ContentProgressProjection(
-      String status, Integer resumeBlockIndex, Instant updatedAt, boolean updatedSinceCompleted) {}
+      String status,
+      Integer resumeBlockIndex,
+      VideoPositionProjection video,
+      Instant updatedAt,
+      boolean updatedSinceCompleted) {}
 
   public record LessonSummaryProjection(
       UUID resourceId,
@@ -628,7 +714,11 @@ public class PublishedPackageProjector {
       LocalizedTextProjection title,
       List<UUID> outlineItemIds,
       List<String> availableExplanationLanguages,
-      Map<String, List<JsonNode>> blocksByLanguage) {}
+      Map<String, List<JsonNode>> blocksByLanguage,
+      List<VideoAttachmentProjection> videos) {}
+
+  /** Attachment reference carried by a published revision; only REVIEWED-at-publish ids appear. */
+  public record VideoAttachmentProjection(String language, UUID videoAssetId) {}
 
   public record StudyResourceProjection(
       UUID id,
@@ -637,5 +727,6 @@ public class PublishedPackageProjector {
       List<UUID> outlineItemIds,
       List<UUID> objectiveIds,
       List<String> availableExplanationLanguages,
-      Map<String, List<JsonNode>> blocksByLanguage) {}
+      Map<String, List<JsonNode>> blocksByLanguage,
+      List<VideoAttachmentProjection> videos) {}
 }

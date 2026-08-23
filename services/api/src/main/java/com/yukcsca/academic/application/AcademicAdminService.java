@@ -44,6 +44,8 @@ public class AcademicAdminService {
   private final SpeechSynthesisPort speech;
   private final AcademicTermPronunciationStore pronunciations;
   private final SpeechSynthesisProperties speechProperties;
+  private final ResourceVideoAttachmentValidator videoAttachments;
+  private final PublishedVideoProjector videoProjector;
   private final Clock clock;
 
   public AcademicAdminService(
@@ -57,6 +59,8 @@ public class AcademicAdminService {
       SpeechSynthesisPort speech,
       AcademicTermPronunciationStore pronunciations,
       SpeechSynthesisProperties speechProperties,
+      ResourceVideoAttachmentValidator videoAttachments,
+      PublishedVideoProjector videoProjector,
       Clock clock) {
     this.packages = packages;
     this.revisions = revisions;
@@ -68,6 +72,8 @@ public class AcademicAdminService {
     this.speech = speech;
     this.pronunciations = pronunciations;
     this.speechProperties = speechProperties;
+    this.videoAttachments = videoAttachments;
+    this.videoProjector = videoProjector;
     this.clock = clock;
   }
 
@@ -120,6 +126,9 @@ public class AcademicAdminService {
     ObjectNode normalized =
         drafts.normalizeForSave(
             submittedDraft, academicPackage.getDraft(), actorId, academicPackage.getSubject());
+    // Draft-save video-attachment rules are database-dependent (asset/spec existence and
+    // language equality), so they run after pure-shape normalization (CR-03/CR-07c).
+    videoAttachments.validate(normalized);
     Instant now = now();
     academicPackage.replaceDraft(drafts.serialize(normalized), now);
     packages.save(academicPackage);
@@ -236,6 +245,15 @@ public class AcademicAdminService {
 
     Instant now = now();
     ObjectNode reviewed = drafts.reviewForPublication(savedDraft, actorId, now);
+    // Only REVIEWED attachments enter the published revision; video state never blocks
+    // publication of the complete text/formula/image unit (AC-04).
+    videoProjector.projectInto(reviewed);
+    Set<UUID> publishedVideoIds = videoProjector.referencedAssetIds(reviewed);
+    Set<UUID> supersededVideoIds =
+        academicPackage.getActiveRevisionId() == null
+            ? Set.of()
+            : videoProjector.referencedAssetIds(
+                drafts.parseObject(activeRevision(academicPackage).getContent()));
     long revisionNumber =
         academicPackage.getActiveRevisionId() == null
             ? 1
@@ -251,6 +269,8 @@ public class AcademicAdminService {
         });
     academicPackage.activateRevision(revision.getId(), drafts.serialize(reviewed), now);
     packages.save(academicPackage);
+    videoProjector.retireReplaced(actorId, supersededVideoIds, publishedVideoIds, now);
+    videoProjector.logPublished(publishedVideoIds);
     renderTermAudio(revision.getId(), reviewed, now);
     audit(actorId, "PACKAGE_PUBLISHED", "ACADEMIC_PACKAGE", packageId, "SUCCEEDED", null, now);
     return snapshot(academicPackage);
