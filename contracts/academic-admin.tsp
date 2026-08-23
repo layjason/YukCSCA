@@ -906,6 +906,9 @@ model AcademicVideoAsset {
   @doc("Upload-probe rejection reasons. Null unless status is REJECTED; production failures never create an asset and surface on the render job instead.")
   rejection: AcademicValidationViolation[] | null;
 
+  @doc("Latest VALIDATE_UPLOAD job for an UPLOADED asset, including bounded terminal failure detail so an administrator can recover polling or retry after reload. Null for PRODUCED assets.")
+  latestValidationJob: RenderJob | null;
+
   provenance: ProvenanceRecord;
   createdAt: utcDateTime;
   updatedAt: utcDateTime;
@@ -979,6 +982,19 @@ model RenderJobConflictResponse {
   @statusCode statusCode: 409;
   @header contentType: "application/problem+json";
   @body body: RenderJobConflictProblem;
+}
+
+@doc("Validation retry conflict. RENDER_JOB_ACTIVE embeds the already-active validation job; VALIDATION_NOT_RETRYABLE means the asset is not an uploaded asset awaiting validation or its staged bytes are no longer reserved.")
+model VideoValidationRetryConflictProblem extends YukCSCA.Problem {
+  code: "RENDER_JOB_ACTIVE" | "VALIDATION_NOT_RETRYABLE";
+  job?: RenderJob | null;
+}
+
+@error
+model VideoValidationRetryConflictResponse {
+  @statusCode statusCode: 409;
+  @header contentType: "application/problem+json";
+  @body body: VideoValidationRetryConflictProblem;
 }
 
 model AcademicVideoResponse {
@@ -1217,7 +1233,7 @@ interface AcademicAdminApi {
     | YukCSCA.NotFoundResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, and provenance.")
+  @doc("Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, provenance, and the latest upload-validation job for reload-safe polling and failure recovery.")
   @get
   @route("/academic-videos/{id}")
   @useAuth(BearerAuth)
@@ -1226,6 +1242,18 @@ interface AcademicAdminApi {
     | YukCSCA.UnauthorizedResponse
     | YukCSCA.ForbiddenResponse
     | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Retries terminal upload validation from the durable asset id after reload. The asset must be UPLOADED and AWAITING_VALIDATION with staged bytes still reserved. Returns 409 RENDER_JOB_ACTIVE with the active job on a duplicate request, or VALIDATION_NOT_RETRYABLE when the asset or bytes can no longer be retried.")
+  @post
+  @route("/academic-videos/{id}:retry-validation")
+  @useAuth(BearerAuth)
+  retryAcademicVideoValidation(@path id: YukCSCA.uuid):
+    | RenderJobCreatedResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
+    | VideoValidationRetryConflictResponse
     | YukCSCA.InternalServerErrorResponse;
 
   @doc("Returns a short-lived presigned range-capable playback URL for administrator review of one DRAFT or REVIEWED asset; the client assigns it to a video element src. 404 while bytes are not yet validated (AWAITING_VALIDATION); 409 code VIDEO_NOT_PLAYABLE for REJECTED and RETIRED assets.")

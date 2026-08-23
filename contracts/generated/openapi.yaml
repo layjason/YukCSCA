@@ -2194,7 +2194,7 @@ paths:
   /api/v1/admin/academic-videos/{id}:
     get:
       operationId: AcademicAdminApi_getAcademicVideo
-      description: Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, and provenance.
+      description: Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, provenance, and the latest upload-validation job for reload-safe polling and failure recovery.
       parameters:
         - name: id
           in: path
@@ -2444,6 +2444,73 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/admin/academic-videos/{id}:retry-validation:
+    post:
+      operationId: AcademicAdminApi_retryAcademicVideoValidation
+      description: Retries terminal upload validation from the durable asset id after reload. The asset must be UPLOADED and AWAITING_VALIDATION with staged bytes still reserved. Returns 409 RENDER_JOB_ACTIVE with the active job on a duplicate request, or VALIDATION_NOT_RETRYABLE when the asset or bytes can no longer be retried.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AcademicAdmin.VideoValidationRetryConflictProblem'
         '500':
           description: Server error
           content:
@@ -4984,6 +5051,7 @@ components:
         - sha256
         - captionsAvailable
         - rejection
+        - latestValidationJob
         - provenance
         - createdAt
         - updatedAt
@@ -5045,6 +5113,11 @@ components:
                 $ref: '#/components/schemas/AcademicAdmin.AcademicValidationViolation'
             - type: 'null'
           description: Upload-probe rejection reasons. Null unless status is REJECTED; production failures never create an asset and surface on the render job instead.
+        latestValidationJob:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+            - type: 'null'
+          description: Latest VALIDATE_UPLOAD job for an UPLOADED asset, including bounded terminal failure detail so an administrator can recover polling or retry after reload. Null for PRODUCED assets.
         provenance:
           $ref: '#/components/schemas/AcademicAdmin.ProvenanceRecord'
         createdAt:
@@ -6082,6 +6155,23 @@ components:
           type: string
           format: date-time
       description: Short-lived presigned slot for direct-to-storage upload of one finished short video. uploadUrl accepts exactly one HTTP PUT whose body is the raw video bytes; send no Content-Type or other headers beyond those covered by the presign. The storage bucket must allow the web origin for the presigned PUT (CORS preflight plus exposed ETag) — a deployment invariant of this slice.
+    AcademicAdmin.VideoValidationRetryConflictProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - RENDER_JOB_ACTIVE
+            - VALIDATION_NOT_RETRYABLE
+        job:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.RenderJob'
+            - type: 'null'
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: Validation retry conflict. RENDER_JOB_ACTIVE embeds the already-active validation job; VALIDATION_NOT_RETRYABLE means the asset is not an uploaded asset awaiting validation or its staged bytes are no longer reserved.
     AcademicStudent.BookmarkLessonTermsRequest:
       type: object
       required:

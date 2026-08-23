@@ -7,15 +7,19 @@
 ## Topology and stack
 
 YukCSCA is a pnpm workspace with one React web app, one Spring Boot modular
-monolith, one TypeSpec package, and one PostgreSQL database.
+monolith, one TypeSpec package, one PostgreSQL database, S3-compatible object
+storage for reviewed-video bytes, and one isolated Python render worker.
 
 ```text
-apps/web/       React application
-contracts/      TypeSpec source and generated OpenAPI
-services/api/   Spring Boot modular monolith
+apps/web/                 React application
+contracts/                TypeSpec source and generated OpenAPI
+services/api/             Spring Boot modular monolith
+services/render-worker/   Isolated Python render worker (VS-010B)
 
 Browser -> Nginx/React -> Spring Boot API -> PostgreSQL 18
-             |
+             |                    |
+             |                    +-> MinIO (S3-compatible video/caption bytes)
+             |                    +-> PostgreSQL-polled render-worker
              +-> proxies /api and health only
 ```
 
@@ -25,11 +29,13 @@ Browser -> Nginx/React -> Spring Boot API -> PostgreSQL 18
 | Web        | React 19, Vite 8, strict TypeScript, React Router, i18next, CSS tokens |
 | Contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations        |
 | API/data   | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL 18  |
+| Media      | S3-compatible port (`MediaStoragePort`); MinIO in Compose dev/test     |
+| Worker     | Isolated Python service: Manim CE, manim-voiceover gTTS, FFmpeg        |
 | Testing    | Vitest, Testing Library, JUnit, Testcontainers, Playwright             |
 | Operations | Docker Compose, Actuator health, structured logs, GitHub Actions       |
 
-No microservices, queues, caches, vector/object stores, Python services, AI
-SDKs, or external UI/animation frameworks are active.
+No extra caches, vector stores, AI SDKs, or microservices beyond the isolated
+render worker. Redis remains deferred. Image bytes stay in PostgreSQL `bytea`.
 
 ## Contract and backend boundaries
 
@@ -220,11 +226,53 @@ Pre-feedback payloads omit correct keys and undisclosed hint bodies;
 assistance uniqueness to `(item_attempt_id, kind, tier_index)` and stores a
 disclosed Language-help snapshot on the item. `LearningEvidencePort` is the
 read-oriented evidence surface for later modules. Publish-time term audio uses
-`SpeechSynthesisPort` (Edge TTS adapter when enabled; tests use an in-process
-stub). CI and tests do not contact Microsoft Edge TTS. Student and admin audio
-GETs never synthesize.
+`SpeechSynthesisPort` (gTTS adapter per `ADR-0003` when enabled; tests use an
+in-process stub). CI and tests do not contact Google Translate TTS. Student and
+admin audio GETs never synthesize.
 No LLM/provider calls. Observability is value-free (no stems/answers/notes/keys,
 selected unmatched text, SSML, or speech keys).
+
+VS-010B adds the reviewed-lesson-video backend to `academic`: V13 stores
+`academic_video_asset` (lifecycle, shape metadata, provenance; bytes live in
+S3-compatible object storage behind `MediaStoragePort` — presigned single-PUT
+upload slots with idempotent confirm, presigned range-capable playback grants,
+WebVTT caption storage), `academic_video_upload_slot`, `scene_specification`
+(template-bound, registry-versioned scripts), and the PostgreSQL-polled
+`render_job` queue (workers claim due rows with `FOR UPDATE SKIP LOCKED`, a
+visibility timeout, bounded attempts, and attempt-token fencing on terminal
+writes), plus `media_object_cleanup`, a durable deletion outbox consumed by the
+same worker. Cleanup claims are token-fenced; active upload validation fences
+staging deletion; and caption/object writes register durable cleanup protection
+before writing to storage so a database rollback cannot strand an untracked
+object. Admin endpoints cover slots, scene specifications, render
+jobs (409 `RENDER_JOB_ACTIVE` embeds the active job), assets, captions
+(editable only on `UPLOADED`+`DRAFT`), play grants, and the human review
+transition. Admin asset responses include required-nullable
+`latestValidationJob`, restricted to the latest `VALIDATE_UPLOAD` job, so
+polling state and bounded terminal failure recover from the durable asset id
+after reload. `POST /api/v1/admin/academic-videos/{id}:retry-validation` creates a
+replacement validation job from that asset id; asset locking plus a partial
+unique index prevent concurrent active validation jobs (CR-10). Only `REVIEWED` assets project into a published revision and
+replaced assets retire on publish. Student lesson/remediation projections gain
+a nullable `video` reference per explanation language plus play/captions
+endpoints gated on the active published revision, and content progress carries
+an optional per-resource video playback position (validated
+`INVALID_VIDEO_ASSET`/`POSITION_OUT_OF_RANGE` on write, clamped on read). An
+isolated Python render worker (`services/render-worker`, pinned Manim CE +
+`manim-voiceover` gTTS without the transcribe extra + FFmpeg) executes
+`VALIDATE_UPLOAD`/`RENDER_SCENE` jobs; it consumes only schema-validated scene
+data and never authored code. Compose adds MinIO and the worker, waits for API
+readiness/Flyway before worker startup, separates the internal S3 endpoint from
+the browser-facing presign origin, and applies a read-only root filesystem,
+bounded tmpfs/resources/PIDs, dropped capabilities, and no-new-privileges.
+Local Compose still shares the API database account and MinIO root credentials;
+staged deployment requires a worker-specific database role and bucket policy.
+The D-05 pilot policy adds no malware-scanner service: upload bytes remain
+private and untrusted, and signature/container/shape validation plus worker
+isolation must not be described as malware clearance. The cleanup outbox makes
+staging/orphan objects due within 24 hours and rejected/successful-staging/
+retired objects due immediately. The worker runtime itself is not yet exercised end-to-end in CI
+(Java ITs simulate its DB writes; queue semantics are proven against the real schema).
 
 VS-005 is `DONE` after contract, PostgreSQL/Flyway (V6–V7), backend, production
 admin frontend (`/admin/academic-packages` under `features/academic-admin`),
@@ -238,10 +286,16 @@ Practice/Mistakes/checkpoint/remediation UI (`features/assessment`),
 security/privacy, prototype isolation, and product-owner journey evidence
 (2026-08-14). KaTeX is used for admin formula preview, student LESSON MATH
 blocks, and bounded `\(...\)` inline math inside TEXT-like prose
-(lessons, questions, remediation, and term definition/example/English equivalent). Short video, object storage, and any scene-render worker remain
-unimplemented (`VS-010B` is `CONTRACT_READY` with accepted checkpoint
-`VS-010B-R4-accepted`; backend and frontend implementation are starting in
-parallel). Multi-subject content seeding and
+(lessons, questions, remediation, and term definition/example/English equivalent). VS-010B's
+reviewed-video backend (V13, object storage, scene specifications, render
+queue, gTTS consolidation per `ADR-0003`, and the isolated Python render
+worker) is implemented against contract checkpoint `VS-010B-R5-accepted`.
+Backend review resolved untrusted-media retention (`D-05`) without adding a
+scanner stack, and CR-10 adds asset-keyed upload-validation job visibility.
+CR-10 also adds asset-keyed validation retry, so recovery does not depend on a
+lost upload-slot id.
+The slice is `CONTRACT_READY`; the video frontend and integrated product-owner
+journey remain open. Multi-subject content seeding and
 mock student flows remain later slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields

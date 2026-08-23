@@ -35,7 +35,24 @@ cp .env.example .env
 make dev
 ```
 
-`make dev` runs `docker compose up --build --watch`: PostgreSQL, API, and web start together, logs remain attached, and Compose rebuilds/replaces only the affected application service when watched source, dependency, Dockerfile, or Nginx configuration changes. Open `http://localhost:5173`; press `Ctrl+C` to stop the stack. PostgreSQL data remains in its named volume.
+`make dev` runs `docker compose up --build --watch`: PostgreSQL, MinIO,
+the isolated render worker, API, and web start together, logs remain attached,
+and Compose rebuilds/replaces only the affected application service when
+watched source, dependency, Dockerfile, or Nginx configuration changes. Open
+`http://localhost:5173`; press `Ctrl+C` to stop the stack. PostgreSQL and
+MinIO data remain in named volumes. The worker image includes TeX Live and
+CJK fonts and is slower to build on first run.
+
+`make infra-up` (used by `make dev-host`) starts PostgreSQL and MinIO so the
+host API can reach object storage at `http://localhost:9000`. Start the render
+worker with `docker compose up -d render-worker` only when exercising a real
+`RENDER_SCENE` / `VALIDATE_UPLOAD` job; Java integration tests simulate those
+worker writes. In Compose the API uses `http://minio:9000` internally while
+`YUKCSCA_MEDIA_PUBLIC_ENDPOINT` controls the browser-reachable origin embedded
+in presigned URLs (default `http://localhost:9000`). The worker waits for API
+readiness so Flyway V13 exists before it polls the render and media-cleanup
+queues. No antivirus service is part of the local stack; D-05 treats uploaded
+bytes as private/untrusted and does not claim malware clearance.
 
 Compose Watch requires Docker Compose 2.22 or later. `make doctor` verifies this requirement.
 
@@ -268,7 +285,7 @@ User-journey or container changes also require:
 ```bash
 pnpm e2e:web
 docker compose config --quiet
-docker compose build web api
+docker compose build web api render-worker
 docker compose up --detach --no-build --wait --wait-timeout 180
 make smoke
 docker compose down
