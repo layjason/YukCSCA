@@ -11,6 +11,7 @@ import java.util.Base64;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +39,7 @@ public class GttsSpeechSynthesisAdapter implements SpeechSynthesisPort {
   private final HttpClient http;
   private final String endpoint;
 
+  @Autowired
   public GttsSpeechSynthesisAdapter(SpeechSynthesisProperties properties) {
     this(properties, BATCH_EXECUTE_URL);
   }

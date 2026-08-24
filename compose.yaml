@@ -91,6 +91,14 @@ services:
           cpus: '2'
           memory: 2g
           pids: 256
+    develop:
+      watch:
+        - action: rebuild
+          path: ./services/render-worker
+          ignore:
+            - tests/
+            - .pytest_cache/
+            - __pycache__/
 
   api:
     build:
