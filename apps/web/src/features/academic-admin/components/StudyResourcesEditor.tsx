@@ -9,6 +9,7 @@ import {
 import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import { ResourceVideoPanel } from './ResourceVideoPanel';
 import { useAdminNotify } from '../adminNotify';
 import { termDraftLabel } from '../termDraftLabel';
 import type { LearningObjective, StudyResource, SyllabusOutlineItem, TermDraft } from '../types';
@@ -386,6 +387,16 @@ export function StudyResourcesEditor({
             onChange={setProvenance}
             disabled={disabled}
           />
+
+          {selected.kind === 'LESSON' || selected.kind === 'REMEDIATION' ? (
+            <ResourceVideoPanel
+              resourceId={selected.id}
+              resourceKind={selected.kind}
+              videos={selected.videos ?? []}
+              onChange={(videos) => update({ ...selected, videos })}
+              disabled={disabled}
+            />
+          ) : null}
 
           <LocalizedVersionsEditor
             versions={selected.versions ?? []}

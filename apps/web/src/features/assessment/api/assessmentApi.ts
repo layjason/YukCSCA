@@ -621,6 +621,7 @@ export async function upsertRemediationProgress(
         resourceId,
         request.status,
         request.resumeBlockIndex,
+        request.video,
       );
       if (mock) return mock;
     }
@@ -636,6 +637,7 @@ export async function upsertRemediationProgress(
         resourceId,
         request.status,
         request.resumeBlockIndex,
+        request.video,
       );
       if (mock) return mock;
     }

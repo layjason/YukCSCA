@@ -23,6 +23,10 @@ export type UpsertContentProgressRequest =
 export type WritableContentProgressStatus =
   components['schemas']['AcademicStudent.WritableContentProgressStatus'];
 
+export type PublishedVideoRef = components['schemas']['AcademicStudent.PublishedVideoRef'];
+export type VideoPlaybackGrant = components['schemas']['AcademicAdmin.VideoPlaybackGrant'];
+export type VideoPlaybackPosition = components['schemas']['AcademicStudent.VideoPlaybackPosition'];
+
 export const EXPLANATION_LANGUAGES: readonly ExplanationLanguage[] = ['id', 'en', 'zh-CN'] as const;
 
 export const ACADEMIC_SUBJECTS: readonly AcademicSubject[] = ['MATHEMATICS'] as const;
