@@ -1,5 +1,6 @@
 package com.yukcsca.academic.api.student;
 
+import com.yukcsca.academic.api.video.AcademicVideoResponses.VideoPlaybackGrantResponse;
 import com.yukcsca.academic.application.AcademicImageContent;
 import com.yukcsca.academic.application.AcademicStudentService;
 import com.yukcsca.academic.application.AcademicTerminologyService;
@@ -87,6 +88,7 @@ public class AcademicStudentController {
             resourceId,
             request.status(),
             request.resumeBlockIndex(),
+            request.videoCommand(),
             request.expectedPackageRevisionId()));
   }
 
@@ -117,6 +119,7 @@ public class AcademicStudentController {
             resourceId,
             request.status(),
             request.resumeBlockIndex(),
+            request.videoCommand(),
             request.expectedPackageRevisionId()));
   }
 
@@ -292,6 +295,29 @@ public class AcademicStudentController {
             CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePrivate().immutable())
         .header("X-Content-Type-Options", "nosniff")
         .body(image.bytes());
+  }
+
+  @GetMapping("/videos/{videoAssetId}/play")
+  public VideoPlaybackGrantResponse playPublishedVideo(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID videoAssetId,
+      HttpServletResponse response) {
+    noStore(response);
+    return VideoPlaybackGrantResponse.from(academic.playPublishedVideo(actor(jwt), videoAssetId));
+  }
+
+  @GetMapping("/videos/{videoAssetId}/captions")
+  public ResponseEntity<String> getPublishedVideoCaptions(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable UUID videoAssetId) {
+    AcademicStudentService.PublishedVideoCaptions captions =
+        academic.getPublishedVideoCaptions(actor(jwt), videoAssetId);
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType("text/vtt"))
+        .cacheControl(
+            CacheControl.maxAge(java.time.Duration.ofDays(365)).cachePrivate().immutable())
+        .header("X-Content-Type-Options", "nosniff")
+        .eTag("\"" + captions.updatedAt().toString() + "\"")
+        .body(captions.captions());
   }
 
   private static UUID actor(Jwt jwt) {

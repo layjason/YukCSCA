@@ -90,6 +90,17 @@ yukcsca:
       retention: ${YUKCSCA_SESSION_RETENTION:30d}
   speech:
     enabled: ${YUKCSCA_SPEECH_ENABLED:false}
-    voice: ${YUKCSCA_SPEECH_VOICE:zh-CN-XiaoxiaoNeural}
     timeout: ${YUKCSCA_SPEECH_TIMEOUT:8s}
     max-clips-per-publish: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:200}
+  media:
+    storage:
+      endpoint: ${YUKCSCA_MEDIA_ENDPOINT:}
+      public-endpoint: ${YUKCSCA_MEDIA_PUBLIC_ENDPOINT:${YUKCSCA_MEDIA_ENDPOINT:}}
+      region: ${YUKCSCA_MEDIA_REGION:us-east-1}
+      bucket: ${YUKCSCA_MEDIA_BUCKET:yukcsca-media}
+      access-key: ${YUKCSCA_MEDIA_ACCESS_KEY:}
+      secret-key: ${YUKCSCA_MEDIA_SECRET_KEY:}
+      path-style-access: ${YUKCSCA_MEDIA_PATH_STYLE:true}
+      auto-create-bucket: ${YUKCSCA_MEDIA_AUTO_CREATE_BUCKET:false}
+      playback-presign-ttl: ${YUKCSCA_MEDIA_PLAYBACK_PRESIGN_TTL:10m}
+      upload-slot-ttl: ${YUKCSCA_MEDIA_UPLOAD_SLOT_TTL:15m}

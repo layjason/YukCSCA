@@ -33,6 +33,65 @@ services:
       timeout: 3s
       retries: 20
 
+  # VS-010B: S3-compatible object storage for reviewed-video/caption bytes (D-02).
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${YUKCSCA_MEDIA_ACCESS_KEY:-yukcsca-local}
+      MINIO_ROOT_PASSWORD: ${YUKCSCA_MEDIA_SECRET_KEY:-yukcsca-local-secret}
+      # CR-06: browser presigned PUT from the web origin (preflight + PUT). Playback
+      # itself does not need bucket CORS; CSP media-src is the frontend deployment gate.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${YUKCSCA_WEB_ORIGIN:-http://localhost:5173}
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # VS-010B: isolated render worker (pinned Manim + manim-voiceover gTTS + FFmpeg)
+  # polling the PostgreSQL render-job queue. Executes no authored scene code.
+  render-worker:
+    build:
+      context: ./services/render-worker
+      dockerfile: Dockerfile
+    environment:
+      WORKER_DB_DSN: postgresql://${POSTGRES_USER:-yukcsca}:${POSTGRES_PASSWORD:-yukcsca-local}@postgres:5432/${POSTGRES_DB:-yukcsca}
+      WORKER_S3_ENDPOINT: http://minio:9000
+      WORKER_S3_BUCKET: ${YUKCSCA_MEDIA_BUCKET:-yukcsca-media}
+      WORKER_S3_ACCESS_KEY: ${YUKCSCA_MEDIA_ACCESS_KEY:-yukcsca-local}
+      WORKER_S3_SECRET_KEY: ${YUKCSCA_MEDIA_SECRET_KEY:-yukcsca-local-secret}
+      WORKER_S3_AUTO_CREATE_BUCKET: 'true'
+      WORKER_MAX_ATTEMPTS: '3'
+      # Must exceed the 900s render hard-timeout plus child shutdown grace.
+      WORKER_VISIBILITY_TIMEOUT_SECONDS: '1020'
+      WORKER_RENDER_TIMEOUT_SECONDS: '900'
+      WORKER_POLL_INTERVAL_SECONDS: '5'
+    depends_on:
+      # Flyway owns render_job creation; wait for API readiness on a clean database.
+      api:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=2g,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2g
+          pids: 256
+
   api:
     build:
       context: .
@@ -56,8 +115,15 @@ services:
       YUKCSCA_PRIVACY_NOTICE_VERSION: ${YUKCSCA_PRIVACY_NOTICE_VERSION:-PRIVACY_V1}
       YUKCSCA_VERIFICATION_MAIL_FROM: ${YUKCSCA_VERIFICATION_MAIL_FROM:-no-reply@yukcsca.local}
       YUKCSCA_SPEECH_ENABLED: ${YUKCSCA_SPEECH_ENABLED:-false}
-      YUKCSCA_SPEECH_VOICE: ${YUKCSCA_SPEECH_VOICE:-zh-CN-XiaoxiaoNeural}
       YUKCSCA_SPEECH_TIMEOUT: ${YUKCSCA_SPEECH_TIMEOUT:-8s}
+      # The API client uses the Compose service name; presigned URLs returned to the host browser
+      # use the separately configured public origin.
+      YUKCSCA_MEDIA_ENDPOINT: http://minio:9000
+      YUKCSCA_MEDIA_PUBLIC_ENDPOINT: ${YUKCSCA_MEDIA_PUBLIC_ENDPOINT:-http://localhost:9000}
+      YUKCSCA_MEDIA_BUCKET: ${YUKCSCA_MEDIA_BUCKET:-yukcsca-media}
+      YUKCSCA_MEDIA_ACCESS_KEY: ${YUKCSCA_MEDIA_ACCESS_KEY:-yukcsca-local}
+      YUKCSCA_MEDIA_SECRET_KEY: ${YUKCSCA_MEDIA_SECRET_KEY:-yukcsca-local-secret}
+      YUKCSCA_MEDIA_AUTO_CREATE_BUCKET: 'true'
       YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:-200}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
@@ -67,6 +133,8 @@ services:
       mailpit:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '--fail', '--silent', 'http://localhost:8080/actuator/health/readiness']
@@ -116,3 +184,4 @@ services:
 
 volumes:
   postgres-data:
+  minio-data:

@@ -12,7 +12,7 @@ bootstrap:
 	fi
 
 infra-up:
-	docker compose up -d postgres
+	docker compose up -d postgres minio
 
 infra-down:
 	docker compose down
@@ -51,7 +51,7 @@ verify:
 	./scripts/check.sh
 
 docker-build:
-	docker compose build web api
+	docker compose build web api render-worker
 
 docker-config:
 	docker compose config --quiet
