@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { KaTeXPreview } from './KaTeXPreview';
+import { AdminInlineLatexPreview } from './AdminInlineLatexPreview';
 import {
   createRenderJob,
   createSceneSpecification,
@@ -487,25 +488,39 @@ export function ScriptEditor({
                             </label>
 
                             {p.kind === 'STRING' ? (
-                              <input
-                                id={`seg-${index}-param-${p.id}`}
-                                type="text"
-                                className="text-input admin-field-control"
-                                value={String(paramValue)}
-                                maxLength={p.maxLength ?? undefined}
-                                disabled={disabled}
-                                onChange={(e) => handleParamChange(index, p.id, e.target.value)}
-                              />
+                              <div className="admin-stack-tight">
+                                <input
+                                  id={`seg-${index}-param-${p.id}`}
+                                  type="text"
+                                  className="text-input admin-field-control"
+                                  value={String(paramValue)}
+                                  maxLength={p.maxLength ?? undefined}
+                                  placeholder={t(
+                                    'admin.academic.video.scriptEditor.inlineLatexPlaceholder',
+                                  )}
+                                  disabled={disabled}
+                                  onChange={(e) => handleParamChange(index, p.id, e.target.value)}
+                                />
+                                <p className="admin-hint">{t('content.inlineLatexHint')}</p>
+                                <AdminInlineLatexPreview text={String(paramValue)} />
+                              </div>
                             ) : p.kind === 'MULTILINE_TEXT' ? (
-                              <textarea
-                                id={`seg-${index}-param-${p.id}`}
-                                className="text-input admin-field-control admin-textarea-compact"
-                                value={String(paramValue)}
-                                maxLength={p.maxLength ?? undefined}
-                                rows={3}
-                                disabled={disabled}
-                                onChange={(e) => handleParamChange(index, p.id, e.target.value)}
-                              />
+                              <div className="admin-stack-tight">
+                                <textarea
+                                  id={`seg-${index}-param-${p.id}`}
+                                  className="text-input admin-field-control admin-textarea-compact"
+                                  value={String(paramValue)}
+                                  maxLength={p.maxLength ?? undefined}
+                                  rows={3}
+                                  placeholder={t(
+                                    'admin.academic.video.scriptEditor.inlineLatexPlaceholder',
+                                  )}
+                                  disabled={disabled}
+                                  onChange={(e) => handleParamChange(index, p.id, e.target.value)}
+                                />
+                                <p className="admin-hint">{t('content.inlineLatexHint')}</p>
+                                <AdminInlineLatexPreview text={String(paramValue)} />
+                              </div>
                             ) : p.kind === 'INTEGER' ? (
                               <input
                                 id={`seg-${index}-param-${p.id}`}
@@ -556,10 +571,17 @@ export function ScriptEditor({
                                   disabled={disabled}
                                   onChange={(e) => handleParamChange(index, p.id, e.target.value)}
                                 />
+                                <p className="admin-hint">
+                                  {t('admin.academic.blocks.latexSafetyHint')}
+                                </p>
+                                {String(paramValue).includes('<') ||
+                                String(paramValue).includes('>') ? (
+                                  <p className="admin-field-error" role="status">
+                                    {t('admin.academic.blocks.latexAngleBracketWarning')}
+                                  </p>
+                                ) : null}
                                 {paramValue ? (
-                                  <div className="admin-preview-surface">
-                                    <KaTeXPreview latex={String(paramValue)} displayMode />
-                                  </div>
+                                  <KaTeXPreview latex={String(paramValue)} displayMode />
                                 ) : null}
                               </div>
                             ) : null}

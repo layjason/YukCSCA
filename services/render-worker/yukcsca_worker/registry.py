@@ -12,6 +12,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
+from .markup import is_safe_latex, is_valid_mixed
+
 VERSION = "2026-08.1"
 
 STRING = "STRING"
@@ -27,19 +29,6 @@ MAX_NARRATION_LENGTH = 600
 MAX_PARAM_KEYS = 16
 EXPLANATION_LANGUAGES = ("id", "en", "zh-CN")
 ACTION_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
-LATEX_COMMAND_PATTERN = re.compile(r"\\([A-Za-z]+)")
-ALLOWED_MATH_COMMANDS = frozenset(
-    {
-        "frac", "sqrt", "text", "mathrm", "mathbf", "mathit", "operatorname",
-        "left", "right", "cdot", "times", "div", "pm", "mp", "le", "leq",
-        "ge", "geq", "ne", "neq", "approx", "equiv", "in", "notin", "subset",
-        "subseteq", "supset", "supseteq", "cup", "cap", "emptyset", "infty",
-        "sum", "prod", "int", "lim", "sin", "cos", "tan", "log", "ln", "exp",
-        "pi", "theta", "alpha", "beta", "gamma", "delta", "lambda", "mu",
-        "sigma", "phi", "omega", "partial", "nabla", "overline", "underline",
-        "hat", "bar", "vec",
-    }
-)
 
 
 @dataclass(frozen=True)
@@ -191,7 +180,9 @@ def _validate_params(
                 yield violation(path, "INVALID")
             elif descriptor.max_length is not None and len(value) > descriptor.max_length:
                 yield violation(path, "OUT_OF_RANGE")
-            elif descriptor.kind == MATH_EXPRESSION and not _safe_math_expression(value):
+            elif descriptor.kind == MATH_EXPRESSION and not is_safe_latex(value):
+                yield violation(path, "INVALID")
+            elif descriptor.kind != MATH_EXPRESSION and not is_valid_mixed(value):
                 yield violation(path, "INVALID")
         elif descriptor.kind in NUMBER_KINDS:
             if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -205,11 +196,3 @@ def _validate_params(
                 ):
                     yield violation(path, "OUT_OF_RANGE")
 
-
-def _safe_math_expression(value: str) -> bool:
-    if "^^" in value:
-        return False
-    return all(
-        match.group(1) in ALLOWED_MATH_COMMANDS
-        for match in LATEX_COMMAND_PATTERN.finditer(value)
-    )

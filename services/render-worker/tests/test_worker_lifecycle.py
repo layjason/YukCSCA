@@ -13,8 +13,9 @@ import time
 import unittest
 from unittest.mock import ANY, patch
 
-from yukcsca_worker import jobs, process_control, validate_upload
+from yukcsca_worker import jobs, process_control, render, validate_upload
 from yukcsca_worker.config import WorkerConfig
+from yukcsca_worker.render import RenderFailure
 
 
 class WorkerConfigurationTest(unittest.TestCase):
@@ -185,5 +186,90 @@ class ProcessGroupTest(unittest.TestCase):
 
             self.assertFalse(leader.is_alive())
             self.assertFalse(os.path.exists(survived))
+
+
+class SceneSnapshotDecodeTest(unittest.TestCase):
+    def test_snapshot_dict_accepts_psycopg_jsonb_object(self):
+        claimed = jobs.ClaimedJob(
+            id="00000000-0000-0000-0000-000000000001",
+            kind="RENDER_SCENE",
+            scene_specification_id="00000000-0000-0000-0000-000000000002",
+            video_asset_id=None,
+            scene_snapshot={"explanationLanguage": "en", "segments": []},
+            registry_version="2026-08.1",
+            attempts=1,
+        )
+        self.assertEqual(claimed.snapshot_dict()["explanationLanguage"], "en")
+
+    def test_snapshot_dict_accepts_json_string(self):
+        claimed = jobs.ClaimedJob(
+            id="00000000-0000-0000-0000-000000000001",
+            kind="RENDER_SCENE",
+            scene_specification_id="00000000-0000-0000-0000-000000000002",
+            video_asset_id=None,
+            scene_snapshot='{"explanationLanguage":"id","segments":[]}',
+            registry_version="2026-08.1",
+            attempts=1,
+        )
+        self.assertEqual(claimed.snapshot_dict()["explanationLanguage"], "id")
+
+
+class WriteAnimationTimingTest(unittest.TestCase):
+    def test_write_occupies_most_of_the_segment(self):
+        fade, create, write = render.animation_timings(
+            8.0, has_previous=True, has_frames=True
+        )
+        self.assertAlmostEqual(fade + create + write, 8.0)
+        self.assertGreater(write, create)
+        self.assertGreater(write, fade)
+
+    def test_first_segment_skips_fade(self):
+        fade, create, write = render.animation_timings(
+            4.0, has_previous=False, has_frames=True
+        )
+        self.assertEqual(fade, 0.0)
+        self.assertAlmostEqual(create + write, 4.0)
+
+    def test_title_without_frame_writes_the_remaining_time(self):
+        fade, create, write = render.animation_timings(
+            3.0, has_previous=True, has_frames=False
+        )
+        self.assertEqual(create, 0.0)
+        self.assertAlmostEqual(fade + write, 3.0)
+
+    def test_construct_stroke_writes_instead_of_fading_the_card_in(self):
+        source = Path(__file__).parents[1] / "yukcsca_worker" / "render.py"
+        text = source.read_text(encoding="utf-8")
+        self.assertIn("mn.Write(", text)
+        self.assertIn("mn.Create(", text)
+        self.assertNotIn("mn.FadeIn(group", text)
+
+
+class RenderOutputPathTest(unittest.TestCase):
+    def test_movie_path_uses_file_writer_not_module_name_dir(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "render-job.mp4"
+            output.write_bytes(b"ftyp")
+
+            class Writer:
+                movie_file_path = output
+
+            class Renderer:
+                file_writer = Writer()
+
+            class Scene:
+                renderer = Renderer()
+
+            self.assertEqual(render.movie_path_from_scene(Scene()), str(output))
+
+    def test_missing_movie_path_is_internal(self):
+        class Scene:
+            renderer = object()
+
+        with self.assertRaises(RenderFailure) as raised:
+            render.movie_path_from_scene(Scene())
+        self.assertEqual(raised.exception.code, "INTERNAL")
+
+
 if __name__ == "__main__":
     unittest.main()

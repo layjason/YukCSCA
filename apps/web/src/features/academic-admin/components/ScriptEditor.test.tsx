@@ -15,6 +15,11 @@ vi.mock('react-i18next', () => ({
         'admin.academic.video.scriptEditor.actionLabel': 'Visual template action',
         'admin.academic.video.scriptEditor.narrationLabel': 'Narration text',
         'admin.academic.video.scriptEditor.narrationPlaceholder': 'Enter narration text...',
+        'admin.academic.video.scriptEditor.mathPlaceholder': 'e.g. x^2',
+        'admin.academic.video.scriptEditor.inlineLatexPlaceholder': 'e.g. \\(x^2\\)',
+        'content.inlineLatexHint': 'Mix prose with \\(...\\).',
+        'admin.academic.blocks.latexSafetyHint': 'Do not use < or >.',
+        'admin.academic.blocks.latexAngleBracketWarning': 'Replace < > with \\lt / \\gt.',
         'admin.academic.video.scriptEditor.narrationCharCount': `${opts?.count ?? 0} characters`,
         'admin.academic.video.scriptEditor.moveUp': 'Move up',
         'admin.academic.video.scriptEditor.moveDown': 'Move down',
@@ -40,6 +45,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('./KaTeXPreview', () => ({
   KaTeXPreview: ({ latex }: { latex: string }) => <div data-testid="katex-preview">{latex}</div>,
+}));
+
+vi.mock('./AdminInlineLatexPreview', () => ({
+  AdminInlineLatexPreview: ({ text }: { text: string }) =>
+    text.includes('\\(') ? <div data-testid="inline-markup-preview">{text}</div> : null,
 }));
 
 const mockRegistry: SceneTemplateRegistry = {
@@ -84,6 +94,36 @@ describe('ScriptEditor', () => {
     fireEvent.change(mathInput, { target: { value: 'x^2 + 2x + 1 = 0' } });
 
     expect(await screen.findByTestId('katex-preview')).toHaveTextContent('x^2 + 2x + 1 = 0');
+  });
+
+  test('previews inline latex in prose fields', async () => {
+    vi.spyOn(api, 'listSceneTemplates').mockResolvedValue({
+      version: '1',
+      actions: [
+        {
+          id: 'statement-text',
+          displayName: 'Statement text',
+          params: [
+            {
+              id: 'text',
+              kind: 'MULTILINE_TEXT',
+              label: 'Statement',
+              required: true,
+              maxLength: 300,
+            },
+          ],
+        },
+      ],
+    });
+
+    render(<ScriptEditor explanationLanguage="en" onSaved={vi.fn()} onClose={vi.fn()} />);
+    const statement = await screen.findByLabelText(/Statement/i);
+    fireEvent.change(statement, {
+      target: { value: 'Vertex at \\(\\frac{-b}{2a}\\).' },
+    });
+
+    expect(await screen.findByTestId('inline-markup-preview')).toBeInTheDocument();
+    expect(screen.getByTestId('inline-markup-preview')).toHaveTextContent('\\frac{-b}{2a}');
   });
 
   test('handles adding segment and editing narration text', async () => {

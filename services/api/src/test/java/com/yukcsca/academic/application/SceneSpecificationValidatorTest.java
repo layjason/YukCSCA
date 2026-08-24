@@ -98,6 +98,9 @@ class SceneSpecificationValidatorTest {
   @Test
   void rejectsTexFileInputPrimitivesButAllowsReviewedMathCommands() {
     assertThat(SceneSpecificationValidator.isSafeMathExpression("x = \\frac{-b}{2a}")).isTrue();
+    assertThat(SceneSpecificationValidator.isSafeMathExpression("x^{2}-5x+6=(x-2)(x-3)\\lt 0"))
+        .isTrue();
+    assertThat(SceneSpecificationValidator.isSafeMathExpression("a < b")).isFalse();
     ObjectNode input = script("id", segment("worked-example-step", "stepLabel", "Langkah 1"));
     ((ObjectNode) input.withArray("segments").get(0).path("params"))
         .put("expression", "\\input{/etc/passwd}");
@@ -105,6 +108,32 @@ class SceneSpecificationValidatorTest {
     assertThat(violations(assertThrowsValidation(input)))
         .contains(
             new AcademicViolation("segments[0].params.expression", AcademicViolationCode.INVALID));
+  }
+
+  @Test
+  void compilesWorkedExampleUsingLessonInequalityCommands() {
+    ObjectNode input = script("en", segment("worked-example-step", "stepLabel", "Quadratic"));
+    ((ObjectNode) input.withArray("segments").get(0).path("params"))
+        .put("expression", "x^{2}-5x+6=(x-2)(x-3)\\lt 0");
+    Compiled compiled = validator.compile(input);
+    assertThat(compiled.registryVersion()).isEqualTo(SceneTemplateRegistry.VERSION);
+  }
+
+  @Test
+  void allowsInlineTexInProseAndRejectsUnsafeCommands() {
+    assertThat(SceneSpecificationValidator.isSafeInlineMarkup("union \\(A\\cup B\\) and \\(U\\)"))
+        .isTrue();
+    Compiled compiled =
+        validator.compile(script("en", segment("title-heading", "text", "Vertex \\(x^2\\)")));
+    assertThat(compiled.registryVersion()).isEqualTo(SceneTemplateRegistry.VERSION);
+
+    ObjectNode unsafe = script("en", segment("statement-text", "text", "Read \\(\\input{x}\\)"));
+    assertThat(violations(assertThrowsValidation(unsafe)))
+        .contains(new AcademicViolation("segments[0].params.text", AcademicViolationCode.INVALID));
+
+    ObjectNode angles = script("en", segment("statement-text", "text", "Bad \\(a<b\\)"));
+    assertThat(violations(assertThrowsValidation(angles)))
+        .contains(new AcademicViolation("segments[0].params.text", AcademicViolationCode.INVALID));
   }
 
   private AcademicValidationException assertThrowsValidation(ObjectNode input) {

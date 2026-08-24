@@ -43,14 +43,25 @@ class ClaimedJob:
     kind: str
     scene_specification_id: Optional[str]
     video_asset_id: Optional[str]
-    scene_snapshot: Optional[str]
+    scene_snapshot: Optional[Any]
     registry_version: Optional[str]
     attempts: int
 
     def snapshot_dict(self) -> dict[str, Any]:
-        if not self.scene_snapshot:
+        """Returns the claimed scene snapshot as a dict.
+
+        psycopg 3 decodes ``jsonb`` to a Python object. Tests and some adapters
+        still pass a JSON string. ``json.loads`` on a dict is TypeError.
+        """
+        raw = self.scene_snapshot
+        if raw is None or raw == "":
             return {}
-        return json.loads(self.scene_snapshot)
+        if isinstance(raw, dict):
+            return raw
+        loaded = json.loads(raw)
+        if not isinstance(loaded, dict):
+            raise TypeError("scene snapshot must be a JSON object")
+        return loaded
 
 
 @dataclass(frozen=True)

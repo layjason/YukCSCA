@@ -16,7 +16,14 @@ lesson-video pipeline (`VS-010B`, decisions `D-01`–`D-04`, `ADR-0003`):
   directly in `DRAFT`.
 
 The worker executes **no authored scene code** — it consumes only
-schema-validated scene data (requirement V1.7). It claims jobs from the
+schema-validated scene data (requirement V1.7). Visual mapping of the five
+reviewed actions uses one card per segment: the previous card fades out, then
+frames are stroke-drawn (`Create`) and glyphs/equations are written (`Write`)
+over the narration window. Mixed prose + inline TeX (`\(...\)`), and Noto CJK
+for `zh-CN`. Subject-specific open-source Manim scenes are not loaded as
+executable templates.
+
+It claims jobs from the
 `render_job` table with `FOR UPDATE SKIP LOCKED` and a visibility timeout,
 retries transient failures with linear backoff inside the attempts bound, and
 fails terminally with a bounded error code (`RenderJobErrorCode`); terminal

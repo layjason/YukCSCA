@@ -19,10 +19,11 @@ import os
 import subprocess
 import tempfile
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from . import jobs, policy, registry, vtt
+from . import jobs, markup, policy, registry, vtt
 
 
 class RenderFailure(Exception):
@@ -56,7 +57,7 @@ def run(job: jobs.ClaimedJob, storage, conn) -> str:
         if policy_detail is not None:
             raise RenderFailure("DURATION_POLICY", policy_detail)
 
-        video_path = _render(segments, service, durations, media_dir, job.id)
+        video_path = _render(segments, service, durations, media_dir, job.id, language)
         final_path = _faststart(video_path, media_dir)
         probe = _probe(final_path)
         byte_size = os.path.getsize(final_path)
@@ -127,7 +128,12 @@ def _synthesize(narrations: list[str], language: str, cache_dir: str):
 
 
 def _render(
-    segments: list[dict[str, Any]], service, durations: list[float], media_dir: str, job_id: str
+    segments: list[dict[str, Any]],
+    service,
+    durations: list[float],
+    media_dir: str,
+    job_id: str,
+    language: str,
 ) -> str:
     """Renders the scene with Manim CE + manim-voiceover; returns the MP4 path."""
 
@@ -137,13 +143,36 @@ def _render(
     class ScriptScene(VoiceoverScene):
         def construct(self) -> None:
             self.set_speech_service(service)
+            previous = None
             for index, segment in enumerate(segments):
-                with self.voiceover(text=segment["narrationText"]) as tracker:
-                    # Each visual segment occupies the same deterministic duration that produced
-                    # its WebVTT cue. The voiceover cache should report the same duration; using
-                    # the probed value keeps rendering and captions on one timing authority.
+                board = build_segment_board(segment, language)
+                with self.voiceover(text=segment["narrationText"]):
+                    # Duration matches the WebVTT cue. Fade the previous card so glyphs never
+                    # stack, then stroke-write the new board (Manim Write, 3Blue1Brown-style).
                     run_time = durations[index]
-                    self.play(*build_segment_animations(segment), run_time=run_time)
+                    fade, create, write = animation_timings(
+                        run_time,
+                        has_previous=previous is not None,
+                        has_frames=bool(board.frames),
+                    )
+                    if previous is not None:
+                        self.play(mn.FadeOut(previous, shift=mn.UP * 0.12), run_time=fade)
+                    if board.frames:
+                        self.play(
+                            mn.LaggedStart(
+                                *[mn.Create(frame) for frame in board.frames],
+                                lag_ratio=0.18,
+                            ),
+                            run_time=create,
+                        )
+                    self.play(
+                        mn.LaggedStart(
+                            *[mn.Write(mobject) for mobject in board.writings],
+                            lag_ratio=0.16,
+                        ),
+                        run_time=write,
+                    )
+                previous = board.group
 
     mn.config.media_dir = media_dir
     mn.config.quality = "medium_quality"
@@ -151,51 +180,239 @@ def _render(
     mn.config.output_file = f"render-{job_id}.mp4"
     scene = ScriptScene()
     scene.render()
-    return str(mn.config.get_dir("video_dir") / mn.config.output_file)
+    return movie_path_from_scene(scene)
 
 
-def build_segment_animations(segment: dict[str, Any]):
-    """Builds one segment's reviewed visual action.
+def movie_path_from_scene(scene) -> str:
+    """Returns the MP4 Manim actually wrote.
 
-    The mapping from template action id to Manim animation is the reviewed
-    template library itself; authored input never reaches code execution.
+    Dynamic in-process scenes have no ``module_name``, so
+    ``config.get_dir("video_dir")`` raises KeyError even after a successful
+    render. The file writer keeps the concrete path.
+    """
+
+    writer = getattr(getattr(scene, "renderer", None), "file_writer", None)
+    path = getattr(writer, "movie_file_path", None) if writer is not None else None
+    if path is None:
+        raise RenderFailure("INTERNAL", "rendered output missing")
+    resolved = Path(path)
+    if not resolved.is_file():
+        raise RenderFailure("INTERNAL", "rendered output missing")
+    return str(resolved)
+
+
+@dataclass
+class SegmentBoard:
+    """Laid-out card split into stroke-drawn frames and written glyphs."""
+
+    group: Any
+    frames: list
+    writings: list
+
+
+def animation_timings(
+    run_time: float, *, has_previous: bool, has_frames: bool
+) -> tuple[float, float, float]:
+    """Splits one segment into fade / Create / Write seconds that sum to ``run_time``.
+
+    Write takes most of the window so equations draw with the narration instead of
+    popping in. Frames (card borders, underline) draw first and stay short.
+    """
+
+    duration = max(0.55, float(run_time))
+    fade = min(0.35, duration * 0.12) if has_previous else 0.0
+    remaining = duration - fade
+    create = min(0.45, remaining * 0.16) if has_frames else 0.0
+    write = remaining - create
+    return fade, create, write
+
+
+def build_segment_visual(segment: dict[str, Any], language: str):
+    """Builds one reviewed visual card (group only; used by tests)."""
+
+    return build_segment_board(segment, language).group
+
+
+def build_segment_board(segment: dict[str, Any], language: str) -> SegmentBoard:
+    """Builds one reviewed visual card.
+
+    Layout is one card at a time (title or body in the centre). The scene loop
+    fades the previous group, Creates frames, then Writes glyphs. Authored input
+    never reaches code execution — only schema-validated params.
     """
 
     import manim as mn
 
     action_id = segment["templateActionId"]
     params = segment.get("params") or {}
+    frame_w = mn.config.frame_width
     if action_id == "title-heading":
-        text = mn.Text(params["text"], font_size=52).move_to(mn.ORIGIN)
-        return (mn.Write(text),)
+        heading = compose_markup(
+            params["text"],
+            language=language,
+            font_size=46,
+            weight=mn.BOLD,
+            max_width=frame_w - 1.8,
+        )
+        rule = mn.Underline(heading, color=mn.ManimColor("#8FB8D8"), buff=0.22)
+        group = mn.VGroup(heading, rule).arrange(mn.DOWN, buff=0.18).move_to(mn.ORIGIN)
+        return SegmentBoard(group=group, frames=[], writings=[heading, rule])
     if action_id == "concept-definition":
-        term = mn.Text(params["term"], font_size=44, weight=mn.BOLD).to_edge(mn.UP, buff=1.2)
-        definition = (
-            mn.Text(params["definition"], font_size=30, line_spacing=0.8)
-            .scale_to_fit_width(mn.config.frame_width - 2)
-            .next_to(term, mn.DOWN, buff=0.8)
+        term = compose_markup(
+            params["term"],
+            language=language,
+            font_size=38,
+            weight=mn.BOLD,
+            max_width=frame_w - 2.4,
         )
-        return (mn.FadeIn(term, shift=mn.UP * 0.4), mn.FadeIn(definition, shift=mn.UP * 0.2))
+        bar = mn.Rectangle(
+            width=0.12,
+            height=max(0.7, term.height + 0.18),
+            stroke_width=0,
+            fill_color=mn.ManimColor("#7BC4B0"),
+            fill_opacity=1,
+        )
+        term_row = mn.VGroup(bar, term).arrange(mn.RIGHT, buff=0.28, aligned_edge=mn.DOWN)
+        definition = compose_markup(
+            params["definition"],
+            language=language,
+            font_size=28,
+            max_width=frame_w - 3.2,
+            wrap_width=38,
+        )
+        box, body = framed_card(definition, stroke=mn.ManimColor("#7BC4B0"), pad=0.42)
+        card = mn.VGroup(box, body)
+        group = (
+            mn.VGroup(term_row, card)
+            .arrange(mn.DOWN, buff=0.5, aligned_edge=mn.LEFT)
+            .move_to(mn.ORIGIN)
+        )
+        return SegmentBoard(group=group, frames=[bar, box], writings=[term, body])
     if action_id == "statement-text":
-        text = (
-            mn.Text(params["text"], font_size=32, line_spacing=0.8)
-            .scale_to_fit_width(mn.config.frame_width - 2)
-            .move_to(mn.ORIGIN)
+        body = compose_markup(
+            params["text"],
+            language=language,
+            font_size=30,
+            max_width=frame_w - 3.0,
+            wrap_width=40,
         )
-        return (mn.FadeIn(text, shift=mn.UP * 0.3),)
+        box, content = framed_card(body, stroke=mn.ManimColor("#8FB8D8"), pad=0.5)
+        group = mn.VGroup(box, content).move_to(mn.ORIGIN)
+        return SegmentBoard(group=group, frames=[box], writings=[content])
     if action_id == "worked-example-step":
-        label = mn.Text(params["stepLabel"], font_size=30, weight=mn.BOLD).to_edge(mn.UP, buff=1.0)
-        expression = mn.MathTex(params["expression"], font_size=44).next_to(label, mn.DOWN, buff=0.8)
-        return (mn.FadeIn(label, shift=mn.DOWN * 0.3), mn.Write(expression))
-    if action_id == "highlight-box":
-        text = (
-            mn.Text(params["text"], font_size=32, line_spacing=0.8)
-            .scale_to_fit_width(mn.config.frame_width - 3)
-            .move_to(mn.ORIGIN)
+        label = compose_markup(
+            params["stepLabel"],
+            language=language,
+            font_size=24,
+            weight=mn.BOLD,
+            max_width=frame_w - 3.5,
         )
-        box = mn.SurroundingRectangle(text, color=mn.YELLOW, corner_radius=0.15)
-        return (mn.Create(box), mn.FadeIn(text))
+        pill_box, pill_body = framed_card(label, stroke=mn.ManimColor("#E6C07B"), pad=0.28)
+        pill = mn.VGroup(pill_box, pill_body)
+        expression = mn.MathTex(markup.tex_for_manim(params["expression"]), font_size=46)
+        if expression.width > frame_w - 2.6:
+            expression.scale_to_fit_width(frame_w - 2.6)
+        formula_box, formula_body = framed_card(
+            expression, stroke=mn.ManimColor("#8FB8D8"), pad=0.48
+        )
+        formula = mn.VGroup(formula_box, formula_body)
+        group = mn.VGroup(pill, formula).arrange(mn.DOWN, buff=0.45).move_to(mn.ORIGIN)
+        return SegmentBoard(
+            group=group,
+            frames=[pill_box, formula_box],
+            writings=[pill_body, formula_body],
+        )
+    if action_id == "highlight-box":
+        body = compose_markup(
+            params["text"],
+            language=language,
+            font_size=30,
+            max_width=frame_w - 3.2,
+            wrap_width=38,
+        )
+        box, content = framed_card(body, stroke=mn.ManimColor("#E6C07B"), pad=0.5)
+        group = mn.VGroup(box, content).move_to(mn.ORIGIN)
+        return SegmentBoard(group=group, frames=[box], writings=[content])
     raise RenderFailure("VALIDATION_FAILED", f"unknown action {action_id}")
+
+
+def compose_markup(
+    text: str,
+    *,
+    language: str,
+    font_size: int,
+    weight=None,
+    color=None,
+    max_width: float | None = None,
+    wrap_width: int = 36,
+):
+    """Builds a wrapped VGroup of Text + MathTex from mixed ``\\(...\\)`` markup."""
+
+    import manim as mn
+
+    fill = color if color is not None else mn.WHITE
+    # DejaVu reports reliable bounding boxes for Latin; Noto Sans CJK is required for zh-CN.
+    font = "Noto Sans CJK SC" if language == "zh-CN" else "DejaVu Sans"
+    wrap = 18 if language == "zh-CN" else wrap_width
+    rows = []
+    for line in markup.wrap_markup_lines(text, width=wrap):
+        pieces = []
+        for kind, content in _collapse_text_runs(line):
+            if kind == "tex":
+                pieces.append(
+                    mn.MathTex(markup.tex_for_manim(content), font_size=font_size + 2, color=fill)
+                )
+                continue
+            kwargs: dict[str, Any] = {
+                "font_size": font_size,
+                "color": fill,
+                "font": font,
+            }
+            if weight is not None:
+                kwargs["weight"] = weight
+            pieces.append(mn.Text(content, **kwargs))
+        if not pieces:
+            continue
+        if len(pieces) == 1:
+            rows.append(pieces[0])
+        else:
+            rows.append(mn.VGroup(*pieces).arrange(mn.RIGHT, buff=0.12, aligned_edge=mn.DOWN))
+    if not rows:
+        rows.append(mn.Text(" ", font_size=font_size, font=font, color=fill))
+    group = mn.VGroup(*rows).arrange(mn.DOWN, aligned_edge=mn.LEFT, buff=0.16)
+    if max_width is not None and group.width > max_width:
+        group.scale_to_fit_width(max_width)
+    return group
+
+
+def _collapse_text_runs(line: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Joins adjacent prose tokens so one Manim Text owns a whole visual line."""
+
+    collapsed: list[tuple[str, str]] = []
+    for kind, content in line:
+        if kind == "text" and collapsed and collapsed[-1][0] == "text":
+            collapsed[-1] = ("text", collapsed[-1][1] + content)
+        else:
+            collapsed.append((kind, content))
+    return collapsed
+
+
+def framed_card(content, *, stroke, pad: float = 0.42):
+    """Rounded teaching card around one content group (one card per segment)."""
+
+    import manim as mn
+
+    box = mn.RoundedRectangle(
+        corner_radius=0.16,
+        width=content.width + pad * 2,
+        height=content.height + pad * 2,
+        stroke_color=stroke,
+        stroke_width=3,
+        fill_color=mn.BLACK,
+        fill_opacity=0.55,
+    )
+    content.move_to(box.get_center())
+    return box, content
 
 
 def _faststart(video_path: str, media_dir: str) -> str:

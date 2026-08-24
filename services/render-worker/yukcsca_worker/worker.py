@@ -88,7 +88,8 @@ def _run_in_child(job: jobs.ClaimedJob, config: WorkerConfig) -> str:
         raise jobs.StaleClaim(detail)
     if status == "render_failure":
         raise RenderFailure(code, detail)
-    raise RuntimeError(detail)
+    # Child already redacted provider/render text to a class name (or empty).
+    raise RenderFailure("INTERNAL", detail or "unknown")
 
 
 def process_job(job: jobs.ClaimedJob, conn, config: WorkerConfig) -> None:

@@ -8,8 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -30,69 +28,6 @@ public class SceneSpecificationValidator {
   static final int MAX_PARAM_KEYS = 16;
   private static final Set<String> EXPLANATION_LANGUAGES = Set.of("id", "en", "zh-CN");
   private static final String TEMPLATE_ACTION_PATTERN = "^[a-z0-9][a-z0-9-]{0,63}$";
-  private static final Pattern LATEX_COMMAND = Pattern.compile("\\\\([A-Za-z]+)");
-  private static final Set<String> ALLOWED_MATH_COMMANDS =
-      Set.of(
-          "frac",
-          "sqrt",
-          "text",
-          "mathrm",
-          "mathbf",
-          "mathit",
-          "operatorname",
-          "left",
-          "right",
-          "cdot",
-          "times",
-          "div",
-          "pm",
-          "mp",
-          "le",
-          "leq",
-          "ge",
-          "geq",
-          "ne",
-          "neq",
-          "approx",
-          "equiv",
-          "in",
-          "notin",
-          "subset",
-          "subseteq",
-          "supset",
-          "supseteq",
-          "cup",
-          "cap",
-          "emptyset",
-          "infty",
-          "sum",
-          "prod",
-          "int",
-          "lim",
-          "sin",
-          "cos",
-          "tan",
-          "log",
-          "ln",
-          "exp",
-          "pi",
-          "theta",
-          "alpha",
-          "beta",
-          "gamma",
-          "delta",
-          "lambda",
-          "mu",
-          "sigma",
-          "phi",
-          "omega",
-          "partial",
-          "nabla",
-          "overline",
-          "underline",
-          "hat",
-          "bar",
-          "vec");
 
   private final JsonMapper json;
 
@@ -206,9 +141,11 @@ public class SceneSpecificationValidator {
           } else if (value.asText().length() > descriptor.maxLength()) {
             violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
           } else if (descriptor.kind() == ParamKind.MATH_EXPRESSION
-              && !isSafeMathExpression(value.asText())) {
-            // MathTex invokes a real TeX engine in the worker. A small reviewed command allowlist
-            // prevents authored expressions from reaching file/network/macro primitives.
+              && !InlineLatex.isSafe(value.asText())) {
+            // Same safety as lesson MATH: block file/HTML primitives and raw < >; prefer \lt / \gt.
+            violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+          } else if (descriptor.kind() != ParamKind.MATH_EXPRESSION
+              && !InlineLatex.isValidMixed(value.asText())) {
             violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
           } else {
             normalized.put(descriptor.id(), value.asText());
@@ -248,11 +185,10 @@ public class SceneSpecificationValidator {
   }
 
   static boolean isSafeMathExpression(String value) {
-    if (value == null || value.contains("^^")) return false;
-    Matcher matcher = LATEX_COMMAND.matcher(value);
-    while (matcher.find()) {
-      if (!ALLOWED_MATH_COMMANDS.contains(matcher.group(1))) return false;
-    }
-    return true;
+    return InlineLatex.isSafe(value);
+  }
+
+  static boolean isSafeInlineMarkup(String value) {
+    return InlineLatex.isValidMixed(value);
   }
 }
