@@ -5,7 +5,15 @@ import type {
   AcademicPackageDraftInput,
   AcademicPackageSummary,
   AcademicValidationProblem,
+  AcademicVideoAsset,
+  ExplanationLanguage,
   ProvenanceInput,
+  RenderJob,
+  SceneSpecification,
+  SceneSpecificationInput,
+  SceneTemplateRegistry,
+  VideoPlaybackGrant,
+  VideoUploadSlot,
 } from '../types';
 
 export class ApiError extends Error {
@@ -591,6 +599,572 @@ export async function archiveAcademicPackage(
       };
       if (index >= 0) memoryDevPackages[index] = updated;
       return updated;
+    }
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Video & Scene Specification APIs (VS-010B)
+// ---------------------------------------------------------------------------
+
+const memoryDevSlots = new Map<string, VideoUploadSlot>();
+const memoryDevVideos = new Map<string, AcademicVideoAsset>();
+const memoryDevSpecs = new Map<string, SceneSpecification>();
+const memoryDevJobs = new Map<string, RenderJob>();
+const memoryDevCaptions = new Map<string, string>();
+const memoryDevVideoBlobs = new Map<string, Blob>();
+
+export const DEFAULT_DEV_SCENE_TEMPLATES: SceneTemplateRegistry = {
+  version: '1',
+  actions: [
+    {
+      id: 'worked_example_step',
+      displayName: 'Worked Example Step',
+      params: [
+        {
+          id: 'stepNumber',
+          kind: 'INTEGER',
+          label: 'Step number',
+          required: true,
+          min: 1,
+          max: 20,
+        },
+        {
+          id: 'stepTitle',
+          kind: 'STRING',
+          label: 'Step title',
+          required: true,
+          maxLength: 100,
+        },
+        {
+          id: 'mathExpression',
+          kind: 'MATH_EXPRESSION',
+          label: 'LaTeX formula',
+          required: true,
+          maxLength: 500,
+        },
+        {
+          id: 'explanation',
+          kind: 'MULTILINE_TEXT',
+          label: 'Visual explanation text',
+          required: false,
+          maxLength: 1000,
+        },
+      ],
+    },
+    {
+      id: 'concept_definition',
+      displayName: 'Concept Definition',
+      params: [
+        {
+          id: 'conceptName',
+          kind: 'STRING',
+          label: 'Concept name',
+          required: true,
+          maxLength: 100,
+        },
+        {
+          id: 'definitionText',
+          kind: 'MULTILINE_TEXT',
+          label: 'Definition',
+          required: true,
+          maxLength: 1000,
+        },
+        {
+          id: 'keyFormula',
+          kind: 'MATH_EXPRESSION',
+          label: 'Key formula (optional)',
+          required: false,
+          maxLength: 500,
+        },
+      ],
+    },
+  ],
+};
+
+export async function createVideoUploadSlot(
+  explanationLanguage: ExplanationLanguage,
+): Promise<VideoUploadSlot> {
+  try {
+    const res = await fetch('/api/v1/admin/academic-video-slots', {
+      method: 'POST',
+      headers: authorizationHeaders(true),
+      body: JSON.stringify({ explanationLanguage }),
+    });
+    return await handleResponse<VideoUploadSlot>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const slotId = crypto.randomUUID();
+      const slot: VideoUploadSlot = {
+        id: slotId,
+        explanationLanguage,
+        uploadUrl: `dev://mock-storage/slots/${slotId}`,
+        maxByteSize: 209715200, // 200 MiB
+        expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+      };
+      memoryDevSlots.set(slotId, slot);
+      return slot;
+    }
+    throw err;
+  }
+}
+
+export async function uploadVideoBytesToSlot(uploadUrl: string, file: Blob | File): Promise<void> {
+  if (uploadUrl.startsWith('dev://')) {
+    const slotId = uploadUrl.split('/').pop() || 'default';
+    memoryDevVideoBlobs.set(slotId, file);
+    return;
+  }
+  // Presigned S3 PUT requires raw bytes, no Content-Type or Authorization header
+  const res = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, { title: `Video upload failed (${res.status})` });
+  }
+}
+
+export async function confirmVideoUpload(
+  slotId: string,
+  provenance: ProvenanceInput,
+): Promise<AcademicVideoAsset> {
+  try {
+    const res = await fetch(
+      `/api/v1/admin/academic-video-slots/${encodeURIComponent(slotId)}:confirm`,
+      {
+        method: 'POST',
+        headers: authorizationHeaders(true),
+        body: JSON.stringify({ provenance }),
+      },
+    );
+    return await handleResponse<AcademicVideoAsset>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const slot = memoryDevSlots.get(slotId);
+      const videoId = crypto.randomUUID();
+      const validationJobId = crypto.randomUUID();
+      const validationJob: RenderJob = {
+        id: validationJobId,
+        kind: 'VALIDATE_UPLOAD',
+        state: 'SUCCEEDED',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId: null,
+        videoAssetId: videoId,
+        error: null,
+      };
+      memoryDevJobs.set(validationJobId, validationJob);
+
+      const asset: AcademicVideoAsset = {
+        id: videoId,
+        source: 'UPLOADED',
+        status: 'DRAFT',
+        explanationLanguage: slot ? slot.explanationLanguage : 'en',
+        mediaType: 'video/mp4',
+        byteSize: 1048576,
+        durationSeconds: 120,
+        width: 1920,
+        height: 1080,
+        sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        captionsAvailable: true,
+        rejection: null,
+        latestValidationJob: validationJob,
+        provenance: {
+          origin: provenance.origin,
+          provider: provenance.provider || null,
+          sourceLocator: provenance.sourceLocator || null,
+          permissionReference: provenance.permissionReference || null,
+          authorUserId: '00000000-0000-0000-0000-000000000001',
+          reviewedByUserId: null,
+          reviewedAt: null,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryDevVideos.set(videoId, asset);
+      const defaultVtt = `WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nSample lesson explanation transcript.\n`;
+      memoryDevCaptions.set(videoId, defaultVtt);
+      return asset;
+    }
+    throw err;
+  }
+}
+
+export async function listSceneTemplates(): Promise<SceneTemplateRegistry> {
+  try {
+    const res = await fetch('/api/v1/admin/scene-templates', {
+      headers: authorizationHeaders(false),
+    });
+    return await handleResponse<SceneTemplateRegistry>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      return DEFAULT_DEV_SCENE_TEMPLATES;
+    }
+    throw err;
+  }
+}
+
+export async function createSceneSpecification(
+  input: SceneSpecificationInput,
+): Promise<SceneSpecification> {
+  try {
+    const res = await fetch('/api/v1/admin/scene-specifications', {
+      method: 'POST',
+      headers: authorizationHeaders(true),
+      body: JSON.stringify(input),
+    });
+    return await handleResponse<SceneSpecification>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const id = crypto.randomUUID();
+      const spec: SceneSpecification = {
+        id,
+        registryVersion: '1',
+        explanationLanguage: input.explanationLanguage,
+        segments: input.segments,
+        latestRenderJob: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryDevSpecs.set(id, spec);
+      return spec;
+    }
+    throw err;
+  }
+}
+
+export async function replaceSceneSpecification(
+  id: string,
+  input: SceneSpecificationInput,
+): Promise<SceneSpecification> {
+  try {
+    const res = await fetch(`/api/v1/admin/scene-specifications/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: authorizationHeaders(true),
+      body: JSON.stringify(input),
+    });
+    return await handleResponse<SceneSpecification>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const existing = memoryDevSpecs.get(id);
+      const updated: SceneSpecification = {
+        id,
+        registryVersion: existing?.registryVersion ?? '1',
+        explanationLanguage: input.explanationLanguage,
+        segments: input.segments,
+        latestRenderJob: existing?.latestRenderJob ?? null,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryDevSpecs.set(id, updated);
+      return updated;
+    }
+    throw err;
+  }
+}
+
+export async function getSceneSpecification(id: string): Promise<SceneSpecification> {
+  try {
+    const res = await fetch(`/api/v1/admin/scene-specifications/${encodeURIComponent(id)}`, {
+      headers: authorizationHeaders(false),
+    });
+    return await handleResponse<SceneSpecification>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const existing = memoryDevSpecs.get(id);
+      if (existing) return existing;
+      const placeholder: SceneSpecification = {
+        id,
+        registryVersion: '1',
+        explanationLanguage: 'en',
+        segments: [
+          {
+            templateActionId: 'worked_example_step',
+            params: {
+              stepNumber: 1,
+              stepTitle: 'Step 1',
+              mathExpression: 'x^2 - 5x + 6 = 0',
+              explanation: 'Factor the quadratic polynomial into linear terms.',
+            },
+            narrationText: 'Factor the quadratic polynomial into linear terms.',
+          },
+        ],
+        latestRenderJob: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryDevSpecs.set(id, placeholder);
+      return placeholder;
+    }
+    throw err;
+  }
+}
+
+export async function createRenderJob(sceneSpecificationId: string): Promise<RenderJob> {
+  try {
+    const res = await fetch('/api/v1/admin/render-jobs', {
+      method: 'POST',
+      headers: authorizationHeaders(true),
+      body: JSON.stringify({ sceneSpecificationId }),
+    });
+    return await handleResponse<RenderJob>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const jobId = crypto.randomUUID();
+      const videoAssetId = crypto.randomUUID();
+
+      const job: RenderJob = {
+        id: jobId,
+        kind: 'RENDER_SCENE',
+        state: 'SUCCEEDED',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId,
+        videoAssetId,
+        error: null,
+      };
+      memoryDevJobs.set(jobId, job);
+
+      const spec = memoryDevSpecs.get(sceneSpecificationId);
+      if (spec) {
+        spec.latestRenderJob = job;
+      }
+
+      const asset: AcademicVideoAsset = {
+        id: videoAssetId,
+        source: 'PRODUCED',
+        status: 'DRAFT',
+        explanationLanguage: spec?.explanationLanguage ?? 'en',
+        mediaType: 'video/mp4',
+        byteSize: 2097152,
+        durationSeconds: 60,
+        width: 1920,
+        height: 1080,
+        sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        captionsAvailable: true,
+        rejection: null,
+        latestValidationJob: null,
+        provenance: {
+          origin: 'YUKCSCA_ORIGINAL',
+          provider: null,
+          sourceLocator: null,
+          permissionReference: null,
+          authorUserId: '00000000-0000-0000-0000-000000000001',
+          reviewedByUserId: null,
+          reviewedAt: null,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryDevVideos.set(videoAssetId, asset);
+      const generatedVtt = `WEBVTT\n\n00:00:00.000 --> 00:00:10.000\n${spec?.segments[0]?.narrationText || 'Produced narration transcript.'}\n`;
+      memoryDevCaptions.set(videoAssetId, generatedVtt);
+
+      return job;
+    }
+    throw err;
+  }
+}
+
+export async function getRenderJob(jobId: string): Promise<RenderJob> {
+  try {
+    const res = await fetch(`/api/v1/admin/render-jobs/${encodeURIComponent(jobId)}`, {
+      headers: authorizationHeaders(false),
+    });
+    return await handleResponse<RenderJob>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const existing = memoryDevJobs.get(jobId);
+      if (existing) return existing;
+      return {
+        id: jobId,
+        kind: 'RENDER_SCENE',
+        state: 'SUCCEEDED',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId: null,
+        videoAssetId: null,
+        error: null,
+      };
+    }
+    throw err;
+  }
+}
+
+export async function getAcademicVideo(id: string): Promise<AcademicVideoAsset> {
+  try {
+    const res = await fetch(`/api/v1/admin/academic-videos/${encodeURIComponent(id)}`, {
+      headers: authorizationHeaders(false),
+    });
+    return await handleResponse<AcademicVideoAsset>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const existing = memoryDevVideos.get(id);
+      if (existing) return existing;
+      const placeholder: AcademicVideoAsset = {
+        id,
+        source: 'UPLOADED',
+        status: 'DRAFT',
+        explanationLanguage: 'en',
+        mediaType: 'video/mp4',
+        byteSize: 1048576,
+        durationSeconds: 120,
+        width: 1920,
+        height: 1080,
+        sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        captionsAvailable: true,
+        rejection: null,
+        latestValidationJob: null,
+        provenance: {
+          origin: 'YUKCSCA_ORIGINAL',
+          provider: null,
+          sourceLocator: null,
+          permissionReference: null,
+          authorUserId: '00000000-0000-0000-0000-000000000001',
+          reviewedByUserId: null,
+          reviewedAt: null,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      memoryDevVideos.set(id, placeholder);
+      return placeholder;
+    }
+    throw err;
+  }
+}
+
+export async function retryAcademicVideoValidation(id: string): Promise<RenderJob> {
+  try {
+    const res = await fetch(
+      `/api/v1/admin/academic-videos/${encodeURIComponent(id)}:retry-validation`,
+      {
+        method: 'POST',
+        headers: authorizationHeaders(true),
+      },
+    );
+    return await handleResponse<RenderJob>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const jobId = crypto.randomUUID();
+      const job: RenderJob = {
+        id: jobId,
+        kind: 'VALIDATE_UPLOAD',
+        state: 'SUCCEEDED',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId: null,
+        videoAssetId: id,
+        error: null,
+      };
+      memoryDevJobs.set(jobId, job);
+      const asset = memoryDevVideos.get(id);
+      if (asset) {
+        asset.latestValidationJob = job;
+        asset.status = 'DRAFT';
+      }
+      return job;
+    }
+    throw err;
+  }
+}
+
+export async function getAcademicVideoPlay(id: string): Promise<VideoPlaybackGrant> {
+  try {
+    const res = await fetch(`/api/v1/admin/academic-videos/${encodeURIComponent(id)}/play`, {
+      headers: authorizationHeaders(false),
+    });
+    return await handleResponse<VideoPlaybackGrant>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      return {
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+      };
+    }
+    throw err;
+  }
+}
+
+export async function getAcademicVideoCaptions(id: string): Promise<string> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new ApiError(401, { title: 'Authentication required' });
+  }
+  try {
+    const res = await fetch(`/api/v1/admin/academic-videos/${encodeURIComponent(id)}/captions`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'text/vtt',
+      },
+    });
+    if (!res.ok) {
+      throw new ApiError(res.status, { title: `Captions load failed (${res.status})` });
+    }
+    return await res.text();
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const vtt = memoryDevCaptions.get(id);
+      if (vtt) return vtt;
+      return `WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nSample explanation narration caption text.\n`;
+    }
+    throw err;
+  }
+}
+
+export async function putAcademicVideoCaptions(
+  id: string,
+  vttContent: string,
+): Promise<AcademicVideoAsset> {
+  try {
+    const res = await fetch(`/api/v1/admin/academic-videos/${encodeURIComponent(id)}/captions`, {
+      method: 'PUT',
+      headers: authorizationHeaders(true),
+      body: JSON.stringify({ captions: vttContent }),
+    });
+    return await handleResponse<AcademicVideoAsset>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      memoryDevCaptions.set(id, vttContent);
+      const asset = memoryDevVideos.get(id);
+      if (asset) {
+        asset.captionsAvailable = true;
+        asset.updatedAt = new Date().toISOString();
+        return asset;
+      }
+      return getAcademicVideo(id);
+    }
+    throw err;
+  }
+}
+
+export async function reviewAcademicVideo(id: string): Promise<AcademicVideoAsset> {
+  try {
+    const res = await fetch(`/api/v1/admin/academic-videos/${encodeURIComponent(id)}:review`, {
+      method: 'POST',
+      headers: authorizationHeaders(true),
+    });
+    return await handleResponse<AcademicVideoAsset>(res);
+  } catch (err) {
+    if (shouldUseDevFallback(err)) {
+      const asset = memoryDevVideos.get(id);
+      if (asset) {
+        asset.status = 'REVIEWED';
+        asset.provenance.reviewedByUserId = '00000000-0000-0000-0000-000000000001';
+        asset.provenance.reviewedAt = new Date().toISOString();
+        asset.updatedAt = new Date().toISOString();
+        return asset;
+      }
+      return {
+        ...(await getAcademicVideo(id)),
+        status: 'REVIEWED',
+      };
     }
     throw err;
   }

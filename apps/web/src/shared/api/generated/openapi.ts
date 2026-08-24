@@ -490,7 +490,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** @description Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, and provenance. */
+    /** @description Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, provenance, and the latest upload-validation job for reload-safe polling and failure recovery. */
     get: operations['AcademicAdminApi_getAcademicVideo'];
     put?: never;
     post?: never;
@@ -529,6 +529,23 @@ export interface paths {
     get: operations['AcademicAdminApi_getAcademicVideoPlay'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-videos/{id}:retry-validation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Retries terminal upload validation from the durable asset id after reload. The asset must be UPLOADED and AWAITING_VALIDATION with staged bytes still reserved. Returns 409 RENDER_JOB_ACTIVE with the active job on a duplicate request, or VALIDATION_NOT_RETRYABLE when the asset or bytes can no longer be retried. */
+    post: operations['AcademicAdminApi_retryAcademicVideoValidation'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1222,6 +1239,8 @@ export interface components {
       captionsAvailable: boolean;
       /** @description Upload-probe rejection reasons. Null unless status is REJECTED; production failures never create an asset and surface on the render job instead. */
       rejection: components['schemas']['AcademicAdmin.AcademicValidationViolation'][] | null;
+      /** @description Latest VALIDATE_UPLOAD job for an UPLOADED asset, including bounded terminal failure detail so an administrator can recover polling or retry after reload. Null for PRODUCED assets. */
+      latestValidationJob: components['schemas']['AcademicAdmin.RenderJob'] | null;
       provenance: components['schemas']['AcademicAdmin.ProvenanceRecord'];
       /** Format: date-time */
       createdAt: string;
@@ -1640,6 +1659,12 @@ export interface components {
       /** Format: date-time */
       expiresAt: string;
     };
+    /** @description Validation retry conflict. RENDER_JOB_ACTIVE embeds the already-active validation job; VALIDATION_NOT_RETRYABLE means the asset is not an uploaded asset awaiting validation or its staged bytes are no longer reserved. */
+    'AcademicAdmin.VideoValidationRetryConflictProblem': {
+      /** @enum {string} */
+      code: 'RENDER_JOB_ACTIVE' | 'VALIDATION_NOT_RETRYABLE';
+      job?: components['schemas']['AcademicAdmin.RenderJob'] | null;
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
     /** @description Bookmarks this lesson's required list (or a subset). Ids not on the lesson are rejected. Formal-mock sessions receive 403. */
     'AcademicStudent.BookmarkLessonTermsRequest': {
       explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
@@ -5104,6 +5129,76 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_retryAcademicVideoValidation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.RenderJob'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.VideoValidationRetryConflictProblem'];
         };
       };
       /** @description Server error */

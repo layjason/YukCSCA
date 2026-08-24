@@ -289,13 +289,11 @@ blocks, and bounded `\(...\)` inline math inside TEXT-like prose
 (lessons, questions, remediation, and term definition/example/English equivalent). VS-010B's
 reviewed-video backend (V13, object storage, scene specifications, render
 queue, gTTS consolidation per `ADR-0003`, and the isolated Python render
-worker) is implemented against contract checkpoint `VS-010B-R5-accepted`.
-Backend review resolved untrusted-media retention (`D-05`) without adding a
-scanner stack, and CR-10 adds asset-keyed upload-validation job visibility.
-CR-10 also adds asset-keyed validation retry, so recovery does not depend on a
-lost upload-slot id.
-The slice is `CONTRACT_READY`; the video frontend and integrated product-owner
-journey remain open. Multi-subject content seeding and
+worker) and production frontend are implemented against contract checkpoint `VS-010B-R5-accepted`.
+Admin video authoring, upload slots, script compilation, draft review, and validation retry
+are in `features/academic-admin`; student range streaming, captions, speed control, resume,
+and fallback UI are in `features/learn`. All frontend test gates pass (typecheck, lint, 80 test files / 396 tests).
+The slice is `VERIFYING`; product-owner journey review remains open. Multi-subject content seeding and
 mock student flows remain later slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
