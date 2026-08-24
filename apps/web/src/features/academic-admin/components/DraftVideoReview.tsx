@@ -59,7 +59,9 @@ export function DraftVideoReview({
       } catch (err) {
         // May 404/409 if not playable yet
         if (err instanceof ApiError && err.statusCode === 409) {
-          setError(err.problem?.detail || 'Video is not playable.');
+          setError(
+            err.problem?.detail || tRef.current('admin.academic.video.reviewModal.notPlayable'),
+          );
         }
       }
 
@@ -312,7 +314,9 @@ export function DraftVideoReview({
                   </div>
                 </div>
               ) : (
-                <pre className="admin-code-preview">{vtt || 'No captions text'}</pre>
+                <pre className="admin-code-preview">
+                  {vtt || t('admin.academic.video.reviewModal.noCaptions')}
+                </pre>
               )}
             </div>
 
@@ -322,15 +326,19 @@ export function DraftVideoReview({
                 {t('admin.academic.video.reviewModal.provenanceHeading')}
               </h4>
               <p className="admin-hint">
-                <strong>Origin:</strong> {asset.provenance.origin}
-                {asset.provenance.provider ? ` • Provider: ${asset.provenance.provider}` : ''}
+                <strong>{t('admin.academic.video.reviewModal.origin')}:</strong>{' '}
+                {asset.provenance.origin}
+                {asset.provenance.provider
+                  ? ` • ${t('admin.academic.video.reviewModal.provider')}: ${asset.provenance.provider}`
+                  : ''}
                 {asset.provenance.sourceLocator
-                  ? ` • Locator: ${asset.provenance.sourceLocator}`
+                  ? ` • ${t('admin.academic.video.reviewModal.locator')}: ${asset.provenance.sourceLocator}`
                   : ''}
               </p>
               {asset.provenance.permissionReference ? (
                 <p className="admin-hint">
-                  <strong>Permission:</strong> {asset.provenance.permissionReference}
+                  <strong>{t('admin.academic.video.reviewModal.permission')}:</strong>{' '}
+                  {asset.provenance.permissionReference}
                 </p>
               ) : null}
             </div>

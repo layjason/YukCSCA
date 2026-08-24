@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ResourceVideoPanel } from './ResourceVideoPanel';
 import * as api from '../api/academicAdminApi';
 import type { AcademicVideoAsset, ResourceVideoAttachment } from '../types';
@@ -61,6 +61,10 @@ const mockVideoAsset: AcademicVideoAsset = {
 describe('ResourceVideoPanel', () => {
   beforeEach(() => {
     vi.spyOn(api, 'getAcademicVideo').mockResolvedValue(mockVideoAsset);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test('renders 3 explanation language rows with empty states and attachments', async () => {
@@ -168,6 +172,110 @@ describe('ResourceVideoPanel', () => {
 
     await waitFor(() => {
       expect(retrySpy).toHaveBeenCalledWith('vid-en-1');
+    });
+  });
+
+  test('polls getAcademicVideo while the attachment is awaiting validation', async () => {
+    vi.useFakeTimers();
+    const awaiting: AcademicVideoAsset = {
+      ...mockVideoAsset,
+      status: 'AWAITING_VALIDATION',
+      latestValidationJob: {
+        id: 'job-val-1',
+        kind: 'VALIDATE_UPLOAD',
+        state: 'RUNNING',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId: null,
+        videoAssetId: 'vid-en-1',
+        error: null,
+      },
+    };
+    const drafted: AcademicVideoAsset = { ...mockVideoAsset, status: 'DRAFT' };
+    const getVideo = vi
+      .spyOn(api, 'getAcademicVideo')
+      .mockResolvedValueOnce(awaiting)
+      .mockResolvedValue(drafted);
+
+    render(
+      <ResourceVideoPanel
+        resourceId="res-1"
+        resourceKind="LESSON"
+        videos={[
+          {
+            language: 'en',
+            videoAssetId: 'vid-en-1',
+            sceneSpecificationId: null,
+          },
+        ]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getAllByText('Awaiting validation').length).toBeGreaterThan(0);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(getVideo.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Review draft video')).toBeInTheDocument();
+  });
+
+  test('commits the draft handle when a polled render job succeeds', async () => {
+    const onDurabilityCommit = vi.fn();
+    vi.spyOn(api, 'getSceneSpecification').mockResolvedValue({
+      id: 'spec-1',
+      registryVersion: '2026-08.1',
+      explanationLanguage: 'en',
+      segments: [],
+      latestRenderJob: {
+        id: 'job-1',
+        kind: 'RENDER_SCENE',
+        state: 'SUCCEEDED',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId: 'spec-1',
+        videoAssetId: 'vid-produced-1',
+        error: null,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    vi.spyOn(api, 'getAcademicVideo').mockResolvedValue({
+      ...mockVideoAsset,
+      id: 'vid-produced-1',
+      source: 'PRODUCED',
+    });
+
+    render(
+      <ResourceVideoPanel
+        resourceId="res-1"
+        resourceKind="LESSON"
+        videos={[
+          {
+            language: 'en',
+            videoAssetId: null,
+            sceneSpecificationId: 'spec-1',
+          },
+        ]}
+        onChange={vi.fn()}
+        onDurabilityCommit={onDurabilityCommit}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onDurabilityCommit).toHaveBeenCalledWith([
+        {
+          language: 'en',
+          sceneSpecificationId: 'spec-1',
+          videoAssetId: 'vid-produced-1',
+        },
+      ]);
     });
   });
 });

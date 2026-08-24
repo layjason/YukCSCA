@@ -137,12 +137,14 @@ describe('ScriptEditor', () => {
     const createJobSpy = vi.spyOn(api, 'createRenderJob').mockResolvedValue(mockJob);
     const onSaved = vi.fn();
     const onJobUpdated = vi.fn();
+    const onJobEnqueued = vi.fn();
 
     render(
       <ScriptEditor
         explanationLanguage="en"
         onSaved={onSaved}
         onJobUpdated={onJobUpdated}
+        onJobEnqueued={onJobEnqueued}
         onClose={vi.fn()}
       />,
     );
@@ -157,6 +159,7 @@ describe('ScriptEditor', () => {
       expect(createJobSpy).toHaveBeenCalledWith('spec-1');
       expect(onSaved).toHaveBeenCalledWith(mockSpec);
       expect(onJobUpdated).toHaveBeenCalledWith(mockJob);
+      expect(onJobEnqueued).toHaveBeenCalledTimes(1);
     });
   });
 });

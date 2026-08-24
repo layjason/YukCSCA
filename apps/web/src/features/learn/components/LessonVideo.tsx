@@ -245,6 +245,15 @@ export function LessonVideo({
     }
   };
 
+  const handleMediaError = () => {
+    const expired = grant != null && Date.parse(grant.expiresAt) <= Date.now();
+    if (expired) {
+      void loadMedia();
+      return;
+    }
+    setError(t('learn.lesson.video.playbackError'));
+  };
+
   if (loading && !grant) {
     return (
       <section className="learn-video-section" aria-busy="true">
@@ -255,7 +264,7 @@ export function LessonVideo({
     );
   }
 
-  if (error && !grant) {
+  if (error) {
     return (
       <section className="learn-video-section">
         <div className="state-notice state-notice-error" role="alert">
@@ -285,6 +294,7 @@ export function LessonVideo({
             onTimeUpdate={handleTimeUpdate}
             onPause={handlePauseOrEnd}
             onEnded={handlePauseOrEnd}
+            onError={handleMediaError}
           >
             {trackUrl ? (
               <track

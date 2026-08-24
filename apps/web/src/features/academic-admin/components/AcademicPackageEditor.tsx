@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Toast, type ToastTone } from '@/shared/components/Toast';
 import { AdminNotifyContext } from '../adminNotify';
@@ -41,6 +41,7 @@ import type {
   AcademicValidationViolation,
   AdminEditorTab,
   AcademicPackageDraftInput,
+  ResourceVideoAttachment,
 } from '../types';
 import '../academic-admin.css';
 
@@ -73,6 +74,72 @@ interface AcademicPackageEditorProps {
   onBackToList: () => void;
 }
 
+function constructDraftInput(
+  draft: AcademicPackage['draft'],
+  subject: AcademicPackage['subject'],
+): AcademicPackageDraftInput {
+  const examShape = ensureExamStructure(draft.officialSyllabus, subject);
+  const officialSyllabus = normalizeOfficialSyllabus({
+    ...draft.officialSyllabus,
+    subject,
+    examStructure: examShape,
+  });
+  const mocks = ensureSingleMockShell(draft.mocks ?? [], examShape);
+  return {
+    officialSyllabus,
+    outlineItems: draft.outlineItems,
+    learningObjectives: draft.learningObjectives,
+    terms: draft.terms ?? [],
+    resources: draft.resources.map((r) => ({
+      id: r.id,
+      ...(r.kind ? { kind: r.kind } : {}),
+      title: r.title,
+      outlineItemIds: r.outlineItemIds,
+      objectiveIds: r.objectiveIds,
+      // Only send filled language versions (backend requires ≥1; empty optional langs omitted).
+      versions: pruneEmptyLocalizedVersions(r.versions ?? []),
+      ...(r.kind === 'TERMINOLOGY' || r.kind === 'LESSON'
+        ? { requiredTermIds: r.requiredTermIds ?? [] }
+        : {}),
+      provenance: toDraftProvenanceInput(toEditableProvenance(r.provenance)),
+      // Always round-trip attachments on LESSON/REMEDIATION. Omitting videos lets
+      // saveDraft replace the resource with an empty list (no merge of prior draft).
+      ...(r.kind === 'LESSON' || r.kind === 'REMEDIATION' ? { videos: r.videos ?? [] } : {}),
+    })),
+    questions: draft.questions.map((q) => ({
+      id: q.id,
+      examLanguage: q.examLanguage || 'en',
+      ...(q.difficulty ? { difficulty: q.difficulty } : {}),
+      stem: q.stem,
+      options: q.options,
+      ...(q.correctOptionKey ? { correctOptionKey: q.correctOptionKey } : {}),
+      explanations: pruneEmptyLocalizedVersions(q.explanations ?? []),
+      outlineItemIds: q.outlineItemIds,
+      objectiveIds: q.objectiveIds,
+      // VS-009: round-trip assessment metadata even before dedicated admin editors ship.
+      // Omitting these fields silently drops authored hints / solution links on save.
+      ...(q.hintTiers != null ? { hintTiers: q.hintTiers } : {}),
+      ...(q.commonMistakeNotes != null ? { commonMistakeNotes: q.commonMistakeNotes } : {}),
+      ...(q.relatedResourceIds != null ? { relatedResourceIds: q.relatedResourceIds } : {}),
+      authoredTermAttachments: q.authoredTermAttachments ?? [],
+      provenance: toDraftProvenanceInput(toEditableProvenance(q.provenance)),
+    })),
+    mocks: mocks.map((m) => ({
+      id: m.id,
+      title: m.title ?? '',
+      examLanguage: m.examLanguage || 'en',
+      durationMinutes: m.durationMinutes ?? examShape.durationMinutes,
+      totalPoints: m.totalPoints ?? examShape.totalPoints,
+      questionCount: m.questionCount ?? examShape.questionCount,
+      questionType: m.questionType ?? examShape.questionType,
+      questions: m.questions,
+      provenance: toDraftProvenanceInput(toEditableProvenance(m.provenance)),
+    })),
+    // Backend treats omit as empty array — always send so AssessmentSets are not wiped.
+    assessmentSets: draft.assessmentSets ?? [],
+  };
+}
+
 function withNormalizedDraft(pkg: AcademicPackage): AcademicPackage {
   const examStructure = ensureExamStructure(pkg.draft.officialSyllabus, pkg.subject);
   const officialSyllabus = normalizeOfficialSyllabus({
@@ -99,6 +166,9 @@ export function AcademicPackageEditor({
   const { t, i18n } = useTranslation();
 
   const [pkg, setPkg] = useState<AcademicPackage>(() => withNormalizedDraft(initialPackage));
+  const pkgRef = useRef(pkg);
+  pkgRef.current = pkg;
+  const saveChainRef = useRef(Promise.resolve());
   const [activeTab, setActiveTab] = useState<AdminEditorTab>('source');
 
   const [isSaving, setIsSaving] = useState(false);
@@ -203,7 +273,9 @@ export function AcademicPackageEditor({
 
   const applyPackageUpdate = (next: AcademicPackage) => {
     setValidationViolations(null);
-    setPkg(withNormalizedDraft(next));
+    const normalized = withNormalizedDraft(next);
+    pkgRef.current = normalized;
+    setPkg(normalized);
   };
 
   const applyViolations = (violations: AcademicValidationViolation[]) => {
@@ -218,7 +290,7 @@ export function AcademicPackageEditor({
     setIsReloading(true);
     try {
       const fresh = await getAcademicPackage(pkg.id);
-      setPkg(withNormalizedDraft(fresh));
+      applyPackageUpdate(fresh);
       setValidationViolations(null);
       showToast(fallbackDetail || t('admin.academic.toasts.staleRevisionReloaded'), 'info');
     } catch (reloadErr) {
@@ -233,77 +305,18 @@ export function AcademicPackageEditor({
     }
   };
 
-  const constructDraftInput = (): AcademicPackageDraftInput => {
-    const examShape = ensureExamStructure(draft.officialSyllabus, pkg.subject);
-    const officialSyllabus = normalizeOfficialSyllabus({
-      ...draft.officialSyllabus,
-      subject: pkg.subject,
-      examStructure: examShape,
-    });
-    const mocks = ensureSingleMockShell(draft.mocks ?? [], examShape);
-    return {
-      officialSyllabus,
-      outlineItems: draft.outlineItems,
-      learningObjectives: draft.learningObjectives,
-      terms: draft.terms ?? [],
-      resources: draft.resources.map((r) => ({
-        id: r.id,
-        ...(r.kind ? { kind: r.kind } : {}),
-        title: r.title,
-        outlineItemIds: r.outlineItemIds,
-        objectiveIds: r.objectiveIds,
-        // Only send filled language versions (backend requires ≥1; empty optional langs omitted).
-        versions: pruneEmptyLocalizedVersions(r.versions ?? []),
-        ...(r.kind === 'TERMINOLOGY' || r.kind === 'LESSON'
-          ? { requiredTermIds: r.requiredTermIds ?? [] }
-          : {}),
-        provenance: toDraftProvenanceInput(toEditableProvenance(r.provenance)),
-      })),
-      questions: draft.questions.map((q) => ({
-        id: q.id,
-        examLanguage: q.examLanguage || 'en',
-        ...(q.difficulty ? { difficulty: q.difficulty } : {}),
-        stem: q.stem,
-        options: q.options,
-        ...(q.correctOptionKey ? { correctOptionKey: q.correctOptionKey } : {}),
-        explanations: pruneEmptyLocalizedVersions(q.explanations ?? []),
-        outlineItemIds: q.outlineItemIds,
-        objectiveIds: q.objectiveIds,
-        // VS-009: round-trip assessment metadata even before dedicated admin editors ship.
-        // Omitting these fields silently drops authored hints / solution links on save.
-        ...(q.hintTiers != null ? { hintTiers: q.hintTiers } : {}),
-        ...(q.commonMistakeNotes != null ? { commonMistakeNotes: q.commonMistakeNotes } : {}),
-        ...(q.relatedResourceIds != null ? { relatedResourceIds: q.relatedResourceIds } : {}),
-        authoredTermAttachments: q.authoredTermAttachments ?? [],
-        provenance: toDraftProvenanceInput(toEditableProvenance(q.provenance)),
-      })),
-      mocks: mocks.map((m) => ({
-        id: m.id,
-        title: m.title ?? '',
-        examLanguage: m.examLanguage || 'en',
-        durationMinutes: m.durationMinutes ?? examShape.durationMinutes,
-        totalPoints: m.totalPoints ?? examShape.totalPoints,
-        questionCount: m.questionCount ?? examShape.questionCount,
-        questionType: m.questionType ?? examShape.questionType,
-        questions: m.questions,
-        provenance: toDraftProvenanceInput(toEditableProvenance(m.provenance)),
-      })),
-      // Backend treats omit as empty array — always send so AssessmentSets are not wiped.
-      assessmentSets: draft.assessmentSets ?? [],
-    };
-  };
-
-  const handleSaveDraft = async () => {
-    setIsSaving(true);
+  const saveCurrentDraft = async (): Promise<boolean> => {
+    const current = pkgRef.current;
+    if (current.status === 'ARCHIVED') return false;
     setValidationViolations(null);
     try {
       const updated = await saveAcademicPackageDraft(
-        pkg.id,
-        pkg.draftRevision,
-        constructDraftInput(),
+        current.id,
+        current.draftRevision,
+        constructDraftInput(current.draft, current.subject),
       );
-      setPkg(withNormalizedDraft(updated));
-      showToast(t('admin.academic.toasts.draftSaved'));
+      applyPackageUpdate(updated);
+      return true;
     } catch (err) {
       if (err instanceof ApiError && err.statusCode === 409) {
         await reloadPackageAfterStale(
@@ -319,24 +332,57 @@ export function AcademicPackageEditor({
           'error',
         );
       }
-    } finally {
-      setIsSaving(false);
+      return false;
     }
+  };
+
+  const queueDraftSave = (notify: boolean, durationMs = 4000): Promise<boolean> => {
+    const run = saveChainRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        if (notify) setIsSaving(true);
+        try {
+          const saved = await saveCurrentDraft();
+          if (saved && notify) {
+            showToast(t('admin.academic.toasts.draftSaved'), 'success', durationMs);
+          }
+          return saved;
+        } finally {
+          if (notify) setIsSaving(false);
+        }
+      });
+    saveChainRef.current = run.then(() => undefined);
+    return run;
+  };
+
+  const handleSaveDraft = async () => {
+    await queueDraftSave(true);
+  };
+
+  const commitVideoAttachments = (resourceId: string, videos: ResourceVideoAttachment[]) => {
+    const current = pkgRef.current;
+    if (current.status === 'ARCHIVED') return;
+    const nextDraft = {
+      ...current.draft,
+      resources: current.draft.resources.map((resource) =>
+        resource.id === resourceId ? { ...resource, videos } : resource,
+      ),
+    };
+    applyPackageUpdate({ ...current, draft: nextDraft });
+    void queueDraftSave(true, 2000);
   };
 
   const handlePublish = async () => {
     setIsPublishing(true);
     setValidationViolations(null);
     try {
-      // Server publishes the saved draft only — persist local edits first.
-      const saved = await saveAcademicPackageDraft(
-        pkg.id,
-        pkg.draftRevision,
-        constructDraftInput(),
-      );
-      setPkg(withNormalizedDraft(saved));
+      // Server publishes the saved draft only — persist local edits first, including
+      // any in-flight CR-03 video-handle save so expectedDraftRevision stays coherent.
+      const savedOk = await queueDraftSave(false);
+      if (!savedOk) return;
+      const saved = pkgRef.current;
       const updated = await publishAcademicPackage(saved.id, saved.draftRevision);
-      setPkg(withNormalizedDraft(updated));
+      applyPackageUpdate(updated);
       showToast(
         t('admin.academic.toasts.published', {
           date: formatAdminDate(
@@ -369,7 +415,7 @@ export function AcademicPackageEditor({
     setIsArchiving(true);
     try {
       const updated = await archiveAcademicPackage(pkg.id, pkg.draftRevision, reason);
-      setPkg(withNormalizedDraft(updated));
+      applyPackageUpdate(updated);
       setShowArchiveModal(false);
       showToast(t('admin.academic.toasts.archived'));
     } catch (err) {
@@ -674,6 +720,7 @@ export function AcademicPackageEditor({
                     draft: { ...draft, resources: updated },
                   })
                 }
+                onVideoAttachmentsCommit={commitVideoAttachments}
               />
             </div>
           )}

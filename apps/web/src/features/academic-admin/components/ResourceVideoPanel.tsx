@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edit2, Film, RefreshCw, Trash2, Upload, Video } from 'lucide-react';
 import { VideoStatusBadge } from './VideoStatusBadge';
@@ -24,14 +24,25 @@ interface ResourceVideoPanelProps {
   resourceKind?: 'LESSON' | 'REMEDIATION';
   videos?: ResourceVideoAttachment[];
   onChange: (updatedVideos: ResourceVideoAttachment[]) => void;
+  /** Persist the draft handle immediately (CR-03: confirm, spec, enqueue, SUCCEEDED). */
+  onDurabilityCommit?: (updatedVideos: ResourceVideoAttachment[]) => void;
   disabled?: boolean;
 }
 
 const EXPLANATION_LANGUAGES: ExplanationLanguage[] = ['id', 'en', 'zh-CN'];
+const VALIDATION_POLL_MS = 5000;
+
+function attachmentsKey(videos: ResourceVideoAttachment[]): string {
+  return videos
+    .map((v) => `${v.language}:${v.videoAssetId ?? ''}:${v.sceneSpecificationId ?? ''}`)
+    .sort()
+    .join('|');
+}
 
 export function ResourceVideoPanel({
   videos = [],
   onChange,
+  onDurabilityCommit,
   disabled = false,
 }: ResourceVideoPanelProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -48,83 +59,151 @@ export function ResourceVideoPanel({
   const [reviewAssetId, setReviewAssetId] = useState<string | null>(null);
   const [reviewLang, setReviewLang] = useState<ExplanationLanguage | null>(null);
 
+  const videosRef = useRef(videos);
+  videosRef.current = videos;
+  const assetsRef = useRef(assets);
+  assetsRef.current = assets;
+  const specsRef = useRef(specs);
+  specsRef.current = specs;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onDurabilityCommitRef = useRef(onDurabilityCommit);
+  onDurabilityCommitRef.current = onDurabilityCommit;
+
+  const applyVideos = (nextVideos: ResourceVideoAttachment[], persist: boolean) => {
+    videosRef.current = nextVideos;
+    onChange(nextVideos);
+    if (persist) onDurabilityCommit?.(nextVideos);
+  };
+  const loadGenerationRef = useRef<Record<string, number>>({});
+  const videoKey = useMemo(() => attachmentsKey(videos), [videos]);
+
   const loadAttachmentData = useCallback(async (att: ResourceVideoAttachment) => {
+    const requestId = (loadGenerationRef.current[att.language] ?? 0) + 1;
+    loadGenerationRef.current[att.language] = requestId;
     setLoading((curr) => ({ ...curr, [att.language]: true }));
     try {
+      let asset: AcademicVideoAsset | undefined;
+      let spec: SceneSpecification | undefined;
       if (att.videoAssetId) {
-        const asset = await getAcademicVideo(att.videoAssetId);
-        setAssets((curr) => ({ ...curr, [att.language]: asset }));
+        asset = await getAcademicVideo(att.videoAssetId);
       }
       if (att.sceneSpecificationId) {
-        const spec = await getSceneSpecification(att.sceneSpecificationId);
+        spec = await getSceneSpecification(att.sceneSpecificationId);
+      }
+      if (loadGenerationRef.current[att.language] !== requestId) {
+        return { asset, spec };
+      }
+      if (asset) {
+        setAssets((curr) => ({ ...curr, [att.language]: asset }));
+      }
+      if (spec) {
         setSpecs((curr) => ({ ...curr, [att.language]: spec }));
       }
+      return { asset, spec };
     } catch {
-      // Ignored for individual preview fetch errors
+      // Preview fetch failures stay local to the row; polling retries while in-flight.
+      return undefined;
     } finally {
-      setLoading((curr) => ({ ...curr, [att.language]: false }));
+      if (loadGenerationRef.current[att.language] === requestId) {
+        setLoading((curr) => ({ ...curr, [att.language]: false }));
+      }
     }
   }, []);
 
+  const handleRenderJobUpdated = useCallback(
+    (lang: ExplanationLanguage, job: RenderJob) => {
+      if (job.state === 'SUCCEEDED' && job.videoAssetId) {
+        const existing = videosRef.current.find((v) => v.language === lang);
+        if (existing && existing.videoAssetId !== job.videoAssetId) {
+          const nextVideos = videosRef.current.filter((v) => v.language !== lang);
+          nextVideos.push({
+            language: lang,
+            sceneSpecificationId: existing.sceneSpecificationId ?? null,
+            videoAssetId: job.videoAssetId,
+          });
+          videosRef.current = nextVideos;
+          onChangeRef.current(nextVideos);
+          onDurabilityCommitRef.current?.(nextVideos);
+          void loadAttachmentData({
+            language: lang,
+            sceneSpecificationId: existing.sceneSpecificationId ?? null,
+            videoAssetId: job.videoAssetId,
+          });
+        }
+      }
+    },
+    [loadAttachmentData],
+  );
+
   useEffect(() => {
-    for (const att of videos) {
-      void loadAttachmentData(att);
-    }
-  }, [videos, loadAttachmentData]);
+    let cancelled = false;
+
+    const refresh = async () => {
+      for (const att of videosRef.current) {
+        if (cancelled) return;
+        const loaded = await loadAttachmentData(att);
+        if (cancelled || !loaded?.spec?.latestRenderJob) continue;
+        handleRenderJobUpdated(att.language, loaded.spec.latestRenderJob);
+      }
+    };
+
+    void refresh();
+
+    const timer = window.setInterval(() => {
+      const shouldPoll = videosRef.current.some((att) => {
+        const asset = assetsRef.current[att.language];
+        const spec = specsRef.current[att.language];
+        if (att.videoAssetId && (!asset || asset.status === 'AWAITING_VALIDATION')) {
+          return true;
+        }
+        const job = spec?.latestRenderJob;
+        return Boolean(job && (job.state === 'QUEUED' || job.state === 'RUNNING'));
+      });
+      if (shouldPoll) void refresh();
+    }, VALIDATION_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+    // videoKey captures attachment identity without depending on a fresh [] each render.
+  }, [videoKey, loadAttachmentData, handleRenderJobUpdated]);
 
   const handleUploadSuccess = (lang: ExplanationLanguage, asset: AcademicVideoAsset) => {
     setUploaderLang(null);
     setAssets((curr) => ({ ...curr, [lang]: asset }));
-    // Update attachment in draft
-    const nextVideos = videos.filter((v) => v.language !== lang);
+    const nextVideos = videosRef.current.filter((v) => v.language !== lang);
     nextVideos.push({
       language: lang,
       videoAssetId: asset.id,
       sceneSpecificationId: null,
     });
-    onChange(nextVideos);
+    applyVideos(nextVideos, true);
   };
 
   const handleScriptSaved = (lang: ExplanationLanguage, savedSpec: SceneSpecification) => {
     setSpecs((curr) => ({ ...curr, [lang]: savedSpec }));
-    // If not in videos, add it
-    const existing = videos.find((v) => v.language === lang);
+    const existing = videosRef.current.find((v) => v.language === lang);
     if (!existing || existing.sceneSpecificationId !== savedSpec.id) {
-      const nextVideos = videos.filter((v) => v.language !== lang);
+      const nextVideos = videosRef.current.filter((v) => v.language !== lang);
       nextVideos.push({
         language: lang,
         sceneSpecificationId: savedSpec.id,
         videoAssetId: existing?.videoAssetId ?? null,
       });
-      onChange(nextVideos);
+      applyVideos(nextVideos, true);
     }
   };
 
-  const handleRenderJobUpdated = (lang: ExplanationLanguage, job: RenderJob) => {
-    if (job.state === 'SUCCEEDED' && job.videoAssetId) {
-      // Succeeded produced video! Add videoAssetId to draft attachment
-      const existing = videos.find((v) => v.language === lang);
-      if (existing && existing.videoAssetId !== job.videoAssetId) {
-        const nextVideos = videos.filter((v) => v.language !== lang);
-        nextVideos.push({
-          language: lang,
-          sceneSpecificationId: existing.sceneSpecificationId ?? null,
-          videoAssetId: job.videoAssetId,
-        });
-        onChange(nextVideos);
-        void loadAttachmentData({
-          language: lang,
-          sceneSpecificationId: existing.sceneSpecificationId ?? null,
-          videoAssetId: job.videoAssetId,
-        });
-      }
-    }
+  const handleJobEnqueued = () => {
+    onDurabilityCommitRef.current?.(videosRef.current);
   };
 
   const handleRemoveAttachment = (lang: ExplanationLanguage) => {
     if (disabled) return;
-    const nextVideos = videos.filter((v) => v.language !== lang);
-    onChange(nextVideos);
+    const nextVideos = videosRef.current.filter((v) => v.language !== lang);
+    applyVideos(nextVideos, true);
     setAssets((curr) => {
       const next = { ...curr };
       delete next[lang];
@@ -147,7 +226,14 @@ export function ResourceVideoPanel({
       setAssets((curr) => ({ ...curr, [lang]: updatedAsset }));
     } catch (err) {
       if (err instanceof ApiError) {
-        setActionError(err.problem?.detail || err.message);
+        const problem = err.problem as { code?: string; detail?: string } | undefined;
+        if (err.statusCode === 409 && problem?.code === 'VALIDATION_NOT_RETRYABLE') {
+          setActionError(t('admin.academic.video.validationNotRetryable'));
+        } else if (err.statusCode === 409 && problem?.code === 'RENDER_JOB_ACTIVE') {
+          setActionError(t('admin.academic.video.validationJobActive'));
+        } else {
+          setActionError(problem?.detail || err.message);
+        }
       } else if (err instanceof Error) {
         setActionError(err.message);
       }
@@ -316,7 +402,11 @@ export function ResourceVideoPanel({
                     <div className="admin-row-wrap">
                       <span>{t('admin.academic.video.source.PRODUCED')}</span>
                       <span>•</span>
-                      <span>{spec.segments?.length || 0} segments</span>
+                      <span>
+                        {t('admin.academic.video.segmentCount', {
+                          count: spec.segments?.length || 0,
+                        })}
+                      </span>
                       {spec.latestRenderJob ? (
                         <span>
                           • {t('admin.academic.video.jobState.' + spec.latestRenderJob.state)}
@@ -347,6 +437,7 @@ export function ResourceVideoPanel({
           initialSpecId={scriptEditorSpecId}
           onSaved={(savedSpec) => handleScriptSaved(scriptEditorLang, savedSpec)}
           onJobUpdated={(job) => handleRenderJobUpdated(scriptEditorLang, job)}
+          onJobEnqueued={handleJobEnqueued}
           onClose={() => {
             setScriptEditorLang(null);
             setScriptEditorSpecId(null);

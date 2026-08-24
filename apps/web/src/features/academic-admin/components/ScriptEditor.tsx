@@ -25,6 +25,8 @@ interface ScriptEditorProps {
   initialSpecId?: string | null;
   onSaved: (spec: SceneSpecification) => void;
   onJobUpdated?: (job: RenderJob) => void;
+  /** Fired once after enqueue (or 409 active-job recovery), not on later poll ticks. */
+  onJobEnqueued?: () => void;
   onClose: () => void;
   disabled?: boolean;
 }
@@ -34,6 +36,7 @@ export function ScriptEditor({
   initialSpecId,
   onSaved,
   onJobUpdated,
+  onJobEnqueued,
   onClose,
   disabled = false,
 }: ScriptEditorProps): React.JSX.Element {
@@ -274,6 +277,7 @@ export function ScriptEditor({
       const job = await createRenderJob(savedSpec.id);
       setActiveJob(job);
       onJobUpdated?.(job);
+      onJobEnqueued?.();
       clearPoll();
       pollTimerRef.current = window.setTimeout(() => void pollJob(job.id), 2000);
     } catch (err) {
@@ -283,6 +287,7 @@ export function ScriptEditor({
         if (conflictProblem?.job) {
           setActiveJob(conflictProblem.job);
           onJobUpdated?.(conflictProblem.job);
+          onJobEnqueued?.();
           pollTimerRef.current = window.setTimeout(
             () => void pollJob(conflictProblem.job!.id),
             2000,
@@ -545,7 +550,9 @@ export function ScriptEditor({
                                   className="text-input admin-field-control"
                                   value={String(paramValue)}
                                   maxLength={p.maxLength ?? undefined}
-                                  placeholder="e.g. ax^2 + bx + c = 0"
+                                  placeholder={t(
+                                    'admin.academic.video.scriptEditor.mathPlaceholder',
+                                  )}
                                   disabled={disabled}
                                   onChange={(e) => handleParamChange(index, p.id, e.target.value)}
                                 />
@@ -577,7 +584,7 @@ export function ScriptEditor({
                           id={`seg-${index}-narration`}
                           className="text-input admin-field-control"
                           rows={2}
-                          maxLength={1000}
+                          maxLength={600}
                           placeholder={t('admin.academic.video.scriptEditor.narrationPlaceholder')}
                           value={segment.narrationText}
                           disabled={disabled}

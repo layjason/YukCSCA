@@ -49,7 +49,9 @@ worker with `docker compose up -d render-worker` only when exercising a real
 `RENDER_SCENE` / `VALIDATE_UPLOAD` job; Java integration tests simulate those
 worker writes. In Compose the API uses `http://minio:9000` internally while
 `YUKCSCA_MEDIA_PUBLIC_ENDPOINT` controls the browser-reachable origin embedded
-in presigned URLs (default `http://localhost:9000`). The worker waits for API
+in presigned URLs (default `http://localhost:9000`). The Compose web service
+interpolates the same origin into CSP `media-src` (playback) and `connect-src`
+(presigned upload PUT). The worker waits for API
 readiness so Flyway V13 exists before it polls the render and media-cleanup
 queues. No antivirus service is part of the local stack; D-05 treats uploaded
 bytes as private/untrusted and does not claim malware clearance.

@@ -163,6 +163,10 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+    environment:
+      # Same origin the API embeds in VideoPlaybackGrant / upload-slot URLs.
+      YUKCSCA_MEDIA_PUBLIC_ENDPOINT: ${YUKCSCA_MEDIA_PUBLIC_ENDPOINT:-http://localhost:9000}
+      NGINX_ENVSUBST_FILTER: YUKCSCA_MEDIA_PUBLIC_ENDPOINT
     ports:
       - '${WEB_PORT:-5173}:80'
     depends_on:
