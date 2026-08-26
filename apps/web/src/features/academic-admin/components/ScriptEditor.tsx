@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import { useAdminNotify } from '../adminNotify';
 import { KaTeXPreview } from './KaTeXPreview';
 import { AdminInlineLatexPreview } from './AdminInlineLatexPreview';
@@ -774,24 +774,42 @@ export function ScriptEditor({
     activeJob.state === 'SUCCEEDED' &&
     new Date(spec.updatedAt).getTime() > new Date(activeJob.createdAt).getTime();
 
+  const handleClose = async () => {
+    if (loading || saving || rendering) {
+      onClose();
+      return;
+    }
+    if (segments.length > 0) {
+      await saveScript();
+    }
+    onClose();
+  };
+
+  const handleCloseRef = useRef(handleClose);
+  handleCloseRef.current = handleClose;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving && !rendering) {
-        onClose();
+      if (e.key === 'Escape') {
+        void handleCloseRef.current();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, saving, rendering]);
+  }, []);
 
   return (
     <div
-      className="admin-modal-backdrop"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="script-editor-title"
+      onClick={() => void handleClose()}
     >
-      <div className="admin-modal-card admin-modal-card-lg admin-stack-md">
+      <div
+        className="modal-content modal-content-lg admin-stack-md"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="admin-row-between">
           <div>
             <h3 id="script-editor-title" className="admin-detail-title">
@@ -803,11 +821,13 @@ export function ScriptEditor({
           </div>
           <button
             type="button"
-            className="btn-quiet admin-btn-compact"
-            onClick={onClose}
+            className="btn-secondary admin-btn-icon"
+            aria-label={t('admin.academic.video.scriptEditor.close')}
+            title={t('admin.academic.video.scriptEditor.close')}
+            onClick={() => void handleClose()}
             disabled={saving}
           >
-            {t('admin.academic.video.scriptEditor.close')}
+            <X size={16} />
           </button>
         </div>
 
@@ -876,31 +896,29 @@ export function ScriptEditor({
                         <div className="admin-row-wrap">
                           <button
                             type="button"
-                            className="btn-quiet admin-btn-compact"
+                            className="admin-icon-btn"
                             aria-label={t('admin.academic.video.scriptEditor.moveUp')}
+                            title={t('admin.academic.video.scriptEditor.moveUp')}
                             onClick={() => handleMoveSegment(index, 'up')}
                             disabled={index === 0 || disabled}
                           >
-                            <ArrowUp size={16} />
+                            <ArrowUp className="admin-icon-btn-svg" size={20} aria-hidden />
                           </button>
                           <button
                             type="button"
-                            className="btn-quiet admin-btn-compact"
+                            className="admin-icon-btn"
                             aria-label={t('admin.academic.video.scriptEditor.moveDown')}
+                            title={t('admin.academic.video.scriptEditor.moveDown')}
                             onClick={() => handleMoveSegment(index, 'down')}
                             disabled={index === segments.length - 1 || disabled}
                           >
-                            <ArrowDown size={16} />
+                            <ArrowDown className="admin-icon-btn-svg" size={20} aria-hidden />
                           </button>
-                          <button
-                            type="button"
-                            className="btn-quiet admin-btn-compact text-danger"
-                            aria-label={t('admin.academic.video.scriptEditor.removeSegment')}
-                            onClick={() => handleRemoveSegment(index)}
+                          <AdminRemoveButton
+                            label={t('admin.academic.video.scriptEditor.removeSegment')}
                             disabled={disabled || segments.length <= 1}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                            onClick={() => handleRemoveSegment(index)}
+                          />
                         </div>
                       </div>
 
@@ -1193,7 +1211,7 @@ export function ScriptEditor({
           </div>
         )}
 
-        <div className="admin-row-between">
+        <div className="admin-actions-end">
           <button
             type="button"
             className="btn-secondary"
@@ -1204,24 +1222,19 @@ export function ScriptEditor({
               ? t('learn.lesson.savingProgress')
               : t('admin.academic.video.scriptEditor.saveScript')}
           </button>
-          <div className="admin-row-wrap">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
-              {t('admin.academic.video.scriptEditor.close')}
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleStartRender}
-              disabled={saving || rendering || disabled || segments.length === 0}
-              aria-busy={rendering}
-            >
-              {rendering
-                ? t('admin.academic.video.scriptEditor.rendering')
-                : isStale
-                  ? t('admin.academic.video.scriptEditor.reRender')
-                  : t('admin.academic.video.scriptEditor.renderVideo')}
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleStartRender}
+            disabled={saving || rendering || disabled || segments.length === 0}
+            aria-busy={rendering}
+          >
+            {rendering
+              ? t('admin.academic.video.scriptEditor.rendering')
+              : isStale
+                ? t('admin.academic.video.scriptEditor.reRender')
+                : t('admin.academic.video.scriptEditor.renderVideo')}
+          </button>
         </div>
       </div>
     </div>

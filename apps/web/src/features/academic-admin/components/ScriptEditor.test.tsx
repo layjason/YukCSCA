@@ -275,6 +275,16 @@ const enumRegistry: SceneTemplateRegistry = {
   ],
 };
 
+const defaultMockSpec: SceneSpecification = {
+  id: 'spec-1',
+  explanationLanguage: 'en',
+  registryVersion: '1',
+  segments: [],
+  latestRenderJob: null,
+  createdAt: '2026-08-20T00:00:00Z',
+  updatedAt: '2026-08-20T00:00:00Z',
+};
+
 describe('ScriptEditor', () => {
   beforeEach(() => {
     vi.spyOn(api, 'listSceneTemplates').mockResolvedValue(mockRegistry);
@@ -291,6 +301,45 @@ describe('ScriptEditor', () => {
     fireEvent.change(mathInput, { target: { value: 'x^2 + 2x + 1 = 0' } });
 
     expect(await screen.findByTestId('katex-preview')).toHaveTextContent('x^2 + 2x + 1 = 0');
+  });
+
+  test('closes and auto-saves from the header close control', async () => {
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    const createSpecSpy = vi
+      .spyOn(api, 'createSceneSpecification')
+      .mockResolvedValue(defaultMockSpec);
+
+    render(<ScriptEditor explanationLanguage="en" onSaved={onSaved} onClose={onClose} />);
+
+    await screen.findByText('Segment 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => {
+      expect(createSpecSpy).toHaveBeenCalled();
+      expect(onSaved).toHaveBeenCalledWith(defaultMockSpec);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('closes and auto-saves when clicking the backdrop overlay', async () => {
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    const createSpecSpy = vi
+      .spyOn(api, 'createSceneSpecification')
+      .mockResolvedValue(defaultMockSpec);
+
+    render(<ScriptEditor explanationLanguage="en" onSaved={onSaved} onClose={onClose} />);
+
+    await screen.findByText('Segment 1');
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(dialog);
+
+    await waitFor(() => {
+      expect(createSpecSpy).toHaveBeenCalled();
+      expect(onSaved).toHaveBeenCalledWith(defaultMockSpec);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 
   test('previews inline latex in prose fields', async () => {

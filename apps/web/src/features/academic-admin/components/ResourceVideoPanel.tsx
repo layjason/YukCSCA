@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Edit2, Film, RefreshCw, Trash2, Upload, Video } from 'lucide-react';
+import { Edit2, Film, RefreshCw, Upload, Video, X } from 'lucide-react';
 import { VideoStatusBadge } from './VideoStatusBadge';
 import { VideoUploader } from './VideoUploader';
 import { ScriptEditor } from './ScriptEditor';
 import { DraftVideoReview } from './DraftVideoReview';
+import { AdminRemoveButton } from './AdminRemoveButton';
 import {
   getAcademicVideo,
   getSceneSpecification,
@@ -32,6 +33,20 @@ interface ResourceVideoPanelProps {
 const EXPLANATION_LANGUAGES: ExplanationLanguage[] = ['id', 'en', 'zh-CN'];
 const VALIDATION_POLL_MS = 5000;
 
+/** Tone chip for a render-job state so waiting/failed states scan at a glance. */
+function jobStateTagClass(state: RenderJob['state']): string {
+  switch (state) {
+    case 'SUCCEEDED':
+      return 'yukcsca-tag-success';
+    case 'FAILED':
+      return 'yukcsca-tag-danger';
+    case 'RUNNING':
+      return 'yukcsca-tag-warning';
+    default:
+      return 'yukcsca-tag-info';
+  }
+}
+
 function attachmentsKey(videos: ResourceVideoAttachment[]): string {
   return videos
     .map((v) => `${v.language}:${v.videoAssetId ?? ''}:${v.sceneSpecificationId ?? ''}`)
@@ -51,6 +66,7 @@ export function ResourceVideoPanel({
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmDeleteLang, setConfirmDeleteLang] = useState<ExplanationLanguage | null>(null);
 
   // Modal dialog states
   const [uploaderLang, setUploaderLang] = useState<ExplanationLanguage | null>(null);
@@ -262,7 +278,7 @@ export function ResourceVideoPanel({
           const hasAttachment = Boolean(att);
 
           return (
-            <div key={lang} className="admin-card admin-stack-tight">
+            <div key={lang} className="admin-card admin-stack-sm">
               <div className="admin-row-between">
                 <div className="admin-row-wrap">
                   <span className="font-semibold text-sm">
@@ -271,62 +287,56 @@ export function ResourceVideoPanel({
                   {asset ? <VideoStatusBadge status={asset.status} /> : null}
                 </div>
 
-                <div className="admin-row-wrap">
-                  {hasAttachment ? (
-                    <>
-                      {asset?.status === 'DRAFT' || asset?.status === 'REVIEWED' ? (
-                        <button
-                          type="button"
-                          className="btn-secondary admin-btn-compact"
-                          onClick={() => {
-                            setReviewAssetId(asset.id);
-                            setReviewLang(lang);
-                          }}
-                          disabled={disabled}
-                        >
-                          <Film size={16} />
-                          {t('admin.academic.video.reviewVideo')}
-                        </button>
-                      ) : null}
-
-                      {att?.sceneSpecificationId ? (
-                        <button
-                          type="button"
-                          className="btn-secondary admin-btn-compact"
-                          onClick={() => {
-                            setScriptEditorSpecId(att.sceneSpecificationId ?? null);
-                            setScriptEditorLang(lang);
-                          }}
-                          disabled={disabled}
-                        >
-                          <Edit2 size={16} />
-                          {t('admin.academic.video.editScript')}
-                        </button>
-                      ) : null}
-
+                {hasAttachment ? (
+                  <div className="admin-row-wrap">
+                    {asset?.status === 'DRAFT' || asset?.status === 'REVIEWED' ? (
                       <button
                         type="button"
-                        className="btn-quiet admin-btn-compact text-danger"
-                        aria-label={t('admin.academic.video.removeVideo')}
-                        onClick={() => handleRemoveAttachment(lang)}
+                        className="btn-secondary admin-btn-compact-md"
+                        onClick={() => {
+                          setReviewAssetId(asset.id);
+                          setReviewLang(lang);
+                        }}
                         disabled={disabled}
                       >
-                        <Trash2 size={16} />
+                        <Film size={16} />
+                        {t('admin.academic.video.reviewVideo')}
                       </button>
-                    </>
-                  ) : null}
-                </div>
+                    ) : null}
+
+                    {att?.sceneSpecificationId ? (
+                      <button
+                        type="button"
+                        className="btn-secondary admin-btn-compact-md"
+                        onClick={() => {
+                          setScriptEditorSpecId(att.sceneSpecificationId ?? null);
+                          setScriptEditorLang(lang);
+                        }}
+                        disabled={disabled}
+                      >
+                        <Edit2 size={16} />
+                        {t('admin.academic.video.editScript')}
+                      </button>
+                    ) : null}
+
+                    <AdminRemoveButton
+                      label={t('admin.academic.video.removeVideo')}
+                      disabled={disabled}
+                      onClick={() => setConfirmDeleteLang(lang)}
+                    />
+                  </div>
+                ) : null}
               </div>
 
               {isLoading ? (
                 <p className="admin-muted text-xs">{t('learn.loading')}</p>
               ) : !hasAttachment ? (
-                <div className="admin-row-between">
+                <div className="admin-stack-tight">
                   <p className="admin-muted text-xs">{t('admin.academic.video.noVideo')}</p>
-                  <div className="admin-row-wrap">
+                  <div className="admin-equal-actions" data-count="2">
                     <button
                       type="button"
-                      className="btn-secondary admin-btn-compact"
+                      className="btn-secondary admin-btn-compact-md"
                       onClick={() => setUploaderLang(lang)}
                       disabled={disabled}
                     >
@@ -335,7 +345,7 @@ export function ResourceVideoPanel({
                     </button>
                     <button
                       type="button"
-                      className="btn-secondary admin-btn-compact"
+                      className="btn-secondary admin-btn-compact-md"
                       onClick={() => {
                         setScriptEditorSpecId(null);
                         setScriptEditorLang(lang);
@@ -348,18 +358,18 @@ export function ResourceVideoPanel({
                   </div>
                 </div>
               ) : (
-                <div className="admin-stack-tight text-xs admin-hint">
+                <div className="admin-stack-tight">
                   {asset ? (
                     <div className="admin-row-wrap">
-                      <span>{t(`admin.academic.video.source.${asset.source}`)}</span>
-                      <span>•</span>
-                      <span>
+                      <span className="yukcsca-tag yukcsca-tag-neutral">
+                        {t(`admin.academic.video.source.${asset.source}`)}
+                      </span>
+                      <span className="yukcsca-tag yukcsca-tag-neutral">
                         {t('admin.academic.video.duration', {
                           seconds: asset.durationSeconds ?? 0,
                         })}
                       </span>
-                      <span>•</span>
-                      <span>
+                      <span className="yukcsca-tag yukcsca-tag-neutral">
                         {t('admin.academic.video.dimensions', {
                           width: asset.width ?? 0,
                           height: asset.height ?? 0,
@@ -369,19 +379,21 @@ export function ResourceVideoPanel({
                   ) : null}
 
                   {asset?.status === 'AWAITING_VALIDATION' ? (
-                    <div className="admin-row-between state-notice state-notice-warning">
-                      <span>{t('admin.academic.video.status.AWAITING_VALIDATION')}</span>
-                      {asset.latestValidationJob?.state === 'FAILED' ? (
-                        <button
-                          type="button"
-                          className="btn-secondary admin-btn-compact"
-                          onClick={() => handleRetryValidation(lang, asset.id)}
-                          disabled={retryingId === asset.id || disabled}
-                        >
-                          <RefreshCw size={14} />
-                          {t('admin.academic.video.retryValidation')}
-                        </button>
-                      ) : null}
+                    <div className="state-notice state-notice-warning">
+                      <div className="admin-row-wrap">
+                        <span>{t('admin.academic.video.status.AWAITING_VALIDATION')}</span>
+                        {asset.latestValidationJob?.state === 'FAILED' ? (
+                          <button
+                            type="button"
+                            className="btn-secondary admin-btn-compact-md"
+                            onClick={() => handleRetryValidation(lang, asset.id)}
+                            disabled={retryingId === asset.id || disabled}
+                          >
+                            <RefreshCw size={14} />
+                            {t('admin.academic.video.retryValidation')}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   ) : null}
 
@@ -400,16 +412,19 @@ export function ResourceVideoPanel({
 
                   {spec && !asset ? (
                     <div className="admin-row-wrap">
-                      <span>{t('admin.academic.video.source.PRODUCED')}</span>
-                      <span>•</span>
-                      <span>
+                      <span className="yukcsca-tag yukcsca-tag-info">
+                        {t('admin.academic.video.source.PRODUCED')}
+                      </span>
+                      <span className="yukcsca-tag yukcsca-tag-neutral">
                         {t('admin.academic.video.segmentCount', {
                           count: spec.segments?.length || 0,
                         })}
                       </span>
                       {spec.latestRenderJob ? (
-                        <span>
-                          • {t('admin.academic.video.jobState.' + spec.latestRenderJob.state)}
+                        <span
+                          className={`yukcsca-tag ${jobStateTagClass(spec.latestRenderJob.state)}`}
+                        >
+                          {t('admin.academic.video.jobState.' + spec.latestRenderJob.state)}
                         </span>
                       ) : null}
                     </div>
@@ -422,6 +437,62 @@ export function ResourceVideoPanel({
       </div>
 
       {/* Modals */}
+      {confirmDeleteLang ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-delete-video-title"
+          onClick={() => setConfirmDeleteLang(null)}
+        >
+          <div className="modal-content admin-stack-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 id="confirm-delete-video-title" className="admin-detail-title">
+                {t('admin.academic.video.removeVideo')}
+              </h3>
+              <button
+                type="button"
+                className="btn-secondary admin-btn-icon"
+                aria-label={t('admin.academic.video.scriptEditor.close')}
+                title={t('admin.academic.video.scriptEditor.close')}
+                onClick={() => setConfirmDeleteLang(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="modal-body-text">
+              {t('admin.academic.video.removeConfirm', {
+                language: confirmDeleteLang,
+              })}
+            </p>
+
+            <div className="admin-actions-end">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setConfirmDeleteLang(null)}
+                disabled={disabled}
+              >
+                {t('admin.academic.video.uploader.cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={() => {
+                  const lang = confirmDeleteLang;
+                  setConfirmDeleteLang(null);
+                  handleRemoveAttachment(lang);
+                }}
+                disabled={disabled}
+              >
+                {t('admin.academic.video.removeVideo')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {uploaderLang ? (
         <VideoUploader
           explanationLanguage={uploaderLang}

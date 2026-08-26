@@ -934,6 +934,7 @@ body.app-term-overlay-open .app-bottom-nav {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-xs);
   min-height: 48px;
   border: 0;
   border-radius: var(--radius-pill);
@@ -974,6 +975,7 @@ body.app-term-overlay-open .app-bottom-nav {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-xs);
   min-height: 44px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
@@ -1009,6 +1011,7 @@ body.app-term-overlay-open .app-bottom-nav {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-xs);
   min-height: 44px;
   border: 0;
   border-radius: var(--radius-pill);
@@ -1041,6 +1044,48 @@ body.app-term-overlay-open .app-bottom-nav {
 }
 
 .btn-danger:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
+}
+
+/* Quiet tertiary action (DESIGN.md {components.button-quiet}). */
+.btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  color: var(--color-ink);
+  background: var(--color-surface-soft);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition:
+    background-color var(--motion-quick) var(--ease-standard),
+    color var(--motion-quick) var(--ease-standard),
+    transform var(--motion-instant) var(--ease-standard);
+}
+
+.btn-quiet:hover {
+  background: color-mix(in srgb, var(--color-border) 55%, var(--color-surface-soft));
+}
+
+.btn-quiet:active {
+  transform: scale(0.98);
+}
+
+.btn-quiet:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+  box-shadow: var(--focus-ring);
+}
+
+.btn-quiet:disabled {
   cursor: wait;
   opacity: 0.62;
   transform: none;
@@ -1914,6 +1959,17 @@ body.app-term-overlay-open .app-bottom-nav {
 .state-notice-danger {
   background: var(--color-danger-soft);
   border-color: color-mix(in srgb, var(--color-danger) 25%, var(--color-border));
+}
+
+/* Error/success aliases of the danger/success tones (DESIGN.md feedback roles). */
+.state-notice-error {
+  background: var(--color-danger-soft);
+  border-color: color-mix(in srgb, var(--color-danger) 25%, var(--color-border));
+}
+
+.state-notice-success {
+  background: var(--color-success-soft);
+  border-color: color-mix(in srgb, var(--color-success) 25%, var(--color-border));
 }
 
 .preview-state-panel h1,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import {
   createVideoUploadSlot,
@@ -110,12 +111,13 @@ export function VideoUploader({
 
   return (
     <div
-      className="admin-modal-backdrop"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="video-uploader-title"
+      onClick={() => !uploading && onCancel()}
     >
-      <div className="admin-modal-card admin-stack-md">
+      <div className="modal-content admin-stack-md" onClick={(e) => e.stopPropagation()}>
         <div className="admin-row-between">
           <h3 id="video-uploader-title" className="admin-detail-title">
             {t('admin.academic.video.uploader.title', {
@@ -124,11 +126,13 @@ export function VideoUploader({
           </h3>
           <button
             type="button"
-            className="btn-quiet admin-btn-compact"
+            className="btn-secondary admin-btn-icon"
+            aria-label={t('admin.academic.video.uploader.cancel')}
+            title={t('admin.academic.video.uploader.cancel')}
             onClick={onCancel}
             disabled={uploading}
           >
-            {t('admin.academic.video.uploader.cancel')}
+            <X size={16} />
           </button>
         </div>
 
@@ -166,7 +170,7 @@ export function VideoUploader({
             disabled={uploading || disabled}
           />
 
-          <div className="admin-row-end">
+          <div className="admin-actions-end">
             <button type="button" className="btn-secondary" onClick={onCancel} disabled={uploading}>
               {t('admin.academic.video.uploader.cancel')}
             </button>

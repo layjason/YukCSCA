@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Edit2 } from 'lucide-react';
+import { Check, Edit2, X } from 'lucide-react';
 import { VideoStatusBadge } from './VideoStatusBadge';
 import {
   getAcademicVideo,
@@ -158,26 +158,45 @@ export function DraftVideoReview({
     }
   };
 
+  const handleClose = async () => {
+    if (reviewing || savingVtt) return;
+    if (editingVtt && vttDraft !== vtt && asset && isUploadedDraft) {
+      try {
+        await putAcademicVideoCaptions(asset.id, vttDraft);
+      } catch {
+        // ignore caption save error on modal dismiss
+      }
+    }
+    onClose();
+  };
+
+  const handleCloseRef = useRef(handleClose);
+  handleCloseRef.current = handleClose;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !reviewing && !savingVtt) {
-        onClose();
+      if (e.key === 'Escape') {
+        void handleCloseRef.current();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, reviewing, savingVtt]);
+  }, []);
 
   const isUploadedDraft = asset?.source === 'UPLOADED' && asset.status === 'DRAFT';
 
   return (
     <div
-      className="admin-modal-backdrop"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="draft-video-review-title"
+      onClick={() => void handleClose()}
     >
-      <div className="admin-modal-card admin-modal-card-lg admin-stack-md">
+      <div
+        className="modal-content modal-content-lg admin-stack-md"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="admin-row-between">
           <div className="admin-row-wrap">
             <h3 id="draft-video-review-title" className="admin-detail-title">
@@ -187,8 +206,14 @@ export function DraftVideoReview({
             </h3>
             {asset ? <VideoStatusBadge status={asset.status} /> : null}
           </div>
-          <button type="button" className="btn-quiet admin-btn-compact" onClick={onClose}>
-            {t('admin.academic.video.reviewModal.close')}
+          <button
+            type="button"
+            className="btn-secondary admin-btn-icon"
+            aria-label={t('admin.academic.video.reviewModal.close')}
+            title={t('admin.academic.video.reviewModal.close')}
+            onClick={() => void handleClose()}
+          >
+            <X size={16} />
           </button>
         </div>
 
@@ -236,21 +261,21 @@ export function DraftVideoReview({
               ) : (
                 <p className="admin-muted">{t('learn.lesson.video.playbackError')}</p>
               )}
-              <div className="admin-row-wrap admin-hint">
-                <span>
+              <div className="admin-row-wrap">
+                <span className="yukcsca-tag yukcsca-tag-neutral">
                   {t('admin.academic.video.dimensions', {
                     width: asset.width,
                     height: asset.height,
                   })}
                 </span>
-                <span>•</span>
-                <span>
+                <span className="yukcsca-tag yukcsca-tag-neutral">
                   {t('admin.academic.video.duration', {
                     seconds: asset.durationSeconds,
                   })}
                 </span>
-                <span>•</span>
-                <span>{t(`admin.academic.video.source.${asset.source}`)}</span>
+                <span className="yukcsca-tag yukcsca-tag-info">
+                  {t(`admin.academic.video.source.${asset.source}`)}
+                </span>
               </div>
             </div>
 
@@ -263,7 +288,7 @@ export function DraftVideoReview({
                 {isUploadedDraft && !editingVtt ? (
                   <button
                     type="button"
-                    className="btn-quiet admin-btn-compact"
+                    className="btn-secondary admin-btn-compact-md"
                     onClick={() => setEditingVtt(true)}
                     disabled={disabled}
                   >
@@ -282,17 +307,17 @@ export function DraftVideoReview({
               {editingVtt ? (
                 <div className="admin-stack-tight">
                   <textarea
-                    className="text-input admin-field-control font-mono text-sm"
+                    className="text-input admin-field-control admin-vtt-editor"
                     rows={8}
                     value={vttDraft}
                     aria-label={t('admin.academic.video.reviewModal.captionsHeading')}
                     disabled={savingVtt || disabled}
                     onChange={(e) => setVttDraft(e.target.value)}
                   />
-                  <div className="admin-row-end">
+                  <div className="admin-actions-end">
                     <button
                       type="button"
-                      className="btn-secondary admin-btn-compact"
+                      className="btn-secondary admin-btn-compact-md"
                       onClick={() => {
                         setVttDraft(vtt);
                         setEditingVtt(false);
@@ -303,7 +328,7 @@ export function DraftVideoReview({
                     </button>
                     <button
                       type="button"
-                      className="btn-primary admin-btn-compact"
+                      className="btn-primary admin-btn-compact-md"
                       onClick={handleSaveCaptions}
                       disabled={savingVtt || disabled}
                     >
@@ -345,8 +370,8 @@ export function DraftVideoReview({
           </div>
         ) : null}
 
-        <div className="admin-row-between">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+        <div className="admin-actions-end">
+          <button type="button" className="btn-secondary" onClick={() => void handleClose()}>
             {t('admin.academic.video.reviewModal.close')}
           </button>
           {asset?.status === 'DRAFT' ? (

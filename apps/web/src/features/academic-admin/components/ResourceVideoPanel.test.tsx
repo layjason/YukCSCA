@@ -17,6 +17,8 @@ vi.mock('react-i18next', () => ({
         'admin.academic.video.reviewVideo': 'Review draft video',
         'admin.academic.video.editScript': 'Edit script',
         'admin.academic.video.removeVideo': 'Remove video',
+        'admin.academic.video.removeConfirm': `Remove video attachment for ${opts?.language ?? ''}?`,
+        'admin.academic.video.uploader.cancel': 'Cancel',
         'admin.academic.video.retryValidation': 'Retry validation',
         'admin.academic.video.status.DRAFT': 'Draft (needs review)',
         'admin.academic.video.status.REVIEWED': 'Reviewed',
@@ -38,33 +40,43 @@ const mockVideoAsset: AcademicVideoAsset = {
   explanationLanguage: 'en',
   mediaType: 'video/mp4',
   byteSize: 1048576,
-  durationSeconds: 60,
+  durationSeconds: 45,
   width: 1920,
   height: 1080,
   sha256: 'sha-en',
   captionsAvailable: true,
-  rejection: null,
-  latestValidationJob: null,
   provenance: {
     origin: 'YUKCSCA_ORIGINAL',
-    provider: null,
+    provider: 'YukCSCA Authoring',
     sourceLocator: null,
-    permissionReference: null,
+    permissionReference: 'OWNED',
     authorUserId: 'user-1',
     reviewedByUserId: null,
     reviewedAt: null,
   },
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  latestValidationJob: null,
+  rejection: null,
+  createdAt: '2026-08-20T00:00:00Z',
+  updatedAt: '2026-08-20T00:00:00Z',
 };
 
 describe('ResourceVideoPanel', () => {
   beforeEach(() => {
     vi.spyOn(api, 'getAcademicVideo').mockResolvedValue(mockVideoAsset);
+    vi.spyOn(api, 'getSceneSpecification').mockResolvedValue({
+      id: 'spec-1',
+      explanationLanguage: 'en',
+      registryVersion: '2026-08.4',
+      segments: [],
+      latestRenderJob: null,
+      createdAt: '2026-08-20T00:00:00Z',
+      updatedAt: '2026-08-20T00:00:00Z',
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   test('renders 3 explanation language rows with empty states and attachments', async () => {
@@ -93,7 +105,7 @@ describe('ResourceVideoPanel', () => {
     expect(await screen.findByText('Review draft video')).toBeInTheDocument();
   });
 
-  test('handles removing an attachment', async () => {
+  test('opens confirmation dialog and removes the video attachment upon confirmation', async () => {
     const videos: ResourceVideoAttachment[] = [
       {
         language: 'en',
@@ -117,7 +129,63 @@ describe('ResourceVideoPanel', () => {
     });
     fireEvent.click(removeBtn);
 
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/Remove video attachment for en\?/i)).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+
+    const confirmButtons = screen.getAllByRole('button', { name: 'Remove video' });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]!);
+
     expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  test('cancels deletion when clicking Cancel in confirmation dialog', async () => {
+    const videos: ResourceVideoAttachment[] = [
+      {
+        language: 'en',
+        videoAssetId: 'vid-en-1',
+        sceneSpecificationId: null,
+      },
+    ];
+    const onChange = vi.fn();
+
+    render(
+      <ResourceVideoPanel
+        resourceId="res-1"
+        resourceKind="LESSON"
+        videos={videos}
+        onChange={onChange}
+      />,
+    );
+
+    const removeBtn = await screen.findByRole('button', {
+      name: 'Remove video',
+    });
+    fireEvent.click(removeBtn);
+
+    const cancelBtn = await screen.findByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelBtn);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Remove video attachment for en\?/i)).not.toBeInTheDocument();
+  });
+
+  test('opens the script editor dialog from an empty language row', async () => {
+    vi.spyOn(api, 'listSceneTemplates').mockResolvedValue({ version: '2026-08.4', actions: [] });
+
+    render(
+      <ResourceVideoPanel
+        resourceId="res-1"
+        resourceKind="LESSON"
+        videos={[]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const authorButtons = await screen.findAllByRole('button', { name: /Author script/i });
+    fireEvent.click(authorButtons[0]!);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
   test('handles retry validation flow when validation failed', async () => {
