@@ -15,3 +15,14 @@ title = "yukcsca-gitleaks"
 
 [extend]
 useDefault = true
+
+[allowlist]
+description = "Microsoft Edge read-aloud TTS trusted client token: a published protocol constant in historical commits, identical for every caller and shipped with open-source edge-tts (https://github.com/rany2/edge-tts). Retired with the Edge TTS adapter in VS-010B (ADR-0003)."
+regexTarget = "match"
+regexes = ['''6A5AA1D4EAFF4E9FB37E23D68491D6F4''']
+stopwords = [
+  "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
+]
+commits = [
+  "7b67e84f277d551aae7e18abced58f21d67e1cb5"
+]
