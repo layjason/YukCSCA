@@ -292,8 +292,8 @@ queue, gTTS consolidation per `ADR-0003`, and the isolated Python render
 worker) and production frontend are implemented against contract checkpoint `VS-010B-R5-accepted`.
 Admin video authoring, upload slots, script compilation, draft review, and validation retry
 are in `features/academic-admin`; student range streaming, captions, speed control, resume,
-and fallback UI are in `features/learn`. All frontend test gates pass (typecheck, lint, 80 test files / 396 tests).
-The slice is `VERIFYING`; product-owner journey review remains open. Multi-subject content seeding and
+and fallback UI are in `features/learn`. All frontend test gates pass (typecheck, lint, 81 test files / 422 tests).
+The slice is `DONE` after backend, worker, frontend, security/privacy, automated test gates, and product-owner journey review passed (2026-08-26). Multi-subject content seeding and
 mock student flows remain later slices.
 
 `PATCH /api/v1/student-profile/me` updates only supplied learner-profile fields
