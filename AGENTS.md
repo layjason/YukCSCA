@@ -189,7 +189,7 @@ Use an application-facing port or explicit public use case instead.
 - Add or change a semantic design token in `DESIGN.md` first, then mirror it in the shared CSS foundation; do not scatter raw color values through feature styles.
 - Comment decisions, invariants, and non-obvious edge cases—not every function. Code comments and API documentation use clear English; user-facing content is localized.
 - Add component/API tests for a success state and at least one validation, failure, accessibility, or edge state.
-- Use workspace-pinned commands through pnpm: `pnpm exec prettier`, `pnpm lint:web`, `pnpm typecheck:web`, and `pnpm test:web`. Do not rely on unrelated globally installed Node tools.
+- Use workspace-pinned commands through pnpm: `pnpm exec prettier`, `pnpm lint:web`, `pnpm typecheck:web`, and `pnpm test:web`. Do not rely on unrelated globally installed Node tools. Always format modified frontend files (`apps/web/**/*.{ts,tsx,css}`) with `pnpm exec prettier --write` before completing a task.
 
 ## Backend rules
 
@@ -204,6 +204,7 @@ Use an application-facing port or explicit public use case instead.
 - Integration tests use PostgreSQL through Testcontainers, never H2. Production and tests use the same Flyway migrations.
 - Flyway migrations are append-only after the first shared deployment. Never rewrite an applied migration. Before that deployment, an initial migration may be corrected only when the change and validation evidence are explicit.
 - External calls require timeouts, bounded retries where safe, failure mapping, and an adapter interface.
+- Always format modified Java files with Spotless (`services/api/mvnw spotless:apply`) and verify that `services/api/mvnw spotless:check` passes before completing a task.
 - Logs describe meaningful operations and failures with appropriate levels. Never add noisy per-function logging.
 
 ## Security, privacy, and AI
@@ -221,6 +222,7 @@ Use an application-facing port or explicit public use case instead.
 ## Documentation rules
 
 - Update affected documentation in the same change as code, contract, configuration, or operational behavior.
+- Always format modified documentation and markdown files with `pnpm exec prettier --write <file...>` to ensure consistent whitespace, tables, and wrap style.
 - Keep the bilingual requirement documents semantically synchronized. When requirements themselves change, update `Version`/`版本` and `Date`/`日期` in both files using the actual system date in `Asia/Jakarta`, and record a concise reason in an existing change-history section. Do not invent timestamps or add per-edit changelogs to every documentation file.
 - Update `ARCHITECTURE.md` when current implementation boundaries or active technology change. Update `PLAN.md` for plan version, slice order/status, dependencies, experiments, or dependency candidates; update the active slice file for detailed implementation evidence.
 - Update root `DESIGN.md` when the shared visual language, semantic tokens, component roles, motion rules, or anti-pattern boundaries change. Keep application CSS aligned and do not create a competing feature-level design system.
@@ -231,6 +233,7 @@ Use an application-facing port or explicit public use case instead.
 ## Testing and validation
 
 - Every non-trivial use case needs at least one success test and one validation, authorization, privacy, or edge-case test.
+- Always rerun the applicable test suites whenever changes are made: run `pnpm test:web` (or targeted component tests) for frontend changes, and execute the relevant Maven/JUnit integration or unit tests for backend changes. Verify that all assertions and timers pass cleanly before reporting task completion.
 - Never delete, weaken, skip, quarantine, or mark a test flaky merely to pass CI. If a test appears wrong, explain the requirement conflict and obtain approval before changing its asserted behavior.
 - Mock external LLM, payment, email, OAuth, storage, and meeting-provider calls in automated tests. CI must not contact billable or production services.
 - If a required tool or dependency is missing, report it and install only through the repository's declared package manager or wrapper. Request network/cache access when needed; do not silently skip a check or create an alternate temporary dependency cache.
