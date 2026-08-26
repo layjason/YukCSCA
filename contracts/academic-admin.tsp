@@ -751,11 +751,36 @@ enum SceneTemplateParamKind {
   INTEGER,
   DECIMAL,
   MATH_EXPRESSION,
+
+  @doc("Reviewed enumerated choice token; the descriptor's choices list is the closed value set.")
+  ENUM,
+
+  @doc("Bounded JSON-array composite of one to four half-open/closed interval scopes; the exact member schema is fixed by this kind and validated server-side (fields: left, leftBound, leftInf, right, rightBound, rightInf — see SceneTemplateAction docs). Clients render a dedicated structured editor for it.")
+  INTERVAL_SET,
+}
+
+@doc("One closed choice token of an ENUM-kind template parameter; uppercase alphanumeric/underscore identifier.")
+@pattern("^[A-Z0-9][A-Z0-9_]{0,63}$")
+scalar SceneTemplateParamChoice extends string;
+
+@doc("Data-only display rule: the owning parameter is collected only while the referenced ENUM-kind parameter holds one of the listed choice tokens. Presentation-only — server-side validation semantics are unchanged; an absent rule means always shown.")
+model SceneTemplateParamVisibility {
+  @doc("Id of the observed ENUM parameter.")
+  @pattern("^[a-z][a-zA-Z0-9]{0,63}$")
+  @minLength(1)
+  @maxLength(64)
+  paramId: string;
+
+  @doc("Choice tokens of the observed parameter that make the owning parameter applicable.")
+  @minItems(1)
+  @maxItems(16)
+  choices: SceneTemplateParamChoice[];
 }
 
 @doc("Data-only descriptor of one template-action parameter. Bounded values; never executable content.")
 model SceneTemplateParamDescriptor {
-  @pattern("^[a-z0-9][a-z0-9-]{0,63}$")
+  @doc("CamelCase identifier (e.g. xMin, keyPoints), matching SceneTemplateParamVisibility.paramId; template-action ids are the kebab-case identifiers.")
+  @pattern("^[a-z][a-zA-Z0-9]{0,63}$")
   id: string;
 
   kind: SceneTemplateParamKind;
@@ -767,16 +792,24 @@ model SceneTemplateParamDescriptor {
 
   required?: boolean | null;
 
-  @doc("Inclusive lower bound; INTEGER and DECIMAL kinds only.")
+  @doc("Inclusive lower bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead).")
   min?: decimal | null;
 
-  @doc("Inclusive upper bound; INTEGER and DECIMAL kinds only.")
+  @doc("Inclusive upper bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead).")
   max?: decimal | null;
 
   @doc("Maximum text length; STRING, MULTILINE_TEXT, and MATH_EXPRESSION kinds only.")
   @minValue(1)
   @maxValue(2000)
   maxLength?: int32 | null;
+
+  @doc("Closed choice tokens for ENUM kind only; ignored otherwise.")
+  @minItems(1)
+  @maxItems(16)
+  choices?: SceneTemplateParamChoice[] | null;
+
+  @doc("Optional display rule; see SceneTemplateParamVisibility.")
+  visibleWhen?: SceneTemplateParamVisibility | null;
 }
 
 @doc("One reviewed visual action available to the admin script editor.")

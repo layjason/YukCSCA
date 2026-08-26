@@ -19,15 +19,47 @@ import tools.jackson.databind.node.ObjectNode;
  * template registry. Violation paths follow the documented grammar: {@code segments[i]}, {@code
  * segments[i].templateActionId}, {@code segments[i].params.<paramId>}, {@code
  * segments[i].narrationText}, plus collection-level {@code segments} and {@code
- * explanationLanguage}. The Python render worker re-validates the same rules before rendering.
+ * explanationLanguage}. INTERVAL_SET parameters ({@code number-line-union}) extend the param
+ * grammar with composite item paths {@code segments[i].params.<paramId>[j]} and sub-field paths
+ * {@code segments[i].params.<paramId>[j].<field>}. The Python render worker re-validates the same
+ * rules before rendering.
  */
 @Component
 public class SceneSpecificationValidator {
   static final int MAX_SEGMENTS = 60;
   static final int MAX_NARRATION_LENGTH = 600;
   static final int MAX_PARAM_KEYS = 16;
+
+  /** Bounded composite size for INTERVAL_SET parameters ({@code number-line-union}). */
+  static final int MAX_INTERVAL_SCOPES = 4;
+
   private static final Set<String> EXPLANATION_LANGUAGES = Set.of("id", "en", "zh-CN");
   private static final String TEMPLATE_ACTION_PATTERN = "^[a-z0-9][a-z0-9-]{0,63}$";
+  private static final Set<String> INTERVAL_END_TOKENS = Set.of("FINITE", "INFINITE");
+  private static final Set<String> INTERVAL_BOUND_TOKENS = Set.of("OPEN", "CLOSED");
+  private static final double INTERVAL_ENDPOINT_LIMIT = 100.0;
+
+  /**
+   * Family-conditional coefficient requirements; keys align with the {@code function-graph} family
+   * choices. Coefficient {@code a} is required for every family, so its descriptor flag enforces it
+   * and reporting it here again would duplicate the violation.
+   */
+  private static final Map<String, List<String>> REQUIRED_COEFFICIENTS =
+      Map.of(
+          "LINEAR",
+          List.of("b"),
+          "QUADRATIC",
+          List.of("b", "c"),
+          "POWER",
+          List.of("n"),
+          "EXP",
+          List.of("r"),
+          "LOG",
+          List.of("base"),
+          "SIN",
+          List.of("b", "c", "d"),
+          "COS",
+          List.of("b", "c", "d"));
 
   private final JsonMapper json;
 
@@ -169,6 +201,28 @@ public class SceneSpecificationValidator {
             normalized.put(descriptor.id(), numeric);
           }
         }
+        case ENUM -> {
+          if (!value.isTextual() || !descriptor.choices().contains(value.asText())) {
+            violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+          } else {
+            normalized.put(descriptor.id(), value.asText());
+          }
+        }
+        case INTERVAL_SET -> {
+          // The composite value stays an untyped wire boundary; only its shape and member fields
+          // are validated here. A valid array is stored verbatim for the render worker.
+          if (!value.isArray()) {
+            violations.add(new AcademicViolation(path, AcademicViolationCode.INVALID));
+          } else {
+            if (value.isEmpty() || value.size() > MAX_INTERVAL_SCOPES) {
+              violations.add(new AcademicViolation(path, AcademicViolationCode.OUT_OF_RANGE));
+            }
+            for (int index = 0; index < value.size(); index++) {
+              validateIntervalScope(value.get(index), path + "[" + index + "]", violations);
+            }
+            normalized.set(descriptor.id(), value);
+          }
+        }
       }
     }
     for (Map.Entry<String, JsonNode> entry : params.properties()) {
@@ -181,7 +235,197 @@ public class SceneSpecificationValidator {
     if (params.properties().size() > MAX_PARAM_KEYS) {
       violations.add(new AcademicViolation(paramsPath, AcademicViolationCode.OUT_OF_RANGE));
     }
+    applyActionSemantics(action.id(), params, paramsPath, violations);
     return normalized;
+  }
+
+  /**
+   * Validates one INTERVAL_SET member object at {@code basePath} ({@code
+   * segments[i].params.<paramId>[j]}): closed field set, required FINITE/INFINITE end tokens, and
+   * endpoint/bound fields that are required only on a FINITE end. Field order inside the scope is
+   * part of the violation contract and is mirrored by the Python worker.
+   */
+  private static void validateIntervalScope(
+      JsonNode scope, String basePath, List<AcademicViolation> violations) {
+    if (!scope.isObject()) {
+      violations.add(new AcademicViolation(basePath, AcademicViolationCode.INVALID));
+      return;
+    }
+    Set<String> knownFields =
+        Set.of("left", "leftBound", "leftInf", "right", "rightBound", "rightInf");
+    for (Map.Entry<String, JsonNode> entry : scope.properties()) {
+      if (!knownFields.contains(entry.getKey())) {
+        violations.add(
+            new AcademicViolation(
+                basePath + "." + entry.getKey(), AcademicViolationCode.UNSUPPORTED));
+      }
+    }
+    String leftInf = intervalEndToken(scope, "leftInf", basePath, violations);
+    String rightInf = intervalEndToken(scope, "rightInf", basePath, violations);
+    validateIntervalEnd(scope, "left", "leftBound", leftInf, basePath, violations);
+    validateIntervalEnd(scope, "right", "rightBound", rightInf, basePath, violations);
+  }
+
+  /** Reads the FINITE/INFINITE token for one interval end; null when missing or malformed. */
+  private static String intervalEndToken(
+      JsonNode scope, String fieldId, String basePath, List<AcademicViolation> violations) {
+    JsonNode token = scope.path(fieldId);
+    if (token.isMissingNode() || token.isNull()) {
+      violations.add(
+          new AcademicViolation(basePath + "." + fieldId, AcademicViolationCode.REQUIRED));
+      return null;
+    }
+    if (!token.isTextual() || !INTERVAL_END_TOKENS.contains(token.asText())) {
+      violations.add(
+          new AcademicViolation(basePath + "." + fieldId, AcademicViolationCode.INVALID));
+      return null;
+    }
+    return token.asText();
+  }
+
+  /**
+   * Validates the endpoint number and bound type of one FINITE interval end. Fields on an INFINITE
+   * end are semantically absent: neither required nor validated (same D-08/D-10 posture as the
+   * single-interval action).
+   */
+  private static void validateIntervalEnd(
+      JsonNode scope,
+      String numberField,
+      String boundField,
+      String endToken,
+      String basePath,
+      List<AcademicViolation> violations) {
+    if (!"FINITE".equals(endToken)) return;
+    JsonNode number = scope.path(numberField);
+    if (number.isMissingNode() || number.isNull()) {
+      violations.add(
+          new AcademicViolation(basePath + "." + numberField, AcademicViolationCode.REQUIRED));
+    } else if (!number.isNumber()) {
+      violations.add(
+          new AcademicViolation(basePath + "." + numberField, AcademicViolationCode.INVALID));
+    } else if (number.asDouble() < -INTERVAL_ENDPOINT_LIMIT
+        || number.asDouble() > INTERVAL_ENDPOINT_LIMIT) {
+      violations.add(
+          new AcademicViolation(basePath + "." + numberField, AcademicViolationCode.OUT_OF_RANGE));
+    }
+    JsonNode bound = scope.path(boundField);
+    if (bound.isMissingNode() || bound.isNull()) {
+      violations.add(
+          new AcademicViolation(basePath + "." + boundField, AcademicViolationCode.REQUIRED));
+    } else if (!bound.isTextual() || !INTERVAL_BOUND_TOKENS.contains(bound.asText())) {
+      violations.add(
+          new AcademicViolation(basePath + "." + boundField, AcademicViolationCode.INVALID));
+    }
+  }
+
+  /**
+   * Conditional semantic rules for the CSCA Math templates (D-06..D-09). Runs only on already
+   * well-formed inputs: a parameter that failed its own descriptor check is skipped here so no
+   * duplicate or misleading violation is reported. The Python worker mirrors these rules exactly.
+   */
+  private static void applyActionSemantics(
+      String actionId, JsonNode params, String paramsPath, List<AcademicViolation> violations) {
+    if (!params.isObject()) return;
+    switch (actionId) {
+      case "function-graph" -> {
+        String family = textualToken(params.get("family"));
+        if (family != null && REQUIRED_COEFFICIENTS.containsKey(family)) {
+          for (String coefficientId : REQUIRED_COEFFICIENTS.get(family)) {
+            JsonNode coefficient = params.get(coefficientId);
+            if (coefficient == null || coefficient.isNull()) {
+              violations.add(
+                  new AcademicViolation(
+                      paramsPath + "." + coefficientId, AcademicViolationCode.REQUIRED));
+            }
+          }
+          if ("EXP".equals(family)) {
+            Double ratio = numericValue(params.get("r"));
+            if (ratio != null && (ratio <= 0 || ratio == 1)) {
+              violations.add(
+                  new AcademicViolation(paramsPath + ".r", AcademicViolationCode.OUT_OF_RANGE));
+            }
+          } else if ("LOG".equals(family)) {
+            Double base = numericValue(params.get("base"));
+            if (base != null && (base <= 0 || base == 1)) {
+              violations.add(
+                  new AcademicViolation(paramsPath + ".base", AcademicViolationCode.OUT_OF_RANGE));
+            }
+          }
+        }
+        Double xMin = numericValue(params.get("xMin"));
+        Double xMax = numericValue(params.get("xMax"));
+        if (xMin != null && xMax != null && xMin >= xMax) {
+          violations.add(
+              new AcademicViolation(paramsPath + ".xMax", AcademicViolationCode.INVALID));
+        }
+      }
+      case "number-line-interval" -> {
+        String leftInf = textualToken(params.get("leftInf"));
+        String rightInf = textualToken(params.get("rightInf"));
+        Double left = numericValue(params.get("left"));
+        Double right = numericValue(params.get("right"));
+        // D-08: a bound type is meaningless on an infinite end, so it is required only when that
+        // end is FINITE (same conditional pattern as the family coefficients). Presence is checked
+        // on the raw node so a value that already failed its descriptor check is not
+        // double-reported.
+        if ("FINITE".equals(leftInf)
+            && (params.get("leftBound") == null || params.get("leftBound").isNull())) {
+          violations.add(
+              new AcademicViolation(paramsPath + ".leftBound", AcademicViolationCode.REQUIRED));
+        }
+        if ("FINITE".equals(rightInf)
+            && (params.get("rightBound") == null || params.get("rightBound").isNull())) {
+          violations.add(
+              new AcademicViolation(paramsPath + ".rightBound", AcademicViolationCode.REQUIRED));
+        }
+        if ("FINITE".equals(leftInf)
+            && "FINITE".equals(rightInf)
+            && left != null
+            && right != null
+            && left >= right) {
+          violations.add(
+              new AcademicViolation(paramsPath + ".right", AcademicViolationCode.INVALID));
+        }
+      }
+      case "number-line-union" -> {
+        JsonNode scopes = params.get("scopes");
+        if (scopes != null && scopes.isArray()) {
+          for (int index = 0; index < scopes.size(); index++) {
+            JsonNode scope = scopes.get(index);
+            if (scope == null || !scope.isObject()) continue;
+            Double left = numericValue(scope.get("left"));
+            Double right = numericValue(scope.get("right"));
+            boolean leftFinite = "FINITE".equals(textualToken(scope.get("leftInf")));
+            boolean rightFinite = "FINITE".equals(textualToken(scope.get("rightInf")));
+            if (leftFinite && rightFinite && left != null && right != null && left >= right) {
+              violations.add(
+                  new AcademicViolation(
+                      paramsPath + ".scopes[" + index + "].right", AcademicViolationCode.INVALID));
+            }
+          }
+        }
+      }
+      case "sequence-points" -> {
+        String seqType = textualToken(params.get("seqType"));
+        Double ratioOrDiff = numericValue(params.get("ratioOrDiff"));
+        if ("GEOMETRIC".equals(seqType) && ratioOrDiff != null && Math.abs(ratioOrDiff) > 10) {
+          violations.add(
+              new AcademicViolation(
+                  paramsPath + ".ratioOrDiff", AcademicViolationCode.OUT_OF_RANGE));
+        }
+      }
+      default -> {
+        // Framing actions have no cross-parameter semantics.
+      }
+    }
+  }
+
+  private static String textualToken(JsonNode node) {
+    return node != null && node.isTextual() ? node.asText() : null;
+  }
+
+  private static Double numericValue(JsonNode node) {
+    return node != null && node.isNumber() ? node.asDouble() : null;
   }
 
   static boolean isSafeMathExpression(String value) {

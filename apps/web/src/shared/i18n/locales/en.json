@@ -1921,6 +1921,7 @@
           "segmentNumber": "Segment {{index}}",
           "actionLabel": "Visual template action",
           "chooseAction": "Choose template action…",
+          "enumPlaceholder": "Select an option…",
           "narrationLabel": "Narration text",
           "narrationPlaceholder": "Enter narration text for synthesis…",
           "mathPlaceholder": "e.g. \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}",
@@ -1938,7 +1939,28 @@
           "staleWarning": "The script was modified after this render job started. Re-render to update the video.",
           "jobAttempts": "Attempt {{current}} of {{max}}",
           "reRender": "Re-render video",
-          "close": "Close"
+          "close": "Close",
+          "scopeNumber": "Scope {{index}}",
+          "addScope": "Add scope",
+          "scopesMaxHint": "A union supports at most {{max}} scopes.",
+          "removeScope": "Remove scope {{index}}",
+          "scopesEmpty": "No scopes yet. Add at least one interval scope.",
+          "scopeLeftEndType": "Left end type",
+          "scopeRightEndType": "Right end type",
+          "scopeFinite": "Finite",
+          "scopeInfinite": "Infinite",
+          "scopeLeftEndpoint": "Left endpoint",
+          "scopeRightEndpoint": "Right endpoint",
+          "scopeLeftBoundType": "Left bound type",
+          "scopeRightBoundType": "Right bound type",
+          "scopeOpen": "Open",
+          "scopeClosed": "Closed",
+          "toasts": {
+            "saved": "Script saved successfully.",
+            "saveFailed": "Save script failed",
+            "segmentAdded": "Segment added.",
+            "segmentRemoved": "Segment removed."
+          }
         },
         "reviewModal": {
           "title": "Review video ({{language}})",

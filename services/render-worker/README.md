@@ -16,12 +16,13 @@ lesson-video pipeline (`VS-010B`, decisions `D-01`–`D-04`, `ADR-0003`):
   directly in `DRAFT`.
 
 The worker executes **no authored scene code** — it consumes only
-schema-validated scene data (requirement V1.7). Visual mapping of the five
-reviewed actions uses one card per segment: the previous card fades out, then
-frames are stroke-drawn (`Create`) and glyphs/equations are written (`Write`)
-over the narration window. Mixed prose + inline TeX (`\(...\)`), and Noto CJK
-for `zh-CN`. Subject-specific open-source Manim scenes are not loaded as
-executable templates.
+schema-validated scene data (requirement V1.7). Visual mapping of the eight
+reviewed actions (five framing cards plus the CSCA Math graph / interval /
+sequence templates) uses one card per segment: the previous card fades out,
+then frames are stroke-drawn (`Create`) and glyphs/equations are written
+(`Write`) over the narration window. Mixed prose + inline TeX (`\(...\)`), and
+Noto CJK for `zh-CN`. Subject-specific open-source Manim scenes are not loaded
+as executable templates.
 
 It claims jobs from the
 `render_job` table with `FOR UPDATE SKIP LOCKED` and a visibility timeout,
@@ -33,7 +34,7 @@ Pinned stack: Manim CE 0.21.0, manim-voiceover 0.4.0 (gtts extra only), gTTS
 2.5.4, psycopg 3.3.4, boto3 1.43.78, FFmpeg/FFprobe, a bounded TeX Live set
 (for `MathTex` worked-example steps), and Noto CJK fonts (for `zh-CN` `Text`)
 from the image. The registry mirror in `yukcsca_worker/registry.py` must stay
-identical to the Java `SceneTemplateRegistry` (version `2026-08.1`).
+identical to the Java `SceneTemplateRegistry` (version `2026-08.3`).
 
 ## Local runs
 

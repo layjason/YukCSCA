@@ -1825,7 +1825,8 @@ select.admin-field-control,
   gap: var(--space-sm);
 }
 
-.admin-hint-card {
+.admin-hint-card,
+.admin-scope-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -1833,6 +1834,16 @@ select.admin-field-control,
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-soft);
+}
+
+/* Active-state convention for a composite row being edited; mirrors field focus colors. */
+.admin-scope-card:focus-within {
+  border-color: var(--color-focus);
+}
+
+/* Validation highlight for cards holding unresolved field violations. */
+.admin-card-invalid {
+  border-color: var(--color-danger);
 }
 
 .admin-hint-toolbar {

@@ -571,6 +571,14 @@ public class AcademicVideoService {
 
   public record SceneTemplateRegistryView(String version, List<SceneTemplateActionView> actions) {}
 
+  public record SceneTemplateParamVisibilityView(String paramId, List<String> choices) {
+
+    static SceneTemplateParamVisibilityView from(
+        SceneTemplateRegistry.SceneTemplateParamVisibility visibility) {
+      return new SceneTemplateParamVisibilityView(visibility.paramId(), visibility.choices());
+    }
+  }
+
   public record SceneTemplateParamDescriptorView(
       String id,
       String kind,
@@ -578,7 +586,9 @@ public class AcademicVideoService {
       Boolean required,
       Double min,
       Double max,
-      Integer maxLength) {
+      Integer maxLength,
+      List<String> choices,
+      SceneTemplateParamVisibilityView visibleWhen) {
 
     static SceneTemplateParamDescriptorView from(
         SceneTemplateRegistry.SceneTemplateParamDescriptor descriptor) {
@@ -589,7 +599,11 @@ public class AcademicVideoService {
           descriptor.required(),
           descriptor.min(),
           descriptor.max(),
-          descriptor.maxLength());
+          descriptor.maxLength(),
+          descriptor.choices(),
+          descriptor.visibleWhen() == null
+              ? null
+              : SceneTemplateParamVisibilityView.from(descriptor.visibleWhen()));
     }
   }
 

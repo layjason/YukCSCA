@@ -29,7 +29,9 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -248,13 +250,58 @@ class AcademicVideoHttpIT {
 
   @Test
   void sceneSpecificationsValidatePerSegmentAndRenderJobsConflictRecoverably() throws Exception {
-    mvc.perform(
-            get("/api/v1/admin/scene-templates")
-                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.version").value("2026-08.1"))
-        .andExpect(
-            jsonPath("$.actions[?(@.id=='worked-example-step')].params[0].kind").value("STRING"));
+    MvcResult templates =
+        mvc.perform(
+                get("/api/v1/admin/scene-templates")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.version").value("2026-08.3"))
+            .andExpect(
+                jsonPath("$.actions[?(@.id=='worked-example-step')].params[0].kind")
+                    .value("STRING"))
+            .andExpect(jsonPath("$.actions[?(@.id=='function-graph')]").isNotEmpty())
+            .andExpect(jsonPath("$.actions[?(@.id=='number-line-interval')]").isNotEmpty())
+            .andExpect(jsonPath("$.actions[?(@.id=='number-line-union')]").isNotEmpty())
+            .andExpect(jsonPath("$.actions[?(@.id=='sequence-points')]").isNotEmpty())
+            .andReturn();
+    JsonNode actions = json.readTree(templates.getResponse().getContentAsString()).path("actions");
+    JsonNode family = findTemplateParam(actions, "function-graph", "family");
+    assertThat(family.path("kind").asText()).isEqualTo("ENUM");
+    List<String> familyChoices = new ArrayList<>();
+    for (JsonNode choice : family.path("choices")) {
+      familyChoices.add(choice.asText());
+    }
+    assertThat(familyChoices)
+        .containsExactly("LINEAR", "QUADRATIC", "POWER", "EXP", "LOG", "SIN", "COS")
+        .doesNotContain("TAN");
+
+    // D-10: display-only visibility metadata rides the descriptors; validation is unchanged.
+    JsonNode exponent = findTemplateParam(actions, "function-graph", "n");
+    assertThat(exponent.path("visibleWhen").path("paramId").asText()).isEqualTo("family");
+    List<String> exponentChoices = new ArrayList<>();
+    for (JsonNode choice : exponent.path("visibleWhen").path("choices")) {
+      exponentChoices.add(choice.asText());
+    }
+    assertThat(exponentChoices).containsExactly("POWER");
+
+    JsonNode leftBound = findTemplateParam(actions, "number-line-interval", "leftBound");
+    assertThat(leftBound.path("visibleWhen").path("paramId").asText()).isEqualTo("leftInf");
+    List<String> leftBoundChoices = new ArrayList<>();
+    for (JsonNode choice : leftBound.path("visibleWhen").path("choices")) {
+      leftBoundChoices.add(choice.asText());
+    }
+    assertThat(leftBoundChoices).containsExactly("FINITE");
+
+    // The union action exposes the INTERVAL_SET composite kind for a dedicated editor.
+    JsonNode unionScopes = findTemplateParam(actions, "number-line-union", "scopes");
+    assertThat(unionScopes.path("kind").asText()).isEqualTo("INTERVAL_SET");
+    JsonNode unionLabel = findTemplateParam(actions, "number-line-union", "setLabel");
+    assertThat(unionLabel.path("kind").asText()).isEqualTo("MATH_EXPRESSION");
+
+    JsonNode coefficientA = findTemplateParam(actions, "function-graph", "a");
+    assertThat(coefficientA.hasNonNull("visibleWhen")).isFalse();
+    // Required for every curve family, so the descriptor advertises it to the editor.
+    assertThat(coefficientA.path("required").asBoolean()).isTrue();
 
     String invalid =
         """
@@ -270,12 +317,62 @@ class AcademicVideoHttpIT {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.violations[0].path").value("segments[0].templateActionId"));
 
+    // A bad scope member reports through the extended composite grammar, not a flat param path.
+    mvc.perform(
+            post("/api/v1/admin/scene-specifications")
+                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"explanationLanguage":"id","segments":[{
+                      "templateActionId":"number-line-union",
+                      "params":{"scopes":[
+                        {"leftInf":"INFINITE","right":2,"rightBound":"CLOSED","rightInf":"FINITE"},
+                        {"left":5,"leftInf":"FINITE","rightInf":"INFINITE"}
+                      ]},
+                      "narrationText":"Himpunan penyelesaian pertidaksamaan."
+                    }]}
+                    """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.violations[0].path").value("segments[0].params.scopes[1].leftBound"))
+        .andExpect(jsonPath("$.violations[0].code").value("REQUIRED"));
+
+    mvc.perform(
+            post("/api/v1/admin/scene-specifications")
+                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"explanationLanguage":"id","segments":[{
+                      "templateActionId":"function-graph",
+                      "params":{"family":"QUADRATIC","a":1,"b":-3,"c":2,"xMin":-5,"xMax":5,"keyPoints":"ROOTS"},
+                      "narrationText":"Parabola y=x^2-3x+2."
+                    },                    {
+                      "templateActionId":"number-line-interval",
+                      "params":{"left":-2,"right":3,"rightBound":"CLOSED","leftInf":"INFINITE","rightInf":"FINITE"},
+                      "narrationText":"Solusi pada garis bilangan."
+                    },{
+                      "templateActionId":"number-line-union",
+                      "params":{"scopes":[
+                        {"leftInf":"INFINITE","right":2,"rightBound":"CLOSED","rightInf":"FINITE"},
+                        {"left":5,"leftBound":"OPEN","leftInf":"FINITE","rightInf":"INFINITE"}
+                      ]},
+                      "narrationText":"Gabungan dua interval."
+                    },{
+                      "templateActionId":"sequence-points",
+                      "params":{"seqType":"ARITHMETIC","firstTerm":2,"ratioOrDiff":3,"termCount":5},
+                      "narrationText":"Barisan aritmetika lima suku."
+                    }]}
+                    """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.registryVersion").value("2026-08.3"));
+
     UUID specId = createSceneSpecification();
     mvc.perform(
             get("/api/v1/admin/scene-specifications/{id}", specId)
                 .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.registryVersion").value("2026-08.1"))
+        .andExpect(jsonPath("$.registryVersion").value("2026-08.3"))
         .andExpect(jsonPath("$.latestRenderJob").doesNotExist());
 
     mvc.perform(
@@ -905,6 +1002,20 @@ class AcademicVideoHttpIT {
         Instant.now());
     AcademicVideoAsset saved = videos.save(asset);
     return saved.getId();
+  }
+
+  private static JsonNode findTemplateParam(JsonNode actions, String actionId, String paramId) {
+    for (JsonNode action : actions) {
+      if (!actionId.equals(action.path("id").asText())) {
+        continue;
+      }
+      for (JsonNode param : action.path("params")) {
+        if (paramId.equals(param.path("id").asText())) {
+          return param;
+        }
+      }
+    }
+    throw new AssertionError("missing template param " + actionId + "." + paramId);
   }
 
   private UUID createSceneSpecification() throws Exception {

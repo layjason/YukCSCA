@@ -1550,26 +1550,46 @@ export interface components {
       /** @description Structured parameter descriptors the script editor renders inputs from. Empty when the action takes no parameters. */
       params: components['schemas']['AcademicAdmin.SceneTemplateParamDescriptor'][];
     };
+    /** @description One closed choice token of an ENUM-kind template parameter; uppercase alphanumeric/underscore identifier. */
+    'AcademicAdmin.SceneTemplateParamChoice': string;
     /** @description Data-only descriptor of one template-action parameter. Bounded values; never executable content. */
     'AcademicAdmin.SceneTemplateParamDescriptor': {
+      /** @description CamelCase identifier (e.g. xMin, keyPoints), matching SceneTemplateParamVisibility.paramId; template-action ids are the kebab-case identifiers. */
       id: string;
       kind: components['schemas']['AcademicAdmin.SceneTemplateParamKind'];
       /** @description Canonical authoring label; server-provided registry metadata in one canonical language for the pilot, not student-facing content. Clients may layer localization by action and param id later. */
       label?: string | null;
       required?: boolean | null;
-      /** @description Inclusive lower bound; INTEGER and DECIMAL kinds only. */
+      /** @description Inclusive lower bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead). */
       min?: number | null;
-      /** @description Inclusive upper bound; INTEGER and DECIMAL kinds only. */
+      /** @description Inclusive upper bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead). */
       max?: number | null;
       /** @description Maximum text length; STRING, MULTILINE_TEXT, and MATH_EXPRESSION kinds only. */
       maxLength?: number | null;
+      /** @description Closed choice tokens for ENUM kind only; ignored otherwise. */
+      choices?: components['schemas']['AcademicAdmin.SceneTemplateParamChoice'][] | null;
+      /** @description Optional display rule; see SceneTemplateParamVisibility. */
+      visibleWhen?: components['schemas']['AcademicAdmin.SceneTemplateParamVisibility'] | null;
     };
     /**
      * @description Input kind of one template-action parameter; drives the structured control the script editor renders. Semantic validation stays server-side against the same reviewed schema.
      * @enum {string}
      */
     'AcademicAdmin.SceneTemplateParamKind':
-      'STRING' | 'MULTILINE_TEXT' | 'INTEGER' | 'DECIMAL' | 'MATH_EXPRESSION';
+      | 'STRING'
+      | 'MULTILINE_TEXT'
+      | 'INTEGER'
+      | 'DECIMAL'
+      | 'MATH_EXPRESSION'
+      | 'ENUM'
+      | 'INTERVAL_SET';
+    /** @description Data-only display rule: the owning parameter is collected only while the referenced ENUM-kind parameter holds one of the listed choice tokens. Presentation-only — server-side validation semantics are unchanged; an absent rule means always shown. */
+    'AcademicAdmin.SceneTemplateParamVisibility': {
+      /** @description Id of the observed ENUM parameter. */
+      paramId: string;
+      /** @description Choice tokens of the observed parameter that make the owning parameter applicable. */
+      choices: components['schemas']['AcademicAdmin.SceneTemplateParamChoice'][];
+    };
     /** @description Current reviewed render-template registry versioned with the worker. */
     'AcademicAdmin.SceneTemplateRegistry': {
       version: string;

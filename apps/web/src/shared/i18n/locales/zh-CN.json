@@ -1921,6 +1921,7 @@
           "segmentNumber": "分段 {{index}}",
           "actionLabel": "视觉模板动作",
           "chooseAction": "选择模板动作…",
+          "enumPlaceholder": "请选择一个选项…",
           "narrationLabel": "旁白文本",
           "narrationPlaceholder": "输入用于语音合成的旁白文本…",
           "mathPlaceholder": "例如 \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}",
@@ -1938,7 +1939,28 @@
           "staleWarning": "在此渲染任务开始后脚本已被修改。请重新渲染以更新视频。",
           "jobAttempts": "尝试 {{current}} / {{max}}",
           "reRender": "重新渲染视频",
-          "close": "关闭"
+          "close": "关闭",
+          "scopeNumber": "范围 {{index}}",
+          "addScope": "添加范围",
+          "scopesMaxHint": "一个并集最多支持 {{max}} 个范围。",
+          "removeScope": "删除范围 {{index}}",
+          "scopesEmpty": "暂无范围。请至少添加一个区间范围。",
+          "scopeLeftEndType": "左端类型",
+          "scopeRightEndType": "右端类型",
+          "scopeFinite": "有限",
+          "scopeInfinite": "无限",
+          "scopeLeftEndpoint": "左端点",
+          "scopeRightEndpoint": "右端点",
+          "scopeLeftBoundType": "左边界类型",
+          "scopeRightBoundType": "右边界类型",
+          "scopeOpen": "开",
+          "scopeClosed": "闭",
+          "toasts": {
+            "saved": "脚本保存成功。",
+            "saveFailed": "保存脚本失败",
+            "segmentAdded": "分段已添加。",
+            "segmentRemoved": "分段已删除。"
+          }
         },
         "reviewModal": {
           "title": "审阅视频 ({{language}})",

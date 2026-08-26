@@ -352,7 +352,7 @@ class RenderJobQueueIT {
     Instant created = Instant.parse(createdAt);
     jdbc.update(
         "insert into scene_specification (id, explanation_language, registry_version, segments, "
-            + "created_by_user_id, created_at, updated_at) values (?, 'id', '2026-08.1', "
+            + "created_by_user_id, created_at, updated_at) values (?, 'id', '2026-08.3', "
             + "'[]'::jsonb, ?, ?, ?)",
         specId,
         admin,
@@ -362,7 +362,7 @@ class RenderJobQueueIT {
     jdbc.update(
         "insert into render_job (id, kind, state, scene_specification_id, scene_snapshot, "
             + "registry_version, attempts, visible_after, created_at, updated_at) values "
-            + "(?, 'RENDER_SCENE', 'QUEUED', ?, ?::jsonb, '2026-08.1', 0, now(), now(), now())",
+            + "(?, 'RENDER_SCENE', 'QUEUED', ?, ?::jsonb, '2026-08.3', 0, now(), now(), now())",
         jobId,
         specId,
         "{\"explanationLanguage\":\"id\",\"segments\":[]}");

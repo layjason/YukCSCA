@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { useAdminNotify } from '../adminNotify';
 import { KaTeXPreview } from './KaTeXPreview';
 import { AdminInlineLatexPreview } from './AdminInlineLatexPreview';
+import { AdminRemoveButton } from './AdminRemoveButton';
 import {
   createRenderJob,
   createSceneSpecification,
@@ -18,8 +20,81 @@ import type {
   RenderJob,
   SceneSegment,
   SceneSpecification,
+  SceneTemplateParamDescriptor,
   SceneTemplateRegistry,
 } from '../types';
+
+/**
+ * Display-only rule from the descriptor's `visibleWhen`: a parameter is collected only while the
+ * referenced ENUM parameter holds one of its choice tokens. A missing or empty controlling value
+ * (placeholder still selected) hides the parameter. Server-side validation semantics are
+ * unaffected; this only mirrors which params the editor presents and keeps in the wire payload.
+ */
+function isParamVisible(
+  descriptor: SceneTemplateParamDescriptor,
+  params: Record<string, unknown>,
+): boolean {
+  const rule = descriptor.visibleWhen;
+  if (!rule) return true;
+  const controllingValue = params[rule.paramId];
+  return (
+    typeof controllingValue === 'string' &&
+    controllingValue !== '' &&
+    rule.choices.includes(controllingValue)
+  );
+}
+
+/**
+ * Bounded composite size for INTERVAL_SET parameters (`number-line-union`), mirrored from the
+ * reviewed registry validator so the editor cannot author a payload the server must reject.
+ */
+const MAX_INTERVAL_SCOPES = 4;
+
+type IntervalEndToken = 'FINITE' | 'INFINITE';
+type IntervalBoundToken = 'OPEN' | 'CLOSED';
+
+/**
+ * One interval scope of an INTERVAL_SET parameter. Fields of an INFINITE end are dropped at
+ * change time (see `normalizeScope`) so stale endpoint/bound values are never submitted — the
+ * same hygiene as the `visibleWhen` param prune. The wire shape is validated server-side.
+ */
+interface IntervalScope {
+  leftInf: IntervalEndToken;
+  rightInf: IntervalEndToken;
+  left?: number;
+  leftBound?: IntervalBoundToken;
+  right?: number;
+  rightBound?: IntervalBoundToken;
+}
+
+/** Reads an INTERVAL_SET parameter value off the untyped params boundary. */
+function readIntervalScopes(value: unknown): IntervalScope[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is IntervalScope => typeof entry === 'object' && entry !== null,
+  );
+}
+
+/**
+ * Rebuilds one scope so only its applicable fields survive: an INFINITE end contributes only
+ * its token, and every FINITE end always carries both endpoint and bound token. Guarantees no
+ * partial or placeholder row is ever stored in `params`.
+ */
+function normalizeScope(scope: IntervalScope): IntervalScope {
+  const normalized: IntervalScope = {
+    leftInf: scope.leftInf === 'INFINITE' ? 'INFINITE' : 'FINITE',
+    rightInf: scope.rightInf === 'INFINITE' ? 'INFINITE' : 'FINITE',
+  };
+  if (normalized.leftInf === 'FINITE') {
+    normalized.left = typeof scope.left === 'number' ? scope.left : 0;
+    normalized.leftBound = scope.leftBound === 'OPEN' ? 'OPEN' : 'CLOSED';
+  }
+  if (normalized.rightInf === 'FINITE') {
+    normalized.right = typeof scope.right === 'number' ? scope.right : 0;
+    normalized.rightBound = scope.rightBound === 'OPEN' ? 'OPEN' : 'CLOSED';
+  }
+  return normalized;
+}
 
 interface ScriptEditorProps {
   explanationLanguage: ExplanationLanguage;
@@ -42,6 +117,8 @@ export function ScriptEditor({
   disabled = false,
 }: ScriptEditorProps): React.JSX.Element {
   const { t } = useTranslation();
+  // Background acknowledgement toasts; no-op unless an admin host provides the shared toast.
+  const notify = useAdminNotify();
   const [registry, setRegistry] = useState<SceneTemplateRegistry | null>(null);
   const [spec, setSpec] = useState<SceneSpecification | null>(null);
   const [segments, setSegments] = useState<SceneSegment[]>([]);
@@ -157,11 +234,13 @@ export function ScriptEditor({
         narrationText: '',
       },
     ]);
+    notify(t('admin.academic.video.scriptEditor.toasts.segmentAdded'), 'success');
   };
 
   const handleRemoveSegment = (index: number) => {
     if (disabled) return;
     setSegments((prev) => prev.filter((_, i) => i !== index));
+    notify(t('admin.academic.video.scriptEditor.toasts.segmentRemoved'), 'error');
   };
 
   const handleMoveSegment = (index: number, direction: 'up' | 'down') => {
@@ -198,12 +277,214 @@ export function ScriptEditor({
       const seg = next[index];
       if (!seg) return prev;
       const nextParams = { ...(seg.params as Record<string, unknown>), [paramId]: value };
+      // Drop params whose display rule just became unsatisfied so hidden values are never
+      // silently submitted (mirrors the full reset on action change), resolved from the
+      // descriptors at change time rather than a hardcoded param map.
+      const descriptors = registry?.actions.find((a) => a.id === seg.templateActionId)?.params;
+      if (descriptors) {
+        for (const p of descriptors) {
+          if (p.id in nextParams && !isParamVisible(p, nextParams)) {
+            delete nextParams[p.id];
+          }
+        }
+      }
       next[index] = {
         ...seg,
         params: nextParams,
       };
       return next;
     });
+  };
+
+  /** Applies one transformation to an INTERVAL_SET value inside a segment's params. */
+  const updateScopes = (
+    segmentIndex: number,
+    paramId: string,
+    update: (prev: IntervalScope[]) => IntervalScope[],
+  ) => {
+    setSegments((prev) => {
+      const next = [...prev];
+      const seg = next[segmentIndex];
+      if (!seg) return prev;
+      const paramsMap = (seg.params ?? {}) as Record<string, unknown>;
+      next[segmentIndex] = {
+        ...seg,
+        params: { ...paramsMap, [paramId]: update(readIntervalScopes(paramsMap[paramId])) },
+      };
+      return next;
+    });
+  };
+
+  const handleAddScope = (segmentIndex: number, paramId: string) => {
+    // A new row is born complete (bounded interval [0;0]) so no placeholder row can be saved.
+    const freshScope: IntervalScope = {
+      leftInf: 'FINITE',
+      left: 0,
+      leftBound: 'CLOSED',
+      rightInf: 'FINITE',
+      right: 0,
+      rightBound: 'CLOSED',
+    };
+    updateScopes(segmentIndex, paramId, (prev) =>
+      prev.length >= MAX_INTERVAL_SCOPES ? prev : [...prev, freshScope],
+    );
+  };
+
+  const handleRemoveScope = (segmentIndex: number, paramId: string, scopeIndex: number) => {
+    updateScopes(segmentIndex, paramId, (prev) =>
+      prev.filter((_, i) => i !== scopeIndex).map(normalizeScope),
+    );
+  };
+
+  /**
+   * Switches one interval end between FINITE and INFINITE. An INFINITE end drops its endpoint
+   * and bound fields immediately so hidden values are never submitted.
+   */
+  const handleScopeEndChange = (
+    segmentIndex: number,
+    paramId: string,
+    scopeIndex: number,
+    end: 'left' | 'right',
+    token: IntervalEndToken,
+  ) => {
+    updateScopes(segmentIndex, paramId, (prev) => {
+      const target = prev[scopeIndex];
+      if (!target) return prev;
+      const updated =
+        end === 'left' ? { ...target, leftInf: token } : { ...target, rightInf: token };
+      const next = [...prev];
+      next[scopeIndex] = normalizeScope(updated);
+      return next;
+    });
+  };
+
+  const handleScopeNumberChange = (
+    segmentIndex: number,
+    paramId: string,
+    scopeIndex: number,
+    end: 'left' | 'right',
+    text: string,
+  ) => {
+    const numeric = text === '' ? 0 : parseFloat(text);
+    if (Number.isNaN(numeric)) return;
+    updateScopes(segmentIndex, paramId, (prev) => {
+      const target = prev[scopeIndex];
+      if (!target) return prev;
+      const updated = end === 'left' ? { ...target, left: numeric } : { ...target, right: numeric };
+      const next = [...prev];
+      next[scopeIndex] = normalizeScope(updated);
+      return next;
+    });
+  };
+
+  const handleScopeBoundChange = (
+    segmentIndex: number,
+    paramId: string,
+    scopeIndex: number,
+    end: 'left' | 'right',
+    bound: string,
+  ) => {
+    if (bound !== 'OPEN' && bound !== 'CLOSED') return;
+    updateScopes(segmentIndex, paramId, (prev) => {
+      const target = prev[scopeIndex];
+      if (!target) return prev;
+      const updated: IntervalScope =
+        end === 'left' ? { ...target, leftBound: bound } : { ...target, rightBound: bound };
+      const next = [...prev];
+      next[scopeIndex] = normalizeScope(updated);
+      return next;
+    });
+  };
+
+  /** One interval end of a scope row: end-type select plus its FINITE-only endpoint/bound pair. */
+  const renderScopeEnd = (
+    segmentIndex: number,
+    paramId: string,
+    scopeIndex: number,
+    scope: IntervalScope,
+    end: 'left' | 'right',
+  ): React.JSX.Element => {
+    const infToken = end === 'left' ? scope.leftInf : scope.rightInf;
+    const numberValue = end === 'left' ? scope.left : scope.right;
+    const boundValue = (end === 'left' ? scope.leftBound : scope.rightBound) ?? 'CLOSED';
+    const idPrefix = `seg-${segmentIndex}-param-${paramId}-${scopeIndex}-${end}`;
+    const endTypeLabel = t(
+      end === 'left'
+        ? 'admin.academic.video.scriptEditor.scopeLeftEndType'
+        : 'admin.academic.video.scriptEditor.scopeRightEndType',
+    );
+    const endpointLabel = t(
+      end === 'left'
+        ? 'admin.academic.video.scriptEditor.scopeLeftEndpoint'
+        : 'admin.academic.video.scriptEditor.scopeRightEndpoint',
+    );
+    const boundLabel = t(
+      end === 'left'
+        ? 'admin.academic.video.scriptEditor.scopeLeftBoundType'
+        : 'admin.academic.video.scriptEditor.scopeRightBoundType',
+    );
+    return (
+      <div className="admin-stack-tight">
+        <label htmlFor={`${idPrefix}-inf`} className="admin-field-label">
+          {endTypeLabel}
+        </label>
+        <select
+          id={`${idPrefix}-inf`}
+          className="text-input admin-field-control"
+          value={infToken}
+          disabled={disabled}
+          onChange={(e) =>
+            handleScopeEndChange(
+              segmentIndex,
+              paramId,
+              scopeIndex,
+              end,
+              e.target.value as IntervalEndToken,
+            )
+          }
+        >
+          <option value="FINITE">{t('admin.academic.video.scriptEditor.scopeFinite')}</option>
+          <option value="INFINITE">{t('admin.academic.video.scriptEditor.scopeInfinite')}</option>
+        </select>
+        {infToken === 'FINITE' ? (
+          <div className="admin-row-wrap">
+            <div className="admin-stack-tight">
+              <label htmlFor={`${idPrefix}-number`} className="admin-field-label">
+                {endpointLabel}
+              </label>
+              <input
+                id={`${idPrefix}-number`}
+                type="number"
+                step="any"
+                className="text-input admin-field-control"
+                value={typeof numberValue === 'number' ? numberValue : ''}
+                disabled={disabled}
+                onChange={(e) =>
+                  handleScopeNumberChange(segmentIndex, paramId, scopeIndex, end, e.target.value)
+                }
+              />
+            </div>
+            <div className="admin-stack-tight">
+              <label htmlFor={`${idPrefix}-bound`} className="admin-field-label">
+                {boundLabel}
+              </label>
+              <select
+                id={`${idPrefix}-bound`}
+                className="text-input admin-field-control"
+                value={boundValue}
+                disabled={disabled}
+                onChange={(e) =>
+                  handleScopeBoundChange(segmentIndex, paramId, scopeIndex, end, e.target.value)
+                }
+              >
+                <option value="OPEN">{t('admin.academic.video.scriptEditor.scopeOpen')}</option>
+                <option value="CLOSED">{t('admin.academic.video.scriptEditor.scopeClosed')}</option>
+              </select>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
   const handleNarrationChange = (index: number, text: string) => {
@@ -239,8 +520,11 @@ export function ScriptEditor({
       }
       setSpec(savedSpec);
       onSaved(savedSpec);
+      notify(t('admin.academic.video.scriptEditor.toasts.saved'), 'success');
       return savedSpec;
     } catch (err) {
+      // Failure toast accompanies — never replaces — the inline error and violation display.
+      notify(t('admin.academic.video.scriptEditor.toasts.saveFailed'), 'error');
       if (err instanceof ApiError) {
         if (err.statusCode === 400 && err.problem && 'violations' in err.problem) {
           const viols = (err.problem as { violations?: AcademicValidationViolation[] }).violations;
@@ -311,6 +595,51 @@ export function ScriptEditor({
     return violations.filter(
       (v) => v.path === `segments[${index}]` || v.path.startsWith(`segments[${index}].`),
     );
+  };
+
+  /** Parses the row index out of an INTERVAL_SET violation path, e.g. `...scopes[1].leftBound`. */
+  const scopeRowOfPath = (path: string, basePath: string): number | null => {
+    if (!path.startsWith(`${basePath}[`)) return null;
+    const rest = path.slice(basePath.length + 1);
+    const closeIndex = rest.indexOf(']');
+    if (closeIndex < 0) return null;
+    const rowIndex = Number.parseInt(rest.slice(0, closeIndex), 10);
+    return Number.isNaN(rowIndex) ? null : rowIndex;
+  };
+
+  /**
+   * Segment-level violations minus the ones already rendered inside their INTERVAL_SET scope
+   * rows (array-level and in-range row paths). Out-of-range rows have no editor card to host
+   * them, so they intentionally stay at segment level.
+   */
+  const getUnmappedSegmentViolations = (index: number) => {
+    const segViolations = getSegmentViolations(index);
+    const paramsMap = (segments[index]?.params ?? {}) as Record<string, unknown>;
+    const intervalParamIds = (registry?.actions ?? [])
+      .find((a) => a.id === segments[index]?.templateActionId)
+      ?.params.filter((p) => p.kind === 'INTERVAL_SET')
+      .map((p) => p.id);
+    if (!intervalParamIds?.length) return segViolations;
+    return segViolations.filter((v) =>
+      intervalParamIds.every((paramId) => {
+        const basePath = `segments[${index}].params.${paramId}`;
+        if (v.path === basePath) return false;
+        const row = scopeRowOfPath(v.path, basePath);
+        return row === null || row >= readIntervalScopes(paramsMap[paramId]).length;
+      }),
+    );
+  };
+
+  /** Array-level violations for one INTERVAL_SET parameter (e.g. empty or over the cap). */
+  const getScopeArrayViolations = (index: number, paramId: string) => {
+    const basePath = `segments[${index}].params.${paramId}`;
+    return violations.filter((v) => v.path === basePath);
+  };
+
+  /** Row-level violations for one scope row, e.g. `...scopes[1].leftBound`. */
+  const getScopeRowViolations = (index: number, paramId: string, scopeIndex: number) => {
+    const rowBase = `segments[${index}].params.${paramId}[${scopeIndex}]`;
+    return violations.filter((v) => v.path === rowBase || v.path.startsWith(`${rowBase}.`));
   };
 
   const isStale =
@@ -399,6 +728,7 @@ export function ScriptEditor({
               <div className="admin-stack-md">
                 {segments.map((segment, index) => {
                   const segViolations = getSegmentViolations(index);
+                  const displayViolations = getUnmappedSegmentViolations(index);
                   const selectedAction = registry?.actions.find(
                     (a) => a.id === segment.templateActionId,
                   );
@@ -448,7 +778,7 @@ export function ScriptEditor({
                         </div>
                       </div>
 
-                      {segViolations.map((v, vi) => (
+                      {displayViolations.map((v, vi) => (
                         <p key={vi} className="admin-field-error" role="alert">
                           {v.code} ({v.path})
                         </p>
@@ -476,7 +806,9 @@ export function ScriptEditor({
 
                       {/* Structured Parameters */}
                       {selectedAction?.params.map((p) => {
+                        if (!isParamVisible(p, paramsMap)) return null;
                         const paramValue = paramsMap[p.id] ?? '';
+                        const scopes = readIntervalScopes(paramsMap[p.id]);
                         return (
                           <div key={p.id} className="admin-stack-tight">
                             <label
@@ -583,6 +915,97 @@ export function ScriptEditor({
                                 {paramValue ? (
                                   <KaTeXPreview latex={String(paramValue)} displayMode />
                                 ) : null}
+                              </div>
+                            ) : p.kind === 'ENUM' ? (
+                              <select
+                                id={`seg-${index}-param-${p.id}`}
+                                className="text-input admin-field-control"
+                                value={String(paramValue)}
+                                disabled={disabled}
+                                onChange={(e) => handleParamChange(index, p.id, e.target.value)}
+                              >
+                                <option value="">
+                                  {t('admin.academic.video.scriptEditor.enumPlaceholder')}
+                                </option>
+                                {(p.choices ?? []).map((choice) => (
+                                  <option key={choice} value={choice}>
+                                    {choice}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : p.kind === 'INTERVAL_SET' ? (
+                              <div className="admin-stack-sm">
+                                {getScopeArrayViolations(index, p.id).map((v, vi) => (
+                                  <p key={vi} className="admin-field-error" role="alert">
+                                    {v.code} ({v.path})
+                                  </p>
+                                ))}
+                                {scopes.length === 0 ? (
+                                  <p className="admin-muted">
+                                    {t('admin.academic.video.scriptEditor.scopesEmpty')}
+                                  </p>
+                                ) : (
+                                  <div className="admin-stack-sm">
+                                    {scopes.map((scope, scopeIndex) => {
+                                      const rowViolations = getScopeRowViolations(
+                                        index,
+                                        p.id,
+                                        scopeIndex,
+                                      );
+                                      return (
+                                        <div
+                                          key={scopeIndex}
+                                          className={`admin-scope-card admin-stack-sm ${
+                                            rowViolations.length > 0 ? 'admin-card-invalid' : ''
+                                          }`}
+                                        >
+                                          <div className="admin-row-between">
+                                            <span className="yukcsca-tag admin-tag-compact">
+                                              {t('admin.academic.video.scriptEditor.scopeNumber', {
+                                                index: scopeIndex + 1,
+                                              })}
+                                            </span>
+                                            <AdminRemoveButton
+                                              label={t(
+                                                'admin.academic.video.scriptEditor.removeScope',
+                                                { index: scopeIndex + 1 },
+                                              )}
+                                              disabled={disabled}
+                                              onClick={() =>
+                                                handleRemoveScope(index, p.id, scopeIndex)
+                                              }
+                                            />
+                                          </div>
+                                          {rowViolations.map((v, vi) => (
+                                            <p key={vi} className="admin-field-error" role="alert">
+                                              {v.code} ({v.path})
+                                            </p>
+                                          ))}
+                                          {renderScopeEnd(index, p.id, scopeIndex, scope, 'left')}
+                                          {renderScopeEnd(index, p.id, scopeIndex, scope, 'right')}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                <div className="admin-row-between">
+                                  <button
+                                    type="button"
+                                    className="btn-secondary admin-btn-compact"
+                                    onClick={() => handleAddScope(index, p.id)}
+                                    disabled={disabled || scopes.length >= MAX_INTERVAL_SCOPES}
+                                  >
+                                    <Plus size={16} />
+                                    {t('admin.academic.video.scriptEditor.addScope')}
+                                  </button>
+                                  {scopes.length >= MAX_INTERVAL_SCOPES ? (
+                                    <span className="admin-hint">
+                                      {t('admin.academic.video.scriptEditor.scopesMaxHint', {
+                                        max: MAX_INTERVAL_SCOPES,
+                                      })}
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
                             ) : null}
                           </div>

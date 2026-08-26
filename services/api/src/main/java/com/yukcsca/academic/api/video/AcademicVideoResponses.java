@@ -174,6 +174,8 @@ public final class AcademicVideoResponses {
     }
   }
 
+  public record SceneTemplateParamVisibilityResponse(String paramId, List<String> choices) {}
+
   public record SceneTemplateParamDescriptorResponse(
       String id,
       String kind,
@@ -181,7 +183,9 @@ public final class AcademicVideoResponses {
       Boolean required,
       Double min,
       Double max,
-      Integer maxLength) {}
+      Integer maxLength,
+      List<String> choices,
+      SceneTemplateParamVisibilityResponse visibleWhen) {}
 
   public record SceneTemplateActionResponse(
       String id, String displayName, List<SceneTemplateParamDescriptorResponse> params) {}
@@ -207,7 +211,13 @@ public final class AcademicVideoResponses {
                                           param.required(),
                                           param.min(),
                                           param.max(),
-                                          param.maxLength()))
+                                          param.maxLength(),
+                                          param.choices(),
+                                          param.visibleWhen() == null
+                                              ? null
+                                              : new SceneTemplateParamVisibilityResponse(
+                                                  param.visibleWhen().paramId(),
+                                                  param.visibleWhen().choices())))
                               .toList()))
               .toList());
     }

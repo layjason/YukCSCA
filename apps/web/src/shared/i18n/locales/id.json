@@ -1921,6 +1921,7 @@
           "segmentNumber": "Segmen {{index}}",
           "actionLabel": "Aksi templat visual",
           "chooseAction": "Pilih aksi templat…",
+          "enumPlaceholder": "Pilih salah satu opsi…",
           "narrationLabel": "Teks narasi",
           "narrationPlaceholder": "Masukkan teks narasi untuk sintesis suara…",
           "mathPlaceholder": "mis. \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}",
@@ -1938,7 +1939,28 @@
           "staleWarning": "Naskah telah diubah setelah tugas render ini dimulai. Render ulang untuk memperbarui video.",
           "jobAttempts": "Percobaan {{current}} dari {{max}}",
           "reRender": "Render ulang video",
-          "close": "Tutup"
+          "close": "Tutup",
+          "scopeNumber": "Cakupan {{index}}",
+          "addScope": "Tambah cakupan",
+          "scopesMaxHint": "Gabungan mendukung paling banyak {{max}} cakupan.",
+          "removeScope": "Hapus cakupan {{index}}",
+          "scopesEmpty": "Belum ada cakupan. Tambahkan setidaknya satu cakupan interval.",
+          "scopeLeftEndType": "Jenis ujung kiri",
+          "scopeRightEndType": "Jenis ujung kanan",
+          "scopeFinite": "Berhingga",
+          "scopeInfinite": "Tak hingga",
+          "scopeLeftEndpoint": "Titik ujung kiri",
+          "scopeRightEndpoint": "Titik ujung kanan",
+          "scopeLeftBoundType": "Jenis batas kiri",
+          "scopeRightBoundType": "Jenis batas kanan",
+          "scopeOpen": "Terbuka",
+          "scopeClosed": "Tertutup",
+          "toasts": {
+            "saved": "Naskah berhasil disimpan.",
+            "saveFailed": "Gagal menyimpan naskah",
+            "segmentAdded": "Segmen ditambahkan.",
+            "segmentRemoved": "Segmen dihapus."
+          }
         },
         "reviewModal": {
           "title": "Tinjau video ({{language}})",

@@ -229,7 +229,7 @@ describe('ResourceVideoPanel', () => {
     const onDurabilityCommit = vi.fn();
     vi.spyOn(api, 'getSceneSpecification').mockResolvedValue({
       id: 'spec-1',
-      registryVersion: '2026-08.1',
+      registryVersion: '2026-08.3',
       explanationLanguage: 'en',
       segments: [],
       latestRenderJob: {

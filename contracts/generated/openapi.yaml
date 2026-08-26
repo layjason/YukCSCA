@@ -5886,6 +5886,10 @@ components:
           maxItems: 16
           description: Structured parameter descriptors the script editor renders inputs from. Empty when the action takes no parameters.
       description: One reviewed visual action available to the admin script editor.
+    AcademicAdmin.SceneTemplateParamChoice:
+      type: string
+      pattern: ^[A-Z0-9][A-Z0-9_]{0,63}$
+      description: One closed choice token of an ENUM-kind template parameter; uppercase alphanumeric/underscore identifier.
     AcademicAdmin.SceneTemplateParamDescriptor:
       type: object
       required:
@@ -5894,7 +5898,8 @@ components:
       properties:
         id:
           type: string
-          pattern: ^[a-z0-9][a-z0-9-]{0,63}$
+          pattern: ^[a-z][a-zA-Z0-9]{0,63}$
+          description: CamelCase identifier (e.g. xMin, keyPoints), matching SceneTemplateParamVisibility.paramId; template-action ids are the kebab-case identifiers.
         kind:
           $ref: '#/components/schemas/AcademicAdmin.SceneTemplateParamKind'
         label:
@@ -5913,13 +5918,13 @@ components:
             - type: number
               format: decimal
             - type: 'null'
-          description: Inclusive lower bound; INTEGER and DECIMAL kinds only.
+          description: Inclusive lower bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead).
         max:
           anyOf:
             - type: number
               format: decimal
             - type: 'null'
-          description: Inclusive upper bound; INTEGER and DECIMAL kinds only.
+          description: Inclusive upper bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead).
         maxLength:
           anyOf:
             - type: integer
@@ -5928,6 +5933,20 @@ components:
           minimum: 1
           maximum: 2000
           description: Maximum text length; STRING, MULTILINE_TEXT, and MATH_EXPRESSION kinds only.
+        choices:
+          anyOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/AcademicAdmin.SceneTemplateParamChoice'
+            - type: 'null'
+          minItems: 1
+          maxItems: 16
+          description: Closed choice tokens for ENUM kind only; ignored otherwise.
+        visibleWhen:
+          anyOf:
+            - $ref: '#/components/schemas/AcademicAdmin.SceneTemplateParamVisibility'
+            - type: 'null'
+          description: Optional display rule; see SceneTemplateParamVisibility.
       description: Data-only descriptor of one template-action parameter. Bounded values; never executable content.
     AcademicAdmin.SceneTemplateParamKind:
       type: string
@@ -5937,7 +5956,29 @@ components:
         - INTEGER
         - DECIMAL
         - MATH_EXPRESSION
+        - ENUM
+        - INTERVAL_SET
       description: Input kind of one template-action parameter; drives the structured control the script editor renders. Semantic validation stays server-side against the same reviewed schema.
+    AcademicAdmin.SceneTemplateParamVisibility:
+      type: object
+      required:
+        - paramId
+        - choices
+      properties:
+        paramId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[a-z][a-zA-Z0-9]{0,63}$
+          description: Id of the observed ENUM parameter.
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicAdmin.SceneTemplateParamChoice'
+          minItems: 1
+          maxItems: 16
+          description: Choice tokens of the observed parameter that make the owning parameter applicable.
+      description: 'Data-only display rule: the owning parameter is collected only while the referenced ENUM-kind parameter holds one of the listed choice tokens. Presentation-only — server-side validation semantics are unchanged; an absent rule means always shown.'
     AcademicAdmin.SceneTemplateRegistry:
       type: object
       required:

@@ -274,7 +274,7 @@ describe('AcademicPackageEditor', () => {
     };
     vi.spyOn(academicAdminApi, 'getSceneSpecification').mockResolvedValue({
       id: specId,
-      registryVersion: '2026-08.1',
+      registryVersion: '2026-08.3',
       explanationLanguage: 'en',
       segments: [],
       latestRenderJob: {
