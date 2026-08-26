@@ -7,6 +7,8 @@ import { Toast, type ToastTone } from '@/shared/components/Toast';
 import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { ContentBlockView } from '@/features/learn/components/ContentBlockView';
 import { LanguageToggle } from '@/features/learn/components/LanguageToggle';
+import { LessonVideo } from '@/features/learn/components/LessonVideo';
+import '@/features/learn/learn.css';
 import {
   getMistake,
   getPublishedRemediation,
@@ -130,13 +132,42 @@ export function RemediationReaderPage(): React.JSX.Element {
     };
   }, [mistakeId]);
 
+  const contentComplete = progress?.status === 'CONTENT_COMPLETE';
+
+  const handleVideoProgressUpdate = useCallback(
+    (positionSeconds: number) => {
+      if (!subject || !resourceId || !resource || !resource.video || contentComplete) return;
+      const clamped = Math.min(positionSeconds, resource.video.durationSeconds);
+      const resume = progress?.resumeBlockIndex ?? 0;
+      void upsertRemediationProgress(subject, resourceId, {
+        status: 'IN_PROGRESS',
+        resumeBlockIndex: resume,
+        video: {
+          videoAssetId: resource.video.videoAssetId,
+          positionSeconds: clamped,
+        },
+        expectedPackageRevisionId: resource.packageRevisionId,
+      })
+        .then((next) => {
+          setProgress(next);
+        })
+        .catch(() => undefined);
+    },
+    [subject, resourceId, resource, contentComplete, progress?.resumeBlockIndex],
+  );
+
   async function handleComplete(): Promise<void> {
     if (!subject || !resourceId || !resource || saving) return;
     setSaving(true);
     try {
+      const resume = progress?.resumeBlockIndex ?? 0;
+      const videoPos =
+        progress?.video ??
+        (resource.video ? { videoAssetId: resource.video.videoAssetId, positionSeconds: 0 } : null);
       const next = await upsertRemediationProgress(subject, resourceId, {
         status: 'CONTENT_COMPLETE',
-        resumeBlockIndex: 0,
+        resumeBlockIndex: resume,
+        ...(videoPos ? { video: videoPos } : {}),
         expectedPackageRevisionId: resource.packageRevisionId,
       });
       setProgress(next);
@@ -227,9 +258,12 @@ export function RemediationReaderPage(): React.JSX.Element {
     );
   }
 
+  const displayedExplanationLanguage = isExplanationLanguage(resource.requestedExplanationLanguage)
+    ? resource.requestedExplanationLanguage
+    : explanationLanguage;
   const title = resolveLocalizedTextForExplanation(
     resource.title,
-    explanationLanguage,
+    displayedExplanationLanguage,
     i18n.language,
   );
   const body = resource.body;
@@ -271,6 +305,18 @@ export function RemediationReaderPage(): React.JSX.Element {
 
       {isAvailable ? (
         <article className="learn-reader-body is-visible" aria-label={title}>
+          {resource.video ? (
+            <LessonVideo
+              videoRef={resource.video}
+              explanationLanguage={displayedExplanationLanguage}
+              initialPositionSeconds={
+                progress?.video?.videoAssetId === resource.video.videoAssetId
+                  ? progress?.video?.positionSeconds
+                  : null
+              }
+              onProgressUpdate={handleVideoProgressUpdate}
+            />
+          ) : null}
           {blocks.map((block, index) => (
             <ContentBlockView key={`${resource.resourceId}-${index}`} block={block} index={index} />
           ))}

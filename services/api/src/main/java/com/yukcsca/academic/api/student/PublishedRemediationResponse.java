@@ -1,5 +1,6 @@
 package com.yukcsca.academic.api.student;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.yukcsca.academic.application.AcademicStudentService.PublishedRemediationResult;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,8 @@ public record PublishedRemediationResponse(
     Map<String, Object> body,
     ContentProgressResponse contentProgress,
     List<UUID> outlineItemIds,
-    List<UUID> objectiveIds) {
+    List<UUID> objectiveIds,
+    @JsonInclude(JsonInclude.Include.NON_NULL) VideoRefResponse video) {
   static PublishedRemediationResponse from(PublishedRemediationResult value) {
     return new PublishedRemediationResponse(
         value.packageId(),
@@ -29,7 +31,8 @@ public record PublishedRemediationResponse(
         body(value),
         ContentProgressResponse.from(value.contentProgress()),
         value.outlineItemIds(),
-        value.objectiveIds());
+        value.objectiveIds(),
+        VideoRefResponse.from(value.video()));
   }
 
   private static Map<String, Object> body(PublishedRemediationResult value) {

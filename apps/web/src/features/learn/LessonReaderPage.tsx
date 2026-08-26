@@ -19,6 +19,7 @@ import { ContentBlockView } from './components/ContentBlockView';
 import { ContentProgressFrom } from './components/ContentProgressChip';
 import { LanguageToggle } from './components/LanguageToggle';
 import { LessonTermRail } from './components/LessonTermRail';
+import { LessonVideo } from './components/LessonVideo';
 import { resolveLocalizedTextForExplanation } from './localizedText';
 import { previewHref } from './previewNavigation';
 import {
@@ -33,6 +34,7 @@ import {
   type ContentProgress,
   type ExplanationLanguage,
   type PublishedLessonDetail,
+  type VideoPlaybackPosition,
 } from './types';
 import { getMistake } from '@/features/assessment/api/assessmentApi';
 import { CheckpointCta } from '@/features/assessment/components/CheckpointCta';
@@ -105,6 +107,8 @@ export function LessonReaderPage(): React.JSX.Element {
   const columnRef = useRef<HTMLDivElement>(null);
   const activeLessonKeyRef = useRef<string | null>(null);
   const lastSavedIndexRef = useRef<number | null>(null);
+  const lastVideoPositionRef = useRef<VideoPlaybackPosition | null>(null);
+  const videoAssetIdRef = useRef<string | null>(null);
   const resumeCoalescerRef = useRef<ResumeProgressCoalescer | null>(null);
   const blockElsRef = useRef<Map<number, HTMLElement>>(new Map());
   const loadGenerationRef = useRef(0);
@@ -113,6 +117,27 @@ export function LessonReaderPage(): React.JSX.Element {
   const dismissToast = useCallback(() => setToast(null), []);
   const contentComplete = progress?.status === 'CONTENT_COMPLETE';
   const needsReview = isUpdatedSinceCompleted(progress);
+
+  // CR-02: each IN_PROGRESS write replaces the stored video position. Seed once per
+  // published asset so later scroll coalescing cannot clobber a just-reported time.
+  useEffect(() => {
+    const assetId = lesson?.video?.videoAssetId ?? null;
+    if (assetId === videoAssetIdRef.current) return;
+    videoAssetIdRef.current = assetId;
+    if (lesson?.video && progress?.video?.videoAssetId === lesson.video.videoAssetId) {
+      lastVideoPositionRef.current = {
+        videoAssetId: lesson.video.videoAssetId,
+        positionSeconds: progress.video.positionSeconds,
+      };
+    } else if (lesson?.video) {
+      lastVideoPositionRef.current = {
+        videoAssetId: lesson.video.videoAssetId,
+        positionSeconds: 0,
+      };
+    } else {
+      lastVideoPositionRef.current = null;
+    }
+  }, [lesson, progress?.video]);
   const lessonKey = subject && resourceId ? `${subject}:${resourceId}` : null;
 
   function cancelGlossHide(): void {
@@ -455,9 +480,11 @@ export function LessonReaderPage(): React.JSX.Element {
       delayMs: 350,
       initialLastSaved: lastSavedIndexRef.current,
       save: async (resumeBlockIndex) => {
+        const video = lastVideoPositionRef.current;
         const next = await upsertContentProgress(subject, resourceId, {
           status: 'IN_PROGRESS',
           resumeBlockIndex,
+          ...(video ? { video } : {}),
           expectedPackageRevisionId: packageRevisionId,
         });
         setProgress(next);
@@ -511,6 +538,32 @@ export function LessonReaderPage(): React.JSX.Element {
     return () => observer.disconnect();
   }, [lesson, subject, resourceId, contentComplete]);
 
+  const handleVideoProgressUpdate = useCallback(
+    (positionSeconds: number) => {
+      if (!subject || !resourceId || !lesson || !lesson.video || contentComplete) return;
+      const clamped = Math.min(positionSeconds, lesson.video.durationSeconds);
+      const resume = lastSavedIndexRef.current ?? 0;
+      lastVideoPositionRef.current = {
+        videoAssetId: lesson.video.videoAssetId,
+        positionSeconds: clamped,
+      };
+      void upsertContentProgress(subject, resourceId, {
+        status: 'IN_PROGRESS',
+        resumeBlockIndex: resume,
+        video: {
+          videoAssetId: lesson.video.videoAssetId,
+          positionSeconds: clamped,
+        },
+        expectedPackageRevisionId: lesson.packageRevisionId,
+      })
+        .then((next) => {
+          setProgress(next);
+        })
+        .catch(() => undefined);
+    },
+    [subject, resourceId, lesson, contentComplete],
+  );
+
   async function handleMarkComplete(): Promise<void> {
     if (!subject || !resourceId || !lesson || saving) return;
     setSaving(true);
@@ -523,9 +576,13 @@ export function LessonReaderPage(): React.JSX.Element {
           lesson.body.availability === 'AVAILABLE' ? lesson.body.blocks.length : 0,
         ) ??
         0;
+      const videoPos =
+        progress?.video ??
+        (lesson.video ? { videoAssetId: lesson.video.videoAssetId, positionSeconds: 0 } : null);
       const next = await upsertContentProgress(subject, resourceId, {
         status: 'CONTENT_COMPLETE',
         resumeBlockIndex: resume,
+        ...(videoPos ? { video: videoPos } : {}),
         expectedPackageRevisionId: lesson.packageRevisionId,
       });
       setProgress(next);
@@ -710,6 +767,18 @@ export function LessonReaderPage(): React.JSX.Element {
             aria-label={title || t('learn.lesson.title')}
             aria-busy={loading || reloading || undefined}
           >
+            {lesson.video ? (
+              <LessonVideo
+                videoRef={lesson.video}
+                explanationLanguage={displayedExplanationLanguage}
+                initialPositionSeconds={
+                  progress?.video?.videoAssetId === lesson.video.videoAssetId
+                    ? progress?.video?.positionSeconds
+                    : null
+                }
+                onProgressUpdate={handleVideoProgressUpdate}
+              />
+            ) : null}
             {blocks.map((block, index) => (
               <ContentBlockView
                 key={`${lesson.resourceId}-${index}`}

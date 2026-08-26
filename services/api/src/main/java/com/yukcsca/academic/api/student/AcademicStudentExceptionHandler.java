@@ -5,6 +5,7 @@ import com.yukcsca.academic.application.AcademicNotFoundException;
 import com.yukcsca.academic.application.ContentProgressValidationException;
 import com.yukcsca.academic.application.FormalAssistanceDisabledException;
 import com.yukcsca.academic.application.InvalidStudentAcademicRequestException;
+import com.yukcsca.academic.application.MediaStorageUnavailableException;
 import com.yukcsca.academic.application.TerminologyValidationException;
 import com.yukcsca.identity.application.InvalidCredentialException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -122,6 +123,15 @@ public class AcademicStudentExceptionHandler {
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
         .cacheControl(CacheControl.noStore())
         .body(problem(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage()));
+  }
+
+  @ExceptionHandler(MediaStorageUnavailableException.class)
+  ProblemDetail storageUnavailable(MediaStorageUnavailableException exception) {
+    LOGGER.warn("video.storage.unavailable reason={}", exception.getMessage());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "MEDIA_STORAGE_UNAVAILABLE",
+        "Reviewed-video object storage is not configured.");
   }
 
   @ExceptionHandler(Exception.class)

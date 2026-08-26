@@ -12,6 +12,7 @@ const OUTLINE_ROOT = '00000000-0000-4000-8000-0000000000b1';
 const OUTLINE_CHILD = '00000000-0000-4000-8000-0000000000b2';
 const LESSON_ID = '00000000-0000-4000-8000-0000000000c1';
 const IMAGE_ID = '00000000-0000-4000-8000-0000000000d1';
+const VIDEO_ASSET_ID = '00000000-0000-4000-8000-0000000000e1';
 
 /** In-memory progress for DEV offline fallback only — never production persistence. */
 const progressByResource = new Map<string, ContentProgress>();
@@ -20,6 +21,7 @@ function defaultProgress(): ContentProgress {
   return {
     status: 'NOT_STARTED',
     resumeBlockIndex: null,
+    video: null,
     updatedAt: null,
     updatedSinceCompleted: false,
   };
@@ -233,6 +235,10 @@ export function devGetPublishedLesson(
     availableExplanationLanguages: available,
     requestedExplanationLanguage: explanationLanguage,
     body: blocksByLang[explanationLanguage],
+    video: {
+      videoAssetId: VIDEO_ASSET_ID,
+      durationSeconds: 60,
+    },
     contentProgress: progress,
   };
 }
@@ -242,6 +248,7 @@ export function devUpsertContentProgress(
   resourceId: string,
   status: 'IN_PROGRESS' | 'CONTENT_COMPLETE',
   resumeBlockIndex?: number | null,
+  video?: { videoAssetId: string; positionSeconds: number } | null,
 ): ContentProgress | null {
   if (subject !== 'MATHEMATICS' || resourceId !== LESSON_ID) return null;
   const existing = getProgress(resourceId);
@@ -254,12 +261,26 @@ export function devUpsertContentProgress(
       status === 'CONTENT_COMPLETE'
         ? (resumeBlockIndex ?? existing.resumeBlockIndex)
         : (resumeBlockIndex ?? 0),
+    video: video !== undefined ? video : (existing.video ?? null),
     updatedAt: new Date().toISOString(),
     // DEV fixture has a single static revision; soft-update only appears from the real API.
     updatedSinceCompleted: false,
   };
   progressByResource.set(resourceId, next);
   return next;
+}
+
+export function devPlayPublishedVideo(_videoAssetId: string) {
+  void _videoAssetId;
+  return {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+  };
+}
+
+export function devGetPublishedVideoCaptions(_videoAssetId: string): string {
+  void _videoAssetId;
+  return `WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nSample lesson explanation transcript.\n`;
 }
 
 export function devLessonResourceId(): string {

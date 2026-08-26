@@ -27,8 +27,9 @@ export function ArchiveModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="archive-modal-title"
+      onClick={() => !isArchiving && onClose()}
     >
-      <div className="modal-content">
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 id="archive-modal-title">{t('admin.academic.archiveModal.title')}</h2>
           <button type="button" className="btn-secondary admin-btn-icon" onClick={onClose}>

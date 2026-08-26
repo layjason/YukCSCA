@@ -33,6 +33,16 @@ public class StudentContentProgress {
   @Column(name = "resume_block_index")
   private Integer resumeBlockIndex;
 
+  /**
+   * Last saved reviewed-video playback position asset. One position per resource (pilot): each
+   * write replaces it, so clients resend the current position on every IN_PROGRESS write (CR-02).
+   */
+  @Column(name = "video_asset_id")
+  private UUID videoAssetId;
+
+  @Column(name = "video_position_seconds")
+  private Integer videoPositionSeconds;
+
   @Column(name = "last_revision_id")
   private UUID lastRevisionId;
 
@@ -68,10 +78,14 @@ public class StudentContentProgress {
   public void replace(
       StudentContentProgressStatus status,
       Integer resumeBlockIndex,
+      UUID videoAssetId,
+      Integer videoPositionSeconds,
       UUID lastRevisionId,
       Instant now) {
     this.status = status;
     this.resumeBlockIndex = resumeBlockIndex;
+    this.videoAssetId = videoAssetId;
+    this.videoPositionSeconds = videoPositionSeconds;
     this.lastRevisionId = lastRevisionId;
     this.updatedAt = now;
   }
@@ -102,6 +116,14 @@ public class StudentContentProgress {
 
   public Integer getResumeBlockIndex() {
     return resumeBlockIndex;
+  }
+
+  public UUID getVideoAssetId() {
+    return videoAssetId;
+  }
+
+  public Integer getVideoPositionSeconds() {
+    return videoPositionSeconds;
   }
 
   public UUID getLastRevisionId() {

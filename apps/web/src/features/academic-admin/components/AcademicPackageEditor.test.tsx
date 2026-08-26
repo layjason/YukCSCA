@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import { AcademicPackageEditor } from './AcademicPackageEditor';
+import * as academicAdminApi from '../api/academicAdminApi';
 import type { AcademicPackage } from '../types';
 
 vi.mock('react-i18next', () => ({
@@ -159,5 +160,207 @@ describe('AcademicPackageEditor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  test('save draft round-trips lesson video attachments', async () => {
+    const packageWithVideo: AcademicPackage = {
+      ...mockPackage,
+      draft: {
+        ...mockPackage.draft,
+        resources: [
+          {
+            id: 'res-lesson-1',
+            kind: 'LESSON',
+            title: {
+              indonesian: 'Pelajaran',
+              english: 'Lesson',
+              simplifiedChinese: '课',
+            },
+            outlineItemIds: ['out-1'],
+            objectiveIds: [],
+            versions: [
+              {
+                language: 'en',
+                blocks: [{ kind: 'TEXT', text: 'Lesson body' }],
+              },
+            ],
+            requiredTermIds: [],
+            videos: [
+              {
+                language: 'en',
+                videoAssetId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                sceneSpecificationId: null,
+              },
+            ],
+            provenance: {
+              origin: 'YUKCSCA_ORIGINAL',
+              provider: null,
+              sourceLocator: null,
+              permissionReference: null,
+              authorUserId: '00000000-0000-0000-0000-000000000001',
+              reviewedByUserId: null,
+              reviewedAt: null,
+            },
+          },
+        ],
+      },
+    };
+    const saveDraft = vi.spyOn(academicAdminApi, 'saveAcademicPackageDraft').mockResolvedValue({
+      ...packageWithVideo,
+      draftRevision: 2,
+    });
+
+    render(<AcademicPackageEditor initialPackage={packageWithVideo} onBackToList={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Save draft/i }));
+
+    await waitFor(() => {
+      expect(saveDraft).toHaveBeenCalled();
+    });
+    const draftInput = saveDraft.mock.calls[0]?.[2];
+    expect(draftInput?.resources[0]?.videos).toEqual([
+      {
+        language: 'en',
+        videoAssetId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        sceneSpecificationId: null,
+      },
+    ]);
+    saveDraft.mockRestore();
+  });
+
+  test('auto-saves the draft when a render job succeeds with a new video asset id', async () => {
+    const specId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const producedId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const packageWithSpec: AcademicPackage = {
+      ...mockPackage,
+      draft: {
+        ...mockPackage.draft,
+        resources: [
+          {
+            id: 'res-lesson-1',
+            kind: 'LESSON',
+            title: {
+              indonesian: 'Pelajaran',
+              english: 'Lesson',
+              simplifiedChinese: '课',
+            },
+            outlineItemIds: ['out-1'],
+            objectiveIds: [],
+            versions: [
+              {
+                language: 'en',
+                blocks: [{ kind: 'TEXT', text: 'Lesson body' }],
+              },
+            ],
+            requiredTermIds: [],
+            videos: [
+              {
+                language: 'en',
+                videoAssetId: null,
+                sceneSpecificationId: specId,
+              },
+            ],
+            provenance: {
+              origin: 'YUKCSCA_ORIGINAL',
+              provider: null,
+              sourceLocator: null,
+              permissionReference: null,
+              authorUserId: '00000000-0000-0000-0000-000000000001',
+              reviewedByUserId: null,
+              reviewedAt: null,
+            },
+          },
+        ],
+      },
+    };
+    vi.spyOn(academicAdminApi, 'getSceneSpecification').mockResolvedValue({
+      id: specId,
+      registryVersion: '2026-08.3',
+      explanationLanguage: 'en',
+      segments: [],
+      latestRenderJob: {
+        id: 'job-1',
+        kind: 'RENDER_SCENE',
+        state: 'SUCCEEDED',
+        attempts: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sceneSpecificationId: specId,
+        videoAssetId: producedId,
+        error: null,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    vi.spyOn(academicAdminApi, 'getAcademicVideo').mockResolvedValue({
+      id: producedId,
+      source: 'PRODUCED',
+      status: 'DRAFT',
+      explanationLanguage: 'en',
+      mediaType: 'video/mp4',
+      byteSize: 1024,
+      durationSeconds: 12,
+      width: 1280,
+      height: 720,
+      sha256: 'sha-produced',
+      captionsAvailable: true,
+      rejection: null,
+      latestValidationJob: null,
+      provenance: {
+        origin: 'YUKCSCA_ORIGINAL',
+        provider: null,
+        sourceLocator: null,
+        permissionReference: null,
+        authorUserId: '00000000-0000-0000-0000-000000000001',
+        reviewedByUserId: null,
+        reviewedAt: null,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    const savedPackage: AcademicPackage = {
+      ...packageWithSpec,
+      draftRevision: 2,
+      draft: {
+        ...packageWithSpec.draft,
+        resources: [
+          {
+            ...packageWithSpec.draft.resources[0]!,
+            videos: [
+              {
+                language: 'en',
+                videoAssetId: producedId,
+                sceneSpecificationId: specId,
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const saveDraft = vi
+      .spyOn(academicAdminApi, 'saveAcademicPackageDraft')
+      .mockResolvedValue(savedPackage);
+
+    render(<AcademicPackageEditor initialPackage={packageWithSpec} onBackToList={vi.fn()} />);
+    const tablist = screen.getByRole('navigation', {
+      name: 'Academic package configuration sections',
+    });
+    const resourcesTab = Array.from(tablist.querySelectorAll('button')).find((btn) =>
+      /^Resources/.test(btn.textContent ?? ''),
+    );
+    expect(resourcesTab).toBeTruthy();
+    fireEvent.click(resourcesTab!);
+
+    await waitFor(() => {
+      expect(saveDraft).toHaveBeenCalled();
+    });
+    const draftInput = saveDraft.mock.calls[0]?.[2];
+    expect(draftInput?.resources[0]?.videos).toEqual([
+      {
+        language: 'en',
+        sceneSpecificationId: specId,
+        videoAssetId: producedId,
+      },
+    ]);
+    saveDraft.mockRestore();
   });
 });

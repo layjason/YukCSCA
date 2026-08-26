@@ -780,6 +780,7 @@ select.admin-field-control,
 
 .admin-actions-end {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-sm);
 }
@@ -1323,6 +1324,32 @@ select.admin-field-control,
   letter-spacing: 0.05em;
 }
 
+/* Semantic tone variants for status/meta chips (soft background + tone ink). */
+.yukcsca-tag-success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.yukcsca-tag-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.yukcsca-tag-warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.yukcsca-tag-info {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.yukcsca-tag-neutral {
+  background: var(--color-surface-soft);
+  color: var(--color-ink-muted);
+}
+
 /* ── Outline / tree ───────────────────────────────────────────────────── */
 
 .outline-tree-item {
@@ -1468,7 +1495,8 @@ select.admin-field-control,
   gap: var(--space-sm);
 }
 
-/* Icon-only controls (Lucide) — secondary destructive actions */
+/* Icon-only controls (Lucide) — neutral secondary actions; danger tint lives
+ * on the -danger modifier so a neutral icon button never reads as destructive. */
 .admin-icon-btn {
   display: inline-grid;
   place-items: center;
@@ -1491,9 +1519,9 @@ select.admin-field-control,
 }
 
 .admin-icon-btn:hover {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
-  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  border-color: var(--color-border-strong);
   transform: translateY(-1px);
 }
 
@@ -1825,7 +1853,8 @@ select.admin-field-control,
   gap: var(--space-sm);
 }
 
-.admin-hint-card {
+.admin-hint-card,
+.admin-scope-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -1833,6 +1862,28 @@ select.admin-field-control,
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-soft);
+}
+
+/* Active-state convention for a composite row being edited; mirrors field focus colors. */
+.admin-scope-card:focus-within {
+  border-color: var(--color-focus);
+}
+
+/* Quiet bounded card for panel rows, script segments, and review sections.
+ * Declared before .admin-card-invalid so the violation border wins the cascade. */
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas);
+}
+
+/* Validation highlight for cards holding unresolved field violations. */
+.admin-card-invalid {
+  border-color: var(--color-danger);
 }
 
 .admin-hint-toolbar {
@@ -2153,20 +2204,31 @@ select.admin-field-control,
   position: fixed;
   inset: 0;
   background: rgb(23 23 23 / 50%);
-  display: grid;
-  place-items: center;
+  /* Auto child margins keep short dialogs centered; a dialog taller than the
+   * viewport collapses its margins and scrolls from its top edge instead of
+   * clipping (grid centering makes overflow unreachable). */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
   padding: var(--space-md);
   z-index: 1000;
   animation: surface-enter var(--motion-quick) var(--ease-standard) both;
 }
 
 .modal-content {
+  margin: auto;
   background: var(--color-canvas);
   border-radius: var(--radius-xl);
   padding: var(--space-xl);
   width: min(100%, 540px);
   box-shadow: var(--shadow-floating);
   border: 1px solid var(--color-border);
+}
+
+/* Wide dialog variant for editor/review surfaces (video script, draft review). */
+.modal-content-lg {
+  width: min(100%, 48rem);
 }
 
 .modal-header {
@@ -2230,4 +2292,51 @@ select.admin-field-control,
     animation: none;
     transition: none;
   }
+}
+
+/* ==========================================================================
+   Reviewed Lesson Video admin surfaces (VS-010B)
+   Dialogs reuse the shared .modal-overlay/.modal-content convention.
+   ========================================================================== */
+
+/* Monospaced VTT editing surface. */
+.admin-vtt-editor {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+}
+
+.admin-video-player-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.admin-video-element {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.admin-preview-surface {
+  padding: var(--space-sm);
+  background-color: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.admin-code-preview {
+  padding: var(--space-sm);
+  background-color: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  max-height: 12rem;
+  overflow-y: auto;
+  margin: 0;
 }

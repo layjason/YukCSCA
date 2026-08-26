@@ -982,11 +982,13 @@ export function devUpsertRemediationProgress(
   resourceId: string,
   status: 'IN_PROGRESS' | 'CONTENT_COMPLETE',
   resumeBlockIndex?: number | null,
+  video?: { videoAssetId: string; positionSeconds: number } | null,
 ): ContentProgress | null {
   if (subject !== 'MATHEMATICS' || resourceId !== REMEDIATION_ID) return null;
   const next: ContentProgress = {
     status,
     resumeBlockIndex: resumeBlockIndex ?? null,
+    video: video ?? null,
     updatedAt: now(),
     updatedSinceCompleted: false,
   };

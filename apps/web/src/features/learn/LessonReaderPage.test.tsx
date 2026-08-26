@@ -443,6 +443,93 @@ test('language toggle reloads requested language without silent fallback on unav
   expect(screen.queryByText(/English body/i)).not.toBeInTheDocument();
 });
 
+test('reading-progress coalescer resends the current video position', async () => {
+  mockProfile('en');
+  const observers: IntersectionObserverCallback[] = [];
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        observers.push(callback);
+      }
+      observe(el: Element) {
+        const cb = observers[observers.length - 1];
+        cb?.(
+          [
+            {
+              isIntersecting: true,
+              target: el,
+              intersectionRatio: 1,
+              boundingClientRect: {} as DOMRectReadOnly,
+              intersectionRect: {} as DOMRectReadOnly,
+              rootBounds: null,
+              time: 0,
+            },
+          ],
+          this as unknown as IntersectionObserver,
+        );
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '';
+      readonly thresholds = [];
+    },
+  );
+  vi.spyOn(learnApi, 'getPublishedLesson').mockResolvedValue({
+    ...baseLesson,
+    requestedExplanationLanguage: 'en',
+    video: { videoAssetId: 'vid-published-1', durationSeconds: 400 },
+    body: {
+      availability: 'AVAILABLE',
+      blocks: [
+        { kind: 'TEXT', text: 'English body' },
+        { kind: 'TEXT', text: 'Second block' },
+      ],
+    },
+    contentProgress: {
+      status: 'IN_PROGRESS',
+      resumeBlockIndex: 0,
+      video: { videoAssetId: 'vid-published-1', positionSeconds: 250 },
+      updatedAt: '2026-08-07T00:00:00Z',
+      updatedSinceCompleted: false,
+    },
+  });
+  vi.spyOn(learnApi, 'playPublishedVideo').mockResolvedValue({
+    url: 'https://cdn.csca.mock/stream.mp4',
+    expiresAt: new Date(Date.now() + 3600000).toISOString(),
+  });
+  vi.spyOn(learnApi, 'getPublishedVideoCaptions').mockResolvedValue('WEBVTT\n');
+  const upsert = vi.spyOn(learnApi, 'upsertContentProgress').mockResolvedValue({
+    status: 'IN_PROGRESS',
+    resumeBlockIndex: 1,
+    video: { videoAssetId: 'vid-published-1', positionSeconds: 250 },
+    updatedAt: '2026-08-07T00:30:00Z',
+    updatedSinceCompleted: false,
+  });
+
+  renderReader();
+  expect(await screen.findByText(/English body/i)).toBeInTheDocument();
+
+  await waitFor(
+    () => {
+      expect(upsert).toHaveBeenCalledWith(
+        'MATHEMATICS',
+        baseLesson.resourceId,
+        expect.objectContaining({
+          status: 'IN_PROGRESS',
+          resumeBlockIndex: 1,
+          video: { videoAssetId: 'vid-published-1', positionSeconds: 250 },
+        }),
+      );
+    },
+    { timeout: 2000 },
+  );
+});
+
 test('mark content complete uses authoritative response', async () => {
   mockProfile('en');
   vi.spyOn(learnApi, 'getPublishedLesson').mockResolvedValue({

@@ -11,5 +11,6 @@
 - Every endpoint must have validation, authentication/authorization posture, problem response, and tests.
 - Never edit an applied Flyway migration.
 - External calls require timeout, bounded retry, metrics, and an adapter interface.
+- Always format modified Java code with `./mvnw spotless:apply` and ensure `./mvnw spotless:check` passes before completing changes.
 
 - The backend agent owns the `VS-NNN` and TypeSpec lifecycle. It must resolve or escalate frontend contract requests in the slice and must not treat contract ownership as product authority.

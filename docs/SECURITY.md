@@ -93,7 +93,7 @@ Minor-user identity and relationships, learning conversations, assessment answer
 ### Repository and delivery
 
 - Secrets and real user/student data are prohibited from the repository and logs.
-- GitHub Actions are SHA-pinned. Dependency upgrades are proposed and validated as isolated maintainer-reviewed changes; no automated dependency-update pull requests are configured. Gitleaks scans pushes, pull requests, and the weekly schedule using the repository configuration in `.gitleaks.toml`, which extends the default rules with a narrow documented allowlist for the published Edge read-aloud protocol constant in `EdgeTtsProtocol.java` (not a credential).
+- GitHub Actions are SHA-pinned. Dependency upgrades are proposed and validated as isolated maintainer-reviewed changes; no automated dependency-update pull requests are configured. Gitleaks scans pushes, pull requests, and the weekly schedule using the repository configuration in `.gitleaks.toml`, which extends the default rules; it currently needs no custom allowlist entries (the Edge read-aloud constant was retired with the Edge adapter in VS-010B, and the pinned gTTS wire protocol carries no token or credential).
 - CodeQL, dependency review, and GitHub native secret scanning are not active for the current private repository because the required GitHub security entitlements are not enabled.
 - Containers expose health checks; the API runs as a non-root user.
 
@@ -139,13 +139,15 @@ These controls must ship with the first feature that needs them:
 
 ### Term pronunciation and language lookup
 
-- Term audio is synthesized only at package publish through `SpeechSynthesisPort` (Edge TTS / `edge_tts` protocol). The student GET and the administrator published-revision GET serve stored `audio/mpeg` bytes and never synthesize. Missing clips are 404; pinyin remains on the card. Draft authoring has no live preview.
+- Term audio is synthesized only at package publish through `SpeechSynthesisPort` (gTTS adapter per `ADR-0003`; the pinned wire protocol carries no token). The student GET and the administrator published-revision GET serve stored `audio/mpeg` bytes and never synthesize. Missing clips are 404; pinyin remains on the card. Draft authoring has no live preview.
+- Reviewed-video bytes never traverse the API: uploads go browser-to-storage through a presigned single-PUT slot and playback uses short-lived presigned range-capable GETs assigned to a `<video>` src, so no bearer token or storage credential reaches object storage. Compose MinIO sets `MINIO_API_CORS_ALLOW_ORIGIN` to the web origin for the presigned PUT (CR-06); staged S3 buckets need the same CORS (preflight, `PUT`, exposed `ETag`) as a deployment step. Playback itself needs no bucket CORS because the player has no `crossorigin` attribute — CSP `media-src` and `connect-src` must include the storage origin (`YUKCSCA_MEDIA_PUBLIC_ENDPOINT`, interpolated into `apps/web/nginx.conf` on the Compose web service; remote staging must set that origin to the deployed bucket endpoint). The render worker consumes only schema-validated scene specifications (no authored scene code), redacts arbitrary provider/render exception text, and runs in Compose with a read-only root filesystem, bounded tmpfs/resources/PIDs, dropped capabilities, and no-new-privileges. Local Compose credential sharing is not a production isolation claim: staged deployment needs worker-specific least-privilege database and bucket credentials.
+- VS-010B D-05 deliberately adds no antivirus/scanner stack for the pilot. Uploads remain private, non-playable, and explicitly untrusted until bounded signature/container/shape validation completes in the isolated worker; these controls and FFmpeg remuxing do **not** establish malware clearance. A durable PostgreSQL cleanup outbox, consumed by the same worker, makes rejected/successful-staging/retired objects due immediately and unconfirmed staging/orphan outputs due within 24 hours. Cleanup claims are token-fenced, active validation jobs fence staging deletion, and storage writes receive durable cleanup protection before the external write. A future scanner may be added behind the storage/worker boundary when deployment risk warrants it, but no current status or UI may claim an upload is malware-free.
 - SSML, surface text, selected unmatched lookup text, definitions, stems, and answer keys are excluded from logs. Publish logs `termId`, clip status, and byte length only.
 - Unmatched selected text returns HTTP 200 `NOT_IN_BANK` and writes nothing. Formal-mock policy (reserved, always false until a formal session exists) denies lookup, preview writes, review, and Language-help disclose with `403 FORMAL_ASSISTANCE_DISABLED`.
 
 ### Files and provider integrations
 
-- Validate extension, MIME signature, size, malware status, ownership, retention, and download authorization.
+- Validate extension, MIME signature, size, ownership, retention, and download authorization. Where malware status is not technically established, keep the object private/untrusted and never label it clean.
 - Use signed, short-lived object access and never expose provider credentials to the browser.
 - Verify payment webhooks cryptographically and process them idempotently.
 - External calls use minimal data, explicit consent where required, timeouts, bounded retries, and safe failure behavior.
@@ -158,7 +160,7 @@ These controls must ship with the first feature that needs them:
 - Model, prompt, retrieval, rubric, evaluator, cost, and latency versions are traceable without retaining unnecessary private content.
 - Budgets, timeouts, retry limits, maximum steps, golden evaluations, and human escalation exist before release.
 - A model may not both generate and approve high-impact academic content, including a narrated explanation video.
-- Uploaded scene/scripts and produced renders are untrusted until the playable result is human-reviewed; students receive only Published video.
+- Uploaded videos, scene specifications, and produced renders are untrusted until the playable result is human-reviewed; students receive only Published video. Scene specifications are schema-validated data rendered by reviewed templates, never executable scene code.
 
 ## Google login configuration
 

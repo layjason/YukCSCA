@@ -80,7 +80,7 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** @description Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint. */
+    /** @description Creates or replaces the authenticated student's content progress for one LESSON. Reviewed-video playback positions ride the same write; watching never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint. */
     put: operations['AcademicStudentApi_upsertContentProgress'];
     post?: never;
     delete?: never;
@@ -278,6 +278,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/academic/videos/{videoAssetId}/captions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the WebVTT captions of one published reviewed short video. The narration text is authoritative; clients may render the transcript from cues. Same published-reference gate as playback. */
+    get: operations['AcademicStudentApi_getPublishedVideoCaptions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/academic/videos/{videoAssetId}/play': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns a short-lived presigned range-capable playback URL for one published reviewed short video referenced by the active published revision; the client assigns it to a video element src. 404 when the asset exists in any other state or is not referenced by the active revision, so non-published assets never leak. */
+    get: operations['AcademicStudentApi_playPublishedVideo'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/academic-images': {
     parameters: {
       query?: never;
@@ -409,6 +443,212 @@ export interface paths {
     put?: never;
     /** @description Validates and atomically publishes the current package draft as a new immutable active revision. */
     post: operations['AcademicAdminApi_publishAcademicPackage'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-video-slots': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Creates a short-lived presigned upload slot for one finished short video in one explanation language. The client uploads bytes directly to object storage; nothing is attached to content until the asset is referenced from a draft. */
+    post: operations['AcademicAdminApi_createVideoUploadSlot'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-video-slots/{slotId}:confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Confirms an uploaded finished video with its provenance and queues asynchronous probing (container, duration, resolution, size) on the isolated worker. Idempotent: once a confirm has succeeded, replaying it returns the same 202 and the same asset even after slot expiry, so a browser retry after a lost response never forces a re-upload. 409 code SLOT_PENDING when the slot has no uploaded bytes; SLOT_EXPIRED for a first confirm after expiry. A valid probe yields a DRAFT asset; a rejected probe yields REJECTED with reasons. Neither state blocks any content publication. */
+    post: operations['AcademicAdminApi_confirmVideoUpload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-videos/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one video asset with lifecycle, playable-shape metadata, rejection reasons, provenance, and the latest upload-validation job for reload-safe polling and failure recovery. */
+    get: operations['AcademicAdminApi_getAcademicVideo'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-videos/{id}/captions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns the WebVTT captions of one video asset for administrator review. 404 when captions do not exist (captionsAvailable false); captions never exist for AWAITING_VALIDATION or REJECTED assets. */
+    get: operations['AcademicAdminApi_getAcademicVideoCaptions'];
+    /** @description Supplies or replaces the captions for one UPLOADED DRAFT asset with validated bytes. 409 code CAPTIONS_DERIVED_FROM_NARRATION for PRODUCED assets (captions derive from narration segments); CAPTIONS_IMMUTABLE for REVIEWED and RETIRED assets — caption corrections after review go through the replacement flow with their own provenance and review; CAPTIONS_NOT_EDITABLE for AWAITING_VALIDATION and REJECTED assets. */
+    put: operations['AcademicAdminApi_putAcademicVideoCaptions'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-videos/{id}/play': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns a short-lived presigned range-capable playback URL for administrator review of one DRAFT or REVIEWED asset; the client assigns it to a video element src. 404 while bytes are not yet validated (AWAITING_VALIDATION); 409 code VIDEO_NOT_PLAYABLE for REJECTED and RETIRED assets. */
+    get: operations['AcademicAdminApi_getAcademicVideoPlay'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-videos/{id}:retry-validation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Retries terminal upload validation from the durable asset id after reload. The asset must be UPLOADED and AWAITING_VALIDATION with staged bytes still reserved. Returns 409 RENDER_JOB_ACTIVE with the active job on a duplicate request, or VALIDATION_NOT_RETRYABLE when the asset or bytes can no longer be retried. */
+    post: operations['AcademicAdminApi_retryAcademicVideoValidation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/academic-videos/{id}:review': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Marks the playable result, captions, language version, and provenance human-reviewed after the administrator has watched the Draft. Requires a DRAFT asset with validated bytes and captions; violations of those preconditions (including an already-REVIEWED asset) return 409 code REVIEW_PRECONDITION_UNMET. Only REVIEWED assets project into a published revision. A model never performs this transition. */
+    post: operations['AcademicAdminApi_reviewAcademicVideo'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/render-jobs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Enqueues production of one scene specification on the isolated worker (gTTS narration, reviewed templates, FFmpeg muxing). One active job per specification; concurrent enqueue returns 409 RENDER_JOB_ACTIVE with the active job embedded so a lost response is recoverable. The text/formula/image unit is never blocked by production. */
+    post: operations['AcademicAdminApi_createRenderJob'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/render-jobs/{jobId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one render or upload-validation job with state, attempts, and bounded failure detail. */
+    get: operations['AcademicAdminApi_getRenderJob'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/scene-specifications': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Creates a template-bound scene specification from the admin script. Validation failures identify the offending path using the grammar segments[i], segments[i].templateActionId, segments[i].params.<paramId>, segments[i].narrationText, plus segments and explanationLanguage for collection-level bounds; nothing is rendered yet. */
+    post: operations['AcademicAdminApi_createSceneSpecification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/scene-specifications/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one stored scene specification with its segments. */
+    get: operations['AcademicAdminApi_getSceneSpecification'];
+    /** @description Replaces one scene specification; validation uses the same segment path grammar as creation. A finished render is unaffected; re-enqueueing creates a new render job against the replaced script. */
+    put: operations['AcademicAdminApi_replaceSceneSpecification'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/scene-templates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Lists the reviewed render-template actions available to the script editor for the current registry version. */
+    get: operations['AcademicAdminApi_listSceneTemplates'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -870,6 +1110,8 @@ export interface components {
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceRecord'];
         /** @description Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION. */
         requiredTermIds?: components['schemas']['uuid'][];
+        /** @description Optional reviewed short-video attachments, at most one per explanation language. Projected only on LESSON and REMEDIATION kinds; a TERMINOLOGY draft carrying an attachment is rejected by application validation, and an attachment with both videoAssetId and sceneSpecificationId absent is rejected as an incomplete handle. The attachment language must equal the referenced asset's explanationLanguage and, on the production path, the scene specification's explanationLanguage; mismatches are draft-save validation violations (INCOMPATIBLE) on resources[i].videos[j].language. Only assets in REVIEWED status at publish time project into the published revision; attachments referencing other states are excluded without blocking publication of the complete text, formula, and image unit. Each replacement references a new asset id and records its own provenance. */
+        videos?: components['schemas']['AcademicAdmin.ResourceVideoAttachment'][];
       }[];
       questions: {
         id: components['schemas']['uuid'];
@@ -911,6 +1153,8 @@ export interface components {
         provenance: components['schemas']['AcademicAdmin.DraftProvenanceInput'];
         /** @description Ordered required term ids for this resource. On LESSON this is that lesson's preview list (not a shared outline dictionary). TERMINOLOGY may still carry ids in older drafts; student preview and the lesson rail use the LESSON list. Empty or omitted for REMEDIATION. */
         requiredTermIds?: components['schemas']['uuid'][];
+        /** @description Optional reviewed short-video attachments, at most one per explanation language. Projected only on LESSON and REMEDIATION kinds; a TERMINOLOGY draft carrying an attachment is rejected by application validation, and an attachment with both videoAssetId and sceneSpecificationId absent is rejected as an incomplete handle. The attachment language must equal the referenced asset's explanationLanguage and, on the production path, the scene specification's explanationLanguage; mismatches are draft-save validation violations (INCOMPATIBLE) on resources[i].videos[j].language. Only assets in REVIEWED status at publish time project into the published revision; attachments referencing other states are excluded without blocking publication of the complete text, formula, and image unit. Each replacement references a new asset id and records its own provenance. */
+        videos?: components['schemas']['AcademicAdmin.ResourceVideoAttachment'][];
       }[];
       questions: {
         id: components['schemas']['uuid'];
@@ -976,6 +1220,33 @@ export interface components {
       path: string;
       code: components['schemas']['AcademicAdmin.AcademicValidationCode'];
     };
+    /** @description One optional reviewed short-video asset with its lifecycle, playable-shape metadata, and provenance. */
+    'AcademicAdmin.AcademicVideoAsset': {
+      id: components['schemas']['uuid'];
+      source: components['schemas']['AcademicAdmin.VideoAssetSource'];
+      status: components['schemas']['AcademicAdmin.VideoAssetStatus'];
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      /** @enum {string} */
+      mediaType: 'video/mp4';
+      /** @description Null until bytes are validated. */
+      byteSize: number | null;
+      /** @description Null until bytes are validated. Bounded by the short-video duration policy (max 10 minutes). */
+      durationSeconds: number | null;
+      width: number | null;
+      height: number | null;
+      sha256: string | null;
+      /** @description True once WebVTT captions exist: supplied by the admin for UPLOADED assets, derived from narration segments for PRODUCED assets. Required before review. */
+      captionsAvailable: boolean;
+      /** @description Upload-probe rejection reasons. Null unless status is REJECTED; production failures never create an asset and surface on the render job instead. */
+      rejection: components['schemas']['AcademicAdmin.AcademicValidationViolation'][] | null;
+      /** @description Latest VALIDATE_UPLOAD job for an UPLOADED asset, including bounded terminal failure detail so an administrator can recover polling or retry after reload. Null for PRODUCED assets. */
+      latestValidationJob: components['schemas']['AcademicAdmin.RenderJob'] | null;
+      provenance: components['schemas']['AcademicAdmin.ProvenanceRecord'];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
     'AcademicAdmin.ArchiveAcademicPackageRequest': {
       /** Format: int64 */
       expectedDraftRevision: number;
@@ -1024,6 +1295,9 @@ export interface components {
      * @enum {string}
      */
     'AcademicAdmin.CheckpointPassPolicy': 'ALL_CORRECT_NO_STRONG_ASSISTANCE';
+    'AcademicAdmin.ConfirmVideoUploadRequest': {
+      provenance: components['schemas']['AcademicAdmin.ProvenanceInput'];
+    };
     'AcademicAdmin.ContentBlock':
       | components['schemas']['AcademicAdmin.TextContentBlock']
       | components['schemas']['AcademicAdmin.MathContentBlock']
@@ -1032,6 +1306,12 @@ export interface components {
     'AcademicAdmin.ContentOrigin': 'YUKCSCA_ORIGINAL' | 'LICENSED' | 'OPEN_LICENSE';
     'AcademicAdmin.CreateAcademicPackageRequest': {
       subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+    };
+    'AcademicAdmin.CreateRenderJobRequest': {
+      sceneSpecificationId: components['schemas']['uuid'];
+    };
+    'AcademicAdmin.CreateVideoUploadSlotRequest': {
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
     };
     'AcademicAdmin.DraftProvenanceInput': {
       origin?: components['schemas']['AcademicAdmin.ContentOrigin'];
@@ -1170,16 +1450,150 @@ export interface components {
       publishedAt: string;
       publishedByUserId: components['schemas']['uuid'];
     };
+    'AcademicAdmin.PutVideoCaptionsRequest': {
+      /** @description WebVTT source for one UPLOADED video asset. Bounded and syntax-validated; cue timing beyond the asset duration is rejected. */
+      captions: string;
+    };
     /** @enum {string} */
     'AcademicAdmin.QuestionDifficulty': 'FOUNDATION' | 'STANDARD' | 'ADVANCED';
     'AcademicAdmin.QuestionOption': {
       key: string;
       blocks: components['schemas']['AcademicAdmin.ContentBlock'][];
     };
+    /** @description One asynchronous render or upload-validation job. A job snapshots the scene specification and its registry version at enqueue; replacing the specification does not affect an in-flight job — clients detect a stale render by comparing createdAt with the specification's updatedAt. Workers claim through a visibility-timeout poll; a claim that expires without completion is retried within the attempts bound and then fails terminally. Suggested client poll interval: 5 seconds. */
+    'AcademicAdmin.RenderJob': {
+      id: components['schemas']['uuid'];
+      kind: components['schemas']['AcademicAdmin.RenderJobKind'];
+      state: components['schemas']['AcademicAdmin.RenderJobState'];
+      /** @description Set for RENDER_SCENE jobs. */
+      sceneSpecificationId: components['schemas']['uuid'] | null;
+      /** @description For RENDER_SCENE: the produced asset once SUCCEEDED. For VALIDATE_UPLOAD: the confirmed asset under validation, set when the job is created. */
+      videoAssetId: components['schemas']['uuid'] | null;
+      /** Format: int32 */
+      attempts: number;
+      error: components['schemas']['AcademicAdmin.RenderJobError'] | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @description One active job already exists for this scene specification. The embedded job recovers the job id after a lost response without any listing. */
+    'AcademicAdmin.RenderJobConflictProblem': {
+      /** @enum {string} */
+      code: 'RENDER_JOB_ACTIVE';
+      job: components['schemas']['AcademicAdmin.RenderJob'];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /** @description Terminal job failure detail. Never carries narration text or scene content. */
+    'AcademicAdmin.RenderJobError': {
+      code: components['schemas']['AcademicAdmin.RenderJobErrorCode'];
+      detail?: string | null;
+    };
+    /**
+     * @description Terminal failure classification surfaced to the administrator.
+     * @enum {string}
+     */
+    'AcademicAdmin.RenderJobErrorCode':
+      | 'VALIDATION_FAILED'
+      | 'RENDER_TIMEOUT'
+      | 'DURATION_POLICY'
+      | 'SPEECH_SYNTHESIS_FAILED'
+      | 'INTERNAL';
+    /**
+     * @description Asynchronous job kind executed by the isolated Python render worker on the PostgreSQL-polled queue.
+     * @enum {string}
+     */
+    'AcademicAdmin.RenderJobKind': 'VALIDATE_UPLOAD' | 'RENDER_SCENE';
+    /**
+     * @description Render/validation job state. SUCCEEDED and FAILED are terminal; retries stay inside RUNNING attempts.
+     * @enum {string}
+     */
+    'AcademicAdmin.RenderJobState': 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+    /** @description Optional reviewed-video attachment on one explanation-language version of a study resource; the durable draft handle that survives reloads. Upload path: videoAssetId is set at slot confirmation and kept through AWAITING_VALIDATION and later states. Production path: sceneSpecificationId is set at script creation and retained through review so the script stays reopenable (transcript from segments, replace, re-enqueue); videoAssetId is added when the render job reaches SUCCEEDED. At least one of the two ids must be present; both are present on the produced path after success. videoAssetId is the sole publish/projection reference. Drafts are saved immediately after each id is obtained, so recovery after reload needs only the package draft. */
+    'AcademicAdmin.ResourceVideoAttachment': {
+      language: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      videoAssetId?: components['schemas']['uuid'] | null;
+      sceneSpecificationId?: components['schemas']['uuid'] | null;
+    };
     'AcademicAdmin.SaveAcademicPackageDraftRequest': {
       /** Format: int64 */
       expectedDraftRevision: number;
       draft: components['schemas']['AcademicAdmin.AcademicPackageDraftInput'];
+    };
+    /** @description One template-bound scene segment authored in the admin script: a reviewed visual action plus its narration text. Never executable scene code. */
+    'AcademicAdmin.SceneSegment': {
+      templateActionId: string;
+      /** @description Template-specific parameters: an arbitrary JSON object, carried as an untyped wire boundary because its shape is per-template. Clients author it from the SceneTemplateAction param descriptors and narrow it immediately; the server semantically validates keys and values against the reviewed template schema, surfacing violations with the offending segment path. */
+      params?: unknown;
+      narrationText: string;
+    };
+    /** @description Stored admin script compiled to a template-bound scene specification. The render worker consumes only this schema-validated data. */
+    'AcademicAdmin.SceneSpecification': {
+      id: components['schemas']['uuid'];
+      /** @description Registry version this specification was last validated against. A registry bump that invalidates an old script surfaces as VALIDATION_FAILED at render; the editor warns before re-render by comparing with the current registry version. */
+      registryVersion: string;
+      /** @description Latest render job for this specification, embedded on responses so reload recovery needs no job listing. Null when never enqueued. */
+      latestRenderJob?: components['schemas']['AcademicAdmin.RenderJob'] | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    } & components['schemas']['AcademicAdmin.SceneSpecificationInput'];
+    'AcademicAdmin.SceneSpecificationInput': {
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      segments: components['schemas']['AcademicAdmin.SceneSegment'][];
+    };
+    /** @description One reviewed visual action available to the admin script editor. */
+    'AcademicAdmin.SceneTemplateAction': {
+      id: string;
+      /** @description Canonical authoring name; server-provided registry metadata in one canonical language for the pilot, not student-facing content. Clients may layer localization by action id later. */
+      displayName: string;
+      /** @description Structured parameter descriptors the script editor renders inputs from. Empty when the action takes no parameters. */
+      params: components['schemas']['AcademicAdmin.SceneTemplateParamDescriptor'][];
+    };
+    /** @description One closed choice token of an ENUM-kind template parameter; uppercase alphanumeric/underscore identifier. */
+    'AcademicAdmin.SceneTemplateParamChoice': string;
+    /** @description Data-only descriptor of one template-action parameter. Bounded values; never executable content. */
+    'AcademicAdmin.SceneTemplateParamDescriptor': {
+      /** @description CamelCase identifier (e.g. xMin, keyPoints), matching SceneTemplateParamVisibility.paramId; template-action ids are the kebab-case identifiers. */
+      id: string;
+      kind: components['schemas']['AcademicAdmin.SceneTemplateParamKind'];
+      /** @description Canonical authoring label; server-provided registry metadata in one canonical language for the pilot, not student-facing content. Clients may layer localization by action and param id later. */
+      label?: string | null;
+      required?: boolean | null;
+      /** @description Inclusive lower bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead). */
+      min?: number | null;
+      /** @description Inclusive upper bound; INTEGER and DECIMAL kinds only (ENUM uses choices instead). */
+      max?: number | null;
+      /** @description Maximum text length; STRING, MULTILINE_TEXT, and MATH_EXPRESSION kinds only. */
+      maxLength?: number | null;
+      /** @description Closed choice tokens for ENUM kind only; ignored otherwise. */
+      choices?: components['schemas']['AcademicAdmin.SceneTemplateParamChoice'][] | null;
+      /** @description Optional display rule; see SceneTemplateParamVisibility. */
+      visibleWhen?: components['schemas']['AcademicAdmin.SceneTemplateParamVisibility'] | null;
+    };
+    /**
+     * @description Input kind of one template-action parameter; drives the structured control the script editor renders. Semantic validation stays server-side against the same reviewed schema.
+     * @enum {string}
+     */
+    'AcademicAdmin.SceneTemplateParamKind':
+      | 'STRING'
+      | 'MULTILINE_TEXT'
+      | 'INTEGER'
+      | 'DECIMAL'
+      | 'MATH_EXPRESSION'
+      | 'ENUM'
+      | 'INTERVAL_SET';
+    /** @description Data-only display rule: the owning parameter is collected only while the referenced ENUM-kind parameter holds one of the listed choice tokens. Presentation-only — server-side validation semantics are unchanged; an absent rule means always shown. */
+    'AcademicAdmin.SceneTemplateParamVisibility': {
+      /** @description Id of the observed ENUM parameter. */
+      paramId: string;
+      /** @description Choice tokens of the observed parameter that make the owning parameter applicable. */
+      choices: components['schemas']['AcademicAdmin.SceneTemplateParamChoice'][];
+    };
+    /** @description Current reviewed render-template registry versioned with the worker. */
+    'AcademicAdmin.SceneTemplateRegistry': {
+      version: string;
+      actions: components['schemas']['AcademicAdmin.SceneTemplateAction'][];
     };
     'AcademicAdmin.SourcePosition': {
       page?: number | null;
@@ -1235,6 +1649,42 @@ export interface components {
       file: unknown;
       provenance: components['schemas']['AcademicAdmin.ProvenanceInput'];
     };
+    /**
+     * @description How a reviewed-video asset came to exist.
+     * @enum {string}
+     */
+    'AcademicAdmin.VideoAssetSource': 'UPLOADED' | 'PRODUCED';
+    /**
+     * @description Lifecycle of an optional reviewed-video asset. UPLOADED assets are created at slot confirmation in AWAITING_VALIDATION; PRODUCED assets are created by a succeeded render directly in DRAFT (a failed render creates no asset — the failure lives on the render job). Only REVIEWED assets project into a published revision; students never observe any other state. RETIRED is system-managed when a replacement publishes.
+     * @enum {string}
+     */
+    'AcademicAdmin.VideoAssetStatus':
+      'AWAITING_VALIDATION' | 'DRAFT' | 'REVIEWED' | 'REJECTED' | 'RETIRED';
+    /** @description Short-lived presigned playback grant. The client assigns url to a video element src, so native Range streaming and resume go straight to object storage with no credentials attached; deployment must therefore allow the storage origin in CSP media-src. Grants are never cached and are refreshed from this API before expiresAt. */
+    'AcademicAdmin.VideoPlaybackGrant': {
+      url: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    /** @description Short-lived presigned slot for direct-to-storage upload of one finished short video. uploadUrl accepts exactly one HTTP PUT whose body is the raw video bytes; send no Content-Type or other headers beyond those covered by the presign. The storage bucket must allow the web origin for the presigned PUT (CORS preflight plus exposed ETag) — a deployment invariant of this slice. */
+    'AcademicAdmin.VideoUploadSlot': {
+      id: components['schemas']['uuid'];
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      uploadUrl: string;
+      /**
+       * Format: int64
+       * @description Upload size bound for the pre-upload client check; server-side probing enforces the same bound.
+       */
+      maxByteSize: number;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    /** @description Validation retry conflict. RENDER_JOB_ACTIVE embeds the already-active validation job; VALIDATION_NOT_RETRYABLE means the asset is not an uploaded asset awaiting validation or its staged bytes are no longer reserved. */
+    'AcademicAdmin.VideoValidationRetryConflictProblem': {
+      /** @enum {string} */
+      code: 'RENDER_JOB_ACTIVE' | 'VALIDATION_NOT_RETRYABLE';
+      job?: components['schemas']['AcademicAdmin.RenderJob'] | null;
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
     /** @description Bookmarks this lesson's required list (or a subset). Ids not on the lesson are rejected. Formal-mock sessions receive 403. */
     'AcademicStudent.BookmarkLessonTermsRequest': {
       explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
@@ -1269,11 +1719,13 @@ export interface components {
       snippet: string;
       options: components['schemas']['AcademicStudent.ReviewOption'][];
     };
-    /** @description Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED. */
+    /** @description Per-student content progress on one LESSON or REMEDIATION resource. Absent storage projects as NOT_STARTED. */
     'AcademicStudent.ContentProgress': {
       status: components['schemas']['AcademicStudent.ContentProgressStatus'];
       /** @description Zero-based resume index into the blocks of the explanation-language version the student was reading. Null when not started or when no block position is recorded. */
       resumeBlockIndex: number | null;
+      /** @description Last saved reviewed-video playback position on this resource. Null when no position was saved; restored positions are clamped to the currently published asset's duration. One position per resource (pilot behavior): watching in a different explanation language overwrites it. Watching is never mastery evidence. */
+      video?: components['schemas']['AcademicStudent.VideoPlaybackPosition'] | null;
       /** @description Last progress write time. Null when status is NOT_STARTED. */
       updatedAt: string | null;
       /** @description True when status is CONTENT_COMPLETE and this study resource's student-visible content (title, outline/objective links, language versions, blocks) differs between the package revision recorded when the student last marked complete and the active published revision. Unrelated package changes (edition labels, other lessons, assessment questions) do not set this flag. Soft signal only; never demotes content complete or implies mastery. */
@@ -1425,6 +1877,8 @@ export interface components {
       contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
       /** @description Null or omitted when this lesson has no published Chinese exam-language terms. Clients must hide terminology chrome when absent. */
       terminology?: components['schemas']['AcademicStudent.LessonTerminology'] | null;
+      /** @description Published reviewed short video for the requested explanation language. Null or omitted when no REVIEWED video was attached for this language at publish time, and null whenever body is LANGUAGE_UNAVAILABLE because an attachment is bound to an authored language version; clients render no playable control. Watching is never mastery. */
+      video?: components['schemas']['AcademicStudent.PublishedVideoRef'] | null;
     };
     /** @description Browse projection for one published package by subject. */
     'AcademicStudent.PublishedPackageBrowse': {
@@ -1456,6 +1910,17 @@ export interface components {
       contentProgress: components['schemas']['AcademicStudent.ContentProgress'];
       outlineItemIds: components['schemas']['uuid'][];
       objectiveIds: components['schemas']['uuid'][];
+      /** @description Published reviewed short video for the requested explanation language. Null or omitted when no REVIEWED video was attached for this language at publish time, and null whenever body is LANGUAGE_UNAVAILABLE because an attachment is bound to an authored language version; clients render no playable control. Watching is never mastery. */
+      video?: components['schemas']['AcademicStudent.PublishedVideoRef'] | null;
+    };
+    /** @description Reference to the published reviewed short video attached to the requested explanation-language version. Null whenever the lesson body is LANGUAGE_UNAVAILABLE, because an attachment is bound to an authored language version. No poster artwork in the pilot; players show the asset's first frame via preload metadata. */
+    'AcademicStudent.PublishedVideoRef': {
+      videoAssetId: components['schemas']['uuid'];
+      /**
+       * Format: int32
+       * @description Validated playable duration. Bounded by the short-video duration policy (max 10 minutes); restored playback positions are clamped to it.
+       */
+      durationSeconds: number;
     };
     'AcademicStudent.ReviewOption': {
       key: string;
@@ -1647,11 +2112,13 @@ export interface components {
       path: string;
       code: string;
     };
-    /** @description Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource). */
+    /** @description Upsert content progress for the authenticated student on one LESSON or REMEDIATION. Idempotent by (account, package, resource). */
     'AcademicStudent.UpsertContentProgressRequest': {
       status: components['schemas']['AcademicStudent.WritableContentProgressStatus'];
-      /** @description Zero-based resume block index within the language version the student is reading. Required when status is IN_PROGRESS; optional when CONTENT_COMPLETE. */
+      /** @description Zero-based resume block index within the language version the student is reading. When status is IN_PROGRESS, at least one of resumeBlockIndex or video must be present; both may be sent. Optional when CONTENT_COMPLETE. */
       resumeBlockIndex?: number | null;
+      /** @description Reviewed-video playback position to persist. The write replaces any stored position on this resource: send the current position on every IN_PROGRESS write, or null to clear it. Rejected with a validation violation when videoAssetId is not the published reviewed video currently referenced by this resource (path video.videoAssetId, code INVALID_VIDEO_ASSET) or when positionSeconds exceeds that asset's published duration (path video.positionSeconds, code POSITION_OUT_OF_RANGE); the client re-reads the lesson and resumes from the clamped value. */
+      video?: components['schemas']['AcademicStudent.VideoPlaybackPosition'] | null;
       /** @description Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field. */
       expectedPackageRevisionId?: components['schemas']['uuid'];
     };
@@ -1659,6 +2126,15 @@ export interface components {
       status: components['schemas']['AcademicStudent.WritablePreviewProgressStatus'];
       /** @description Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches. */
       expectedPackageRevisionId?: components['schemas']['uuid'];
+    };
+    /** @description Per-student reviewed-video playback position on one resource, saved through content progress. Playback position is private student state and never mastery evidence. */
+    'AcademicStudent.VideoPlaybackPosition': {
+      videoAssetId: components['schemas']['uuid'];
+      /**
+       * Format: int32
+       * @description Last player position. Bounded by the short-video duration policy; restored values are clamped to the currently published asset's duration.
+       */
+      positionSeconds: number;
     };
     /**
      * @description Writable content-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
@@ -3524,6 +4000,127 @@ export interface operations {
       };
     };
   };
+  AcademicStudentApi_getPublishedVideoCaptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        videoAssetId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description WebVTT captions of a published reviewed short video. Client-side cue extraction is the single transcript mechanism in this slice (no separate transcript endpoint); the narration text is authoritative. */
+      200: {
+        headers: {
+          'Cache-Control': 'private, max-age=31536000, immutable';
+          'X-Content-Type-Options': 'nosniff';
+          [name: string]: unknown;
+        };
+        content: {
+          'text/vtt': unknown;
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicStudentApi_playPublishedVideo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        videoAssetId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Short-lived presigned playback grant. The client fetches this endpoint with the bearer token, then assigns url to a video element src so native Range requests, seeking, and resume work without any credential reaching storage. Refresh before expiresAt to avoid opaque media errors; the target content itself is immutable. Deployment must allow the storage origin in CSP media-src. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.VideoPlaybackGrant'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
   AcademicAdminApi_uploadAcademicImage: {
     parameters: {
       query?: never;
@@ -4127,6 +4724,965 @@ export interface operations {
       };
       /** @description The request conflicts with the current state of the server. */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_createVideoUploadSlot: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.CreateVideoUploadSlotRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.VideoUploadSlot'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_confirmVideoUpload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slotId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.ConfirmVideoUploadRequest'];
+      };
+    };
+    responses: {
+      /** @description Accepted for asynchronous probing on the isolated worker; the returned asset starts AWAITING_VALIDATION. */
+      202: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicVideoAsset'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getAcademicVideo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicVideoAsset'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getAcademicVideoCaptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Draft captions may change before review, so they are never cached. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          'X-Content-Type-Options': 'nosniff';
+          [name: string]: unknown;
+        };
+        content: {
+          'text/vtt': unknown;
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_putAcademicVideoCaptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.PutVideoCaptionsRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicVideoAsset'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getAcademicVideoPlay: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Review playback grant for one DRAFT or REVIEWED asset. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.VideoPlaybackGrant'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_retryAcademicVideoValidation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.RenderJob'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.VideoValidationRetryConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_reviewAcademicVideo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.AcademicVideoAsset'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_createRenderJob: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.CreateRenderJobRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.RenderJob'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.RenderJobConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getRenderJob: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        jobId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.RenderJob'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_createSceneSpecification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.SceneSpecificationInput'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.SceneSpecification'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_getSceneSpecification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.SceneSpecification'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_replaceSceneSpecification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicAdmin.SceneSpecificationInput'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.SceneSpecification'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AcademicAdmin.AcademicValidationProblem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AcademicAdminApi_listSceneTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcademicAdmin.SceneTemplateRegistry'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
         headers: {
           [name: string]: unknown;
         };

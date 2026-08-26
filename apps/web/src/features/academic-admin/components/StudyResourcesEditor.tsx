@@ -9,9 +9,18 @@ import {
 import { LocalizedVersionsEditor } from './LocalizedVersionsEditor';
 import { ProvenanceEditor } from './ProvenanceEditor';
 import { AdminRemoveButton } from './AdminRemoveButton';
+import { ResourceVideoPanel } from './ResourceVideoPanel';
 import { useAdminNotify } from '../adminNotify';
 import { termDraftLabel } from '../termDraftLabel';
-import type { LearningObjective, StudyResource, SyllabusOutlineItem, TermDraft } from '../types';
+import type {
+  LearningObjective,
+  ResourceVideoAttachment,
+  StudyResource,
+  SyllabusOutlineItem,
+  TermDraft,
+} from '../types';
+
+const EMPTY_RESOURCE_VIDEOS: ResourceVideoAttachment[] = [];
 
 interface StudyResourcesEditorProps {
   resources: StudyResource[];
@@ -19,6 +28,7 @@ interface StudyResourcesEditorProps {
   objectives: LearningObjective[];
   terms?: TermDraft[];
   onChange: (updated: StudyResource[]) => void;
+  onVideoAttachmentsCommit?: (resourceId: string, videos: ResourceVideoAttachment[]) => void;
   disabled?: boolean;
 }
 
@@ -57,6 +67,7 @@ export function StudyResourcesEditor({
   objectives,
   terms = [],
   onChange,
+  onVideoAttachmentsCommit,
   disabled = false,
 }: StudyResourcesEditorProps): React.JSX.Element {
   const { t } = useTranslation();
@@ -386,6 +397,20 @@ export function StudyResourcesEditor({
             onChange={setProvenance}
             disabled={disabled}
           />
+
+          {selected.kind === 'LESSON' || selected.kind === 'REMEDIATION' ? (
+            <ResourceVideoPanel
+              resourceId={selected.id}
+              resourceKind={selected.kind}
+              videos={selected.videos ?? EMPTY_RESOURCE_VIDEOS}
+              onChange={(videos) => update({ ...selected, videos })}
+              onDurabilityCommit={(videos) => {
+                update({ ...selected, videos });
+                onVideoAttachmentsCommit?.(selected.id, videos);
+              }}
+              disabled={disabled}
+            />
+          ) : null}
 
           <LocalizedVersionsEditor
             versions={selected.versions ?? []}

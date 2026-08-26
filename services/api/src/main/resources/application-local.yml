@@ -32,6 +32,13 @@ yukcsca:
       mail-from: ${YUKCSCA_VERIFICATION_MAIL_FROM:no-reply@yukcsca.local}
   speech:
     enabled: ${YUKCSCA_SPEECH_ENABLED:false}
-    voice: ${YUKCSCA_SPEECH_VOICE:zh-CN-XiaoxiaoNeural}
     timeout: ${YUKCSCA_SPEECH_TIMEOUT:8s}
     max-clips-per-publish: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:200}
+  media:
+    storage:
+      endpoint: ${YUKCSCA_MEDIA_ENDPOINT:http://localhost:9000}
+      public-endpoint: ${YUKCSCA_MEDIA_PUBLIC_ENDPOINT:http://localhost:9000}
+      bucket: ${YUKCSCA_MEDIA_BUCKET:yukcsca-media}
+      access-key: ${YUKCSCA_MEDIA_ACCESS_KEY:yukcsca-local}
+      secret-key: ${YUKCSCA_MEDIA_SECRET_KEY:yukcsca-local-secret}
+      auto-create-bucket: true

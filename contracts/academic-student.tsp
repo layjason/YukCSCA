@@ -72,13 +72,26 @@ model OfficialSourcePanel {
   permittedUse: AcademicAdmin.PermittedUse;
 }
 
-@doc("Per-student content progress on one LESSON resource. Absent storage projects as NOT_STARTED.")
+@doc("Per-student reviewed-video playback position on one resource, saved through content progress. Playback position is private student state and never mastery evidence.")
+model VideoPlaybackPosition {
+  videoAssetId: YukCSCA.uuid;
+
+  @doc("Last player position. Bounded by the short-video duration policy; restored values are clamped to the currently published asset's duration.")
+  @minValue(0)
+  @maxValue(600)
+  positionSeconds: int32;
+}
+
+@doc("Per-student content progress on one LESSON or REMEDIATION resource. Absent storage projects as NOT_STARTED.")
 model ContentProgress {
   status: ContentProgressStatus;
 
   @doc("Zero-based resume index into the blocks of the explanation-language version the student was reading. Null when not started or when no block position is recorded.")
   @minValue(0)
   resumeBlockIndex: int32 | null;
+
+  @doc("Last saved reviewed-video playback position on this resource. Null when no position was saved; restored positions are clamped to the currently published asset's duration. One position per resource (pilot behavior): watching in a different explanation language overwrites it. Watching is never mastery evidence.")
+  video?: VideoPlaybackPosition | null;
 
   @doc("Last progress write time. Null when status is NOT_STARTED.")
   updatedAt: utcDateTime | null;
@@ -163,6 +176,9 @@ model PublishedLessonDetail {
 
   @doc("Null or omitted when this lesson has no published Chinese exam-language terms. Clients must hide terminology chrome when absent.")
   terminology?: LessonTerminology | null;
+
+  @doc("Published reviewed short video for the requested explanation language. Null or omitted when no REVIEWED video was attached for this language at publish time, and null whenever body is LANGUAGE_UNAVAILABLE because an attachment is bound to an authored language version; clients render no playable control. Watching is never mastery.")
+  video?: PublishedVideoRef | null;
 }
 
 @doc("Student REMEDIATION read projection for the active published revision. Same block model as LESSON; kind is always REMEDIATION.")
@@ -188,15 +204,21 @@ model PublishedRemediationDetail {
 
   @maxItems(32)
   objectiveIds: YukCSCA.uuid[];
+
+  @doc("Published reviewed short video for the requested explanation language. Null or omitted when no REVIEWED video was attached for this language at publish time, and null whenever body is LANGUAGE_UNAVAILABLE because an attachment is bound to an authored language version; clients render no playable control. Watching is never mastery.")
+  video?: PublishedVideoRef | null;
 }
 
-@doc("Upsert content progress for the authenticated student on one LESSON. Idempotent by (account, package, resource).")
+@doc("Upsert content progress for the authenticated student on one LESSON or REMEDIATION. Idempotent by (account, package, resource).")
 model UpsertContentProgressRequest {
   status: WritableContentProgressStatus;
 
-  @doc("Zero-based resume block index within the language version the student is reading. Required when status is IN_PROGRESS; optional when CONTENT_COMPLETE.")
+  @doc("Zero-based resume block index within the language version the student is reading. When status is IN_PROGRESS, at least one of resumeBlockIndex or video must be present; both may be sent. Optional when CONTENT_COMPLETE.")
   @minValue(0)
   resumeBlockIndex?: int32 | null;
+
+  @doc("Reviewed-video playback position to persist. The write replaces any stored position on this resource: send the current position on every IN_PROGRESS write, or null to clear it. Rejected with a validation violation when videoAssetId is not the published reviewed video currently referenced by this resource (path video.videoAssetId, code INVALID_VIDEO_ASSET) or when positionSeconds exceeds that asset's published duration (path video.positionSeconds, code POSITION_OUT_OF_RANGE); the client re-reads the lesson and resumes from the clamped value.")
+  video?: VideoPlaybackPosition | null;
 
   @doc("Optional soft diagnostic of the package revision the client last loaded. Servers may ignore routine republish mismatches; do not fail the student loop solely on this field.")
   expectedPackageRevisionId?: YukCSCA.uuid;
@@ -264,6 +286,37 @@ model PublishedAcademicImageContentResponse {
   @header("Cache-Control") cacheControl: "private, max-age=31536000, immutable";
   @header("X-Content-Type-Options") contentTypeOptions: "nosniff";
   @bodyRoot image: AcademicAdmin.AcademicImageUploadFile;
+}
+
+// ---------------------------------------------------------------------------
+// Reviewed short video (VS-010B)
+// ---------------------------------------------------------------------------
+
+@doc("Reference to the published reviewed short video attached to the requested explanation-language version. Null whenever the lesson body is LANGUAGE_UNAVAILABLE, because an attachment is bound to an authored language version. No poster artwork in the pilot; players show the asset's first frame via preload metadata.")
+model PublishedVideoRef {
+  videoAssetId: YukCSCA.uuid;
+
+  @doc("Validated playable duration. Bounded by the short-video duration policy (max 10 minutes); restored playback positions are clamped to it.")
+  @minValue(1)
+  @maxValue(600)
+  durationSeconds: int32;
+}
+
+@doc("Short-lived presigned playback grant. The client fetches this endpoint with the bearer token, then assigns url to a video element src so native Range requests, seeking, and resume work without any credential reaching storage. Refresh before expiresAt to avoid opaque media errors; the target content itself is immutable. Deployment must allow the storage origin in CSP media-src.")
+model PublishedVideoPlayResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "no-store";
+  @body body: AcademicAdmin.VideoPlaybackGrant;
+}
+
+model PublishedVideoCaptionsFile extends File<"text/vtt", string> {}
+
+@doc("WebVTT captions of a published reviewed short video. Client-side cue extraction is the single transcript mechanism in this slice (no separate transcript endpoint); the narration text is authoritative.")
+model PublishedVideoCaptionsResponse {
+  @statusCode statusCode: 200;
+  @header("Cache-Control") cacheControl: "private, max-age=31536000, immutable";
+  @header("X-Content-Type-Options") contentTypeOptions: "nosniff";
+  @bodyRoot captions: PublishedVideoCaptionsFile;
 }
 
 // ---------------------------------------------------------------------------
@@ -839,7 +892,7 @@ interface AcademicStudentApi {
     | YukCSCA.BadRequestResponse
     | YukCSCA.InternalServerErrorResponse;
 
-  @doc("Creates or replaces the authenticated student's content progress for one LESSON. Content complete never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint.")
+  @doc("Creates or replaces the authenticated student's content progress for one LESSON. Reviewed-video playback positions ride the same write; watching never implies mastery. Checkpoint unlock is evaluated by the assessment module when the student requests a checkpoint.")
   @put
   @route("/packages/{subject}/lessons/{resourceId}/progress")
   @useAuth(BearerAuth)
@@ -1064,6 +1117,28 @@ interface AcademicStudentApi {
     @query @maxLength(40) surfaceForm?: string,
   ):
     | TermPronunciationContentResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Returns a short-lived presigned range-capable playback URL for one published reviewed short video referenced by the active published revision; the client assigns it to a video element src. 404 when the asset exists in any other state or is not referenced by the active revision, so non-published assets never leak.")
+  @get
+  @route("/videos/{videoAssetId}/play")
+  @useAuth(BearerAuth)
+  playPublishedVideo(@path videoAssetId: YukCSCA.uuid):
+    | PublishedVideoPlayResponse
+    | YukCSCA.UnauthorizedResponse
+    | YukCSCA.ForbiddenResponse
+    | YukCSCA.NotFoundResponse
+    | YukCSCA.InternalServerErrorResponse;
+
+  @doc("Returns the WebVTT captions of one published reviewed short video. The narration text is authoritative; clients may render the transcript from cues. Same published-reference gate as playback.")
+  @get
+  @route("/videos/{videoAssetId}/captions")
+  @useAuth(BearerAuth)
+  getPublishedVideoCaptions(@path videoAssetId: YukCSCA.uuid):
+    | PublishedVideoCaptionsResponse
     | YukCSCA.UnauthorizedResponse
     | YukCSCA.ForbiddenResponse
     | YukCSCA.NotFoundResponse

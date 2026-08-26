@@ -8,12 +8,15 @@ import type {
   PublishedPackageBrowse,
   PublishedPackageSummary,
   UpsertContentProgressRequest,
+  VideoPlaybackGrant,
 } from '../types';
 import {
   devGetPublishedLesson,
   devGetPublishedPackageBrowse,
+  devGetPublishedVideoCaptions,
   devImagePlaceholderBlob,
   devListPublishedPackages,
+  devPlayPublishedVideo,
   devUpsertContentProgress,
 } from './learnDevFallback';
 
@@ -197,6 +200,7 @@ export async function upsertContentProgress(
         resourceId,
         request.status,
         request.resumeBlockIndex,
+        request.video,
       );
       if (mock) return mock;
     }
@@ -210,8 +214,52 @@ export async function upsertContentProgress(
         resourceId,
         request.status,
         request.resumeBlockIndex,
+        request.video,
       );
       if (mock) return mock;
+    }
+    throw err;
+  }
+}
+
+export async function playPublishedVideo(videoAssetId: string): Promise<VideoPlaybackGrant> {
+  try {
+    const response = await fetch(`${BASE}/videos/${encodeURIComponent(videoAssetId)}/play`, {
+      headers: authorizationHeaders(false),
+    });
+    if (isDevFallback() && response.status === 401) {
+      return devPlayPublishedVideo(videoAssetId);
+    }
+    const data = await parseJsonResponse<VideoPlaybackGrant>(response);
+    return data;
+  } catch (err) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      return devPlayPublishedVideo(videoAssetId);
+    }
+    throw err;
+  }
+}
+
+export async function getPublishedVideoCaptions(videoAssetId: string): Promise<string> {
+  const token = getAccessToken();
+  if (!token) throw new ApiError(401, { title: 'Authentication required' });
+  try {
+    const response = await fetch(`${BASE}/videos/${encodeURIComponent(videoAssetId)}/captions`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'text/vtt',
+      },
+    });
+    if (isDevFallback() && response.status === 401) {
+      return devGetPublishedVideoCaptions(videoAssetId);
+    }
+    if (!response.ok) {
+      throw new ApiError(response.status, { title: `Captions load failed (${response.status})` });
+    }
+    return await response.text();
+  } catch (err) {
+    if (shouldUseLearnDevFallback(err, err instanceof ApiError ? err.status : undefined)) {
+      return devGetPublishedVideoCaptions(videoAssetId);
     }
     throw err;
   }
