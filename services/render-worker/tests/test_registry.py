@@ -25,7 +25,7 @@ def spec(segments=None, language="id"):
 
 class RegistryVersionTest(unittest.TestCase):
     def test_version_matches_java_registry(self):
-        self.assertEqual(registry.VERSION, "2026-08.3")
+        self.assertEqual(registry.VERSION, "2026-08.4")
 
     def test_pilot_library_contains_minimum_actions(self):
         ids = {action.id for action in registry.ACTIONS}
@@ -48,7 +48,7 @@ class RegistryVersionTest(unittest.TestCase):
         bounds = {action.id for action in registry.ACTIONS}
         self.assertIn("number-line-interval", bounds)
         self.assertIn("number-line-union", bounds)
-        self.assertIn("sequence-points", bounds)
+        self.assertNotIn("sequence-points", bounds)
 
     def test_render_rejects_a_mismatched_registry_before_side_effects(self):
         claimed = jobs.ClaimedJob(
@@ -185,17 +185,6 @@ def interval_params(**overrides):
     return dict(params)
 
 
-def sequence_params(**overrides):
-    params = {
-        "seqType": "GEOMETRIC",
-        "firstTerm": 3,
-        "ratioOrDiff": -2,
-        "termCount": 6,
-    }
-    params.update(overrides)
-    return dict(params)
-
-
 class CscaMathValidationParityTest(unittest.TestCase):
     """Same (path, code) table the Java SceneSpecificationValidatorTest asserts."""
 
@@ -205,14 +194,23 @@ class CscaMathValidationParityTest(unittest.TestCase):
         )
         self.assertEqual(violations, [])
 
-    def test_happy_path_interval_and_sequence(self):
+    def test_happy_path_interval_and_union(self):
         violations = registry.validate_specification(
             spec(
                 segments=[
                     segment(action_id="number-line-interval", params=interval_params()),
                     segment(
-                        action_id="sequence-points",
-                        params=sequence_params(seqType="ARITHMETIC", ratioOrDiff=11),
+                        action_id="number-line-union",
+                        params={
+                            "scopes": [
+                                {
+                                    "leftInf": "INFINITE",
+                                    "right": 2,
+                                    "rightBound": "CLOSED",
+                                    "rightInf": "FINITE",
+                                }
+                            ]
+                        },
                     ),
                 ],
                 language="en",
@@ -483,32 +481,32 @@ class CscaMathValidationParityTest(unittest.TestCase):
         )
         self.assertEqual(violations, [("segments[0].params.rightBound", "REQUIRED")])
 
-    def test_geometric_ratio_magnitude_bounded(self):
+    def test_omitted_left_endpoint_allowed_when_left_end_infinite(self):
         violations = registry.validate_specification(
             spec(
+                language="en",
                 segments=[
                     segment(
-                        action_id="sequence-points",
-                        params=sequence_params(ratioOrDiff=-11),
-                    )
-                ]
-            )
-        )
-        self.assertIn(("segments[0].params.ratioOrDiff", "OUT_OF_RANGE"), violations)
-
-    def test_arithmetic_difference_beyond_geometric_bound_is_allowed(self):
-        violations = registry.validate_specification(
-            spec(
-                segments=[
-                    segment(
-                        action_id="sequence-points",
-                        params=sequence_params(seqType="ARITHMETIC", ratioOrDiff=11),
+                        action_id="number-line-interval",
+                        params={
+                            "right": 3,
+                            "rightBound": "CLOSED",
+                            "leftInf": "INFINITE",
+                            "rightInf": "FINITE",
+                        },
                     )
                 ],
-                language="en",
             )
         )
         self.assertEqual(violations, [])
+
+    def test_finite_left_end_requires_left_endpoint(self):
+        params = interval_params()
+        del params["left"]
+        violations = registry.validate_specification(
+            spec(segments=[segment(action_id="number-line-interval", params=params)])
+        )
+        self.assertEqual(violations, [("segments[0].params.left", "REQUIRED")])
 
 
 def union_scope(**overrides):

@@ -12,12 +12,12 @@ import java.util.stream.Collectors;
  * worker, which must ship the identical version and action set before it claims RENDER_SCENE jobs.
  */
 public final class SceneTemplateRegistry {
-  public static final String VERSION = "2026-08.3";
+  public static final String VERSION = "2026-08.4";
 
   /**
    * The pilot library: worked-example steps and concept/definition introduction, plus the shared
-   * framing actions every script uses, and the CSCA Math graph/interval/sequence templates
-   * (follow-on decisions D-06..D-09).
+   * framing actions every script uses, and the CSCA Math graph/interval templates (follow-on
+   * decisions D-06..D-12). {@code sequence-points} was removed by D-11.
    */
   public static final List<SceneTemplateAction> ACTIONS =
       List.of(
@@ -246,25 +246,25 @@ public final class SceneTemplateRegistry {
               "Number line interval",
               List.of(
                   new SceneTemplateParamDescriptor(
+                      "leftInf",
+                      ParamKind.ENUM,
+                      "Left end type",
+                      true,
+                      null,
+                      null,
+                      null,
+                      List.of("FINITE", "INFINITE"),
+                      null),
+                  new SceneTemplateParamDescriptor(
                       "left",
                       ParamKind.DECIMAL,
                       "Left endpoint",
-                      true,
+                      false,
                       -100.0,
                       100.0,
                       null,
                       null,
-                      null),
-                  new SceneTemplateParamDescriptor(
-                      "right",
-                      ParamKind.DECIMAL,
-                      "Right endpoint",
-                      true,
-                      -100.0,
-                      100.0,
-                      null,
-                      null,
-                      null),
+                      new SceneTemplateParamVisibility("leftInf", List.of("FINITE"))),
                   new SceneTemplateParamDescriptor(
                       "leftBound",
                       ParamKind.ENUM,
@@ -276,26 +276,6 @@ public final class SceneTemplateRegistry {
                       List.of("OPEN", "CLOSED"),
                       new SceneTemplateParamVisibility("leftInf", List.of("FINITE"))),
                   new SceneTemplateParamDescriptor(
-                      "rightBound",
-                      ParamKind.ENUM,
-                      "Right bound type",
-                      false,
-                      null,
-                      null,
-                      null,
-                      List.of("OPEN", "CLOSED"),
-                      new SceneTemplateParamVisibility("rightInf", List.of("FINITE"))),
-                  new SceneTemplateParamDescriptor(
-                      "leftInf",
-                      ParamKind.ENUM,
-                      "Left end type",
-                      true,
-                      null,
-                      null,
-                      null,
-                      List.of("FINITE", "INFINITE"),
-                      null),
-                  new SceneTemplateParamDescriptor(
                       "rightInf",
                       ParamKind.ENUM,
                       "Right end type",
@@ -305,6 +285,26 @@ public final class SceneTemplateRegistry {
                       null,
                       List.of("FINITE", "INFINITE"),
                       null),
+                  new SceneTemplateParamDescriptor(
+                      "right",
+                      ParamKind.DECIMAL,
+                      "Right endpoint",
+                      false,
+                      -100.0,
+                      100.0,
+                      null,
+                      null,
+                      new SceneTemplateParamVisibility("rightInf", List.of("FINITE"))),
+                  new SceneTemplateParamDescriptor(
+                      "rightBound",
+                      ParamKind.ENUM,
+                      "Right bound type",
+                      false,
+                      null,
+                      null,
+                      null,
+                      List.of("OPEN", "CLOSED"),
+                      new SceneTemplateParamVisibility("rightInf", List.of("FINITE"))),
                   new SceneTemplateParamDescriptor(
                       "setLabel",
                       ParamKind.MATH_EXPRESSION,
@@ -337,50 +337,6 @@ public final class SceneTemplateRegistry {
                       null,
                       null,
                       80,
-                      null,
-                      null))),
-          new SceneTemplateAction(
-              "sequence-points",
-              "Sequence points",
-              List.of(
-                  new SceneTemplateParamDescriptor(
-                      "seqType",
-                      ParamKind.ENUM,
-                      "Sequence type",
-                      true,
-                      null,
-                      null,
-                      null,
-                      List.of("ARITHMETIC", "GEOMETRIC"),
-                      null),
-                  new SceneTemplateParamDescriptor(
-                      "firstTerm",
-                      ParamKind.DECIMAL,
-                      "First term",
-                      true,
-                      -1000.0,
-                      1000.0,
-                      null,
-                      null,
-                      null),
-                  new SceneTemplateParamDescriptor(
-                      "ratioOrDiff",
-                      ParamKind.DECIMAL,
-                      "Common ratio or difference",
-                      true,
-                      -50.0,
-                      50.0,
-                      null,
-                      null,
-                      null),
-                  new SceneTemplateParamDescriptor(
-                      "termCount",
-                      ParamKind.INTEGER,
-                      "Number of terms",
-                      true,
-                      3.0,
-                      15.0,
-                      null,
                       null,
                       null))));
 

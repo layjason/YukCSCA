@@ -96,6 +96,89 @@ function normalizeScope(scope: IntervalScope): IntervalScope {
   return normalized;
 }
 
+const NUMBER_LINE_INTERVAL_ACTION = 'number-line-interval';
+const INTERVAL_END_PARAM_IDS = new Set([
+  'leftInf',
+  'left',
+  'leftBound',
+  'rightInf',
+  'right',
+  'rightBound',
+]);
+
+/** Flat `number-line-interval` params as one union-style scope. */
+function readFlatIntervalScope(params: Record<string, unknown>): IntervalScope {
+  const scope: IntervalScope = {
+    leftInf: params.leftInf === 'INFINITE' ? 'INFINITE' : 'FINITE',
+    rightInf: params.rightInf === 'INFINITE' ? 'INFINITE' : 'FINITE',
+  };
+  if (typeof params.left === 'number') scope.left = params.left;
+  if (params.leftBound === 'OPEN' || params.leftBound === 'CLOSED') {
+    scope.leftBound = params.leftBound;
+  }
+  if (typeof params.right === 'number') scope.right = params.right;
+  if (params.rightBound === 'OPEN' || params.rightBound === 'CLOSED') {
+    scope.rightBound = params.rightBound;
+  }
+  return normalizeScope(scope);
+}
+
+/** Writes one normalized scope back to the interval action's flat param ids. */
+function writeFlatIntervalScope(scope: IntervalScope): Record<string, unknown> {
+  const normalized = normalizeScope(scope);
+  const next: Record<string, unknown> = {
+    leftInf: normalized.leftInf,
+    rightInf: normalized.rightInf,
+  };
+  if (normalized.leftInf === 'FINITE') {
+    next.left = normalized.left;
+    next.leftBound = normalized.leftBound;
+  }
+  if (normalized.rightInf === 'FINITE') {
+    next.right = normalized.right;
+    next.rightBound = normalized.rightBound;
+  }
+  return next;
+}
+
+function defaultParamsForAction(actionId: string): Record<string, unknown> {
+  if (actionId === NUMBER_LINE_INTERVAL_ACTION) {
+    return writeFlatIntervalScope({ leftInf: 'FINITE', rightInf: 'FINITE' });
+  }
+  return {};
+}
+
+function isBlankOptionalText(descriptor: SceneTemplateParamDescriptor, value: unknown): boolean {
+  if (descriptor.required) return false;
+  if (
+    descriptor.kind !== 'STRING' &&
+    descriptor.kind !== 'MULTILINE_TEXT' &&
+    descriptor.kind !== 'MATH_EXPRESSION'
+  ) {
+    return false;
+  }
+  return typeof value !== 'string' || value.trim() === '';
+}
+
+/** Drops hidden `visibleWhen` values and blank optional text so optional setLabel is omitted. */
+function pruneParams(
+  params: Record<string, unknown>,
+  descriptors: SceneTemplateParamDescriptor[],
+): Record<string, unknown> {
+  const next = { ...params };
+  for (const descriptor of descriptors) {
+    if (!(descriptor.id in next)) continue;
+    if (!isParamVisible(descriptor, next) || isBlankOptionalText(descriptor, next[descriptor.id])) {
+      delete next[descriptor.id];
+    }
+  }
+  return next;
+}
+
+function requiredAsterisk(): React.JSX.Element {
+  return <span className="admin-required"> *</span>;
+}
+
 interface ScriptEditorProps {
   explanationLanguage: ExplanationLanguage;
   initialSpecId?: string | null;
@@ -265,7 +348,7 @@ export function ScriptEditor({
       next[index] = {
         ...seg,
         templateActionId: actionId,
-        params: {}, // reset params on action type change
+        params: defaultParamsForAction(actionId),
       };
       return next;
     });
@@ -277,20 +360,31 @@ export function ScriptEditor({
       const seg = next[index];
       if (!seg) return prev;
       const nextParams = { ...(seg.params as Record<string, unknown>), [paramId]: value };
-      // Drop params whose display rule just became unsatisfied so hidden values are never
-      // silently submitted (mirrors the full reset on action change), resolved from the
-      // descriptors at change time rather than a hardcoded param map.
       const descriptors = registry?.actions.find((a) => a.id === seg.templateActionId)?.params;
-      if (descriptors) {
-        for (const p of descriptors) {
-          if (p.id in nextParams && !isParamVisible(p, nextParams)) {
-            delete nextParams[p.id];
-          }
-        }
-      }
       next[index] = {
         ...seg,
-        params: nextParams,
+        params: descriptors ? pruneParams(nextParams, descriptors) : nextParams,
+      };
+      return next;
+    });
+  };
+
+  const updateFlatInterval = (
+    segmentIndex: number,
+    update: (prev: IntervalScope) => IntervalScope,
+  ) => {
+    setSegments((prev) => {
+      const next = [...prev];
+      const seg = next[segmentIndex];
+      if (!seg) return prev;
+      const paramsMap = (seg.params ?? {}) as Record<string, unknown>;
+      const rest: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(paramsMap)) {
+        if (!INTERVAL_END_PARAM_IDS.has(key)) rest[key] = value;
+      }
+      next[segmentIndex] = {
+        ...seg,
+        params: { ...rest, ...writeFlatIntervalScope(update(readFlatIntervalScope(paramsMap))) },
       };
       return next;
     });
@@ -408,6 +502,7 @@ export function ScriptEditor({
     const numberValue = end === 'left' ? scope.left : scope.right;
     const boundValue = (end === 'left' ? scope.leftBound : scope.rightBound) ?? 'CLOSED';
     const idPrefix = `seg-${segmentIndex}-param-${paramId}-${scopeIndex}-${end}`;
+    const isFlatInterval = paramId === 'interval';
     const endTypeLabel = t(
       end === 'left'
         ? 'admin.academic.video.scriptEditor.scopeLeftEndType'
@@ -427,21 +522,23 @@ export function ScriptEditor({
       <div className="admin-stack-tight">
         <label htmlFor={`${idPrefix}-inf`} className="admin-field-label">
           {endTypeLabel}
+          {requiredAsterisk()}
         </label>
         <select
           id={`${idPrefix}-inf`}
           className="text-input admin-field-control"
           value={infToken}
           disabled={disabled}
-          onChange={(e) =>
-            handleScopeEndChange(
-              segmentIndex,
-              paramId,
-              scopeIndex,
-              end,
-              e.target.value as IntervalEndToken,
-            )
-          }
+          onChange={(e) => {
+            const token = e.target.value as IntervalEndToken;
+            if (isFlatInterval) {
+              updateFlatInterval(segmentIndex, (prev) =>
+                end === 'left' ? { ...prev, leftInf: token } : { ...prev, rightInf: token },
+              );
+              return;
+            }
+            handleScopeEndChange(segmentIndex, paramId, scopeIndex, end, token);
+          }}
         >
           <option value="FINITE">{t('admin.academic.video.scriptEditor.scopeFinite')}</option>
           <option value="INFINITE">{t('admin.academic.video.scriptEditor.scopeInfinite')}</option>
@@ -451,6 +548,7 @@ export function ScriptEditor({
             <div className="admin-stack-tight">
               <label htmlFor={`${idPrefix}-number`} className="admin-field-label">
                 {endpointLabel}
+                {requiredAsterisk()}
               </label>
               <input
                 id={`${idPrefix}-number`}
@@ -459,23 +557,42 @@ export function ScriptEditor({
                 className="text-input admin-field-control"
                 value={typeof numberValue === 'number' ? numberValue : ''}
                 disabled={disabled}
-                onChange={(e) =>
-                  handleScopeNumberChange(segmentIndex, paramId, scopeIndex, end, e.target.value)
-                }
+                onChange={(e) => {
+                  if (isFlatInterval) {
+                    const numeric = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    if (Number.isNaN(numeric)) return;
+                    updateFlatInterval(segmentIndex, (prev) =>
+                      end === 'left' ? { ...prev, left: numeric } : { ...prev, right: numeric },
+                    );
+                    return;
+                  }
+                  handleScopeNumberChange(segmentIndex, paramId, scopeIndex, end, e.target.value);
+                }}
               />
             </div>
             <div className="admin-stack-tight">
               <label htmlFor={`${idPrefix}-bound`} className="admin-field-label">
                 {boundLabel}
+                {requiredAsterisk()}
               </label>
               <select
                 id={`${idPrefix}-bound`}
                 className="text-input admin-field-control"
                 value={boundValue}
                 disabled={disabled}
-                onChange={(e) =>
-                  handleScopeBoundChange(segmentIndex, paramId, scopeIndex, end, e.target.value)
-                }
+                onChange={(e) => {
+                  const bound = e.target.value;
+                  if (bound !== 'OPEN' && bound !== 'CLOSED') return;
+                  if (isFlatInterval) {
+                    updateFlatInterval(segmentIndex, (prev) =>
+                      end === 'left'
+                        ? { ...prev, leftBound: bound }
+                        : { ...prev, rightBound: bound },
+                    );
+                    return;
+                  }
+                  handleScopeBoundChange(segmentIndex, paramId, scopeIndex, end, bound);
+                }}
               >
                 <option value="OPEN">{t('admin.academic.video.scriptEditor.scopeOpen')}</option>
                 <option value="CLOSED">{t('admin.academic.video.scriptEditor.scopeClosed')}</option>
@@ -505,17 +622,26 @@ export function ScriptEditor({
     setError(null);
     setViolations([]);
 
+    const payloadSegments = segments.map((segment) => {
+      const descriptors =
+        registry?.actions.find((action) => action.id === segment.templateActionId)?.params ?? [];
+      return {
+        ...segment,
+        params: pruneParams((segment.params ?? {}) as Record<string, unknown>, descriptors),
+      };
+    });
+
     try {
       let savedSpec: SceneSpecification;
       if (spec?.id) {
         savedSpec = await replaceSceneSpecification(spec.id, {
           explanationLanguage,
-          segments,
+          segments: payloadSegments,
         });
       } else {
         savedSpec = await createSceneSpecification({
           explanationLanguage,
-          segments,
+          segments: payloadSegments,
         });
       }
       setSpec(savedSpec);
@@ -806,6 +932,19 @@ export function ScriptEditor({
 
                       {/* Structured Parameters */}
                       {selectedAction?.params.map((p) => {
+                        if (
+                          segment.templateActionId === NUMBER_LINE_INTERVAL_ACTION &&
+                          INTERVAL_END_PARAM_IDS.has(p.id)
+                        ) {
+                          if (p.id !== 'leftInf') return null;
+                          const intervalScope = readFlatIntervalScope(paramsMap);
+                          return (
+                            <div key="interval-ends" className="admin-stack-sm">
+                              {renderScopeEnd(index, 'interval', 0, intervalScope, 'left')}
+                              {renderScopeEnd(index, 'interval', 0, intervalScope, 'right')}
+                            </div>
+                          );
+                        }
                         if (!isParamVisible(p, paramsMap)) return null;
                         const paramValue = paramsMap[p.id] ?? '';
                         const scopes = readIntervalScopes(paramsMap[p.id]);
@@ -816,7 +955,7 @@ export function ScriptEditor({
                               className="admin-field-label"
                             >
                               {p.label || p.id}
-                              {p.required ? <span className="admin-required"> *</span> : null}
+                              {p.required ? requiredAsterisk() : null}
                             </label>
 
                             {p.kind === 'STRING' ? (

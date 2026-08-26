@@ -251,8 +251,6 @@ FAMILY_COEFFICIENT_KEYS: dict[str, tuple[str, ...]] = {
 SAMPLES_PER_CURVE = 481
 KEY_POINT_GRID = 241
 MAX_KEY_POINTS_PER_KIND = 8
-SCIENTIFIC_MIN_ABS = 1e4
-SCIENTIFIC_MAX_ABS = 1e-3
 
 
 def curve_coefficients(family: str, params: dict[str, Any]) -> dict[str, float]:
@@ -434,31 +432,30 @@ def _novel(existing: list[float], candidate: float) -> bool:
 
 
 def interval_layout(
-    left: float,
-    right: float,
+    left: float | None,
+    right: float | None,
     left_infinite: bool,
     right_infinite: bool,
 ) -> tuple[float, float, bool, bool]:
     """Number-line domain and which ends get a numbered mark.
 
     Infinite ends are arrows, not dummy numbered dots (D-08). The domain is
-    taken from finite ends when any exist; both-infinite still uses the
-    authored numbers only as a span so the line has a scale.
+    taken from finite ends when any exist; both-infinite uses a unit scale.
     """
 
     mark_left = not left_infinite
     mark_right = not right_infinite
     finite: list[float] = []
-    if mark_left:
+    if mark_left and left is not None:
         finite.append(float(left))
-    if mark_right:
+    if mark_right and right is not None:
         finite.append(float(right))
     if len(finite) >= 2:
         lo, hi = min(finite), max(finite)
     elif len(finite) == 1:
         lo = hi = finite[0]
     else:
-        lo, hi = sorted((float(left), float(right)))
+        lo, hi = -1.0, 1.0
     margin = max((hi - lo) * 0.35, 1.0)
     domain_lo = lo - margin
     domain_hi = hi + margin
@@ -518,41 +515,20 @@ def union_scope_color(index: int) -> str:
 
     Distinct colors let a paused last frame show which span is which and
     which fragment of the ``\\cup`` notation it belongs to — without a
-    separate focus-index parameter (registry stays ``2026-08.3``).
+    separate focus-index parameter (registry stays ``2026-08.4``).
     """
 
     palette = (_ACCENT_GREEN, _ACCENT_AMBER, _ACCENT_BLUE, _ACCENT_LILAC)
     return palette[index % len(palette)]
 
 
-def scientific_notation(value: float) -> tuple[str, int] | None:
-    """Returns (mantissa, exponent) for magnitudes outside [1e-3, 1e4); else None.
+def _optional_endpoint(params: dict[str, Any], key: str) -> float | None:
+    """Finite endpoint when present and numeric; None on an infinite/omitted end."""
 
-    The mantissa stays in [1, 10) as dot-decimal text; the exponent is an int.
-    """
-
-    number = float(value)
-    if number == 0 or math.isnan(number) or math.isinf(number):
+    value = params.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    magnitude = abs(number)
-    if SCIENTIFIC_MAX_ABS <= magnitude < SCIENTIFIC_MIN_ABS:
-        return None
-    exponent = math.floor(math.log10(magnitude))
-    mantissa = number / (10**exponent)
-    if abs(mantissa) >= 10:  # floating rounding guard at decade boundaries
-        mantissa /= 10
-        exponent += 1
-    return format_number(mantissa), exponent
-
-
-def sequence_term_latex(value: float) -> str:
-    """Dot-decimal term label; scientific ``m \\times 10^{k}`` LaTeX on overflow."""
-
-    scientific = scientific_notation(value)
-    if scientific is None:
-        return format_number(value)
-    mantissa, exponent = scientific
-    return rf"{mantissa} \times 10^{{{exponent}}}"
+    return float(value)
 
 
 def _join_terms(terms: list[tuple[float, str | None]]) -> str:
@@ -741,8 +717,6 @@ def build_segment_board(segment: dict[str, Any], language: str) -> SegmentBoard:
         return _number_line_interval_board(params, frame_w)
     if action_id == "number-line-union":
         return _number_line_union_board(params, frame_w)
-    if action_id == "sequence-points":
-        return _sequence_points_board(params, frame_w)
     raise RenderFailure("VALIDATION_FAILED", f"unknown action {action_id}")
 
 
@@ -974,19 +948,20 @@ def _function_graph_board(params: dict[str, Any], frame_w: float) -> SegmentBoar
 
 
 def _number_line_interval_board(params: dict[str, Any], frame_w: float) -> SegmentBoard:
-    """Card for ``number-line-interval``: semantic open/closed dots, infinite arrows.
+    """Card for ``number-line-interval``: white number line, green covered span.
 
-    Hollow ring vs filled dot is the open/closed distinction (semantic, D-08);
-    arrowheads mark infinite ends. Endpoint numbers are dot-decimal regardless
-    of explanation language.
+    The unhighlighted line stays white so the finite/infinite interval reads as
+    the green span (D-12). Hollow ring vs filled dot is the open/closed
+    distinction (semantic, D-08); arrowheads mark infinite ends. Endpoint
+    numbers are dot-decimal regardless of explanation language.
     """
 
     import manim as mn
 
-    left_value = float(params["left"])
-    right_value = float(params["right"])
     left_infinite = params["leftInf"] == "INFINITE"
     right_infinite = params["rightInf"] == "INFINITE"
+    left_value = None if left_infinite else _optional_endpoint(params, "left")
+    right_value = None if right_infinite else _optional_endpoint(params, "right")
     domain_lo, domain_hi, mark_left, mark_right = interval_layout(
         left_value, right_value, left_infinite, right_infinite
     )
@@ -999,9 +974,21 @@ def _number_line_interval_board(params: dict[str, Any], frame_w: float) -> Segme
     line = mn.Line(
         mn.LEFT * line_span / 2,
         mn.RIGHT * line_span / 2,
-        stroke_color=mn.ManimColor(_ACCENT_GREEN),
+        stroke_color=mn.WHITE,
         stroke_width=4,
     )
+    span_lo = domain_lo if left_value is None else left_value
+    span_hi = domain_hi if right_value is None else right_value
+    highlight = mn.VGroup()
+    if span_hi > span_lo:
+        highlight.add(
+            mn.Line(
+                position(span_lo),
+                position(span_hi),
+                stroke_color=mn.ManimColor(_ACCENT_GREEN),
+                stroke_width=9,
+            )
+        )
     arrows = mn.VGroup()
     if left_infinite:
         arrows.add(
@@ -1033,7 +1020,7 @@ def _number_line_interval_board(params: dict[str, Any], frame_w: float) -> Segme
         (left_value, "leftBound", mark_left),
         (right_value, "rightBound", mark_right),
     ):
-        if not show_mark:
+        if not show_mark or value is None:
             continue
         bound = params.get(bound_key)
         anchor = position(value)
@@ -1054,7 +1041,7 @@ def _number_line_interval_board(params: dict[str, Any], frame_w: float) -> Segme
         number.next_to(anchor, mn.DOWN, buff=0.16)
         endpoint_marks.add(mark, tick, number)
 
-    row = mn.VGroup(line, arrows, endpoint_marks).move_to(mn.ORIGIN)
+    row = mn.VGroup(line, highlight, arrows, endpoint_marks).move_to(mn.ORIGIN)
     column: list[Any] = [row]
     glyphs: list[Any] = [endpoint_marks]
     set_label_text = params.get("setLabel")
@@ -1069,7 +1056,9 @@ def _number_line_interval_board(params: dict[str, Any], frame_w: float) -> Segme
         content.scale_to_fit_width(frame_w - 1.6)
     box, body = framed_card(content, stroke=mn.ManimColor(_ACCENT_GREEN), pad=0.46)
     group = mn.VGroup(box, body).move_to(mn.ORIGIN)
-    return SegmentBoard(group=group, frames=[box, line, arrows], writings=glyphs)
+    return SegmentBoard(
+        group=group, frames=[box, line, highlight, arrows], writings=glyphs
+    )
 
 
 def _union_scope_ends(scope: dict[str, Any]) -> tuple[float | None, float | None]:
@@ -1240,122 +1229,6 @@ def _number_line_union_board(params: dict[str, Any], frame_w: float) -> SegmentB
     box, body = framed_card(content, stroke=mn.ManimColor(_ACCENT_GREEN), pad=0.46)
     group = mn.VGroup(box, body).move_to(mn.ORIGIN)
     return SegmentBoard(group=group, frames=[box, line, highlights, arrows], writings=glyphs)
-
-
-def _sequence_terms(params: dict[str, Any]) -> list[float]:
-    """Pure arithmetic/geometric terms; validated inputs keep magnitudes bounded."""
-
-    first = float(params["firstTerm"])
-    step = float(params["ratioOrDiff"])
-    count = int(params["termCount"])
-    if params["seqType"] == "GEOMETRIC":
-        return [first * (step**index) for index in range(count)]
-    return [first + step * index for index in range(count)]
-
-
-def _sequence_points_board(params: dict[str, Any], frame_w: float) -> SegmentBoard:
-    """Card for ``sequence-points``: real x/y axes with ``(n,t_n)`` labels.
-
-    Uses the same ``mn.Axes`` foundation as ``function-graph`` so integer ``n``
-    ticks, auto y-range ticks (no trailing ``.0``), and axis names read
-    consistently. Each dot carries a ``(n,t_n)`` coordinate label; terms keep
-    dot-decimal text with scientific MathTex on overflow. The paused last frame
-    teaches without motion (D-08).
-    """
-
-    import manim as mn
-
-    terms = _sequence_terms(params)
-    count = len(terms)
-    value_low = min(terms + [0.0])
-    value_high = max(terms + [0.0])
-    if value_high - value_low < 1e-9:
-        value_low -= 1.0
-        value_high += 1.0
-    pad = (value_high - value_low) * 0.18
-    value_low -= pad
-    value_high += pad
-
-    y_step = _axis_step(value_high - value_low)
-    axes = mn.Axes(
-        x_range=[1, count, 1],
-        y_range=[value_low, value_high, y_step],
-        x_length=min(frame_w - 3.6, 8.6),
-        y_length=3.1,
-        tips=False,
-        axis_config={"include_numbers": True, "font_size": 22},
-        x_axis_config={
-            "decimal_number_config": {"num_decimal_places": tick_decimal_places(1.0)}
-        },
-        y_axis_config={
-            "decimal_number_config": {"num_decimal_places": tick_decimal_places(y_step)}
-        },
-    ).set_color(_ACCENT_BLUE)
-    axis_names = axes.get_axis_labels(
-        mn.MathTex("n", font_size=30, color=mn.WHITE),
-        mn.MathTex("y", font_size=30, color=mn.WHITE),
-    )
-
-    points = [
-        (index + 1, terms[index]) for index in range(count) if math.isfinite(terms[index])
-    ]
-    connectors = mn.VGroup(
-        mn.VMobject(stroke_color=mn.ManimColor(_ACCENT_GREEN), stroke_width=2.6).set_points_as_corners(
-            [axes.c2p(n, value) for n, value in points]
-        )
-        if len(points) >= 2
-        else mn.VMobject()
-    )
-    # Dashed drop lines: vertical to the n-axis, horizontal to the y-axis, so
-    # each plotted term shows which index corresponds to which value.
-    guides = mn.VGroup()
-    for n, value in points:
-        peak = axes.c2p(n, value)
-        guides.add(
-            mn.DashedLine(
-                peak,
-                axes.x_axis.n2p(n),
-                stroke_color=mn.GRAY,
-                stroke_width=1.6,
-                dash_length=0.12,
-            ),
-            mn.DashedLine(
-                peak,
-                axes.y_axis.n2p(value),
-                stroke_color=mn.GRAY,
-                stroke_width=1.6,
-                dash_length=0.12,
-            ),
-        )
-    dots = mn.VGroup(
-        *[
-            mn.Dot(axes.c2p(n, value), radius=0.062, color=mn.WHITE)
-            for n, value in points
-        ]
-    )
-    point_labels = mn.VGroup(
-        *[
-            mn.MathTex(rf"({n},{sequence_term_latex(value)})", font_size=22, color=_ACCENT_AMBER)
-            for n, value in points
-        ]
-    )
-    _place_point_labels(point_labels, dots, axes)
-
-    # Guides, connectors, dots, and coordinate labels join the axes group so
-    # arrange, scale-to-fit, and card FadeOut keep everything aligned (same
-    # rule as the function-graph board).
-    content = mn.VGroup(axes, axis_names, guides, connectors, dots, point_labels).move_to(
-        mn.ORIGIN
-    )
-    if content.width > frame_w - 1.6:
-        content.scale_to_fit_width(frame_w - 1.6)
-    box, body = framed_card(content, stroke=mn.ManimColor(_ACCENT_BLUE), pad=0.44)
-    group = mn.VGroup(box, body).move_to(mn.ORIGIN)
-    return SegmentBoard(
-        group=group,
-        frames=[box, axes, axis_names],
-        writings=[guides, connectors, dots, point_labels],
-    )
 
 
 def compose_markup(

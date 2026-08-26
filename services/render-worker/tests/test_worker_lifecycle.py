@@ -196,7 +196,7 @@ class SceneSnapshotDecodeTest(unittest.TestCase):
             scene_specification_id="00000000-0000-0000-0000-000000000002",
             video_asset_id=None,
             scene_snapshot={"explanationLanguage": "en", "segments": []},
-            registry_version="2026-08.3",
+            registry_version="2026-08.4",
             attempts=1,
         )
         self.assertEqual(claimed.snapshot_dict()["explanationLanguage"], "en")
@@ -208,7 +208,7 @@ class SceneSnapshotDecodeTest(unittest.TestCase):
             scene_specification_id="00000000-0000-0000-0000-000000000002",
             video_asset_id=None,
             scene_snapshot='{"explanationLanguage":"id","segments":[]}',
-            registry_version="2026-08.3",
+            registry_version="2026-08.4",
             attempts=1,
         )
         self.assertEqual(claimed.snapshot_dict()["explanationLanguage"], "id")

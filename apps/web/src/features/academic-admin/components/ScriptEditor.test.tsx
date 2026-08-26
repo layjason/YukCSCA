@@ -102,11 +102,11 @@ const mockRegistry: SceneTemplateRegistry = {
   ],
 };
 
-// Mirrors the reviewed 2026-08.3 registry's function-graph, number-line-interval, and
+// Mirrors the reviewed 2026-08.4 registry's function-graph, number-line-interval, and
 // number-line-union param descriptors, including their display-only `visibleWhen` rules and the
 // INTERVAL_SET composite kind whose member schema is fixed server-side.
 const enumRegistry: SceneTemplateRegistry = {
-  version: '2026-08.3',
+  version: '2026-08.4',
   actions: [
     {
       id: 'function-graph',
@@ -197,20 +197,20 @@ const enumRegistry: SceneTemplateRegistry = {
       displayName: 'Number line interval',
       params: [
         {
+          id: 'leftInf',
+          kind: 'ENUM',
+          label: 'Left end type',
+          required: true,
+          choices: ['FINITE', 'INFINITE'],
+        },
+        {
           id: 'left',
           kind: 'DECIMAL',
           label: 'Left endpoint',
-          required: true,
+          required: false,
           min: -100,
           max: 100,
-        },
-        {
-          id: 'right',
-          kind: 'DECIMAL',
-          label: 'Right endpoint',
-          required: true,
-          min: -100,
-          max: 100,
+          visibleWhen: { paramId: 'leftInf', choices: ['FINITE'] },
         },
         {
           id: 'leftBound',
@@ -221,6 +221,22 @@ const enumRegistry: SceneTemplateRegistry = {
           visibleWhen: { paramId: 'leftInf', choices: ['FINITE'] },
         },
         {
+          id: 'rightInf',
+          kind: 'ENUM',
+          label: 'Right end type',
+          required: true,
+          choices: ['FINITE', 'INFINITE'],
+        },
+        {
+          id: 'right',
+          kind: 'DECIMAL',
+          label: 'Right endpoint',
+          required: false,
+          min: -100,
+          max: 100,
+          visibleWhen: { paramId: 'rightInf', choices: ['FINITE'] },
+        },
+        {
           id: 'rightBound',
           kind: 'ENUM',
           label: 'Right bound type',
@@ -229,18 +245,11 @@ const enumRegistry: SceneTemplateRegistry = {
           visibleWhen: { paramId: 'rightInf', choices: ['FINITE'] },
         },
         {
-          id: 'leftInf',
-          kind: 'ENUM',
-          label: 'Left end type',
-          required: true,
-          choices: ['FINITE', 'INFINITE'],
-        },
-        {
-          id: 'rightInf',
-          kind: 'ENUM',
-          label: 'Right end type',
-          required: true,
-          choices: ['FINITE', 'INFINITE'],
+          id: 'setLabel',
+          kind: 'MATH_EXPRESSION',
+          label: 'Set label',
+          required: false,
+          maxLength: 80,
         },
       ],
     },
@@ -580,17 +589,17 @@ describe('ScriptEditor', () => {
     });
   });
 
-  test('hides bound-type selects for infinite ends and clears them from the payload', async () => {
+  test('groups interval ends like union scopes and omits infinite-end fields from the payload', async () => {
     vi.spyOn(api, 'listSceneTemplates').mockResolvedValue(enumRegistry);
 
     const mockSpec: SceneSpecification = {
       id: 'spec-interval-1',
-      registryVersion: '2026-08.3',
+      registryVersion: '2026-08.4',
       explanationLanguage: 'en',
       segments: [
         {
           templateActionId: 'number-line-interval',
-          params: { leftInf: 'INFINITE', rightInf: 'FINITE', rightBound: 'CLOSED' },
+          params: { leftInf: 'INFINITE', rightInf: 'FINITE', right: 0, rightBound: 'CLOSED' },
           narrationText: 'Interval notation.',
         },
       ],
@@ -621,23 +630,21 @@ describe('ScriptEditor', () => {
       target: { value: 'number-line-interval' },
     });
 
-    // Placeholder end types keep both bound-type selects hidden.
-    expect(screen.queryByLabelText(/Left bound type/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Right bound type/i)).not.toBeInTheDocument();
+    // Born complete like a union scope: finite ends expose endpoint + bound type.
+    expect(screen.getByLabelText(/Left endpoint/i)).toHaveValue(0);
+    expect(screen.getByLabelText(/Left bound type/i)).toHaveValue('CLOSED');
+    expect(screen.getByLabelText(/Right endpoint/i)).toHaveValue(0);
+    expect(screen.getByLabelText(/Right bound type/i)).toHaveValue('CLOSED');
 
-    fireEvent.change(screen.getByLabelText(/Left end type/i), { target: { value: 'FINITE' } });
-    const leftBoundSelect = screen.getByLabelText(/Left bound type/i);
-    expect(leftBoundSelect.tagName).toBe('SELECT');
-    fireEvent.change(leftBoundSelect, { target: { value: 'OPEN' } });
+    const setLabel = screen.getByLabelText('Set label');
+    expect(setLabel).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Right end type/i), { target: { value: 'FINITE' } });
-    fireEvent.change(screen.getByLabelText(/Right bound type/i), { target: { value: 'CLOSED' } });
-
-    // An infinite left end hides its bound-type select and drops the collected OPEN token.
     fireEvent.change(screen.getByLabelText(/Left end type/i), { target: { value: 'INFINITE' } });
+    expect(screen.queryByLabelText(/Left endpoint/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Left bound type/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Right bound type/i)).toBeInTheDocument();
 
+    fireEvent.change(setLabel, { target: { value: '   ' } });
     fireEvent.change(screen.getByLabelText(/Narration text/i), {
       target: { value: 'Interval notation.' },
     });
@@ -649,7 +656,7 @@ describe('ScriptEditor', () => {
         segments: [
           {
             templateActionId: 'number-line-interval',
-            params: { leftInf: 'INFINITE', rightInf: 'FINITE', rightBound: 'CLOSED' },
+            params: { leftInf: 'INFINITE', rightInf: 'FINITE', right: 0, rightBound: 'CLOSED' },
             narrationText: 'Interval notation.',
           },
         ],
@@ -692,11 +699,15 @@ describe('ScriptEditor', () => {
 
     expect(await screen.findByText('No scopes yet.')).toBeInTheDocument();
     expect(screen.queryByText('Scope 1')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Set label')).toBeInTheDocument();
 
     const addBtn = screen.getByRole('button', { name: /Add scope/i });
     fireEvent.click(addBtn);
 
     expect(await screen.findByText('Scope 1')).toBeInTheDocument();
+    expect(
+      (screen.getByLabelText(/Left end type/i) as HTMLSelectElement).labels?.[0]?.textContent,
+    ).toMatch(/\*/);
     // A new row is born complete, never a placeholder.
     expect(screen.getByLabelText(/Left endpoint/i)).toHaveValue(0);
     expect(screen.getByLabelText(/Right endpoint/i)).toHaveValue(0);

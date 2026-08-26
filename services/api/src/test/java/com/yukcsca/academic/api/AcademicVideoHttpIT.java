@@ -255,14 +255,14 @@ class AcademicVideoHttpIT {
                 get("/api/v1/admin/scene-templates")
                     .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.version").value("2026-08.3"))
+            .andExpect(jsonPath("$.version").value("2026-08.4"))
             .andExpect(
                 jsonPath("$.actions[?(@.id=='worked-example-step')].params[0].kind")
                     .value("STRING"))
             .andExpect(jsonPath("$.actions[?(@.id=='function-graph')]").isNotEmpty())
             .andExpect(jsonPath("$.actions[?(@.id=='number-line-interval')]").isNotEmpty())
             .andExpect(jsonPath("$.actions[?(@.id=='number-line-union')]").isNotEmpty())
-            .andExpect(jsonPath("$.actions[?(@.id=='sequence-points')]").isNotEmpty())
+            .andExpect(jsonPath("$.actions[?(@.id=='sequence-points')]").isEmpty())
             .andReturn();
     JsonNode actions = json.readTree(templates.getResponse().getContentAsString()).path("actions");
     JsonNode family = findTemplateParam(actions, "function-graph", "family");
@@ -284,6 +284,9 @@ class AcademicVideoHttpIT {
     }
     assertThat(exponentChoices).containsExactly("POWER");
 
+    JsonNode leftEndpoint = findTemplateParam(actions, "number-line-interval", "left");
+    assertThat(leftEndpoint.path("required").asBoolean()).isFalse();
+    assertThat(leftEndpoint.path("visibleWhen").path("paramId").asText()).isEqualTo("leftInf");
     JsonNode leftBound = findTemplateParam(actions, "number-line-interval", "leftBound");
     assertThat(leftBound.path("visibleWhen").path("paramId").asText()).isEqualTo("leftInf");
     List<String> leftBoundChoices = new ArrayList<>();
@@ -297,6 +300,9 @@ class AcademicVideoHttpIT {
     assertThat(unionScopes.path("kind").asText()).isEqualTo("INTERVAL_SET");
     JsonNode unionLabel = findTemplateParam(actions, "number-line-union", "setLabel");
     assertThat(unionLabel.path("kind").asText()).isEqualTo("MATH_EXPRESSION");
+    assertThat(unionLabel.path("required").asBoolean()).isFalse();
+    JsonNode intervalLabel = findTemplateParam(actions, "number-line-interval", "setLabel");
+    assertThat(intervalLabel.path("required").asBoolean()).isFalse();
 
     JsonNode coefficientA = findTemplateParam(actions, "function-graph", "a");
     assertThat(coefficientA.hasNonNull("visibleWhen")).isFalse();
@@ -358,21 +364,17 @@ class AcademicVideoHttpIT {
                         {"left":5,"leftBound":"OPEN","leftInf":"FINITE","rightInf":"INFINITE"}
                       ]},
                       "narrationText":"Gabungan dua interval."
-                    },{
-                      "templateActionId":"sequence-points",
-                      "params":{"seqType":"ARITHMETIC","firstTerm":2,"ratioOrDiff":3,"termCount":5},
-                      "narrationText":"Barisan aritmetika lima suku."
                     }]}
                     """))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.registryVersion").value("2026-08.3"));
+        .andExpect(jsonPath("$.registryVersion").value("2026-08.4"));
 
     UUID specId = createSceneSpecification();
     mvc.perform(
             get("/api/v1/admin/scene-specifications/{id}", specId)
                 .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.registryVersion").value("2026-08.3"))
+        .andExpect(jsonPath("$.registryVersion").value("2026-08.4"))
         .andExpect(jsonPath("$.latestRenderJob").doesNotExist());
 
     mvc.perform(

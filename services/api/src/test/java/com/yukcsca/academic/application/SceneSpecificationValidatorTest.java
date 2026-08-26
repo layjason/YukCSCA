@@ -175,20 +175,22 @@ class SceneSpecificationValidatorTest {
     assertThat(intervalSegments.get(0).path("params").path("rightBound").asText())
         .isEqualTo("CLOSED");
 
-    Compiled sequence =
+    Compiled union =
         validator.compile(
             script(
                 "id",
                 segment(
-                    "sequence-points",
+                    "number-line-union",
                     json -> {
-                      json.put("seqType", "GEOMETRIC");
-                      json.put("firstTerm", 3);
-                      json.put("ratioOrDiff", -2);
-                      json.put("termCount", 6);
+                      ArrayNode scopes = json.putArray("scopes");
+                      ObjectNode scope = scopes.addObject();
+                      scope.put("leftInf", "INFINITE");
+                      scope.put("right", 2);
+                      scope.put("rightBound", "CLOSED");
+                      scope.put("rightInf", "FINITE");
                     })));
-    ArrayNode sequenceSegments = (ArrayNode) json.readTree(sequence.segmentsJson());
-    assertThat(sequenceSegments.get(0).path("params").path("termCount").asInt()).isEqualTo(6);
+    ArrayNode unionSegments = (ArrayNode) json.readTree(union.segmentsJson());
+    assertThat(unionSegments.get(0).path("params").path("scopes").isArray()).isTrue();
   }
 
   @Test
@@ -424,40 +426,35 @@ class SceneSpecificationValidatorTest {
   }
 
   @Test
-  void boundsGeometricRatioMagnitude() {
+  void allowsOmittedLeftEndpointWhenLeftEndIsInfinite() {
     ObjectNode input =
         script(
-            "id",
+            "en",
             segment(
-                "sequence-points",
-                params -> {
-                  params.put("seqType", "GEOMETRIC");
-                  params.put("firstTerm", 2);
-                  params.put("ratioOrDiff", -11);
-                  params.put("termCount", 4);
+                "number-line-interval",
+                json -> {
+                  json.put("right", 3);
+                  json.put("rightBound", "CLOSED");
+                  json.put("leftInf", "INFINITE");
+                  json.put("rightInf", "FINITE");
                 }));
-
-    List<AcademicViolation> violations = violations(assertThrowsValidation(input));
-    assertThat(violations)
-        .contains(
-            new AcademicViolation(
-                "segments[0].params.ratioOrDiff", AcademicViolationCode.OUT_OF_RANGE));
+    validator.compile(input);
   }
 
   @Test
-  void allowsArithmeticDifferenceBeyondGeometricBound() {
-    ObjectNode input =
-        script(
-            "id",
-            segment(
-                "sequence-points",
-                params -> {
-                  params.put("seqType", "ARITHMETIC");
-                  params.put("firstTerm", -20);
-                  params.put("ratioOrDiff", 11);
-                  params.put("termCount", 15);
-                }));
-    validator.compile(input);
+  void requiresLeftEndpointOnlyWhenLeftEndIsFinite() {
+    ObjectNode input = script("id", validNumberLineInterval());
+    ((ObjectNode) input.withArray("segments").get(0).path("params")).remove("left");
+
+    assertThat(violations(assertThrowsValidation(input)))
+        .containsExactly(
+            new AcademicViolation("segments[0].params.left", AcademicViolationCode.REQUIRED));
+  }
+
+  @Test
+  void allowsOmittedSetLabelOnIntervalAndUnion() {
+    validator.compile(script("id", validNumberLineInterval()));
+    validator.compile(script("id", validNumberLineUnion()));
   }
 
   private ObjectNode validNumberLineUnion() {

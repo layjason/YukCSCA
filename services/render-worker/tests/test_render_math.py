@@ -74,19 +74,15 @@ class IntervalLayoutTest(unittest.TestCase):
 
     def test_left_infinite_omits_left_number_and_extends_left_domain(self):
         domain_lo, domain_hi, mark_left, mark_right = render.interval_layout(
-            -50.0, 3.0, True, False
+            None, 3.0, True, False
         )
         self.assertFalse(mark_left)
         self.assertTrue(mark_right)
         self.assertLess(domain_lo, 3.0)
         self.assertGreater(domain_hi, 3.0)
-        finite_only_lo, _, _, _ = render.interval_layout(3.0, 3.0, True, False)
-        # Dummy left=-50 must not pull the finite closed end to the right edge.
-        self.assertGreater(domain_lo, -50.0)
-        self.assertAlmostEqual(finite_only_lo, domain_lo)
 
     def test_both_infinite_draws_no_numbered_ends(self):
-        _, _, mark_left, mark_right = render.interval_layout(-1.0, 1.0, True, True)
+        _, _, mark_left, mark_right = render.interval_layout(None, None, True, True)
         self.assertFalse(mark_left)
         self.assertFalse(mark_right)
 
@@ -103,26 +99,7 @@ class NumberFormattingTest(unittest.TestCase):
     def test_small_magnitudes_keep_dot_decimals(self):
         self.assertEqual(render.format_number(0.125), "0.125")
 
-    def test_scientific_thresholds(self):
-        self.assertIsNone(render.scientific_notation(0))
-        self.assertIsNone(render.scientific_notation(9999.0))
-        self.assertIsNone(render.scientific_notation(0.001))
-        self.assertIsNotNone(render.scientific_notation(10000.0))
-        self.assertIsNotNone(render.scientific_notation(0.0009))
 
-    def test_scientific_components_stay_in_valid_range(self):
-        mantissa, exponent = render.scientific_notation(250000.0)
-        self.assertEqual(mantissa, "2.5")
-        self.assertEqual(exponent, 5)
-
-        mantissa, exponent = render.scientific_notation(1024000000000000000.0)
-        self.assertEqual(mantissa, "1.024")
-        self.assertEqual(exponent, 18)
-
-    def test_sequence_term_uses_latex_scientific_on_overflow(self):
-        self.assertEqual(render.sequence_term_latex(250.0), "250")
-        latex = render.sequence_term_latex(250000.0)
-        self.assertIn("\\times 10^{5}", latex)
 
 
 class EquationBuilderTest(unittest.TestCase):

@@ -364,14 +364,24 @@ public class SceneSpecificationValidator {
         String rightInf = textualToken(params.get("rightInf"));
         Double left = numericValue(params.get("left"));
         Double right = numericValue(params.get("right"));
-        // D-08: a bound type is meaningless on an infinite end, so it is required only when that
-        // end is FINITE (same conditional pattern as the family coefficients). Presence is checked
-        // on the raw node so a value that already failed its descriptor check is not
-        // double-reported.
+        // D-08/D-12: endpoint and bound type are meaningless on an infinite end, so each is
+        // required only when that end is FINITE (same conditional pattern as family coefficients).
+        // Presence is checked on the raw node so a value that already failed its descriptor check
+        // is not double-reported.
+        if ("FINITE".equals(leftInf)
+            && (params.get("left") == null || params.get("left").isNull())) {
+          violations.add(
+              new AcademicViolation(paramsPath + ".left", AcademicViolationCode.REQUIRED));
+        }
         if ("FINITE".equals(leftInf)
             && (params.get("leftBound") == null || params.get("leftBound").isNull())) {
           violations.add(
               new AcademicViolation(paramsPath + ".leftBound", AcademicViolationCode.REQUIRED));
+        }
+        if ("FINITE".equals(rightInf)
+            && (params.get("right") == null || params.get("right").isNull())) {
+          violations.add(
+              new AcademicViolation(paramsPath + ".right", AcademicViolationCode.REQUIRED));
         }
         if ("FINITE".equals(rightInf)
             && (params.get("rightBound") == null || params.get("rightBound").isNull())) {
@@ -403,15 +413,6 @@ public class SceneSpecificationValidator {
                       paramsPath + ".scopes[" + index + "].right", AcademicViolationCode.INVALID));
             }
           }
-        }
-      }
-      case "sequence-points" -> {
-        String seqType = textualToken(params.get("seqType"));
-        Double ratioOrDiff = numericValue(params.get("ratioOrDiff"));
-        if ("GEOMETRIC".equals(seqType) && ratioOrDiff != null && Math.abs(ratioOrDiff) > 10) {
-          violations.add(
-              new AcademicViolation(
-                  paramsPath + ".ratioOrDiff", AcademicViolationCode.OUT_OF_RANGE));
         }
       }
       default -> {

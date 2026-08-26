@@ -14,7 +14,7 @@ from typing import Any, Iterable, Optional
 
 from .markup import is_safe_latex, is_valid_mixed
 
-VERSION = "2026-08.3"
+VERSION = "2026-08.4"
 
 STRING = "STRING"
 MULTILINE_TEXT = "MULTILINE_TEXT"
@@ -162,14 +162,30 @@ ACTIONS: tuple[TemplateAction, ...] = (
         "number-line-interval",
         "Number line interval",
         (
-            _p("left", DECIMAL, "Left endpoint", minimum=-100.0, maximum=100.0),
-            _p("right", DECIMAL, "Right endpoint", minimum=-100.0, maximum=100.0),
+            _p("leftInf", ENUM, "Left end type", choices=("FINITE", "INFINITE")),
+            _p(
+                "left",
+                DECIMAL,
+                "Left endpoint",
+                required=False,
+                minimum=-100.0,
+                maximum=100.0,
+            ),
             _p(
                 "leftBound",
                 ENUM,
                 "Left bound type",
                 required=False,
                 choices=("OPEN", "CLOSED"),
+            ),
+            _p("rightInf", ENUM, "Right end type", choices=("FINITE", "INFINITE")),
+            _p(
+                "right",
+                DECIMAL,
+                "Right endpoint",
+                required=False,
+                minimum=-100.0,
+                maximum=100.0,
             ),
             _p(
                 "rightBound",
@@ -178,8 +194,6 @@ ACTIONS: tuple[TemplateAction, ...] = (
                 required=False,
                 choices=("OPEN", "CLOSED"),
             ),
-            _p("leftInf", ENUM, "Left end type", choices=("FINITE", "INFINITE")),
-            _p("rightInf", ENUM, "Right end type", choices=("FINITE", "INFINITE")),
             _p("setLabel", MATH_EXPRESSION, "Set label", required=False, max_length=80),
         ),
     ),
@@ -189,22 +203,6 @@ ACTIONS: tuple[TemplateAction, ...] = (
         (
             _p("scopes", INTERVAL_SET, "Interval scopes"),
             _p("setLabel", MATH_EXPRESSION, "Set label", required=False, max_length=80),
-        ),
-    ),
-    TemplateAction(
-        "sequence-points",
-        "Sequence points",
-        (
-            _p("seqType", ENUM, "Sequence type", choices=("ARITHMETIC", "GEOMETRIC")),
-            _p("firstTerm", DECIMAL, "First term", minimum=-1000.0, maximum=1000.0),
-            _p(
-                "ratioOrDiff",
-                DECIMAL,
-                "Common ratio or difference",
-                minimum=-50.0,
-                maximum=50.0,
-            ),
-            _p("termCount", INTEGER, "Number of terms", minimum=3.0, maximum=15.0),
         ),
     ),
 )
@@ -451,11 +449,16 @@ def _action_semantics(
         right_inf = _token(params, "rightInf")
         left = _numeric(params, "left")
         right = _numeric(params, "right")
-        # D-08: a bound type is meaningless on an infinite end, so it is required only when that
-        # end is FINITE (same conditional pattern as the family coefficients). Presence is checked
-        # on the raw value so one that already failed its descriptor check is not double-reported.
+        # D-08/D-12: endpoint and bound type are meaningless on an infinite end, so each is
+        # required only when that end is FINITE (same conditional pattern as family coefficients).
+        # Presence is checked on the raw value so one that already failed its descriptor check is
+        # not double-reported.
+        if left_inf == "FINITE" and params.get("left") is None:
+            violations.append(violation(f"{params_path}.left", "REQUIRED"))
         if left_inf == "FINITE" and params.get("leftBound") is None:
             violations.append(violation(f"{params_path}.leftBound", "REQUIRED"))
+        if right_inf == "FINITE" and params.get("right") is None:
+            violations.append(violation(f"{params_path}.right", "REQUIRED"))
         if right_inf == "FINITE" and params.get("rightBound") is None:
             violations.append(violation(f"{params_path}.rightBound", "REQUIRED"))
         if (
@@ -486,10 +489,5 @@ def _action_semantics(
                     violations.append(
                         violation(f"{params_path}.scopes[{index}].right", "INVALID")
                     )
-    elif action_id == "sequence-points":
-        seq_type = _token(params, "seqType")
-        ratio_or_diff = _numeric(params, "ratioOrDiff")
-        if seq_type == "GEOMETRIC" and ratio_or_diff is not None and abs(ratio_or_diff) > 10:
-            violations.append(violation(f"{params_path}.ratioOrDiff", "OUT_OF_RANGE"))
     return violations
 

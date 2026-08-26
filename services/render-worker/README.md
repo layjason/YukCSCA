@@ -34,7 +34,7 @@ Pinned stack: Manim CE 0.21.0, manim-voiceover 0.4.0 (gtts extra only), gTTS
 2.5.4, psycopg 3.3.4, boto3 1.43.78, FFmpeg/FFprobe, a bounded TeX Live set
 (for `MathTex` worked-example steps), and Noto CJK fonts (for `zh-CN` `Text`)
 from the image. The registry mirror in `yukcsca_worker/registry.py` must stay
-identical to the Java `SceneTemplateRegistry` (version `2026-08.3`).
+identical to the Java `SceneTemplateRegistry` (version `2026-08.4`).
 
 ## Local runs
 
