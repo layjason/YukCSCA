@@ -18,7 +18,7 @@ infra-down:
 	docker compose down
 
 dev:
-	docker compose up --build --watch
+	docker compose up --build --watch --pull missing
 
 dev-host: infra-up
 	@echo "Run 'make api' and 'make web' in separate terminals."

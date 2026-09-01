@@ -35,13 +35,23 @@ cp .env.example .env
 make dev
 ```
 
-`make dev` runs `docker compose up --build --watch`: PostgreSQL, MinIO,
-the isolated render worker, API, and web start together, logs remain attached,
-and Compose rebuilds/replaces only the affected application service when
-watched source, dependency, Dockerfile, or Nginx configuration changes. Open
-`http://localhost:5173`; press `Ctrl+C` to stop the stack. PostgreSQL and
-MinIO data remain in named volumes. The worker image includes TeX Live and
-CJK fonts and is slower to build on first run.
+`make dev` runs `docker compose up --build --watch --pull missing`:
+PostgreSQL, MinIO, the isolated render worker, API, and web start together,
+logs remain attached, and Compose rebuilds/replaces only the affected
+application service when watched source, dependency, Dockerfile, or Nginx
+configuration changes. Open `http://localhost:5173`; press `Ctrl+C` to stop
+the stack. PostgreSQL and MinIO data remain in named volumes. The worker
+image includes TeX Live and CJK fonts and is slower to build on first run.
+
+Application Dockerfiles pin official base-image index digests, fetch Debian
+packages over HTTPS, and skip `*-updates` suites, so a rebuild uses local
+layers and does not have to resolve floating Docker Hub tags. That path
+works with or without a VPN (including Clash Verge TUN, which you can leave
+on for other tools). The first fetch of a missing digest still needs a
+working registry route. If a pull fails with an x509 name such as
+`Scholar Service v1`, the campus network is intercepting `auth.docker.io`;
+keep the VPN/TUN on for that pull, or copy the image from a host that
+already has it. Do not disable TLS verification.
 
 `make infra-up` (used by `make dev-host`) starts PostgreSQL and MinIO so the
 host API can reach object storage at `http://localhost:9000`. Start the render

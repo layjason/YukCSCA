@@ -1,8 +1,12 @@
 # VS-010B isolated render worker. Python 3.12 keeps the audioop stdlib module
 # that pydub (a manim-voiceover dependency) imports; 3.13+ removed it.
-FROM python:3.12-slim AS builder
+# Pin the index digest so rebuilds skip Docker Hub tag lookup.
+FROM python:3.12-slim@sha256:e5c9fa26ffb76e11e0f054f30dc2523a2f9693f0c36c0cf1e39b27e152d899fc AS builder
 
-RUN apt-get update \
+# HTTP to deb.debian.org EOFs through Clash TUN fake-ip; HTTPS does not.
+# Skip trixie-updates (flaky through the same path). Main + security is enough.
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g; s/ trixie-updates//' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         cmake \
@@ -20,9 +24,10 @@ WORKDIR /build
 COPY requirements.txt .
 RUN pip install --timeout 120 --retries 5 --no-cache-dir -r requirements.txt
 
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:e5c9fa26ffb76e11e0f054f30dc2523a2f9693f0c36c0cf1e39b27e152d899fc
 
-RUN apt-get update \
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g; s/ trixie-updates//' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
         sox \
