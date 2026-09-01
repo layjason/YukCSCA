@@ -215,13 +215,17 @@ public class AcademicAdminService {
       throw new AcademicConflictException(
           "ACADEMIC_PACKAGE_ARCHIVED", "An archived package cannot be published.");
     }
-    if (academicPackage.getStatus() == AcademicPackageStatus.PUBLISHED
-        && !academicPackage.hasUnpublishedChanges()) {
+    if (academicPackage.getStatus() == AcademicPackageStatus.PUBLISHED) {
+      // Missing clips belong to the live revision. An open correction draft must not
+      // block filling audio students already should hear; draft publication still
+      // validates separately below.
       if (speechProperties.usable()) {
-        AcademicRevision revision = activeRevision(academicPackage);
-        renderTermAudio(revision.getId(), drafts.parseObject(revision.getContent()), now());
+        AcademicRevision live = activeRevision(academicPackage);
+        renderTermAudio(live.getId(), drafts.parseObject(live.getContent()), now());
       }
-      return snapshot(academicPackage);
+      if (!academicPackage.hasUnpublishedChanges()) {
+        return snapshot(academicPackage);
+      }
     }
 
     ObjectNode savedDraft = drafts.parseObject(academicPackage.getDraft());

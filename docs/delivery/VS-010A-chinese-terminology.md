@@ -239,7 +239,7 @@ Clean Chinese stem
 - Existing stack is enough for the term bank, matching, notebook, and student reads. Short audio can follow the VS-005 image pattern.
 - First new technology: **Edge TTS** (`edge_tts` protocol) behind `SpeechSynthesisPort`, first use = one clip per published Chinese surface form at publish (`D-03` / `D-10`, `ADR-0002`). Voice is `zh-CN-XiaoxiaoNeural`. No jieba, dictionary API, object store, Python sidecar, or browser-speech product voice.
 - Alternatives rejected: pinyin only (`D-03`); browser Web Speech (cannot guarantee this voice); live per-tap synthesis (privacy and cost); Azure subscription key (`D-10`); object storage (too heavy for 1–3 second clips).
-- Impact: no speech subscription key; CI mocks the port; publish has a timeout and a per-publish clip budget; student and admin audio GETs are authorized like images; logs may record `termId` and clip status, never SSML or unmatched selected text.
+- Impact: no speech subscription key; CI mocks the port; publish has a timeout and a per-publish clip budget; student and admin audio GETs are authorized like images; logs may record `termId` and clip status, never SSML or unmatched selected text. A later Publish on an already-published package fills missing clips on the live revision even when a correction draft is open; the unfinished draft is not published unless it also validates.
 - Migration: additive Flyway after V9 for terms, notebook, review events, and audio bytes. Hide Play and keep pinyin if the adapter is removed. Academic owns persistence. Assessment owns only `LANGUAGE_ASSIST` events.
 - ADR: [`ADR-0002`](../decisions/ADR-0002-edge-tts-term-pronunciation.md) (supersedes `ADR-0001`).
 

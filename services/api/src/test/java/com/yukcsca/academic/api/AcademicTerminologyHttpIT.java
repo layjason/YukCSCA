@@ -329,6 +329,48 @@ class AcademicTerminologyHttpIT {
   }
 
   @Test
+  void publishFillsMissingTermAudioOnLiveRevisionWhenDraftIsDirty() throws Exception {
+    TermFixture fixture = publishChineseTerms();
+    jdbc.update("delete from academic_term_pronunciation");
+    mvc.perform(
+            get(
+                    "/api/v1/admin/academic-packages/{id}/terms/{termId}/audio",
+                    fixture.packageId(),
+                    fixture.findId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+        .andExpect(status().isNotFound());
+
+    MvcResult loaded =
+        mvc.perform(
+                get("/api/v1/admin/academic-packages/{id}", fixture.packageId())
+                    .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+    JsonNode body = json.readTree(loaded.getResponse().getContentAsString());
+    ObjectNode draft = (ObjectNode) body.path("draft");
+    ((ObjectNode) draft.path("officialSyllabus")).put("authority", "");
+    long draftRevision = body.path("draftRevision").asLong();
+    save(fixture.packageId(), draftRevision, draft);
+
+    mvc.perform(
+            post("/api/v1/admin/academic-packages/{id}:publish", fixture.packageId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedDraftRevision\":" + (draftRevision + 1) + "}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("ACADEMIC_VALIDATION_FAILED"));
+
+    mvc.perform(
+            get(
+                    "/api/v1/admin/academic-packages/{id}/terms/{termId}/audio",
+                    fixture.packageId(),
+                    fixture.findId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
+        .andExpect(status().isOk())
+        .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "audio/mpeg"));
+  }
+
+  @Test
   void draftPackageHasNoTermAudioUntilPublish() throws Exception {
     UUID packageId = createPackage();
     mvc.perform(
