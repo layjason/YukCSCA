@@ -10,5 +10,7 @@ import java.util.UUID;
 public interface LearningEvidencePort {
   List<EvidenceSnapshot> listByAccountAndObjective(UUID accountId, UUID objectiveId);
 
+  List<EvidenceSnapshot> listRecentByAccount(UUID accountId, int limit);
+
   record EvidenceSnapshot(UUID objectiveId, String signal, UUID sourceSessionId, Instant at) {}
 }

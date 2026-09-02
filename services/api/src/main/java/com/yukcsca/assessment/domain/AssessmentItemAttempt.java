@@ -99,6 +99,12 @@ public class AssessmentItemAttempt {
     this.updatedAt = now;
   }
 
+  /** OPEN-item Ask (AGENT_QA) is STRONG assistance without consuming a hint tier. */
+  public void recordStrongAgentAssistance(Instant now) {
+    this.strongAssistance = true;
+    this.updatedAt = now;
+  }
+
   public void selectAnswer(String optionKey, Instant now) {
     this.selectedOptionKey = optionKey;
     this.updatedAt = now;

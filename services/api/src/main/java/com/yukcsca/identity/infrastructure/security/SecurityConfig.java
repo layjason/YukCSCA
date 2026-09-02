@@ -169,7 +169,11 @@ public class SecurityConfig {
     configuration.setAllowedOrigins(List.of(properties.webOrigin()));
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(
-        List.of(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, "X-Request-Id"));
+        List.of(
+            HttpHeaders.AUTHORIZATION,
+            HttpHeaders.CONTENT_TYPE,
+            "X-Request-Id",
+            "Idempotency-Key"));
     configuration.setExposedHeaders(List.of("X-Request-Id", HttpHeaders.RETRY_AFTER));
     configuration.setAllowCredentials(true);
     configuration.setMaxAge(3600L);

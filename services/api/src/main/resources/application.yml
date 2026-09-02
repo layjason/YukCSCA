@@ -92,6 +92,15 @@ yukcsca:
     enabled: ${YUKCSCA_SPEECH_ENABLED:false}
     timeout: ${YUKCSCA_SPEECH_TIMEOUT:8s}
     max-clips-per-publish: ${YUKCSCA_SPEECH_MAX_CLIPS_PER_PUBLISH:200}
+  agent:
+    enabled: ${YUKCSCA_AGENT_ENABLED:false}
+    api-key: ${YUKCSCA_AGENT_API_KEY:}
+    base-url: ${YUKCSCA_AGENT_BASE_URL:https://api.x.ai}
+    chat-model: ${YUKCSCA_AGENT_CHAT_MODEL:grok-4}
+    embedding-model: ${YUKCSCA_AGENT_EMBEDDING_MODEL:text-embedding-3-small}
+    daily-turn-cap: ${YUKCSCA_AGENT_DAILY_TURN_CAP:40}
+    turn-timeout: ${YUKCSCA_AGENT_TURN_TIMEOUT:8s}
+    prompt-version: ${YUKCSCA_AGENT_PROMPT_VERSION:vs011-v1}
   media:
     storage:
       endpoint: ${YUKCSCA_MEDIA_ENDPOINT:}

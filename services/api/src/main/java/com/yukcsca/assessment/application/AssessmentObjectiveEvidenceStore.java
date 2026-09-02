@@ -12,5 +12,7 @@ public interface AssessmentObjectiveEvidenceStore {
   List<AssessmentObjectiveEvidence> findByAccountIdAndObjectiveIdOrderByOccurredAtDesc(
       UUID accountId, UUID objectiveId);
 
+  List<AssessmentObjectiveEvidence> findTop8ByAccountIdOrderByOccurredAtDesc(UUID accountId);
+
   boolean existsBySourceSessionIdAndObjectiveId(UUID sourceSessionId, UUID objectiveId);
 }

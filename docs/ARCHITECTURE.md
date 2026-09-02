@@ -23,19 +23,24 @@ Browser -> Nginx/React -> Spring Boot API -> PostgreSQL 18
              +-> proxies /api and health only
 ```
 
-| Area       | Current implementation                                                 |
-| ---------- | ---------------------------------------------------------------------- |
-| Workspace  | Node.js 24, pnpm 11, one lockfile                                      |
-| Web        | React 19, Vite 8, strict TypeScript, React Router, i18next, CSS tokens |
-| Contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations        |
-| API/data   | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL 18  |
-| Media      | S3-compatible port (`MediaStoragePort`); MinIO in Compose dev/test     |
-| Worker     | Isolated Python service: Manim CE, manim-voiceover gTTS, FFmpeg        |
-| Testing    | Vitest, Testing Library, JUnit, Testcontainers, Playwright             |
-| Operations | Docker Compose, Actuator health, structured logs, GitHub Actions       |
+| Area       | Current implementation                                                              |
+| ---------- | ----------------------------------------------------------------------------------- |
+| Workspace  | Node.js 24, pnpm 11, one lockfile                                                   |
+| Web        | React 19, Vite 8, strict TypeScript, React Router, i18next, CSS tokens              |
+| Contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations                     |
+| API/data   | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL 18 with pgvector |
+| Media      | S3-compatible port (`MediaStoragePort`); MinIO in Compose dev/test                  |
+| Worker     | Isolated Python service: Manim CE, manim-voiceover gTTS, FFmpeg                     |
+| Testing    | Vitest, Testing Library, JUnit, Testcontainers, Playwright                          |
+| Operations | Docker Compose, Actuator health, structured logs, GitHub Actions                    |
 
-No extra caches, vector stores, AI SDKs, or microservices beyond the isolated
-render worker. Redis remains deferred. Image bytes stay in PostgreSQL `bytea`.
+The first AI adapter lives in the `agent` module (VS-011): Spring AI 2.0.1
+`ChatClient` / `EmbeddingModel` behind `AgentChatPort` (`ADR-0004`), and
+authorised hybrid retrieval uses pgvector plus `tsvector` in the existing
+PostgreSQL database (`ADR-0005`). Tests use a fake `ChatModel` and
+`EmbeddingModel`; CI does not contact a billable provider. Redis, MCP, a
+dedicated vector service, and extra microservices remain out. Image bytes stay
+in PostgreSQL `bytea`.
 
 ## Contract and backend boundaries
 
@@ -48,8 +53,8 @@ render worker. Redis remains deferred. Image bytes stay in PostgreSQL `bytea`.
   codes. Bearer failures preserve `WWW-Authenticate`; rate limits preserve
   `Retry-After`.
 
-The API currently contains `identity`, `profile`, `academic`, and `assessment`
-modules:
+The API currently contains `identity`, `profile`, `academic`, `assessment`, and
+`agent` modules:
 
 ```text
 <module>/
@@ -77,8 +82,19 @@ content-progress, and the published term bank only through academic application
 ports (`PublishedAssessmentCatalog`, `StudentContentProgressQuery`,
 `PublishedTerminologyCatalog`) and never imports academic JPA. Academic never
 imports assessment JPA; ITEM term lookups use `AssessmentItemContextPort`.
-Modules never import another module's repository, JPA entity, controller, or
-infrastructure. New modules appear only with their first accepted use case.
+The `agent` module (VS-011) owns student-private contextual text Q&A under
+`/api/v1/agent/**`: availability, idempotent start, owner GET, and `askTurn`.
+It reads published lessons/remediation/terms through `PublishedLearningContextPort`
+and item/mistake context plus `AGENT_QA` writes through `AgentAssessmentContextPort`;
+it never imports academic or assessment JPA. Academic never imports agent.
+V17 stores `agent_conversation`, `agent_turn`, `agent_trace`, `agent_flag`, and
+`agent_content_chunk` (pgvector + tsvector) and extends assistance `kind` with
+`AGENT_QA`. `agent_content_chunk.embedding` is `vector(1536)`, matching the
+default `yukcsca.agent.embedding-model` (`text-embedding-3-small`) and the
+in-process hash/fake embedding adapters. A different embedding size requires a
+new migration. Modules never import another module's repository, JPA entity,
+controller, or infrastructure. New modules appear only with their first accepted
+use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
@@ -229,8 +245,9 @@ read-oriented evidence surface for later modules. Publish-time term audio uses
 `SpeechSynthesisPort` (gTTS adapter per `ADR-0003` when enabled; tests use an
 in-process stub). CI and tests do not contact Google Translate TTS. Student and
 admin audio GETs never synthesize.
-No LLM/provider calls. Observability is value-free (no stems/answers/notes/keys,
-selected unmatched text, SSML, or speech keys).
+VS-011 Ask lives in the separate `agent` module and is the first LLM adapter;
+assessment still does not call a model. Observability is value-free (no
+stems/answers/notes/keys, selected unmatched text, SSML, or speech keys).
 
 VS-010B adds the reviewed-lesson-video backend to `academic`: V13 stores
 `academic_video_asset` (lifecycle, shape metadata, provenance; bytes live in

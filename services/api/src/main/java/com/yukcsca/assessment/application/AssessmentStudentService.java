@@ -1012,7 +1012,9 @@ public class AssessmentStudentService {
         mistakes
             .findById(session.getMistakeId())
             .orElseThrow(() -> new AssessmentNotFoundException("Mistake not found."));
-    boolean anyAssistance = assistance.countBySessionIdAndKind(session.getId(), "MATH_HINT") > 0;
+    boolean anyAssistance =
+        assistance.countBySessionIdAndKind(session.getId(), "MATH_HINT") > 0
+            || assistance.countBySessionIdAndKind(session.getId(), "AGENT_QA") > 0;
     AssessmentItemAttempt item = attempts.isEmpty() ? null : attempts.getFirst();
     boolean itemCorrect =
         item != null && attempts.size() == 1 && Boolean.TRUE.equals(item.getCorrect());
@@ -1061,7 +1063,8 @@ public class AssessmentStudentService {
             AssessmentSessionStatus.SUBMITTED);
     Set<UUID> excluded = new LinkedHashSet<>();
     for (AssessmentSession priorSession : prior) {
-      if (assistance.countBySessionIdAndKind(priorSession.getId(), "MATH_HINT") <= 0) {
+      if (assistance.countBySessionIdAndKind(priorSession.getId(), "MATH_HINT") <= 0
+          && assistance.countBySessionIdAndKind(priorSession.getId(), "AGENT_QA") <= 0) {
         continue;
       }
       for (AssessmentItemAttempt priorItem :
