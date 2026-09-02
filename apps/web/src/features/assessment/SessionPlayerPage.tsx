@@ -31,6 +31,7 @@ import { HintPanel } from './components/HintPanel';
 import { LanguageHelpAskControl, LanguageHelpPanel } from './components/LanguageHelpPanel';
 import { ItemNavigator } from './components/ItemNavigator';
 import { OptionRadiogroup } from './components/OptionRadiogroup';
+import { AskHost, mathBlocksFrom } from '@/features/agent';
 import {
   isExplanationLanguage,
   type AssessmentSession,
@@ -391,198 +392,223 @@ export function SessionPlayerPage(): React.JSX.Element {
 
   return (
     <div className="page-content assessment-page session-player">
-      {toast ? (
-        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
-      ) : null}
-
-      <header className="assessment-player-chrome">
-        <div className="assessment-player-top">
-          <Link to="/app/practice" className="learn-back-link">
-            <ArrowLeft size={18} aria-hidden="true" />
-            {t('assessment.backToPractice')}
-          </Link>
-        </div>
-        <div className="assessment-progress-row">
-          <p className="assessment-progress-label">
-            {t('assessment.session.itemOf', {
-              current: itemIndex + 1,
-              total: session.items.length,
-            })}
-          </p>
-          {item &&
-          session.examLanguage === 'zh-CN' &&
-          (item.languageHelpAvailable || item.languageHelp) ? (
-            !item.languageHelp?.disclosed && session.status === 'IN_PROGRESS' && !reviewing ? (
-              <LanguageHelpAskControl
-                busy={busy}
-                onClick={() => void handleLanguageDisclose('STUDENT_REQUEST')}
-              />
-            ) : item.languageHelp?.disclosed ? (
-              <Link
-                to="/app/learn/terms"
-                state={notebookStateFrom(`${location.pathname}${location.search}`)}
-                className="learn-back-link"
-              >
-                <BookOpenText size={18} aria-hidden="true" />
-                {t('assessment.languageHelp.openNotebook')}
-              </Link>
-            ) : null
-          ) : null}
-        </div>
-      </header>
-
-      {error ? (
-        <div className="assessment-inline-error" role="alert">
-          {error}
-        </div>
-      ) : null}
-
-      {reviewing ? (
-        <div className="assessment-review-banner" role="status">
-          <p>{t('assessment.session.reviewBanner')}</p>
-          <button type="button" className="btn-primary" onClick={goToResult}>
-            {t('assessment.session.viewSummary')}
-          </button>
-        </div>
-      ) : null}
-
-      <article
-        className={`assessment-item-card${showFeedback && item.correct === true ? ' is-marked-correct' : ''}${showFeedback && item.correct === false ? ' is-marked-incorrect' : ''}`}
+      <AskHost
         key={item.itemId}
+        context={{
+          contextType: 'ITEM',
+          contextId: item.itemId,
+          sessionId: session.sessionId,
+          itemId: item.itemId,
+        }}
+        hostTitle={t('assessment.session.itemOf', {
+          current: itemIndex + 1,
+          total: session.items.length,
+        })}
+        mathBlocks={mathBlocksFrom(item.stem)}
+        {...(item.status === 'OPEN' && session.status === 'IN_PROGRESS' && !reviewing
+          ? {
+              openItem: {
+                alreadyStrong: item.strongAssistance === true,
+                onAsked: () => {
+                  void load();
+                },
+              },
+            }
+          : {})}
       >
-        <div className="assessment-stem">
-          {item.languageHelpAvailable || item.languageHelp ? (
-            <LanguageHelpPanel
-              item={item}
-              subject={session.subject}
-              sessionId={session.sessionId}
-              explanationLanguage={explanationLanguage}
-              lookupSource={
-                wordingHardQuestionIds.has(item.questionId) ? 'LANGUAGE_MISTAKE' : 'ITEM'
-              }
-              canDisclose={false}
-              showAskControl={false}
-              busy={busy}
-              onDisclose={handleLanguageDisclose}
-              renderStem={({ spans, onActivate, onHoverEnd, disabled }) => (
-                <AssessmentBlocks
-                  blocks={item.stem}
-                  termSpans={spans.length > 0 ? spans : undefined}
-                  onTermActivate={spans.length > 0 ? onActivate : undefined}
-                  onTermHoverEnd={spans.length > 0 ? onHoverEnd : undefined}
-                  termDisabled={disabled}
+        {toast ? (
+          <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
+        ) : null}
+
+        <header className="assessment-player-chrome">
+          <div className="assessment-player-top">
+            <Link to="/app/practice" className="learn-back-link">
+              <ArrowLeft size={18} aria-hidden="true" />
+              {t('assessment.backToPractice')}
+            </Link>
+          </div>
+          <div className="assessment-progress-row">
+            <p className="assessment-progress-label">
+              {t('assessment.session.itemOf', {
+                current: itemIndex + 1,
+                total: session.items.length,
+              })}
+            </p>
+            {item &&
+            session.examLanguage === 'zh-CN' &&
+            (item.languageHelpAvailable || item.languageHelp) ? (
+              !item.languageHelp?.disclosed && session.status === 'IN_PROGRESS' && !reviewing ? (
+                <LanguageHelpAskControl
+                  busy={busy}
+                  onClick={() => void handleLanguageDisclose('STUDENT_REQUEST')}
                 />
-              )}
-            />
-          ) : (
-            <AssessmentBlocks blocks={item.stem} />
-          )}
-        </div>
+              ) : item.languageHelp?.disclosed ? (
+                <Link
+                  to="/app/learn/terms"
+                  state={notebookStateFrom(`${location.pathname}${location.search}`)}
+                  className="learn-back-link"
+                >
+                  <BookOpenText size={18} aria-hidden="true" />
+                  {t('assessment.languageHelp.openNotebook')}
+                </Link>
+              ) : null
+            ) : null}
+          </div>
+        </header>
 
-        <OptionRadiogroup
-          options={item.options}
-          name={`item-${item.itemId}`}
-          value={selected}
-          onChange={setSelected}
-          disabled={locked || busy || reviewing || session.status !== 'IN_PROGRESS'}
-          showCorrectness={showFeedback}
-          correctKey={item.feedback?.correctOptionKey ?? null}
-          selectedKey={item.selectedOptionKey}
-        />
-
-        {session.status === 'IN_PROGRESS' && !locked && !reviewing ? (
-          <HintPanel
-            item={item}
-            purpose={session.purpose}
-            busy={busy}
-            onDisclose={handleDisclose}
-          />
-        ) : null}
-
-        {showFeedback && item.feedback ? (
-          <FeedbackPanel
-            feedback={item.feedback}
-            subject={session.subject}
-            interfaceLanguage={i18n.language}
-            purpose={session.purpose}
-            assistanceUsed={itemUsedAssistance(item)}
-          />
-        ) : null}
-
-        {showFeedback &&
-        item.correct === false &&
-        item.languageHelpAvailable &&
-        !wordingPromptDismissed.has(item.itemId) ? (
-          <div
-            className="language-help-wording"
-            role="group"
-            aria-label={t('assessment.languageHelp.wordingHard')}
-          >
-            <p>{t('assessment.languageHelp.wordingHard')}</p>
-            <div className="language-help-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={busy}
-                onClick={markWordingHard}
-              >
-                {t('assessment.languageHelp.wordingHardYes')}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() =>
-                  setWordingPromptDismissed((current) => new Set(current).add(item.itemId))
-                }
-              >
-                {t('assessment.languageHelp.wordingHardNo')}
-              </button>
-            </div>
+        {error ? (
+          <div className="assessment-inline-error" role="alert">
+            {error}
           </div>
         ) : null}
 
-        <footer className="assessment-item-actions">
-          {session.status === 'IN_PROGRESS' && !locked && !reviewing ? (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!canLockAnswer(item, selected) || busy}
-              onClick={() => void handleLock()}
-              aria-busy={busy}
-            >
-              {session.feedbackMode === 'IMMEDIATE'
-                ? t('assessment.session.checkAnswer')
-                : t('assessment.session.saveAnswer')}
-            </button>
-          ) : null}
-
-          {canFinish ? (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy}
-              onClick={() => void handleFinishSession()}
-              aria-busy={busy}
-            >
-              <Send size={18} aria-hidden="true" />
-              {finishLabel}
-            </button>
-          ) : null}
-
-          {reviewing ? (
+        {reviewing ? (
+          <div className="assessment-review-banner" role="status">
+            <p>{t('assessment.session.reviewBanner')}</p>
             <button type="button" className="btn-primary" onClick={goToResult}>
               {t('assessment.session.viewSummary')}
             </button>
-          ) : null}
-        </footer>
+          </div>
+        ) : null}
 
-        <ItemNavigator
-          items={session.items}
-          currentIndex={itemIndex}
-          onSelect={goToIndex}
-          showCorrectness={showCorrectnessOnNav}
-        />
-      </article>
+        <article
+          className={`assessment-item-card${showFeedback && item.correct === true ? ' is-marked-correct' : ''}${showFeedback && item.correct === false ? ' is-marked-incorrect' : ''}`}
+          key={item.itemId}
+        >
+          <div className="assessment-stem">
+            {item.languageHelpAvailable || item.languageHelp ? (
+              <LanguageHelpPanel
+                item={item}
+                subject={session.subject}
+                sessionId={session.sessionId}
+                explanationLanguage={explanationLanguage}
+                lookupSource={
+                  wordingHardQuestionIds.has(item.questionId) ? 'LANGUAGE_MISTAKE' : 'ITEM'
+                }
+                canDisclose={false}
+                showAskControl={false}
+                busy={busy}
+                onDisclose={handleLanguageDisclose}
+                renderStem={({ spans, onActivate, onHoverEnd, disabled }) => (
+                  <AssessmentBlocks
+                    blocks={item.stem}
+                    termSpans={spans.length > 0 ? spans : undefined}
+                    onTermActivate={spans.length > 0 ? onActivate : undefined}
+                    onTermHoverEnd={spans.length > 0 ? onHoverEnd : undefined}
+                    termDisabled={disabled}
+                  />
+                )}
+              />
+            ) : (
+              <AssessmentBlocks blocks={item.stem} />
+            )}
+          </div>
+
+          <OptionRadiogroup
+            options={item.options}
+            name={`item-${item.itemId}`}
+            value={selected}
+            onChange={setSelected}
+            disabled={locked || busy || reviewing || session.status !== 'IN_PROGRESS'}
+            showCorrectness={showFeedback}
+            correctKey={item.feedback?.correctOptionKey ?? null}
+            selectedKey={item.selectedOptionKey}
+          />
+
+          {session.status === 'IN_PROGRESS' && !locked && !reviewing ? (
+            <HintPanel
+              item={item}
+              purpose={session.purpose}
+              busy={busy}
+              onDisclose={handleDisclose}
+            />
+          ) : null}
+
+          {showFeedback && item.feedback ? (
+            <FeedbackPanel
+              feedback={item.feedback}
+              subject={session.subject}
+              interfaceLanguage={i18n.language}
+              purpose={session.purpose}
+              assistanceUsed={itemUsedAssistance(item)}
+            />
+          ) : null}
+
+          {showFeedback &&
+          item.correct === false &&
+          item.languageHelpAvailable &&
+          !wordingPromptDismissed.has(item.itemId) ? (
+            <div
+              className="language-help-wording"
+              role="group"
+              aria-label={t('assessment.languageHelp.wordingHard')}
+            >
+              <p>{t('assessment.languageHelp.wordingHard')}</p>
+              <div className="language-help-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={markWordingHard}
+                >
+                  {t('assessment.languageHelp.wordingHardYes')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() =>
+                    setWordingPromptDismissed((current) => new Set(current).add(item.itemId))
+                  }
+                >
+                  {t('assessment.languageHelp.wordingHardNo')}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <footer className="assessment-item-actions">
+            {session.status === 'IN_PROGRESS' && !locked && !reviewing ? (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!canLockAnswer(item, selected) || busy}
+                onClick={() => void handleLock()}
+                aria-busy={busy}
+              >
+                {session.feedbackMode === 'IMMEDIATE'
+                  ? t('assessment.session.checkAnswer')
+                  : t('assessment.session.saveAnswer')}
+              </button>
+            ) : null}
+
+            {canFinish ? (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={busy}
+                onClick={() => void handleFinishSession()}
+                aria-busy={busy}
+              >
+                <Send size={18} aria-hidden="true" />
+                {finishLabel}
+              </button>
+            ) : null}
+
+            {reviewing ? (
+              <button type="button" className="btn-primary" onClick={goToResult}>
+                {t('assessment.session.viewSummary')}
+              </button>
+            ) : null}
+          </footer>
+
+          <ItemNavigator
+            items={session.items}
+            currentIndex={itemIndex}
+            onSelect={goToIndex}
+            showCorrectness={showCorrectnessOnNav}
+          />
+        </article>
+      </AskHost>
     </div>
   );
 }

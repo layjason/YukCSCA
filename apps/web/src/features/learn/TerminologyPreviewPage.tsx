@@ -22,6 +22,7 @@ import { isAcademicSubject, isExplanationLanguage, type ExplanationLanguage } fr
 import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
 import { lessonHref } from './previewNavigation';
 import { resolveLocalizedText } from './localizedText';
+import { AskHost } from '@/features/agent';
 import './learn.css';
 
 export function TerminologyPreviewPage(): React.JSX.Element {
@@ -324,121 +325,129 @@ export function TerminologyPreviewPage(): React.JSX.Element {
           : 'page-content learn-page terminology-preview-page'
       }
     >
-      {toast ? (
-        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
-      ) : null}
+      <AskHost
+        context={{ contextType: 'LESSON', contextId: resourceId }}
+        hostTitle={title}
+        enabled={!pairsOpen}
+      >
+        {toast ? (
+          <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
+        ) : null}
 
-      {pairsOpen ? null : (
-        <header className="learn-reader-chrome">
-          <div className="learn-reader-chrome-row">
-            <Link to={`/app/learn/${subject}`} className="learn-back-link">
-              <ArrowLeft size={18} aria-hidden="true" />
-              {t('learn.backToBrowse')}
-            </Link>
-            <Link
-              to="/app/learn/terms"
-              state={notebookStateFrom(`${location.pathname}${location.search}`)}
-              className="learn-back-link"
-            >
-              <NotebookText size={18} aria-hidden="true" />
-              {t('learn.openNotebook')}
-            </Link>
-          </div>
-          <h1>{title}</h1>
-        </header>
-      )}
-
-      {preview.previewProgress.requiredSetUpdatedSinceCompleted && !pairsOpen ? (
-        <p className="learn-update-notice" role="status">
-          {t('terminology.requiredSetUpdated')}
-        </p>
-      ) : null}
-
-      {error ? (
-        <div className="assessment-inline-error" role="alert">
-          {error}
-          <button type="button" className="btn-secondary" onClick={() => void load()}>
-            {t('learn.retry')}
-          </button>
-        </div>
-      ) : null}
-
-      {pairsOpen && preview.matchingPairsAvailable ? (
-        <TermMatchBoard
-          targets={matchTiles}
-          busy={busy}
-          onSubmit={(pairs) => void handleCheck(pairs)}
-          onContinue={() => void handleContinue()}
-          onPlayPrompt={(termId, surface) => {
-            void audio.play(termId, surface);
-          }}
-          onEnd={() => {
-            setPairsOpen(false);
-          }}
-        />
-      ) : (
-        <>
-          {preview.terms.length > 0 ? (
-            <div className="term-preview-toolbar">
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={bookmarkBusy || preview.terms.every((card) => card.alreadyInNotebook)}
-                onClick={() => void handleBookmarkAll()}
+        {pairsOpen ? null : (
+          <header className="learn-reader-chrome">
+            <div className="learn-reader-chrome-row">
+              <Link to={`/app/learn/${subject}`} className="learn-back-link">
+                <ArrowLeft size={18} aria-hidden="true" />
+                {t('learn.backToBrowse')}
+              </Link>
+              <Link
+                to="/app/learn/terms"
+                state={notebookStateFrom(`${location.pathname}${location.search}`)}
+                className="learn-back-link"
               >
-                {t('terminology.bookmarkAll')}
-              </button>
+                <NotebookText size={18} aria-hidden="true" />
+                {t('learn.openNotebook')}
+              </Link>
             </div>
-          ) : null}
-          <ol className="term-preview-list">
-            {preview.terms.map((card) => (
-              <li key={card.termId}>
-                <TermCardView
-                  card={card}
-                  bookmarked={card.alreadyInNotebook}
-                  bookmarkBusy={bookmarkBusy}
-                  onToggleBookmark={() =>
-                    void handleToggleBookmark(card.termId, card.alreadyInNotebook)
-                  }
-                  onPlay={
-                    (card.primarySurface.audioAvailable ||
-                      card.aliases.some((alias) => alias.audioAvailable)) &&
-                    !(audio.playFailed && audio.playingTermId === card.termId)
-                      ? (surface) => {
-                          void audio.play(card.termId, surface);
-                        }
-                      : undefined
-                  }
-                  playingSurface={audio.playingTermId === card.termId ? audio.playingSurface : null}
-                  playFailed={audio.playFailed && audio.playingTermId === card.termId}
-                />
-              </li>
-            ))}
-          </ol>
-        </>
-      )}
+            <h1>{title}</h1>
+          </header>
+        )}
 
-      {preview.matchingPairsAvailable && !pairsOpen ? (
-        <TermPracticeLaunch
-          label={t('terminology.practicePairs')}
-          onClick={() => {
-            setPairsOpen(true);
-          }}
-        />
-      ) : null}
+        {preview.previewProgress.requiredSetUpdatedSinceCompleted && !pairsOpen ? (
+          <p className="learn-update-notice" role="status">
+            {t('terminology.requiredSetUpdated')}
+          </p>
+        ) : null}
 
-      {pairsOpen ? null : (
-        <footer className="learn-reader-actions">
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={busy}
-            onClick={() => void handleContinue()}
-          >
-            {t('terminology.continueToLesson')}
-          </button>
-        </footer>
-      )}
+        {error ? (
+          <div className="assessment-inline-error" role="alert">
+            {error}
+            <button type="button" className="btn-secondary" onClick={() => void load()}>
+              {t('learn.retry')}
+            </button>
+          </div>
+        ) : null}
+
+        {pairsOpen && preview.matchingPairsAvailable ? (
+          <TermMatchBoard
+            targets={matchTiles}
+            busy={busy}
+            onSubmit={(pairs) => void handleCheck(pairs)}
+            onContinue={() => void handleContinue()}
+            onPlayPrompt={(termId, surface) => {
+              void audio.play(termId, surface);
+            }}
+            onEnd={() => {
+              setPairsOpen(false);
+            }}
+          />
+        ) : (
+          <>
+            {preview.terms.length > 0 ? (
+              <div className="term-preview-toolbar">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={bookmarkBusy || preview.terms.every((card) => card.alreadyInNotebook)}
+                  onClick={() => void handleBookmarkAll()}
+                >
+                  {t('terminology.bookmarkAll')}
+                </button>
+              </div>
+            ) : null}
+            <ol className="term-preview-list">
+              {preview.terms.map((card) => (
+                <li key={card.termId}>
+                  <TermCardView
+                    card={card}
+                    bookmarked={card.alreadyInNotebook}
+                    bookmarkBusy={bookmarkBusy}
+                    onToggleBookmark={() =>
+                      void handleToggleBookmark(card.termId, card.alreadyInNotebook)
+                    }
+                    onPlay={
+                      (card.primarySurface.audioAvailable ||
+                        card.aliases.some((alias) => alias.audioAvailable)) &&
+                      !(audio.playFailed && audio.playingTermId === card.termId)
+                        ? (surface) => {
+                            void audio.play(card.termId, surface);
+                          }
+                        : undefined
+                    }
+                    playingSurface={
+                      audio.playingTermId === card.termId ? audio.playingSurface : null
+                    }
+                    playFailed={audio.playFailed && audio.playingTermId === card.termId}
+                  />
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+
+        {preview.matchingPairsAvailable && !pairsOpen ? (
+          <TermPracticeLaunch
+            label={t('terminology.practicePairs')}
+            onClick={() => {
+              setPairsOpen(true);
+            }}
+          />
+        ) : null}
+
+        {pairsOpen ? null : (
+          <footer className="learn-reader-actions">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={busy}
+              onClick={() => void handleContinue()}
+            >
+              {t('terminology.continueToLesson')}
+            </button>
+          </footer>
+        )}
+      </AskHost>
     </div>
   );
 }

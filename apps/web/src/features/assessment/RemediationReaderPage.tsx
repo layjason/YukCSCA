@@ -26,6 +26,8 @@ import type {
   PublishedRemediationDetail,
 } from './types';
 import { isAcademicSubject, isExplanationLanguage } from './types';
+import { AskHost, mathBlocksFrom } from '@/features/agent';
+import { prefersReducedMotion, scrollToLearnBlock } from '@/features/agent/locatorHref';
 import './assessment.css';
 
 export function RemediationReaderPage(): React.JSX.Element {
@@ -36,7 +38,10 @@ export function RemediationReaderPage(): React.JSX.Element {
   }>();
   const [searchParams] = useSearchParams();
   const mistakeId = searchParams.get('mistakeId');
+  const blockParam = searchParams.get('block');
+  const blockFromQuery = blockParam != null && /^\d+$/.test(blockParam) ? Number(blockParam) : null;
   const subject = isAcademicSubject(subjectParam) ? subjectParam : null;
+  const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
 
   const [explanationLanguage, setExplanationLanguage] = useState<ExplanationLanguage | null>(null);
   const [profileReady, setProfileReady] = useState(false);
@@ -109,6 +114,18 @@ export function RemediationReaderPage(): React.JSX.Element {
   useEffect(() => {
     if (profileReady && explanationLanguage) void load();
   }, [profileReady, explanationLanguage, load]);
+
+  useEffect(() => {
+    if (blockFromQuery == null || !resource) return;
+    const max = resource.body.availability === 'AVAILABLE' ? resource.body.blocks.length : 0;
+    if (blockFromQuery < 0 || blockFromQuery >= max) return;
+    const frame = window.requestAnimationFrame(() => {
+      scrollToLearnBlock(blockFromQuery);
+      setHighlightIndex(blockFromQuery);
+      window.setTimeout(() => setHighlightIndex(null), prefersReducedMotion() ? 0 : 1600);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [blockFromQuery, resource]);
 
   useEffect(() => {
     if (!mistakeId) {
@@ -280,97 +297,117 @@ export function RemediationReaderPage(): React.JSX.Element {
 
   return (
     <div className="page-content assessment-page remediation-reader learn-page">
-      <Link
-        to={mistakeId ? `/app/practice/mistakes/${mistakeId}` : '/app/practice/mistakes'}
-        className="learn-back-link"
+      <AskHost
+        context={{ contextType: 'REMEDIATION', contextId: resource.resourceId }}
+        hostTitle={title || t('assessment.remediation.title')}
+        mathBlocks={mathBlocksFrom(blocks)}
+        onHighlightBlock={(index) => {
+          setHighlightIndex(index);
+          window.setTimeout(() => setHighlightIndex(null), prefersReducedMotion() ? 0 : 1600);
+        }}
       >
-        <ArrowLeft size={18} aria-hidden="true" />
-        {mistakeId ? t('assessment.mistakes.detailTitle') : t('assessment.mistakes.backToList')}
-      </Link>
+        <Link
+          to={mistakeId ? `/app/practice/mistakes/${mistakeId}` : '/app/practice/mistakes'}
+          className="learn-back-link"
+        >
+          <ArrowLeft size={18} aria-hidden="true" />
+          {mistakeId ? t('assessment.mistakes.detailTitle') : t('assessment.mistakes.backToList')}
+        </Link>
 
-      <header className="assessment-hero assessment-hero-cream">
-        <p className="assessment-eyebrow">{t('assessment.remediation.eyebrow')}</p>
-        <h1>{title || t('assessment.remediation.title')}</h1>
-        <LanguageToggle
-          value={explanationLanguage}
-          available={
-            resource.availableExplanationLanguages.length > 0
-              ? resource.availableExplanationLanguages
-              : [explanationLanguage]
-          }
-          onChange={setExplanationLanguage}
-          disabled={loading}
-        />
-      </header>
+        <header className="assessment-hero assessment-hero-cream">
+          <p className="assessment-eyebrow">{t('assessment.remediation.eyebrow')}</p>
+          <h1>{title || t('assessment.remediation.title')}</h1>
+          <LanguageToggle
+            value={explanationLanguage}
+            available={
+              resource.availableExplanationLanguages.length > 0
+                ? resource.availableExplanationLanguages
+                : [explanationLanguage]
+            }
+            onChange={setExplanationLanguage}
+            disabled={loading}
+          />
+        </header>
 
-      {isAvailable ? (
-        <article className="learn-reader-body is-visible" aria-label={title}>
-          {resource.video ? (
-            <LessonVideo
-              videoRef={resource.video}
-              explanationLanguage={displayedExplanationLanguage}
-              initialPositionSeconds={
-                progress?.video?.videoAssetId === resource.video.videoAssetId
-                  ? progress?.video?.positionSeconds
-                  : null
-              }
-              onProgressUpdate={handleVideoProgressUpdate}
-            />
-          ) : null}
-          {blocks.map((block, index) => (
-            <ContentBlockView key={`${resource.resourceId}-${index}`} block={block} index={index} />
-          ))}
-        </article>
-      ) : (
-        <section className="state-notice state-notice-info" role="status">
-          <p>{t('learn.lesson.languageUnavailableTitle')}</p>
-        </section>
-      )}
+        {isAvailable ? (
+          <article className="learn-reader-body is-visible" aria-label={title}>
+            {resource.video ? (
+              <LessonVideo
+                videoRef={resource.video}
+                explanationLanguage={displayedExplanationLanguage}
+                initialPositionSeconds={
+                  progress?.video?.videoAssetId === resource.video.videoAssetId
+                    ? progress?.video?.positionSeconds
+                    : null
+                }
+                onProgressUpdate={handleVideoProgressUpdate}
+              />
+            ) : null}
+            {blocks.map((block, index) => (
+              <ContentBlockView
+                key={`${resource.resourceId}-${index}`}
+                block={block}
+                index={index}
+                highlighted={highlightIndex === index}
+              />
+            ))}
+          </article>
+        ) : (
+          <section className="state-notice state-notice-info" role="status">
+            <p>{t('learn.lesson.languageUnavailableTitle')}</p>
+          </section>
+        )}
 
-      {isAvailable ? (
-        <footer className="learn-reader-actions assessment-result-actions">
-          {isComplete ? (
-            <>
-              <p className="learn-complete-ack" role="status">
-                <Check size={18} aria-hidden="true" />
-                {nextAction === 'already_passed'
-                  ? t('assessment.remediation.alreadyPassed')
-                  : t('assessment.remediation.completeAck')}
-              </p>
-              {nextAction === 'continue_revalidation' && inProgressSessionId ? (
-                <Link to={`/app/practice/sessions/${inProgressSessionId}`} className="btn-primary">
-                  <RefreshCw size={18} aria-hidden="true" />
-                  {t('assessment.mistakes.continueRevalidation')}
-                </Link>
-              ) : nextAction === 'start_revalidation' ? (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={busy}
-                  onClick={() => void handleRevalidate()}
-                >
-                  <RefreshCw size={18} aria-hidden="true" />
-                  {t('assessment.mistakes.revalidate')}
-                </button>
-              ) : null}
-            </>
-          ) : (
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={saving}
-              onClick={() => void handleComplete()}
-              aria-busy={saving}
-            >
-              {saving ? t('learn.lesson.savingProgress') : t('assessment.remediation.markComplete')}
-            </button>
-          )}
-        </footer>
-      ) : null}
+        {isAvailable ? (
+          <footer className="learn-reader-actions assessment-result-actions">
+            {isComplete ? (
+              <>
+                <p className="learn-complete-ack" role="status">
+                  <Check size={18} aria-hidden="true" />
+                  {nextAction === 'already_passed'
+                    ? t('assessment.remediation.alreadyPassed')
+                    : t('assessment.remediation.completeAck')}
+                </p>
+                {nextAction === 'continue_revalidation' && inProgressSessionId ? (
+                  <Link
+                    to={`/app/practice/sessions/${inProgressSessionId}`}
+                    className="btn-primary"
+                  >
+                    <RefreshCw size={18} aria-hidden="true" />
+                    {t('assessment.mistakes.continueRevalidation')}
+                  </Link>
+                ) : nextAction === 'start_revalidation' ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy}
+                    onClick={() => void handleRevalidate()}
+                  >
+                    <RefreshCw size={18} aria-hidden="true" />
+                    {t('assessment.mistakes.revalidate')}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={saving}
+                onClick={() => void handleComplete()}
+                aria-busy={saving}
+              >
+                {saving
+                  ? t('learn.lesson.savingProgress')
+                  : t('assessment.remediation.markComplete')}
+              </button>
+            )}
+          </footer>
+        ) : null}
 
-      {toast ? (
-        <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
-      ) : null}
+        {toast ? (
+          <Toast message={toast.message} tone={toast.tone} onDismiss={() => setToast(null)} />
+        ) : null}
+      </AskHost>
     </div>
   );
 }
