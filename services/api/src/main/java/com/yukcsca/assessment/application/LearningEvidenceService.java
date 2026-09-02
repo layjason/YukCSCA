@@ -24,6 +24,16 @@ public class LearningEvidenceService implements LearningEvidencePort {
         .toList();
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public List<EvidenceSnapshot> listRecentByAccount(UUID accountId, int limit) {
+    int capped = Math.max(1, Math.min(limit, 8));
+    return evidenceStore.findTop8ByAccountIdOrderByOccurredAtDesc(accountId).stream()
+        .limit(capped)
+        .map(LearningEvidenceService::toSnapshot)
+        .toList();
+  }
+
   private static EvidenceSnapshot toSnapshot(AssessmentObjectiveEvidence evidence) {
     return new EvidenceSnapshot(
         evidence.getObjectiveId(),
