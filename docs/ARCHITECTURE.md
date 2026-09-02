@@ -319,8 +319,13 @@ assessment (`/app/practice`, sessions, Language help, mistakes, Learn checkpoint
 remediation reader under `features/assessment`); post-setup home routes
 activated students to `/app/learn`, and mobile More exposes production-safe
 destinations without re-entering the preview-workspace gate for those routes.
-Family, mock execution, access, commerce, tutoring, and AI destinations remain
-prototype-only or unimplemented until their owning frontend slices land. VS-002 is also `DONE` after full implementation,
+Family, mock execution, access, commerce, and tutoring destinations remain
+prototype-only or unimplemented until their owning frontend slices land.
+Contextual text Ask (`VS-011`, checkpoint `VS-011-R7-accepted`) is a secondary
+control on production Learn/Practice hosts under `features/agent` — not a
+primary nav item and not `/app/ask`. Prototype Today is not wired to the agent
+API. Backend agent waves may land in parallel and are not implied by the
+frontend chrome. VS-002 is also `DONE` after full implementation,
 verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
 and first Mathematics package path. VS-008 is `DONE` for the first production
 student consumer of published LESSON content with content progress only.

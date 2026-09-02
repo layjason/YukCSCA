@@ -20,6 +20,7 @@ import { AssessmentBlocks } from './components/AssessmentBlocks';
 import { ItemNavigator } from './components/ItemNavigator';
 import { OptionRadiogroup } from './components/OptionRadiogroup';
 import type { SessionItemView, SessionResult } from './types';
+import { AskHost, mathBlocksFrom } from '@/features/agent';
 import './assessment.css';
 
 interface LocationState {
@@ -212,8 +213,8 @@ export function SessionResultPage(): React.JSX.Element {
       ? `/app/learn/${result.context.subject}/lessons/${result.context.lessonResourceId}`
       : null;
 
-  return (
-    <div className="page-content assessment-page session-result">
+  const resultBody = (
+    <>
       <Link to="/app/practice" className="learn-back-link">
         <ArrowLeft size={18} aria-hidden="true" />
         {t('assessment.backToPractice')}
@@ -333,6 +334,28 @@ export function SessionResultPage(): React.JSX.Element {
           </Link>
         ) : null}
       </div>
+    </>
+  );
+
+  return (
+    <div className="page-content assessment-page session-result">
+      {sessionId && reviewItem ? (
+        <AskHost
+          key={reviewItem.itemId}
+          context={{
+            contextType: 'ITEM',
+            contextId: reviewItem.itemId,
+            sessionId,
+            itemId: reviewItem.itemId,
+          }}
+          hostTitle={t('assessment.result.byQuestion')}
+          mathBlocks={mathBlocksFrom(reviewItem.stem)}
+        >
+          {resultBody}
+        </AskHost>
+      ) : (
+        resultBody
+      )}
     </div>
   );
 }

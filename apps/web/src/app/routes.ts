@@ -652,7 +652,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['4.4', '4.5', '4.6'],
+    ['4.4', '4.5', '4.6', '6.3'],
     false,
   ),
   route(
@@ -674,7 +674,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['5.4'],
+    ['5.4', '6.3'],
     false,
   ),
   route(
@@ -685,7 +685,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['4.5', '4.7'],
+    ['4.5', '4.7', '6.3'],
     false,
   ),
   route(
@@ -707,7 +707,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['4.7'],
+    ['4.7', '6.3'],
     false,
   ),
   route(
@@ -731,7 +731,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['5.1', '5.2', '5.3'],
+    ['5.1', '5.2', '5.3', '6.3'],
     false,
   ),
   route(
@@ -742,7 +742,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['5.3', '5.4'],
+    ['5.3', '5.4', '6.3'],
     false,
   ),
   route(
@@ -764,7 +764,7 @@ export const routeManifest = defineRoutes([
     'student-settings',
     'student',
     'hidden',
-    ['5.4', '6.4'],
+    ['5.4', '6.4', '6.3'],
     false,
   ),
   route(

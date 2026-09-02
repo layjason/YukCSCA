@@ -3,7 +3,7 @@ export interface ApiProblem {
   title?: string;
   detail?: string;
   code?: string;
-  violations?: Array<{ field: string; code: string }>;
+  violations?: Array<{ field?: string; path?: string; code: string }>;
 }
 
 export class ApiError extends Error {
@@ -17,7 +17,10 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.code = problem.code;
-    this.violations = problem.violations ?? [];
+    this.violations = (problem.violations ?? []).map((row) => ({
+      field: row.field ?? row.path ?? '',
+      code: row.code,
+    }));
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }

@@ -18,6 +18,7 @@ import { getMyStudentProfile } from '@/features/profile/studentProfileApi';
 import { isExplanationLanguage, type ExplanationLanguage } from './types';
 import { formatMetInLine } from './termMetIn';
 import { notebookBackLabelKey, notebookReturnTo } from '@/shared/terminology/notebookReturn';
+import { AskHost } from '@/features/agent';
 import './learn.css';
 
 export function TerminologyNotebookEntryPage(): React.JSX.Element {
@@ -194,125 +195,132 @@ export function TerminologyNotebookEntryPage(): React.JSX.Element {
 
   return (
     <div className="page-content learn-page term-entry-page">
-      <button
-        type="button"
-        className="learn-back-link"
-        onClick={() => {
-          if (origin) navigate(-1);
-          else navigate('/app/learn/terms');
-        }}
+      <AskHost
+        context={{ contextType: 'TERMINOLOGY', contextId: detail.card.termId }}
+        hostTitle={detail.card.primarySurface.text}
       >
-        <ArrowLeft size={18} aria-hidden="true" />
-        {origin ? t(notebookBackLabelKey(origin)) : t('terminology.notebookTitle')}
-      </button>
+        <button
+          type="button"
+          className="learn-back-link"
+          onClick={() => {
+            if (origin) navigate(-1);
+            else navigate('/app/learn/terms');
+          }}
+        >
+          <ArrowLeft size={18} aria-hidden="true" />
+          {origin ? t(notebookBackLabelKey(origin)) : t('terminology.notebookTitle')}
+        </button>
 
-      <TermCardView
-        layout="entry"
-        card={detail.card}
-        alreadyInNotebook
-        bookmarked
-        onToggleBookmark={() => {
-          if (!termId || busy) return;
-          setBusy(true);
-          void unbookmarkTerm(termId)
-            .then(() => {
-              void navigate('/app/learn/terms', { replace: true, state: location.state });
-            })
-            .catch((err: unknown) => {
-              if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
-                setError(t('terminology.formalDisabled'));
-              } else {
-                setError(t('terminology.saveFailed'));
-              }
-            })
-            .finally(() => setBusy(false));
-        }}
-        bookmarkBusy={busy}
-        metInLine={formatMetInLine(detail.entry.metIn, i18n.language, t)}
-        onPlay={
-          (detail.card.primarySurface.audioAvailable ||
-            detail.card.aliases.some((alias) => alias.audioAvailable)) &&
-          !audio.playFailed
-            ? (surface) => {
-                void audio.play(detail.card.termId, surface);
-              }
-            : undefined
-        }
-        playingSurface={audio.playingSurface}
-        playFailed={audio.playFailed}
-      />
+        <TermCardView
+          layout="entry"
+          card={detail.card}
+          alreadyInNotebook
+          bookmarked
+          onToggleBookmark={() => {
+            if (!termId || busy) return;
+            setBusy(true);
+            void unbookmarkTerm(termId)
+              .then(() => {
+                void navigate('/app/learn/terms', { replace: true, state: location.state });
+              })
+              .catch((err: unknown) => {
+                if (err instanceof ApiError && err.code === 'FORMAL_ASSISTANCE_DISABLED') {
+                  setError(t('terminology.formalDisabled'));
+                } else {
+                  setError(t('terminology.saveFailed'));
+                }
+              })
+              .finally(() => setBusy(false));
+          }}
+          bookmarkBusy={busy}
+          metInLine={formatMetInLine(detail.entry.metIn, i18n.language, t)}
+          onPlay={
+            (detail.card.primarySurface.audioAvailable ||
+              detail.card.aliases.some((alias) => alias.audioAvailable)) &&
+            !audio.playFailed
+              ? (surface) => {
+                  void audio.play(detail.card.termId, surface);
+                }
+              : undefined
+          }
+          playingSurface={audio.playingSurface}
+          playFailed={audio.playFailed}
+        />
 
-      {error ? (
-        <div className="assessment-inline-error" role="alert">
-          {error}
-        </div>
-      ) : null}
+        {error ? (
+          <div className="assessment-inline-error" role="alert">
+            {error}
+          </div>
+        ) : null}
 
-      {prompt ? (
-        <section className="term-review" aria-labelledby="term-review-heading">
-          <h2 id="term-review-heading" className="term-match-title">
-            {t('terminology.reviewTitle')}
-          </h2>
-          {prompt.kind === 'CONTEXT_CLOZE' ? (
-            <MixedProse
-              text={prompt.snippet}
-              as="p"
-              className="term-review-prompt term-cloze"
-              lang="zh"
-            />
-          ) : (
-            <p className="term-review-prompt" lang="zh">
-              {prompt.promptSurface}
-            </p>
-          )}
-          <fieldset className="term-review-choices" disabled={busy || Boolean(result)}>
-            <legend className="sr-only">{t('terminology.chooseMatch')}</legend>
-            {prompt.options.map((option) => {
-              const isKey = result != null && option.key === result.correctOptionKey;
-              const isMiss = result != null && !result.correct && option.key === selected;
-              return (
-                <label
-                  key={option.key}
-                  className={`term-review-choice${isKey ? ' is-key' : ''}${isMiss ? ' is-miss' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="term-review"
-                    value={option.key}
-                    checked={selected === option.key}
-                    onChange={() => setSelected(option.key)}
-                  />
-                  <MixedProse text={option.label} as="span" />
-                </label>
-              );
-            })}
-          </fieldset>
-          {result ? (
-            <TermPracticeDock
-              tone={result.correct ? 'correct' : 'incorrect'}
-              idleLabel={t('terminology.reviewSubmit')}
-              title={
-                result.correct ? t('terminology.pairsNicelyDone') : t('terminology.reviewIncorrect')
-              }
-              actionLabel={t('terminology.pairsContinue')}
-              onAction={() => {
-                void handleNextDue();
-              }}
-              busy={busy}
-            />
-          ) : (
-            <TermPracticeDock
-              tone="idle"
-              idleLabel={t('terminology.reviewSubmit')}
-              actionDisabled={!selected}
-              busy={busy}
-              onAction={() => {
-                void handleReview();
-              }}
-            />
-          )}
-        </section>
-      ) : null}
+        {prompt ? (
+          <section className="term-review" aria-labelledby="term-review-heading">
+            <h2 id="term-review-heading" className="term-match-title">
+              {t('terminology.reviewTitle')}
+            </h2>
+            {prompt.kind === 'CONTEXT_CLOZE' ? (
+              <MixedProse
+                text={prompt.snippet}
+                as="p"
+                className="term-review-prompt term-cloze"
+                lang="zh"
+              />
+            ) : (
+              <p className="term-review-prompt" lang="zh">
+                {prompt.promptSurface}
+              </p>
+            )}
+            <fieldset className="term-review-choices" disabled={busy || Boolean(result)}>
+              <legend className="sr-only">{t('terminology.chooseMatch')}</legend>
+              {prompt.options.map((option) => {
+                const isKey = result != null && option.key === result.correctOptionKey;
+                const isMiss = result != null && !result.correct && option.key === selected;
+                return (
+                  <label
+                    key={option.key}
+                    className={`term-review-choice${isKey ? ' is-key' : ''}${isMiss ? ' is-miss' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="term-review"
+                      value={option.key}
+                      checked={selected === option.key}
+                      onChange={() => setSelected(option.key)}
+                    />
+                    <MixedProse text={option.label} as="span" />
+                  </label>
+                );
+              })}
+            </fieldset>
+            {result ? (
+              <TermPracticeDock
+                tone={result.correct ? 'correct' : 'incorrect'}
+                idleLabel={t('terminology.reviewSubmit')}
+                title={
+                  result.correct
+                    ? t('terminology.pairsNicelyDone')
+                    : t('terminology.reviewIncorrect')
+                }
+                actionLabel={t('terminology.pairsContinue')}
+                onAction={() => {
+                  void handleNextDue();
+                }}
+                busy={busy}
+              />
+            ) : (
+              <TermPracticeDock
+                tone="idle"
+                idleLabel={t('terminology.reviewSubmit')}
+                actionDisabled={!selected}
+                busy={busy}
+                onAction={() => {
+                  void handleReview();
+                }}
+              />
+            )}
+          </section>
+        ) : null}
+      </AskHost>
     </div>
   );
 }
