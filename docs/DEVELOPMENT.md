@@ -77,6 +77,11 @@ secret, approved immutable policy artifacts, a verified sender/domain, bounded
 SMTP credentials, and an HTTPS origin before enabling credential enrollment or
 recovery.
 
+Ask (`VS-011`) is off by default (`YUKCSCA_AGENT_ENABLED=false`). Local
+journey review sets it true and supplies an OpenAI-compatible
+`YUKCSCA_AGENT_API_KEY` / `YUKCSCA_AGENT_BASE_URL`. Automated tests always use
+in-process fake chat and embedding models.
+
 `YUKCSCA_FIRST_ADMIN_EMAIL` is an exact, case-insensitive sign-in identity. It
 does not create an account: the address must complete Google or credential
 verification and remain `UNASSIGNED` until successful sign-in. Leave it empty
@@ -92,7 +97,7 @@ make dev-host
 # Then run `make api` and `make web` in separate terminals.
 ```
 
-This mode keeps PostgreSQL in Docker while Vite and Spring run on the host. The web application is still served at `http://localhost:5173`.
+This mode keeps PostgreSQL in Docker while Vite and Spring run on the host. The web application is still served at `http://localhost:5173`. Compose and Testcontainers use `pgvector/pgvector:pg18` so Flyway can enable the `vector` extension (VS-011). Recreate the local `postgres-data` volume if it was created from `postgres:18-alpine`.
 
 ### Production-style detached stack
 

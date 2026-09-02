@@ -13,12 +13,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class StudentProfileService {
+public class StudentProfileService implements StudentExplanationLanguageQuery {
   private static final ZoneId JAKARTA = ZoneId.of("Asia/Jakarta");
 
   private final StudentProfileStore profiles;
@@ -69,6 +70,14 @@ public class StudentProfileService {
                 clock.instant()));
     accounts.activateStudent(accountId);
     return new StudentActivationResult(profile, true);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<String> explanationLanguage(UUID accountId) {
+    return profiles
+        .findByAccountId(accountId)
+        .map(profile -> profile.getDefaultExplanationLanguage().wireValue());
   }
 
   @Transactional(readOnly = true)

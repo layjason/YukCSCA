@@ -24,6 +24,7 @@
     <spotless.version>3.8.0</spotless.version>
     <bouncycastle.version>1.84</bouncycastle.version>
     <awssdk.version>2.31.30</awssdk.version>
+    <spring-ai.version>2.0.1</spring-ai.version>
   </properties>
 
   <dependencies>
@@ -80,6 +81,16 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
     </dependency>
+    <!-- VS-011 / ADR-0004: ChatClient + EmbeddingModel behind AgentChatPort. OpenAI-compatible
+         beans are constructed only when yukcsca.agent.api-key is set; tests use fakes. -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-client-chat</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-openai</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -116,6 +127,33 @@
         <version>${awssdk.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.github.victools</groupId>
+        <artifactId>jsonschema-generator</artifactId>
+        <version>5.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.victools</groupId>
+        <artifactId>jsonschema-module-jackson</artifactId>
+        <version>5.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.victools</groupId>
+        <artifactId>jsonschema-module-swagger-2</artifactId>
+        <version>5.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-runtime</artifactId>
+        <version>4.13.2</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
