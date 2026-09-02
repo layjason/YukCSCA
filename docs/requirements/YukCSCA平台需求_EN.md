@@ -1,7 +1,7 @@
 # YukCSCA Platform Requirements Summary
 
-**Version:** V1.8
-**Date:** 2026-08-22
+**Version:** V1.9
+**Date:** 2026-09-01
 **Target Market:** Indonesian high school students planning to pursue undergraduate study in China, and their families
 
 > **NORMATIVE PRODUCT AUTHORITY:** This document and its paired Chinese version are the sole authoritative product requirements for YukCSCA. Architecture descriptions, implementation plans, contracts, issues, and code may implement or propose a subset, but they do not amend or override these requirements. Both language versions must change together.
@@ -10,6 +10,7 @@
 
 | Version | Date       | Change                                                                                  |
 | ------- | ---------- | --------------------------------------------------------------------------------------- |
+| V1.9    | 2026-09-01 | Contextual Q&A: ground first in the current authorised object, then other published authorised objects in the same package; derived teaching of public mathematics is allowed when retrieval is thin; official/policy claims refuse; sources are inspectable locators. Ask on an in-progress checkpoint or topic-practice item is strong assistance. |
 | V1.8    | 2026-08-22 | Extended optional reviewed short video to question explanations: attachable to a lesson, remediation unit, or question explanation; a question-explanation video is visible only where the reviewed explanation is already visible and never during formal timed mock attempts. |
 | V1.7    | 2026-08-22 | Defined the lesson-video scene/script artifact: a scene specification is template-bound, schema-validated structured data rendered by reviewed templates and never executable scene code; model-generated scene specifications follow the same validation, rendering, and Draft → human review path. |
 | V1.6    | 2026-08-14 | Clarified optional reviewed short video: admin may upload a finished video or a scene/script that produces synchronized narration; students play only Published video; first contextual Q&A remains text; a later derived video must not replace the text answer or auto-publish. |
@@ -562,8 +563,9 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 - Students can request tiered problem-solving hints instead of only revealing the answer.
 - Chinese Mathematics learning mode also provides tiered language assistance. The system separately records whether the student used a mathematical hint or language support.
 - After submission, the system displays the correct answer, key steps, common mistakes, language-misinterpretation points, and links to relevant courses.
-- Correct answers obtained after strong hints or a full meaning explanation are not treated as independent mastery. The system reduces the contribution of that attempt to mastery and schedules a no-assistance reassessment.
-- AI-generated supplementary explanations must be grounded in reviewed questions, solutions, and course materials, and should use the student’s default explanation language. Low-confidence responses provide an option for human review or feedback.
+- An in-progress contextual Ask on a scored checkpoint, topic-practice, or revalidation item is recorded as strong assistance, distinct from mathematical hints and language assistance, and has the same independent-mastery effect as a strong hint.
+- Correct answers obtained after strong hints, a full meaning explanation, or in-progress Ask are not treated as independent mastery. The system reduces the contribution of that attempt to mastery and schedules a no-assistance reassessment.
+- AI-generated supplementary explanations must be grounded first in reviewed questions, solutions, and course materials, and should use the student’s default explanation language. Low-confidence responses provide an option for human review or feedback.
 
 ### 5.4 Mistake Notebook and Immediate Remediation (P0)
 
@@ -596,12 +598,14 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ### 6.3 Contextual Questions and Answers (P0)
 
-- Students can ask from a lesson, assessment item, mistake, terminology entry, remediation unit, or mock report without requiring an active study plan.
-- The agent receives only the authorised current lesson, question, mistake, or mock context, the subject exam language, the current explanation language, and relevant recent learning evidence.
+- Students can ask from a lesson, assessment item (including an in-progress checkpoint or topic-practice item), mistake, terminology entry, remediation unit, or mock report without requiring an active study plan.
+- The agent is grounded first in the authorised current lesson, question, mistake, terminology, or remediation context, plus the subject exam language, the current explanation language, and relevant recent learning evidence. It may then retrieve other **published, student-authorised** objects in the same package. Hits are inspectable locators; they do not retarget the conversation.
 - Answers default to the student's explanation language while preserving the subject's English or Chinese exam terminology.
-- Answers distinguish **reviewed-source answer**, **derived explanation**, and **insufficient evidence / human review required**; they must not imply that a model-generated explanation is official.
+- Answers distinguish **reviewed-source answer**, **derived explanation**, and **insufficient evidence / human review required**. The student-facing distinction is a quiet provenance line and inspectable locators, not a labelled essay. They must not imply that a model-generated explanation is official.
+- When retrieved reviewed text is thin, the agent may give a **derived explanation** of public academic content (for example school mathematics). Official rules, exam policy, scoring procedures, and admissions claims without reviewed sources must be refused as insufficient evidence — not guessed.
+- Ask on an in-progress scored checkpoint, topic-practice, or revalidation item is recorded as strong assistance and is not treated as independent mastery. Ask after the item is locked, or from a lesson, mistake, term, or remediation reader, does not by itself write attempt assistance. Formal timed mocks still disable Ask.
 - The first closed contextual-Q&A loop is a text answer. A later optional narrated video of the same authorised context must not delay or replace that text answer, must be labelled as a derived explanation, and must not be auto-published as reviewed course content. A model may not generate and approve such a video.
-- The sources and exact lesson or question content used for the answer are traceable, and the student can report a disputed answer.
+- The sources used for the answer are traceable as locators into authorised lesson, item, term, or remediation content the student can open, and the student can report a disputed answer.
 
 ### 6.4 Plan Remediation and Reprioritization (P0)
 
@@ -1111,7 +1115,7 @@ The platform has only four primary front-end roles: **Student, Parent, Tutor, an
 
 ## 5. AI Academic Quality and Safety
 
-- AI answers are grounded first in platform-reviewed courses, questions, and explanations and must not present model guesses as official rules.
+- AI answers are grounded first in platform-reviewed courses, questions, and explanations. They may retrieve other published authorised package objects. They must not present model guesses as official rules. A derived teaching explanation of public academic content is allowed when labelled as assistance.
 - A model may not both generate and approve high-impact academic content, including a narrated explanation video.
 - University requirements, exam policies, and registration information display sources and update dates.
 - The AI can express uncertainty and provides routes for user feedback or tutor escalation.

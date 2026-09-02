@@ -76,3 +76,10 @@ model InternalServerErrorResponse {
   @header contentType: "application/problem+json";
   @body body: Problem;
 }
+
+@error
+model ServiceUnavailableResponse {
+  @statusCode statusCode: 503;
+  @header contentType: "application/problem+json";
+  @body body: Problem;
+}

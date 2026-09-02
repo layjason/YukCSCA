@@ -2972,6 +2972,369 @@ paths:
                 $ref: '#/components/schemas/Problem'
       security:
         - BearerAuth: []
+  /api/v1/agent/availability:
+    get:
+      operationId: AgentStudentApi_getAvailability
+      description: Side-effect-free Ask availability for one authorised host context. First-paint chrome uses this only; do not probe startConversation. Kill switch and formal mock return 200 with available false (never 403 on this read) so compact Ask is omitted without creating a conversation. ITEM requires sessionId and itemId that match; a mismatch is 409 CONTEXT_CONFLICT. Unauthorised or unknown context is 404. Parents and non-students receive generic 403. Budget and provider health are not this signal — those remain 429/503 on askTurn.
+      parameters:
+        - name: contextType
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AgentStudent.AgentContextType'
+          explode: false
+        - name: contextId
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+          explode: false
+        - name: sessionId
+          in: query
+          required: false
+          description: Required when contextType is ITEM. Identifies the assessment session that owns the item.
+          schema:
+            $ref: '#/components/schemas/uuid'
+          explode: false
+        - name: itemId
+          in: query
+          required: false
+          description: Required when contextType is ITEM. Must equal contextId and belong to sessionId.
+          schema:
+            $ref: '#/components/schemas/uuid'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentAvailability'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AgentStudent.AgentValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/agent/conversations:
+    post:
+      operationId: AgentStudentApi_startConversation
+      description: 'Starts or returns the student-private conversation for one authorised host context. Idempotent on (account, contextType, contextId): 201 when created, 200 when the conversation already exists (including its bounded turns). Formal mock and the agent kill switch fail closed before any provider call. Unauthorised or unknown context is 404. ITEM requires sessionId and itemId that match each other and the session; a mismatch is 409 CONTEXT_CONFLICT. Parents and non-students receive 403. No conversation list in this slice.'
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentConversation'
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentConversation'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AgentStudent.AgentValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AgentStudent.AgentDisabledProblem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentConflictProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentStudent.AgentConversationStart'
+      security:
+        - BearerAuth: []
+  /api/v1/agent/conversations/{conversationId}:
+    get:
+      operationId: AgentStudentApi_getConversation
+      description: Returns one owner conversation and its bounded turns (newest-last, max 20), including COMPLETED, FAILED, and short-lived PENDING turns. Other-account or unknown ids are 404. This read does not call the provider and is not blocked by the kill switch or formal-mock lock; Ask remains denied on startConversation and askTurn.
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: The request has succeeded.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentConversation'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+        - BearerAuth: []
+  /api/v1/agent/conversations/{conversationId}/turns:
+    post:
+      operationId: AgentStudentApi_askTurn
+      description: 'Appends one schema-validated text answer to an owner conversation. Context is inherited and cannot be overridden. Idempotency-Key is required: replay within 24 hours of a COMPLETED turn returns that turn without a second provider call; a second concurrent Ask with a different key returns 409 CONCURRENT_TURN_PENDING. Every turn re-reads item lock state. OPEN scored-item Ask is allowed and is not ITEM_NOT_LOCKED. Insufficiency is 201 with kind INSUFFICIENT_EVIDENCE. Provider, timeout, or schema exhaustion stores FAILED and returns 503 AGENT_PROVIDER_UNAVAILABLE, not an insufficiency kind. Daily/turn budget exhaustion is 429 AGENT_BUDGET_EXCEEDED with Retry-After.'
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-store
+            Pragma:
+              required: true
+              schema:
+                type: string
+                enum:
+                  - no-cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentCompletedTurn'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AgentStudent.AgentValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '401':
+          description: Access is unauthorized.
+          headers:
+            WWW-Authenticate:
+              required: false
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AgentStudent.AgentDisabledProblem'
+                  - $ref: '#/components/schemas/FormalAssistanceDisabledProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentConflictProblem'
+        '429':
+          description: Client error
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/AgentStudent.AgentBudgetExceededProblem'
+        '500':
+          description: Server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Service unavailable.
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AgentStudent.AgentProviderUnavailableProblem'
+                  - $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentStudent.AgentTurnRequest'
+      security:
+        - BearerAuth: []
   /api/v1/assessment/mistakes:
     get:
       operationId: AssessmentStudentApi_listMistakes
@@ -7369,6 +7732,385 @@ components:
         - IN_PROGRESS
         - PREVIEW_COMPLETE
       description: Writable preview-progress statuses. Absent progress is NOT_STARTED; clients do not write that state.
+    AgentStudent.AgentAnswerKind:
+      type: string
+      enum:
+        - REVIEWED_SOURCE
+        - DERIVED_EXPLANATION
+        - INSUFFICIENT_EVIDENCE
+      description: Product label on a completed structured answer. Not an LLM-as-judge mastery score. Student chrome does not render these as marketing chips.
+    AgentStudent.AgentAvailability:
+      type: object
+      required:
+        - available
+        - unavailableCode
+      properties:
+        available:
+          type: boolean
+        unavailableCode:
+          anyOf:
+            - $ref: '#/components/schemas/AgentStudent.AgentUnavailableCode'
+            - type: 'null'
+          description: Null when available is true.
+      description: Side-effect-free first-paint signal for compact Ask chrome. Does not create a conversation. When available is true, unavailableCode is null; when false, unavailableCode is AGENT_DISABLED or FORMAL_ASSISTANCE_DISABLED.
+    AgentStudent.AgentBudgetExceededProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - AGENT_BUDGET_EXCEEDED
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AgentStudent.AgentCompletedTurn:
+      type: object
+      required:
+        - status
+        - kind
+        - body
+        - locators
+        - steps
+        - suggestedFollowUps
+        - latencyMs
+      properties:
+        status:
+          type: string
+          enum:
+            - COMPLETED
+        kind:
+          $ref: '#/components/schemas/AgentStudent.AgentAnswerKind'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 12000
+        locators:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentStudent.AgentLocator'
+          maxItems: 12
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentStudent.AgentTraceStep'
+          maxItems: 16
+        suggestedFollowUps:
+          type: array
+          items:
+            type: string
+          maxItems: 3
+          description: Zero to three same-conversation follow-up chips. Each chip is 1–80 characters. Empty when none. Chips must not retarget another context.
+        latencyMs:
+          type: integer
+          format: int32
+          minimum: 0
+      allOf:
+        - $ref: '#/components/schemas/AgentStudent.AgentTurnIdentity'
+      description: Completed structured answer. body is TEXT-like prose that may include bounded inline \(...\) KaTeX so MixedProse can render it.
+    AgentStudent.AgentConflictProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - CONTEXT_CONFLICT
+            - CONCURRENT_TURN_PENDING
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: Conflict problem for agent lifecycle. code is one of AgentProblemCode string values.
+    AgentStudent.AgentContextType:
+      type: string
+      enum:
+        - LESSON
+        - ITEM
+        - MISTAKE
+        - TERMINOLOGY
+        - REMEDIATION
+      description: Authorised host object a conversation or locator may bind to. MOCK_REPORT is deferred to VS-013.
+    AgentStudent.AgentConversation:
+      type: object
+      required:
+        - id
+        - contextType
+        - contextId
+        - subject
+        - packageId
+        - packageRevisionId
+        - sessionId
+        - itemId
+        - explanationLanguage
+        - examLanguage
+        - turns
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        contextType:
+          $ref: '#/components/schemas/AgentStudent.AgentContextType'
+        contextId:
+          $ref: '#/components/schemas/uuid'
+        subject:
+          $ref: '#/components/schemas/AcademicAdmin.AcademicSubject'
+        packageId:
+          $ref: '#/components/schemas/uuid'
+        packageRevisionId:
+          $ref: '#/components/schemas/uuid'
+        sessionId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: Non-null when contextType is ITEM. The session that owns the item; re-read on every turn.
+        itemId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: Non-null when contextType is ITEM. Equals contextId.
+        explanationLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExplanationLanguage'
+          description: Answer language from the student profile at conversation create. Changing interface language does not change this.
+        examLanguage:
+          $ref: '#/components/schemas/AcademicAdmin.ExamLanguage'
+          description: Exam terminology language from the authorised context. Independent from explanationLanguage.
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentStudent.AgentTurn'
+          maxItems: 20
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: Student-owned conversation bound to one authorised context. Turns are newest-last and capped at 20 in this payload.
+    AgentStudent.AgentConversationStart:
+      type: object
+      required:
+        - contextType
+        - contextId
+      properties:
+        contextType:
+          $ref: '#/components/schemas/AgentStudent.AgentContextType'
+        contextId:
+          $ref: '#/components/schemas/uuid'
+        sessionId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when contextType is ITEM. Identifies the assessment session that owns the item.
+        itemId:
+          $ref: '#/components/schemas/uuid'
+          description: Required when contextType is ITEM. Must equal contextId and belong to sessionId.
+      description: Idempotent start from a host surface. One conversation per (account, contextType, contextId). Follow-ups cannot change context.
+    AgentStudent.AgentDisabledProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - AGENT_DISABLED
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: Kill switch or missing provider. Host screens must not advertise a working agent.
+    AgentStudent.AgentFailedTurn:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - FAILED
+      allOf:
+        - $ref: '#/components/schemas/AgentStudent.AgentTurnIdentity'
+      description: Provider, timeout, or schema-exhausted failure stored without a fake answer. Replay of a FAILED key is not a completed-turn replay.
+    AgentStudent.AgentLocator:
+      type: object
+      required:
+        - sourceKind
+        - sourceId
+        - label
+        - blockIndex
+        - packageRevisionId
+      properties:
+        sourceKind:
+          $ref: '#/components/schemas/AgentStudent.AgentContextType'
+        sourceId:
+          $ref: '#/components/schemas/uuid'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        blockIndex:
+          anyOf:
+            - type: integer
+              format: int32
+            - type: 'null'
+          minimum: 0
+          description: Zero-based block index into a LESSON or REMEDIATION body. Null for terminology, item, and mistake locators that are not block-scoped.
+        packageRevisionId:
+          anyOf:
+            - $ref: '#/components/schemas/uuid'
+            - type: 'null'
+          description: Published revision the locator was resolved against. A republished package does not rewrite past turns; a stale locator falls back to the object top.
+      description: Clickable pointer to an authorised host object the student can already open. Not an excerpt dump and not an open-web URL.
+    AgentStudent.AgentPendingTurn:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - PENDING
+      allOf:
+        - $ref: '#/components/schemas/AgentStudent.AgentTurnIdentity'
+      description: In-flight Ask reserved for idempotency. GET may expose this while another request with the same key is running; askTurn success never returns PENDING.
+    AgentStudent.AgentProblemCode:
+      type: string
+      enum:
+        - AGENT_DISABLED
+        - AGENT_VALIDATION_FAILED
+        - CONTEXT_CONFLICT
+        - CONCURRENT_TURN_PENDING
+        - AGENT_BUDGET_EXCEEDED
+        - AGENT_PROVIDER_UNAVAILABLE
+      description: Stable agent problem codes returned in application/problem+json.
+    AgentStudent.AgentProviderUnavailableProblem:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - AGENT_PROVIDER_UNAVAILABLE
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+      description: Provider timeout, outage, or bounded schema-validation exhaustion. Not an insufficiency kind.
+    AgentStudent.AgentTraceStep:
+      type: object
+      required:
+        - kind
+        - label
+        - locators
+        - latencyMs
+      properties:
+        kind:
+          $ref: '#/components/schemas/AgentStudent.AgentTraceStepKind'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+        locators:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentStudent.AgentLocator'
+          maxItems: 12
+        latencyMs:
+          type: integer
+          format: int32
+          minimum: 0
+      description: Student-language trajectory step for Worked-for-Ns disclosure. Token counts, prompts, and raw tool names are omitted.
+    AgentStudent.AgentTraceStepKind:
+      type: string
+      enum:
+        - TOOL
+        - MODEL
+      description: Student-safe trajectory step kind. Raw Java tool names never appear in this projection.
+    AgentStudent.AgentTurn:
+      anyOf:
+        - $ref: '#/components/schemas/AgentStudent.AgentPendingTurn'
+        - $ref: '#/components/schemas/AgentStudent.AgentCompletedTurn'
+        - $ref: '#/components/schemas/AgentStudent.AgentFailedTurn'
+    AgentStudent.AgentTurnIdentity:
+      type: object
+      required:
+        - id
+        - questionText
+        - quote
+        - createdAt
+      properties:
+        id:
+          $ref: '#/components/schemas/uuid'
+        questionText:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        quote:
+          anyOf:
+            - type: string
+            - type: 'null'
+          maxLength: 4000
+        createdAt:
+          type: string
+          format: date-time
+      description: Shared turn identity echoed on reload. Quote is the optional host selection (TEXT/term span or whole MATH block latex).
+    AgentStudent.AgentTurnRequest:
+      type: object
+      required:
+        - questionText
+      properties:
+        questionText:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        quote:
+          anyOf:
+            - type: string
+            - type: 'null'
+          minLength: 1
+          maxLength: 4000
+          description: "Optional host selection: TEXT/terminology span, or a whole MATH block's authored latex. Echoed on the turn. Omit rather than send an empty string."
+      description: Ask body. Context is inherited from the conversation; this request cannot retarget contextType or contextId.
+    AgentStudent.AgentTurnStatus:
+      type: string
+      enum:
+        - PENDING
+        - COMPLETED
+        - FAILED
+      description: Lifecycle of one Ask turn. PENDING is short-lived inside the Ask request; the public askTurn success body is always COMPLETED.
+    AgentStudent.AgentUnavailableCode:
+      type: string
+      enum:
+        - AGENT_DISABLED
+        - FORMAL_ASSISTANCE_DISABLED
+      description: Reason Ask is unavailable on an authorised context. Returned on the availability read, not as a 403, so first paint does not probe a write.
+    AgentStudent.AgentValidationProblem:
+      type: object
+      required:
+        - code
+        - violations
+      properties:
+        code:
+          type: string
+          enum:
+            - AGENT_VALIDATION_FAILED
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentStudent.AgentValidationViolation'
+          maxItems: 20
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+    AgentStudent.AgentValidationViolation:
+      type: object
+      required:
+        - path
+        - code
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 200
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
     AssessmentStudent.AssessmentConflictProblem:
       type: object
       required:

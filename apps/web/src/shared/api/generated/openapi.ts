@@ -655,6 +655,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/agent/availability': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Side-effect-free Ask availability for one authorised host context. First-paint chrome uses this only; do not probe startConversation. Kill switch and formal mock return 200 with available false (never 403 on this read) so compact Ask is omitted without creating a conversation. ITEM requires sessionId and itemId that match; a mismatch is 409 CONTEXT_CONFLICT. Unauthorised or unknown context is 404. Parents and non-students receive generic 403. Budget and provider health are not this signal — those remain 429/503 on askTurn. */
+    get: operations['AgentStudentApi_getAvailability'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/agent/conversations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Starts or returns the student-private conversation for one authorised host context. Idempotent on (account, contextType, contextId): 201 when created, 200 when the conversation already exists (including its bounded turns). Formal mock and the agent kill switch fail closed before any provider call. Unauthorised or unknown context is 404. ITEM requires sessionId and itemId that match each other and the session; a mismatch is 409 CONTEXT_CONFLICT. Parents and non-students receive 403. No conversation list in this slice. */
+    post: operations['AgentStudentApi_startConversation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/agent/conversations/{conversationId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Returns one owner conversation and its bounded turns (newest-last, max 20), including COMPLETED, FAILED, and short-lived PENDING turns. Other-account or unknown ids are 404. This read does not call the provider and is not blocked by the kill switch or formal-mock lock; Ask remains denied on startConversation and askTurn. */
+    get: operations['AgentStudentApi_getConversation'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/agent/conversations/{conversationId}/turns': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** @description Appends one schema-validated text answer to an owner conversation. Context is inherited and cannot be overridden. Idempotency-Key is required: replay within 24 hours of a COMPLETED turn returns that turn without a second provider call; a second concurrent Ask with a different key returns 409 CONCURRENT_TURN_PENDING. Every turn re-reads item lock state. OPEN scored-item Ask is allowed and is not ITEM_NOT_LOCKED. Insufficiency is 201 with kind INSUFFICIENT_EVIDENCE. Provider, timeout, or schema exhaustion stores FAILED and returns 503 AGENT_PROVIDER_UNAVAILABLE, not an insufficiency kind. Daily/turn budget exhaustion is 429 AGENT_BUDGET_EXCEEDED with Retry-After. */
+    post: operations['AgentStudentApi_askTurn'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/assessment/mistakes': {
     parameters: {
       query?: never;
@@ -2146,6 +2214,167 @@ export interface components {
      * @enum {string}
      */
     'AcademicStudent.WritablePreviewProgressStatus': 'IN_PROGRESS' | 'PREVIEW_COMPLETE';
+    /**
+     * @description Product label on a completed structured answer. Not an LLM-as-judge mastery score. Student chrome does not render these as marketing chips.
+     * @enum {string}
+     */
+    'AgentStudent.AgentAnswerKind':
+      'REVIEWED_SOURCE' | 'DERIVED_EXPLANATION' | 'INSUFFICIENT_EVIDENCE';
+    /** @description Side-effect-free first-paint signal for compact Ask chrome. Does not create a conversation. When available is true, unavailableCode is null; when false, unavailableCode is AGENT_DISABLED or FORMAL_ASSISTANCE_DISABLED. */
+    'AgentStudent.AgentAvailability': {
+      available: boolean;
+      /** @description Null when available is true. */
+      unavailableCode: components['schemas']['AgentStudent.AgentUnavailableCode'] | null;
+    };
+    'AgentStudent.AgentBudgetExceededProblem': {
+      /** @enum {string} */
+      code: 'AGENT_BUDGET_EXCEEDED';
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /** @description Completed structured answer. body is TEXT-like prose that may include bounded inline \(...\) KaTeX so MixedProse can render it. */
+    'AgentStudent.AgentCompletedTurn': {
+      /** @enum {string} */
+      status: 'COMPLETED';
+      kind: components['schemas']['AgentStudent.AgentAnswerKind'];
+      body: string;
+      locators: components['schemas']['AgentStudent.AgentLocator'][];
+      steps: components['schemas']['AgentStudent.AgentTraceStep'][];
+      /** @description Zero to three same-conversation follow-up chips. Each chip is 1–80 characters. Empty when none. Chips must not retarget another context. */
+      suggestedFollowUps: string[];
+      /** Format: int32 */
+      latencyMs: number;
+    } & components['schemas']['AgentStudent.AgentTurnIdentity'];
+    /** @description Conflict problem for agent lifecycle. code is one of AgentProblemCode string values. */
+    'AgentStudent.AgentConflictProblem': {
+      /** @enum {string} */
+      code: 'CONTEXT_CONFLICT' | 'CONCURRENT_TURN_PENDING';
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /**
+     * @description Authorised host object a conversation or locator may bind to. MOCK_REPORT is deferred to VS-013.
+     * @enum {string}
+     */
+    'AgentStudent.AgentContextType': 'LESSON' | 'ITEM' | 'MISTAKE' | 'TERMINOLOGY' | 'REMEDIATION';
+    /** @description Student-owned conversation bound to one authorised context. Turns are newest-last and capped at 20 in this payload. */
+    'AgentStudent.AgentConversation': {
+      id: components['schemas']['uuid'];
+      contextType: components['schemas']['AgentStudent.AgentContextType'];
+      contextId: components['schemas']['uuid'];
+      subject: components['schemas']['AcademicAdmin.AcademicSubject'];
+      packageId: components['schemas']['uuid'];
+      packageRevisionId: components['schemas']['uuid'];
+      /** @description Non-null when contextType is ITEM. The session that owns the item; re-read on every turn. */
+      sessionId: components['schemas']['uuid'] | null;
+      /** @description Non-null when contextType is ITEM. Equals contextId. */
+      itemId: components['schemas']['uuid'] | null;
+      /** @description Answer language from the student profile at conversation create. Changing interface language does not change this. */
+      explanationLanguage: components['schemas']['AcademicAdmin.ExplanationLanguage'];
+      /** @description Exam terminology language from the authorised context. Independent from explanationLanguage. */
+      examLanguage: components['schemas']['AcademicAdmin.ExamLanguage'];
+      turns: components['schemas']['AgentStudent.AgentTurn'][];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    /** @description Idempotent start from a host surface. One conversation per (account, contextType, contextId). Follow-ups cannot change context. */
+    'AgentStudent.AgentConversationStart': {
+      contextType: components['schemas']['AgentStudent.AgentContextType'];
+      contextId: components['schemas']['uuid'];
+      /** @description Required when contextType is ITEM. Identifies the assessment session that owns the item. */
+      sessionId?: components['schemas']['uuid'];
+      /** @description Required when contextType is ITEM. Must equal contextId and belong to sessionId. */
+      itemId?: components['schemas']['uuid'];
+    };
+    /** @description Kill switch or missing provider. Host screens must not advertise a working agent. */
+    'AgentStudent.AgentDisabledProblem': {
+      /** @enum {string} */
+      code: 'AGENT_DISABLED';
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /** @description Provider, timeout, or schema-exhausted failure stored without a fake answer. Replay of a FAILED key is not a completed-turn replay. */
+    'AgentStudent.AgentFailedTurn': {
+      /** @enum {string} */
+      status: 'FAILED';
+    } & components['schemas']['AgentStudent.AgentTurnIdentity'];
+    /** @description Clickable pointer to an authorised host object the student can already open. Not an excerpt dump and not an open-web URL. */
+    'AgentStudent.AgentLocator': {
+      sourceKind: components['schemas']['AgentStudent.AgentContextType'];
+      sourceId: components['schemas']['uuid'];
+      label: string;
+      /** @description Zero-based block index into a LESSON or REMEDIATION body. Null for terminology, item, and mistake locators that are not block-scoped. */
+      blockIndex: number | null;
+      /** @description Published revision the locator was resolved against. A republished package does not rewrite past turns; a stale locator falls back to the object top. */
+      packageRevisionId: components['schemas']['uuid'] | null;
+    };
+    /** @description In-flight Ask reserved for idempotency. GET may expose this while another request with the same key is running; askTurn success never returns PENDING. */
+    'AgentStudent.AgentPendingTurn': {
+      /** @enum {string} */
+      status: 'PENDING';
+    } & components['schemas']['AgentStudent.AgentTurnIdentity'];
+    /**
+     * @description Stable agent problem codes returned in application/problem+json.
+     * @enum {string}
+     */
+    'AgentStudent.AgentProblemCode':
+      | 'AGENT_DISABLED'
+      | 'AGENT_VALIDATION_FAILED'
+      | 'CONTEXT_CONFLICT'
+      | 'CONCURRENT_TURN_PENDING'
+      | 'AGENT_BUDGET_EXCEEDED'
+      | 'AGENT_PROVIDER_UNAVAILABLE';
+    /** @description Provider timeout, outage, or bounded schema-validation exhaustion. Not an insufficiency kind. */
+    'AgentStudent.AgentProviderUnavailableProblem': {
+      /** @enum {string} */
+      code: 'AGENT_PROVIDER_UNAVAILABLE';
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    /** @description Student-language trajectory step for Worked-for-Ns disclosure. Token counts, prompts, and raw tool names are omitted. */
+    'AgentStudent.AgentTraceStep': {
+      kind: components['schemas']['AgentStudent.AgentTraceStepKind'];
+      label: string;
+      locators: components['schemas']['AgentStudent.AgentLocator'][];
+      /** Format: int32 */
+      latencyMs: number;
+    };
+    /**
+     * @description Student-safe trajectory step kind. Raw Java tool names never appear in this projection.
+     * @enum {string}
+     */
+    'AgentStudent.AgentTraceStepKind': 'TOOL' | 'MODEL';
+    'AgentStudent.AgentTurn':
+      | components['schemas']['AgentStudent.AgentPendingTurn']
+      | components['schemas']['AgentStudent.AgentCompletedTurn']
+      | components['schemas']['AgentStudent.AgentFailedTurn'];
+    /** @description Shared turn identity echoed on reload. Quote is the optional host selection (TEXT/term span or whole MATH block latex). */
+    'AgentStudent.AgentTurnIdentity': {
+      id: components['schemas']['uuid'];
+      questionText: string;
+      quote: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    /** @description Ask body. Context is inherited from the conversation; this request cannot retarget contextType or contextId. */
+    'AgentStudent.AgentTurnRequest': {
+      questionText: string;
+      /** @description Optional host selection: TEXT/terminology span, or a whole MATH block's authored latex. Echoed on the turn. Omit rather than send an empty string. */
+      quote?: string | null;
+    };
+    /**
+     * @description Lifecycle of one Ask turn. PENDING is short-lived inside the Ask request; the public askTurn success body is always COMPLETED.
+     * @enum {string}
+     */
+    'AgentStudent.AgentTurnStatus': 'PENDING' | 'COMPLETED' | 'FAILED';
+    /**
+     * @description Reason Ask is unavailable on an authorised context. Returned on the availability read, not as a 403, so first paint does not probe a write.
+     * @enum {string}
+     */
+    'AgentStudent.AgentUnavailableCode': 'AGENT_DISABLED' | 'FORMAL_ASSISTANCE_DISABLED';
+    'AgentStudent.AgentValidationProblem': {
+      /** @enum {string} */
+      code: 'AGENT_VALIDATION_FAILED';
+      violations: components['schemas']['AgentStudent.AgentValidationViolation'][];
+    } & WithRequired<components['schemas']['Problem'], 'code'>;
+    'AgentStudent.AgentValidationViolation': {
+      path: string;
+      code: string;
+    };
     /** @description Conflict problem for assessment lifecycle. code is one of AssessmentProblemCode string values. */
     'AssessmentStudent.AssessmentConflictProblem': {
       /** @enum {string} */
@@ -5697,6 +5926,361 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AgentStudentApi_getAvailability: {
+    parameters: {
+      query: {
+        contextType: components['schemas']['AgentStudent.AgentContextType'];
+        contextId: components['schemas']['uuid'];
+        /** @description Required when contextType is ITEM. Identifies the assessment session that owns the item. */
+        sessionId?: components['schemas']['uuid'];
+        /** @description Required when contextType is ITEM. Must equal contextId and belong to sessionId. */
+        itemId?: components['schemas']['uuid'];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AgentStudent.AgentAvailability'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AgentStudent.AgentValidationProblem']
+            | components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AgentStudent.AgentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AgentStudentApi_startConversation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AgentStudent.AgentConversationStart'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AgentStudent.AgentConversation'];
+        };
+      };
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AgentStudent.AgentConversation'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AgentStudent.AgentValidationProblem']
+            | components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AgentStudent.AgentDisabledProblem']
+            | components['schemas']['FormalAssistanceDisabledProblem']
+            | components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AgentStudent.AgentConflictProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AgentStudentApi_getConversation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        conversationId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AgentStudent.AgentConversation'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  AgentStudentApi_askTurn: {
+    parameters: {
+      query?: never;
+      header: {
+        'Idempotency-Key': components['schemas']['uuid'];
+      };
+      path: {
+        conversationId: components['schemas']['uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AgentStudent.AgentTurnRequest'];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded and a new resource has been created as a result. */
+      201: {
+        headers: {
+          'Cache-Control': 'no-store';
+          Pragma: 'no-cache';
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AgentStudent.AgentCompletedTurn'];
+        };
+      };
+      /** @description The server could not understand the request due to invalid syntax. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AgentStudent.AgentValidationProblem']
+            | components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is unauthorized. */
+      401: {
+        headers: {
+          'WWW-Authenticate'?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Access is forbidden. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AgentStudent.AgentDisabledProblem']
+            | components['schemas']['FormalAssistanceDisabledProblem']
+            | components['schemas']['Problem'];
+        };
+      };
+      /** @description The server cannot find the requested resource. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description The request conflicts with the current state of the server. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AgentStudent.AgentConflictProblem'];
+        };
+      };
+      /** @description Client error */
+      429: {
+        headers: {
+          'Retry-After': string;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['AgentStudent.AgentBudgetExceededProblem'];
+        };
+      };
+      /** @description Server error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Service unavailable. */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json':
+            | components['schemas']['AgentStudent.AgentProviderUnavailableProblem']
+            | components['schemas']['Problem'];
         };
       };
     };

@@ -7,6 +7,7 @@ import "./profile.tsp";
 import "./academic-admin.tsp";
 import "./academic-student.tsp";
 import "./assessment-student.tsp";
+import "./agent-student.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;
