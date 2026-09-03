@@ -9,8 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.yukcsca.agent.application.AgentContentSearchPort;
 import com.yukcsca.agent.application.AgentEnablement;
 import com.yukcsca.agent.support.FakeChatModel;
+import com.yukcsca.agent.support.FakeEmbeddingModel;
 import com.yukcsca.identity.application.AccessTokenService;
 import com.yukcsca.identity.application.UserAccountStore;
 import com.yukcsca.identity.domain.UserAccount;
@@ -21,12 +23,21 @@ import com.yukcsca.profile.domain.StudentGrade;
 import com.yukcsca.profile.domain.StudentProfile;
 import com.yukcsca.support.ConfigurableFormalAssistancePolicy;
 import com.yukcsca.support.PostgresTestConfiguration;
+import jakarta.persistence.EntityManager;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,17 +69,22 @@ class AgentStudentHttpIT {
   @Autowired AccessTokenService accessTokens;
   @Autowired StudentProfileStore profiles;
   @Autowired FakeChatModel fakeChat;
+  @Autowired FakeEmbeddingModel fakeEmbeddings;
   @Autowired ConfigurableFormalAssistancePolicy formalPolicy;
   @Autowired AgentEnablement enablement;
+  @Autowired AgentContentSearchPort search;
+  @Autowired EntityManager entityManager;
 
   private String adminToken;
   private String studentToken;
   private String otherStudentToken;
   private String unassignedToken;
+  private String parentToken;
 
   @BeforeEach
   void setUp() {
     fakeChat.reset();
+    fakeEmbeddings.reset();
     formalPolicy.setDisabled(false);
     enablement.setForceDisabled(false);
     jdbc.execute(
@@ -105,10 +121,19 @@ class AgentStudentHttpIT {
     UserAccount unassigned =
         ((UserAccountStore) users)
             .save(UserAccount.createGoogleUser("unassigned@example.com", "Unassigned", null, now));
+    UserAccount parent =
+        ((UserAccountStore) users)
+            .save(UserAccount.createGoogleUser("parent@example.com", "Parent", null, now));
+    jdbc.update(
+        "update user_account set role = 'PARENT', onboarding_completed = true where id = ?",
+        parent.getId());
+    entityManager.clear();
+    UserAccount reloadedParent = users.findById(parent.getId()).orElseThrow();
     adminToken = accessTokens.issue(admin).value();
     studentToken = accessTokens.issue(student).value();
     otherStudentToken = accessTokens.issue(other).value();
     unassignedToken = accessTokens.issue(unassigned).value();
+    parentToken = accessTokens.issue(reloadedParent).value();
   }
 
   @Test
@@ -133,6 +158,14 @@ class AgentStudentHttpIT {
                 .param("contextId", UUID.randomUUID().toString())
                 .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
         .andExpect(status().isForbidden());
+
+    mvc.perform(
+            get("/api/v1/agent/availability")
+                .param("contextType", "LESSON")
+                .param("contextId", UUID.randomUUID().toString())
+                .header(HttpHeaders.AUTHORIZATION, bearer(parentToken)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
   }
 
   @Test
@@ -223,6 +256,12 @@ class AgentStudentHttpIT {
             Integer.class,
             conversationId);
     assertThat(traces).isEqualTo(1);
+    Integer tokenUsage =
+        jdbc.queryForObject(
+            "select token_usage from agent_trace where conversation_id = ?",
+            Integer.class,
+            conversationId);
+    assertThat(tokenUsage).isGreaterThan(0);
   }
 
   @Test
@@ -421,6 +460,97 @@ class AgentStudentHttpIT {
   }
 
   @Test
+  void getConversationRemainsReadableWhenKillSwitchIsOn() throws Exception {
+    Fixture fixture = publishPackage();
+    UUID conversationId = startLesson(fixture.lessonId());
+    enablement.setForceDisabled(true);
+    mvc.perform(
+            get("/api/v1/agent/conversations/{id}", conversationId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(conversationId.toString()));
+    mvc.perform(
+            post("/api/v1/agent/conversations/{id}/turns", conversationId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"questionText\":\"Still asking.\"}"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("AGENT_DISABLED"));
+  }
+
+  @Test
+  void schemaInvalidModelStoresFailedTurn() throws Exception {
+    Fixture fixture = publishPackage();
+    UUID conversationId = startLesson(fixture.lessonId());
+    fakeChat.setMode(FakeChatModel.Mode.INVALID_JSON);
+    mvc.perform(
+            post("/api/v1/agent/conversations/{id}/turns", conversationId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"questionText\":\"Explain this.\"}"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(jsonPath("$.code").value("AGENT_PROVIDER_UNAVAILABLE"));
+    assertThat(fakeChat.calls()).isEqualTo(3);
+    Integer failed =
+        jdbc.queryForObject(
+            "select count(*) from agent_turn where conversation_id = ? and status = 'FAILED'",
+            Integer.class,
+            conversationId);
+    assertThat(failed).isEqualTo(1);
+  }
+
+  @Test
+  void hybridSearchDropsUnauthorisedIndexedChunks() throws Exception {
+    Fixture fixture = publishPackage();
+    UUID conversationId = startLesson(fixture.lessonId());
+    UUID packageId =
+        jdbc.queryForObject(
+            "select package_id from agent_conversation where id = ?", UUID.class, conversationId);
+    UUID revisionId =
+        jdbc.queryForObject(
+            "select package_revision_id from agent_conversation where id = ?",
+            UUID.class,
+            conversationId);
+    UUID poisonSource = UUID.randomUUID();
+    jdbc.update(
+        """
+        insert into agent_content_chunk (
+          id, package_id, package_revision_id, source_kind, source_id, block_index,
+          explanation_language, label, body, search_tsv, embedding, created_at)
+        values (?, ?, ?, 'LESSON', ?, 0, 'en', 'Poison', 'UNIQUEPOISONTOKEN vs011',
+                to_tsvector('simple', 'UNIQUEPOISONTOKEN vs011'), null, now())
+        """,
+        UUID.randomUUID(),
+        packageId,
+        revisionId,
+        poisonSource);
+    var hits = search.search(revisionId, "UNIQUEPOISONTOKEN", "en", 8);
+    assertThat(hits).noneMatch(hit -> poisonSource.equals(hit.sourceId()));
+    assertThat(hits)
+        .noneMatch(hit -> hit.excerpt() != null && hit.excerpt().contains("UNIQUEPOISONTOKEN"));
+  }
+
+  @Test
+  void hybridSearchEmbedsOutsideDatabaseTransaction() throws Exception {
+    Fixture fixture = publishPackage();
+    UUID conversationId = startLesson(fixture.lessonId());
+    UUID revisionId =
+        jdbc.queryForObject(
+            "select package_revision_id from agent_conversation where id = ?",
+            UUID.class,
+            conversationId);
+    jdbc.update(
+        "update agent_content_chunk set embedding = null where package_revision_id = ?",
+        revisionId);
+    fakeEmbeddings.reset();
+    search.ensureIndexed(revisionId);
+    assertThat(fakeEmbeddings.calls()).isPositive();
+    assertThat(fakeEmbeddings.calledInsideTransaction()).isFalse();
+  }
+
+  @Test
   void oversizedQuestionAndQuoteReturnValidationProblem() throws Exception {
     Fixture fixture = publishPackage();
     UUID conversationId = startLesson(fixture.lessonId());
@@ -471,15 +601,56 @@ class AgentStudentHttpIT {
           UUID.randomUUID(),
           Timestamp.from(created));
     }
-    mvc.perform(
-            post("/api/v1/agent/conversations/{id}/turns", conversationId)
-                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
-                .header("Idempotency-Key", UUID.randomUUID().toString())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"questionText\":\"One more question.\"}"))
-        .andExpect(status().isTooManyRequests())
-        .andExpect(jsonPath("$.code").value("AGENT_BUDGET_EXCEEDED"))
-        .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+    MvcResult budgeted =
+        mvc.perform(
+                post("/api/v1/agent/conversations/{id}/turns", conversationId)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                    .header("Idempotency-Key", UUID.randomUUID().toString())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"questionText\":\"One more question.\"}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.code").value("AGENT_BUDGET_EXCEEDED"))
+            .andExpect(header().exists(HttpHeaders.RETRY_AFTER))
+            .andReturn();
+    long retryAfter = Long.parseLong(budgeted.getResponse().getHeader(HttpHeaders.RETRY_AFTER));
+    ZoneId jakarta = ZoneId.of("Asia/Jakarta");
+    Instant resetAt =
+        Instant.now().atZone(jakarta).toLocalDate().plusDays(1).atStartOfDay(jakarta).toInstant();
+    long expected = Duration.between(Instant.now(), resetAt).toSeconds();
+    assertThat(retryAfter).isBetween(Math.max(1, expected - 5), expected + 5);
+  }
+
+  @Test
+  void concurrentStartConversationDoesNotReturn500() throws Exception {
+    Fixture fixture = publishPackage();
+    String body =
+        """
+        {"contextType":"LESSON","contextId":"%s"}
+        """
+            .formatted(fixture.lessonId());
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      Callable<MvcResult> start =
+          () ->
+              mvc.perform(
+                      post("/api/v1/agent/conversations")
+                          .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                          .contentType(MediaType.APPLICATION_JSON)
+                          .content(body))
+                  .andReturn();
+      Future<MvcResult> first = pool.submit(start);
+      Future<MvcResult> second = pool.submit(start);
+      MvcResult a = first.get(20, TimeUnit.SECONDS);
+      MvcResult b = second.get(20, TimeUnit.SECONDS);
+      assertThat(List.of(a.getResponse().getStatus(), b.getResponse().getStatus()))
+          .allMatch(status -> status == 200 || status == 201)
+          .doesNotContain(500);
+      String idA = json.readTree(a.getResponse().getContentAsString()).path("id").asText();
+      String idB = json.readTree(b.getResponse().getContentAsString()).path("id").asText();
+      assertThat(idA).isEqualTo(idB);
+    } finally {
+      pool.shutdownNow();
+    }
   }
 
   @Test

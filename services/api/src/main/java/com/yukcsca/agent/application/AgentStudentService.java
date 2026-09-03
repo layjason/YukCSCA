@@ -37,6 +37,7 @@ import com.yukcsca.profile.application.StudentExplanationLanguageQuery;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -59,6 +60,7 @@ public class AgentStudentService {
   private static final int TURN_PAYLOAD_CAP = 20;
   private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
   private static final Duration PENDING_WAIT = Duration.ofSeconds(12);
+  private static final ZoneId JAKARTA = ZoneId.of("Asia/Jakarta");
 
   private final AgentProperties properties;
   private final AgentEnablement enablement;
@@ -152,20 +154,34 @@ public class AgentStudentService {
     }
     Instant now = now();
     String explanationLanguage = explanationLanguages.explanationLanguage(actorId).orElse("en");
-    AgentConversation created =
-        conversations.save(
-            new AgentConversation(
-                actorId,
-                contextType,
-                context.contextId(),
-                context.subject(),
-                context.packageId(),
-                context.packageRevisionId(),
-                context.sessionId(),
-                context.itemId(),
-                explanationLanguage,
-                context.examLanguage(),
-                now));
+    AgentConversation created;
+    try {
+      created =
+          requiresNew.execute(
+              status ->
+                  conversations.save(
+                      new AgentConversation(
+                          actorId,
+                          contextType,
+                          context.contextId(),
+                          context.subject(),
+                          context.packageId(),
+                          context.packageRevisionId(),
+                          context.sessionId(),
+                          context.itemId(),
+                          explanationLanguage,
+                          context.examLanguage(),
+                          now)));
+    } catch (DataIntegrityViolationException exception) {
+      AgentConversation winner =
+          conversations
+              .findByAccountIdAndContextTypeAndContextId(actorId, contextType, context.contextId())
+              .orElseThrow(AgentNotFoundException::new);
+      return new ConversationStartResult(toConversationView(winner), false);
+    }
+    if (created == null) {
+      throw new AgentNotFoundException();
+    }
     LOGGER.info(
         "agent.conversation.started conversationId={} contextType={}",
         created.getId(),
@@ -201,9 +217,9 @@ public class AgentStudentService {
             conversation.getSessionId(),
             conversation.getItemId());
     try {
-      search.ensureIndexed(conversation.getPackageRevisionId());
+      search.ensureIndexed(context.packageRevisionId());
     } catch (RuntimeException exception) {
-      LOGGER.warn("agent.index.failed revisionId={}", conversation.getPackageRevisionId());
+      LOGGER.warn("agent.index.failed revisionId={}", context.packageRevisionId());
     }
 
     AgentTurn reserved = reserveTurn(conversation, actorId, idempotencyKey, questionText, quote);
@@ -231,8 +247,8 @@ public class AgentStudentService {
                   conversation.getId(),
                   conversation.getContextType(),
                   conversation.getContextId(),
-                  conversation.getPackageId(),
-                  conversation.getPackageRevisionId(),
+                  context.packageId(),
+                  context.packageRevisionId(),
                   conversation.getSubject(),
                   conversation.getExplanationLanguage(),
                   conversation.getExamLanguage(),
@@ -257,11 +273,12 @@ public class AgentStudentService {
         }
       }
       LOGGER.info(
-          "agent.turn.completed conversationId={} turnId={} kind={} latencyMs={}",
+          "agent.turn.completed conversationId={} turnId={} kind={} latencyMs={} tokenUsage={}",
           conversation.getId(),
           completed.getId(),
           completed.getKind(),
-          latency);
+          latency,
+          result.tokenUsage());
       return toTurnView(completed);
     } catch (AgentProviderUnavailableException exception) {
       persistFailed(reserved, elapsedMs(started), now());
@@ -832,10 +849,11 @@ public class AgentStudentService {
   }
 
   private void enforceBudget(UUID actorId) {
-    Instant startOfDay = now().truncatedTo(ChronoUnit.DAYS);
+    Instant startOfDay = now().atZone(JAKARTA).toLocalDate().atStartOfDay(JAKARTA).toInstant();
     long used = turns.countByAccountIdAndCreatedAtGreaterThanEqual(actorId, startOfDay);
     if (used >= properties.dailyTurnCap()) {
-      long retry = Duration.between(now(), startOfDay.plus(1, ChronoUnit.DAYS)).toSeconds();
+      Instant resetAt = startOfDay.plus(1, ChronoUnit.DAYS);
+      long retry = Duration.between(now(), resetAt).toSeconds();
       LOGGER.info("agent.budget.exceeded accountId={} capName=dailyTurn", actorId);
       throw new AgentBudgetExceededException(Math.max(1, retry));
     }

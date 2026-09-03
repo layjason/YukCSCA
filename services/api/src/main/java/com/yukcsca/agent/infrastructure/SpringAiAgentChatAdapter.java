@@ -6,7 +6,6 @@ import com.yukcsca.agent.application.AgentProviderUnavailableException;
 import com.yukcsca.agent.domain.AgentAnswerKind;
 import com.yukcsca.agent.domain.AgentContextType;
 import com.yukcsca.agent.domain.AgentTraceStepKind;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -14,12 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -50,25 +47,18 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
   @Override
   public AgentChatResult complete(AgentChatCommand command) {
     AgentToolFacade tools = new AgentToolFacade(command, search);
-    Duration timeout = command.timeout() == null ? properties.turnTimeout() : command.timeout();
     String lastRaw = null;
+    int tokenUsage = 0;
     for (int attempt = 0; attempt <= SCHEMA_RETRIES; attempt++) {
       boolean retry = attempt > 0;
       try {
-        String raw =
-            CompletableFuture.supplyAsync(() -> invoke(command, tools, retry))
-                .orTimeout(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS)
-                .join();
-        lastRaw = raw;
-        AgentChatResult parsed = parse(raw, command, tools);
+        ModelOutput output = invoke(command, tools, retry);
+        lastRaw = output.content();
+        tokenUsage += output.tokenUsage();
+        AgentChatResult parsed = parse(output.content(), command, tools, tokenUsage);
         if (parsed != null) {
           return parsed;
         }
-      } catch (CompletionException exception) {
-        if (exception.getCause() instanceof TimeoutException) {
-          throw new AgentProviderUnavailableException(exception);
-        }
-        throw new AgentProviderUnavailableException(exception);
       } catch (RuntimeException exception) {
         throw new AgentProviderUnavailableException(exception);
       }
@@ -77,18 +67,34 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
         lastRaw == null ? null : new IllegalStateException("schema-exhausted"));
   }
 
-  private String invoke(AgentChatCommand command, AgentToolFacade tools, boolean retry) {
+  private ModelOutput invoke(AgentChatCommand command, AgentToolFacade tools, boolean retry) {
     String user = userMessage(command, retry);
-    return chatClient
-        .prompt()
-        .system(systemPrompt(command))
-        .user(user)
-        .tools(tools)
-        .call()
-        .content();
+    ChatResponse response =
+        chatClient
+            .prompt()
+            .system(systemPrompt(command))
+            .user(user)
+            .tools(tools)
+            .call()
+            .chatResponse();
+    if (response == null
+        || response.getResult() == null
+        || response.getResult().getOutput() == null) {
+      throw new AgentProviderUnavailableException();
+    }
+    return new ModelOutput(response.getResult().getOutput().getText(), tokenUsage(response));
   }
 
-  private AgentChatResult parse(String raw, AgentChatCommand command, AgentToolFacade tools) {
+  private static int tokenUsage(ChatResponse response) {
+    Usage usage = response.getMetadata() == null ? null : response.getMetadata().getUsage();
+    if (usage == null || usage.getTotalTokens() == null) {
+      return 0;
+    }
+    return Math.max(0, usage.getTotalTokens());
+  }
+
+  private AgentChatResult parse(
+      String raw, AgentChatCommand command, AgentToolFacade tools, int tokenUsage) {
     JsonNode node = readObject(raw);
     if (node == null) return null;
     AgentAnswerKind kind = parseKind(node.path("kind").asText(null));
@@ -103,7 +109,7 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
     boolean lowConfidence = node.path("lowConfidence").asBoolean(false);
     List<TraceStep> steps = studentSteps(command, tools);
     return new AgentChatResult(
-        kind, body, locators, steps, followUps, lowConfidence, 0, properties.chatModel());
+        kind, body, locators, steps, followUps, lowConfidence, tokenUsage, properties.chatModel());
   }
 
   private List<TraceStep> studentSteps(AgentChatCommand command, AgentToolFacade tools) {
@@ -336,4 +342,6 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
       return null;
     }
   }
+
+  private record ModelOutput(String content, int tokenUsage) {}
 }

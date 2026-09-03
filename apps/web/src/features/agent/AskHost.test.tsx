@@ -7,7 +7,7 @@ import i18n from '@/shared/i18n';
 import { ApiError } from '@/shared/api/httpClient';
 import { AskHost } from './AskHost';
 import * as agentApi from './api/agentApi';
-import type { AgentCompletedTurn, AgentConversation } from './types';
+import type { AgentCompletedTurn, AgentConversation, AgentPendingTurn } from './types';
 
 vi.mock('./api/agentApi', async () => {
   const actual = await vi.importActual<typeof agentApi>('./api/agentApi');
@@ -317,6 +317,22 @@ test('submits from the composer with Ctrl+Enter', async () => {
   await waitFor(() => expect(agentApi.askTurn).toHaveBeenCalled());
 });
 
+test('announces budget errors instead of a timeout in the live region', async () => {
+  vi.mocked(agentApi.askTurn).mockRejectedValueOnce(
+    new ApiError(429, { code: 'AGENT_BUDGET_EXCEEDED', detail: 'cap' }, 90),
+  );
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const composer = await screen.findByPlaceholderText('Ask about this work');
+  fireEvent.change(composer, { target: { value: 'What is a factor?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+  const budgetCopy = await screen.findAllByText(
+    'Daily Ask limit reached. Try again in 90 seconds.',
+  );
+  expect(budgetCopy.length).toBeGreaterThanOrEqual(2);
+  expect(screen.queryByText('Ask timed out.')).not.toBeInTheDocument();
+});
+
 test('rotates the Idempotency-Key after a provider failure', async () => {
   vi.mocked(agentApi.askTurn)
     .mockRejectedValueOnce(
@@ -337,3 +353,92 @@ test('rotates the Idempotency-Key after a provider failure', async () => {
   expect(secondKey).toEqual(expect.any(String));
   expect(secondKey).not.toEqual(firstKey);
 });
+
+test('mints a new Idempotency-Key when the student edits and submits after a failure', async () => {
+  vi.mocked(agentApi.askTurn)
+    .mockRejectedValueOnce(
+      new ApiError(503, { code: 'AGENT_PROVIDER_UNAVAILABLE', detail: 'Provider down' }),
+    )
+    .mockResolvedValueOnce({ ...completed, questionText: 'What is a product?' });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const composer = await screen.findByPlaceholderText('Ask about this work');
+  fireEvent.change(composer, { target: { value: 'What is a factor?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+  expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  fireEvent.change(composer, { target: { value: 'What is a product?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+  await waitFor(() => expect(agentApi.askTurn).toHaveBeenCalledTimes(2));
+  const firstCall = vi.mocked(agentApi.askTurn).mock.calls[0];
+  const secondCall = vi.mocked(agentApi.askTurn).mock.calls[1];
+  expect(firstCall?.[1]).toEqual({ questionText: 'What is a factor?' });
+  expect(secondCall?.[1]).toEqual({ questionText: 'What is a product?' });
+  expect(secondCall?.[2]).toEqual(expect.any(String));
+  expect(secondCall?.[2]).not.toEqual(firstCall?.[2]);
+});
+
+test('settles a concurrent turn by clearing the matching composer and notifying the host', async () => {
+  const onAsked = vi.fn();
+  const pending: AgentPendingTurn = {
+    id: completed.id,
+    status: 'PENDING',
+    questionText: completed.questionText,
+    quote: null,
+    createdAt: completed.createdAt,
+  };
+  vi.mocked(agentApi.askTurn).mockRejectedValue(
+    new ApiError(409, { code: 'CONCURRENT_TURN_PENDING', detail: 'Another Ask is in progress' }),
+  );
+  vi.mocked(agentApi.getConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [completed],
+  });
+  renderHost({ openItem: { alreadyStrong: true, onAsked } });
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const composer = await screen.findByPlaceholderText('Ask about this work');
+  fireEvent.change(composer, { target: { value: pending.questionText } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+  expect(await screen.findByText(completed.body)).toBeInTheDocument();
+  await waitFor(() => expect(onAsked).toHaveBeenCalled());
+  expect(composer).toHaveValue('');
+});
+
+test('retries conversation start when the first open fails', async () => {
+  vi.mocked(agentApi.startConversation)
+    .mockRejectedValueOnce(new Error('network'))
+    .mockResolvedValueOnce(emptyConversation);
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const retry = await screen.findByRole('button', { name: 'Try again' });
+  expect(screen.getByPlaceholderText('Ask about this work')).toBeDisabled();
+  fireEvent.click(retry);
+  await waitFor(() => expect(agentApi.startConversation).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(screen.getByPlaceholderText('Ask about this work')).not.toBeDisabled(),
+  );
+});
+
+test('keeps polling after a transient conversation read failure', async () => {
+  const pending: AgentPendingTurn = {
+    id: completed.id,
+    status: 'PENDING',
+    questionText: completed.questionText,
+    quote: null,
+    createdAt: completed.createdAt,
+  };
+  vi.mocked(agentApi.askTurn).mockRejectedValue(
+    new ApiError(409, { code: 'CONCURRENT_TURN_PENDING', detail: 'Another Ask is in progress' }),
+  );
+  vi.mocked(agentApi.getConversation)
+    .mockResolvedValueOnce({ ...emptyConversation, turns: [pending] })
+    .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    .mockResolvedValue({ ...emptyConversation, turns: [completed] });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const composer = await screen.findByPlaceholderText('Ask about this work');
+  fireEvent.change(composer, { target: { value: pending.questionText } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+  await waitFor(() => expect(screen.getByText(completed.body)).toBeInTheDocument(), {
+    timeout: 4000,
+  });
+}, 10_000);

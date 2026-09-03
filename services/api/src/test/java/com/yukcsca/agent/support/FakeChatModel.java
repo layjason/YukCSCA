@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.DefaultUsage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -116,6 +118,9 @@ public class FakeChatModel implements ChatModel {
   }
 
   private static ChatResponse response(String text) {
-    return new ChatResponse(List.of(new Generation(new AssistantMessage(text))));
+    return ChatResponse.builder()
+        .generations(List.of(new Generation(new AssistantMessage(text))))
+        .metadata(ChatResponseMetadata.builder().usage(new DefaultUsage(12, 7)).build())
+        .build();
   }
 }

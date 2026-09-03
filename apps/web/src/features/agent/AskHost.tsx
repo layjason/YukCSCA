@@ -23,7 +23,13 @@ import type {
   AgentTurnRequest,
   MathBlockSource,
 } from './types';
-import { isPendingTurn, QUESTION_MAX_LENGTH, QUESTION_MIN_LENGTH, QUOTE_MAX_LENGTH } from './types';
+import {
+  isCompletedTurn,
+  isPendingTurn,
+  QUESTION_MAX_LENGTH,
+  QUESTION_MIN_LENGTH,
+  QUOTE_MAX_LENGTH,
+} from './types';
 import './agent.css';
 
 const DESKTOP_QUERY = '(min-width: 960px)';
@@ -211,9 +217,13 @@ function AskHostSession({
           pollTimer.current = window.setTimeout(resolve, POLL_MS);
         });
         if (cancelledRef.current) return latest;
-        latest = await getConversation(conversationId);
-        if (cancelledRef.current) return latest;
-        persistConversation(latest);
+        try {
+          latest = await getConversation(conversationId);
+          if (cancelledRef.current) return latest;
+          persistConversation(latest);
+        } catch {
+          // Transient GET failure: keep polling until the budget expires.
+        }
       }
       return latest;
     },
@@ -354,16 +364,42 @@ function AskHostSession({
         if (err instanceof ApiError && err.code === 'CONCURRENT_TURN_PENDING') {
           setLiveMessage(t('agent.errorConcurrent'));
           try {
-            await pollUntilSettled(conversation.id);
+            const settled = await pollUntilSettled(conversation.id);
             if (cancelledRef.current) return;
+            if (settled.turns.some(isPendingTurn)) {
+              setPhase('idle');
+              setLiveMessage(t('agent.liveTimeout'));
+              setErrorMessage(t('agent.errorConcurrent'));
+              return;
+            }
+            const knownCompleted = new Set(
+              conversation.turns.filter(isCompletedTurn).map((turn) => turn.id),
+            );
+            const newlyCompleted = settled.turns
+              .filter(isCompletedTurn)
+              .filter((turn) => !knownCompleted.has(turn.id));
+            const matching = newlyCompleted.find(
+              (turn) => turn.questionText === request.questionText,
+            );
             setPhase('idle');
             setLiveMessage(t('agent.liveDone'));
+            setRetryRequest(null);
+            setIdempotencyKey(null);
+            setLastErrorCode(null);
+            if (newlyCompleted.length > 0) {
+              openItem?.onAsked?.();
+            }
+            if (matching) {
+              setQuestion('');
+              setQuote(null);
+            }
           } catch (pollErr) {
             if (cancelledRef.current) return;
+            const message = mapError(pollErr);
             setPhase('idle');
             setLastErrorCode(pollErr instanceof ApiError ? (pollErr.code ?? null) : null);
-            setErrorMessage(mapError(pollErr));
-            setLiveMessage(t('agent.liveTimeout'));
+            setErrorMessage(message);
+            setLiveMessage(message);
           }
           return;
         }
@@ -378,10 +414,11 @@ function AskHostSession({
           setPhase('idle');
           return;
         }
+        const message = mapError(err);
         setPhase('idle');
         setLastErrorCode(err instanceof ApiError ? (err.code ?? null) : null);
-        setErrorMessage(mapError(err));
-        setLiveMessage(t('agent.liveTimeout'));
+        setErrorMessage(message);
+        setLiveMessage(message);
       }
     },
     [conversation, mapError, openItem, persistConversation, pollUntilSettled, t],
@@ -402,7 +439,7 @@ function AskHostSession({
       return;
     }
     setConfirmOpen(false);
-    void sendTurn(request, idempotencyKey ?? newIdempotencyKey());
+    void sendTurn(request, newIdempotencyKey());
   }
 
   function handleFollowUp(text: string): void {
@@ -413,6 +450,10 @@ function AskHostSession({
   }
 
   function handleRetry(): void {
+    if (!conversation) {
+      void openPanel();
+      return;
+    }
     if (!retryRequest) {
       handleSubmit();
       return;
@@ -476,7 +517,7 @@ function AskHostSession({
           onLocator={handleLocator}
           onConfirmAsk={() => {
             setConfirmOpen(false);
-            void sendTurn(currentRequest(), idempotencyKey ?? newIdempotencyKey());
+            void sendTurn(currentRequest(), newIdempotencyKey());
           }}
           onCancelConfirm={() => setConfirmOpen(false)}
         />
@@ -537,7 +578,7 @@ function AskHostSession({
           onLocator={handleLocator}
           onConfirmAsk={() => {
             setConfirmOpen(false);
-            void sendTurn(currentRequest(), idempotencyKey ?? newIdempotencyKey());
+            void sendTurn(currentRequest(), newIdempotencyKey());
           }}
           onCancelConfirm={() => setConfirmOpen(false)}
         />
