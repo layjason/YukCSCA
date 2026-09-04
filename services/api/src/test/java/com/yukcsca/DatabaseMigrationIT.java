@@ -36,5 +36,19 @@ class DatabaseMigrationIT {
       assertThat(result.next()).isTrue();
       assertThat(result.getInt(1)).isEqualTo(23);
     }
+    try (var connection = dataSource.getConnection();
+        var statement =
+            connection.prepareStatement(
+                "select format_type(a.atttypid, a.atttypmod) "
+                    + "from pg_attribute a "
+                    + "join pg_class c on c.oid = a.attrelid "
+                    + "join pg_namespace n on n.oid = c.relnamespace "
+                    + "where n.nspname = 'public' "
+                    + "and c.relname = 'agent_content_chunk' "
+                    + "and a.attname = 'embedding'");
+        var result = statement.executeQuery()) {
+      assertThat(result.next()).isTrue();
+      assertThat(result.getString(1)).isEqualTo("vector(1024)");
+    }
   }
 }

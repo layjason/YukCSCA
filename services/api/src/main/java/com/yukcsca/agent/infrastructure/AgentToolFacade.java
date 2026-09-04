@@ -6,7 +6,10 @@ import com.yukcsca.agent.application.AgentContentSearchPort;
 import com.yukcsca.agent.application.AgentContentSearchPort.SearchHit;
 import com.yukcsca.agent.domain.AgentContextType;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import org.springframework.ai.tool.annotation.Tool;
 
 /**
@@ -24,10 +27,14 @@ public class AgentToolFacade {
           "getRecentEvidence",
           "searchAuthorisedContent");
 
+  static final int SEARCH_HIT_CAP = 3;
+
   private final AgentChatCommand command;
   private final AgentContentSearchPort search;
   private final List<GroundedLocator> retrieved = new ArrayList<>();
   private final List<String> invoked = new ArrayList<>();
+  private final Map<String, List<GroundedLocator>> locatorsByTool = new LinkedHashMap<>();
+  private String lastSearchQuery = "";
 
   public AgentToolFacade(AgentChatCommand command, AgentContentSearchPort search) {
     this.command = command;
@@ -35,59 +42,86 @@ public class AgentToolFacade {
   }
 
   public List<GroundedLocator> retrievedLocators() {
-    return List.copyOf(retrieved);
+    return unique(retrieved);
   }
 
   public List<String> invokedTools() {
     return List.copyOf(invoked);
   }
 
-  @Tool(description = "Current lesson excerpt. No arguments. Identity is request-attached.")
+  List<GroundedLocator> locatorsFor(String toolName) {
+    return unique(locatorsByTool.getOrDefault(toolName, List.of()));
+  }
+
+  String lastSearchQuery() {
+    return lastSearchQuery;
+  }
+
+  @Tool(
+      description =
+          "Current lesson excerpt. Use when current_object is missing a needed lesson detail. Do not use when greeting, identity, thanks, or current_object already has the excerpt. Never call unless the current context is this lesson. No arguments.")
   public String getLessonContext() {
     return getter(AgentContextType.LESSON, "getLessonContext");
   }
 
   @Tool(
       description =
-          "Current assessment item excerpt. OPEN items omit keys and undisclosed solutions. No arguments.")
+          "Current assessment item excerpt. OPEN items omit keys and undisclosed solutions. Use when current_object is missing a needed item detail. Do not use when greeting, identity, thanks, or current_object already has the excerpt. Never call unless the current context is this item. No arguments.")
   public String getItemContext() {
     return getter(AgentContextType.ITEM, "getItemContext");
   }
 
-  @Tool(description = "Current mistake excerpt. No arguments.")
+  @Tool(
+      description =
+          "Current mistake excerpt. Use when current_object is missing a needed mistake detail. Do not use when greeting, identity, thanks, or current_object already has the excerpt. Never call unless the current context is this mistake. No arguments.")
   public String getMistakeContext() {
     return getter(AgentContextType.MISTAKE, "getMistakeContext");
   }
 
-  @Tool(description = "Current remediation excerpt. No arguments.")
+  @Tool(
+      description =
+          "Current remediation excerpt. Use when current_object is missing a needed remediation detail. Do not use when greeting, identity, thanks, or current_object already has the excerpt. Never call unless the current context is this remediation. No arguments.")
   public String getRemediationContext() {
     return getter(AgentContextType.REMEDIATION, "getRemediationContext");
   }
 
-  @Tool(description = "Current terminology entry excerpt. No arguments.")
+  @Tool(
+      description =
+          "Current terminology entry excerpt. Use when current_object is missing a needed term detail. Do not use when greeting, identity, thanks, or current_object already has the excerpt. Never call unless the current context is this term. No arguments.")
   public String getTermContext() {
     return getter(AgentContextType.TERMINOLOGY, "getTermContext");
   }
 
-  @Tool(description = "Bounded recent learner evidence snapshots. No arguments.")
+  @Tool(
+      description =
+          "Bounded recent learner work or mistakes. Use when the question is about the student's recent work or mistakes. Do not use when greeting, identity, or a content question about the current object. No arguments.")
   public String getRecentEvidence() {
-    invoked.add("getRecentEvidence");
-    return wrap("evidence", command.grounding().currentObjectExcerpt());
+    markInvoked("getRecentEvidence");
+    String evidence = command.grounding().recentEvidenceExcerpt();
+    return wrap(
+        "evidence",
+        evidence == null || evidence.isBlank() ? "No separate evidence snapshot." : evidence);
   }
 
   @Tool(
       description =
-          "Search published authorised objects in this package. Query is a student question fragment.")
+          "Search published authorised objects in this package. Use when the question needs another published object in this package, or current_object is clearly insufficient for a content question. Do not use when greeting, identity, thanks, or current_object already answers. Query is a student question fragment.")
   public String searchAuthorisedContent(String query) {
-    invoked.add("searchAuthorisedContent");
+    lastSearchQuery = query == null ? "" : query.trim();
+    markInvoked("searchAuthorisedContent");
     List<SearchHit> hits =
-        search.search(command.packageRevisionId(), query, command.explanationLanguage(), 8);
+        search.search(
+            command.packageRevisionId(), query, command.explanationLanguage(), SEARCH_HIT_CAP);
+    if (hits.size() > SEARCH_HIT_CAP) {
+      hits = hits.subList(0, SEARCH_HIT_CAP);
+    }
     if (hits.isEmpty()) {
       return wrap("search", "No authorised hits.");
     }
     StringBuilder body = new StringBuilder();
     for (SearchHit hit : hits) {
-      retrieved.add(
+      recordLocator(
+          "searchAuthorisedContent",
           new GroundedLocator(
               hit.sourceKind(),
               hit.sourceId(),
@@ -105,12 +139,43 @@ public class AgentToolFacade {
   }
 
   private String getter(AgentContextType expected, String name) {
-    invoked.add(name);
+    markInvoked(name);
     if (command.contextType() != expected) {
       return wrap(name, "Not the current context.");
     }
-    retrieved.addAll(command.grounding().currentLocators());
+    for (GroundedLocator locator : command.grounding().currentLocators()) {
+      recordLocator(name, locator);
+    }
     return wrap(name, command.grounding().currentObjectExcerpt());
+  }
+
+  private void markInvoked(String name) {
+    invoked.add(name);
+    locatorsByTool.computeIfAbsent(name, key -> new ArrayList<>());
+  }
+
+  private void recordLocator(String toolName, GroundedLocator locator) {
+    retrieved.add(locator);
+    locatorsByTool.computeIfAbsent(toolName, key -> new ArrayList<>()).add(locator);
+  }
+
+  private static List<GroundedLocator> unique(List<GroundedLocator> locators) {
+    LinkedHashSet<String> keys = new LinkedHashSet<>();
+    List<GroundedLocator> values = new ArrayList<>();
+    for (GroundedLocator locator : locators) {
+      String key =
+          locator.sourceKind()
+              + ":"
+              + locator.sourceId()
+              + ":"
+              + locator.blockIndex()
+              + ":"
+              + locator.packageRevisionId();
+      if (keys.add(key)) {
+        values.add(locator);
+      }
+    }
+    return List.copyOf(values);
   }
 
   private static String wrap(String source, String data) {

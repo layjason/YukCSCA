@@ -1,5 +1,6 @@
 package com.yukcsca.support;
 
+import java.util.concurrent.Executor;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
@@ -13,5 +14,10 @@ public class PostgresTestConfiguration {
   PostgreSQLContainer postgresContainer() {
     return new PostgreSQLContainer(
         DockerImageName.parse("pgvector/pgvector:pg18").asCompatibleSubstituteFor("postgres"));
+  }
+
+  @Bean(name = "agentContentIndexExecutor")
+  Executor agentContentIndexExecutor() {
+    return Runnable::run;
   }
 }

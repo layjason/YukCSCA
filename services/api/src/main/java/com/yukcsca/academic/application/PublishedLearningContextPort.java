@@ -9,11 +9,14 @@ import java.util.UUID;
  * JPA. Academic never imports agent.
  */
 public interface PublishedLearningContextPort {
-  Optional<AuthorisedResourceContext> findPublishedLesson(UUID accountId, UUID resourceId);
+  Optional<AuthorisedResourceContext> findPublishedLesson(
+      UUID accountId, UUID resourceId, String explanationLanguage);
 
-  Optional<AuthorisedResourceContext> findPublishedRemediation(UUID accountId, UUID resourceId);
+  Optional<AuthorisedResourceContext> findPublishedRemediation(
+      UUID accountId, UUID resourceId, String explanationLanguage);
 
-  Optional<AuthorisedTermContext> findPublishedTerm(UUID accountId, UUID termId);
+  Optional<AuthorisedTermContext> findPublishedTerm(
+      UUID accountId, UUID termId, String explanationLanguage);
 
   List<PublishedChunk> listPublishedChunks(UUID packageRevisionId);
 

@@ -1,5 +1,6 @@
 package com.yukcsca.agent.support;
 
+import com.yukcsca.agent.infrastructure.AgentProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -61,7 +62,7 @@ public class FakeEmbeddingModel implements EmbeddingModel {
       byte[] hash =
           MessageDigest.getInstance("SHA-256")
               .digest((text == null ? "" : text).getBytes(StandardCharsets.UTF_8));
-      float[] values = new float[1536];
+      float[] values = new float[AgentProperties.EMBEDDING_DIMENSIONS];
       for (int i = 0; i < values.length; i++) {
         values[i] = (hash[i % hash.length] & 0xff) / 255.0f;
       }

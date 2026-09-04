@@ -84,6 +84,14 @@ public class AgentConversation {
     this.updatedAt = now;
   }
 
+  public void updateExplanationLanguage(String language, Instant now) {
+    if (language == null || language.isBlank() || language.equals(this.explanationLanguage)) {
+      return;
+    }
+    this.explanationLanguage = language;
+    this.updatedAt = now;
+  }
+
   public UUID getId() {
     return id;
   }

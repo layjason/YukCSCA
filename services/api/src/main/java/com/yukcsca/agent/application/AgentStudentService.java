@@ -42,6 +42,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,7 +126,14 @@ public class AgentStudentService {
   public AvailabilityView availability(
       UUID actorId, AgentContextType contextType, UUID contextId, UUID sessionId, UUID itemId) {
     requireStudent(actorId);
-    AuthorisedContext context = authorize(actorId, contextType, contextId, sessionId, itemId);
+    AuthorisedContext context =
+        authorize(
+            actorId,
+            contextType,
+            contextId,
+            sessionId,
+            itemId,
+            explanationLanguages.explanationLanguage(actorId).orElse("en"));
     if (context == null) {
       throw new AgentNotFoundException();
     }
@@ -144,16 +152,21 @@ public class AgentStudentService {
     requireStudent(actorId);
     denyIfDisabled();
     denyIfFormal(actorId);
-    AuthorisedContext context = requireContext(actorId, contextType, contextId, sessionId, itemId);
+    String profileLanguage = explanationLanguages.explanationLanguage(actorId).orElse("en");
+    AuthorisedContext context =
+        requireContext(actorId, contextType, contextId, sessionId, itemId, profileLanguage);
     AgentConversation existing =
         conversations
             .findByAccountIdAndContextTypeAndContextId(actorId, contextType, context.contextId())
             .orElse(null);
     if (existing != null) {
-      return new ConversationStartResult(toConversationView(existing), false);
+      String explanationLanguage = currentExplanationLanguage(actorId, existing);
+      existing.updateExplanationLanguage(explanationLanguage, now());
+      scheduleIndex(existing.getPackageRevisionId());
+      return new ConversationStartResult(toConversationView(existing, explanationLanguage), false);
     }
     Instant now = now();
-    String explanationLanguage = explanationLanguages.explanationLanguage(actorId).orElse("en");
+    String explanationLanguage = profileLanguage;
     AgentConversation created;
     try {
       created =
@@ -177,7 +190,8 @@ public class AgentStudentService {
           conversations
               .findByAccountIdAndContextTypeAndContextId(actorId, contextType, context.contextId())
               .orElseThrow(AgentNotFoundException::new);
-      return new ConversationStartResult(toConversationView(winner), false);
+      return new ConversationStartResult(
+          toConversationView(winner, currentExplanationLanguage(actorId, winner)), false);
     }
     if (created == null) {
       throw new AgentNotFoundException();
@@ -186,19 +200,18 @@ public class AgentStudentService {
         "agent.conversation.started conversationId={} contextType={}",
         created.getId(),
         contextType);
-    try {
-      search.ensureIndexed(created.getPackageRevisionId());
-    } catch (RuntimeException exception) {
-      LOGGER.warn("agent.index.failed revisionId={}", created.getPackageRevisionId());
-    }
-    return new ConversationStartResult(toConversationView(created), true);
+    scheduleIndex(created.getPackageRevisionId());
+    return new ConversationStartResult(toConversationView(created, explanationLanguage), true);
   }
 
   @Transactional(readOnly = true)
   public ConversationView getConversation(UUID actorId, UUID conversationId) {
     requireStudent(actorId);
     AgentConversation conversation = requireOwnedConversation(actorId, conversationId);
-    return toConversationView(conversation);
+    turns
+        .findFirstByConversationIdAndStatus(conversation.getId(), AgentTurnStatus.PENDING)
+        .ifPresent(this::expireIfStale);
+    return toConversationView(conversation, currentExplanationLanguage(actorId, conversation));
   }
 
   public TurnView askTurn(
@@ -209,18 +222,15 @@ public class AgentStudentService {
     validateTurn(questionText, quote);
     AgentConversation conversation = requireOwnedConversation(actorId, conversationId);
     enforceBudget(actorId);
+    String explanationLanguage = currentExplanationLanguage(actorId, conversation);
     AuthorisedContext context =
         requireContext(
             actorId,
             conversation.getContextType(),
             conversation.getContextId(),
             conversation.getSessionId(),
-            conversation.getItemId());
-    try {
-      search.ensureIndexed(context.packageRevisionId());
-    } catch (RuntimeException exception) {
-      LOGGER.warn("agent.index.failed revisionId={}", context.packageRevisionId());
-    }
+            conversation.getItemId(),
+            explanationLanguage);
 
     AgentTurn reserved = reserveTurn(conversation, actorId, idempotencyKey, questionText, quote);
     if (reserved.getStatus() == AgentTurnStatus.COMPLETED) {
@@ -239,6 +249,18 @@ public class AgentStudentService {
     }
 
     Instant started = now();
+    scheduleIndex(context.packageRevisionId());
+    if (!explanationLanguage.equals(conversation.getExplanationLanguage())) {
+      requiresNew.executeWithoutResult(
+          status -> {
+            AgentConversation current =
+                conversations
+                    .findById(conversation.getId())
+                    .orElseThrow(AgentNotFoundException::new);
+            current.updateExplanationLanguage(explanationLanguage, now());
+            conversations.save(current);
+          });
+    }
     try {
       AgentChatResult result =
           chat.complete(
@@ -250,7 +272,7 @@ public class AgentStudentService {
                   context.packageId(),
                   context.packageRevisionId(),
                   conversation.getSubject(),
-                  conversation.getExplanationLanguage(),
+                  explanationLanguage,
                   conversation.getExamLanguage(),
                   questionText,
                   quote,
@@ -281,19 +303,23 @@ public class AgentStudentService {
           result.tokenUsage());
       return toTurnView(completed);
     } catch (AgentProviderUnavailableException exception) {
-      persistFailed(reserved, elapsedMs(started), now());
+      persistFailed(reserved, elapsedMs(started), now(), exception.causeToken());
       LOGGER.info(
-          "agent.turn.failed conversationId={} turnId={} errorCode=AGENT_PROVIDER_UNAVAILABLE",
+          "agent.turn.failed conversationId={} turnId={} errorCode=AGENT_PROVIDER_UNAVAILABLE cause={}",
           conversation.getId(),
-          reserved.getId());
+          reserved.getId(),
+          exception.causeToken());
       throw exception;
     } catch (RuntimeException exception) {
-      persistFailed(reserved, elapsedMs(started), now());
+      AgentProviderUnavailableException unavailable =
+          new AgentProviderUnavailableException(exception);
+      persistFailed(reserved, elapsedMs(started), now(), unavailable.causeToken());
       LOGGER.warn(
-          "agent.turn.failed conversationId={} turnId={} errorCode=AGENT_PROVIDER_UNAVAILABLE",
+          "agent.turn.failed conversationId={} turnId={} errorCode=AGENT_PROVIDER_UNAVAILABLE cause={}",
           conversation.getId(),
-          reserved.getId());
-      throw new AgentProviderUnavailableException(exception);
+          reserved.getId(),
+          unavailable.causeToken());
+      throw unavailable;
     }
   }
 
@@ -347,9 +373,9 @@ public class AgentStudentService {
     if (pending.getStatus() != AgentTurnStatus.PENDING || !isStalePending(pending)) {
       return pending;
     }
-    persistFailed(pending, elapsedMs(pending.getCreatedAt()), now());
+    persistFailed(pending, elapsedMs(pending.getCreatedAt()), now(), "stale-pending");
     LOGGER.info(
-        "agent.turn.failed conversationId={} turnId={} errorCode=STALE_PENDING",
+        "agent.turn.failed conversationId={} turnId={} errorCode=STALE_PENDING cause=stale-pending",
         pending.getConversationId(),
         pending.getId());
     return turns.findById(pending.getId()).orElse(pending);
@@ -456,7 +482,8 @@ public class AgentStudentService {
         });
   }
 
-  private void persistFailed(AgentTurn pending, int latencyMs, Instant now) {
+  private void persistFailed(AgentTurn pending, int latencyMs, Instant now, String causeToken) {
+    String cause = AgentProviderUnavailableException.sanitizeCause(causeToken);
     requiresNew.executeWithoutResult(
         status -> {
           AgentTurn turn = turns.findById(pending.getId()).orElseThrow(AgentNotFoundException::new);
@@ -464,6 +491,28 @@ public class AgentStudentService {
             return;
           }
           turns.save(turn);
+          traces.save(
+              new AgentTrace(
+                  turn.getId(),
+                  turn.getConversationId(),
+                  turn.getAccountId(),
+                  properties.chatModel(),
+                  properties.promptVersion(),
+                  0,
+                  writeJson(
+                      List.of(
+                          Map.of(
+                              "kind",
+                              "MODEL",
+                              "label",
+                              "unavailable",
+                              "cause",
+                              cause,
+                              "locators",
+                              List.of(),
+                              "latencyMs",
+                              0))),
+                  now));
           AgentConversation owned =
               conversations
                   .findById(turn.getConversationId())
@@ -474,8 +523,14 @@ public class AgentStudentService {
   }
 
   private AuthorisedContext requireContext(
-      UUID actorId, AgentContextType contextType, UUID contextId, UUID sessionId, UUID itemId) {
-    AuthorisedContext context = authorize(actorId, contextType, contextId, sessionId, itemId);
+      UUID actorId,
+      AgentContextType contextType,
+      UUID contextId,
+      UUID sessionId,
+      UUID itemId,
+      String explanationLanguage) {
+    AuthorisedContext context =
+        authorize(actorId, contextType, contextId, sessionId, itemId, explanationLanguage);
     if (context == null) {
       throw new AgentNotFoundException();
     }
@@ -483,7 +538,12 @@ public class AgentStudentService {
   }
 
   private AuthorisedContext authorize(
-      UUID actorId, AgentContextType contextType, UUID contextId, UUID sessionId, UUID itemId) {
+      UUID actorId,
+      AgentContextType contextType,
+      UUID contextId,
+      UUID sessionId,
+      UUID itemId,
+      String explanationLanguage) {
     if (contextType == null || contextId == null) {
       throw new AgentValidationException(List.of(new AgentViolation("contextType", "REQUIRED")));
     }
@@ -534,16 +594,19 @@ public class AgentStudentService {
     return switch (contextType) {
       case LESSON ->
           learning
-              .findPublishedLesson(actorId, contextId)
+              .findPublishedLesson(actorId, contextId, explanationLanguage)
               .map(resource -> fromResource(AgentContextType.LESSON, resource))
               .orElse(null);
       case REMEDIATION ->
           learning
-              .findPublishedRemediation(actorId, contextId)
+              .findPublishedRemediation(actorId, contextId, explanationLanguage)
               .map(resource -> fromResource(AgentContextType.REMEDIATION, resource))
               .orElse(null);
       case TERMINOLOGY ->
-          learning.findPublishedTerm(actorId, contextId).map(this::fromTerm).orElse(null);
+          learning
+              .findPublishedTerm(actorId, contextId, explanationLanguage)
+              .map(this::fromTerm)
+              .orElse(null);
       case MISTAKE ->
           assessment.findOwnedMistake(actorId, contextId).map(this::fromMistake).orElse(null);
       case ITEM -> null;
@@ -616,26 +679,33 @@ public class AgentStudentService {
   }
 
   private AuthorisedAskGrounding grounding(UUID accountId, AuthorisedContext context) {
+    StringBuilder recentEvidence = new StringBuilder();
+    evidence
+        .listRecentByAccount(accountId, 5)
+        .forEach(
+            snapshot ->
+                recentEvidence
+                    .append(snapshot.signal())
+                    .append(" objective=")
+                    .append(snapshot.objectiveId())
+                    .append('\n'));
     StringBuilder excerpt = new StringBuilder(context.excerpt());
     if (context.type() == AgentContextType.ITEM && !context.itemOpen()) {
       if (!context.reviewedExplanation().isBlank()) {
         excerpt.append('\n').append(context.reviewedExplanation());
       }
     }
-    evidence
-        .listRecentByAccount(accountId, 5)
-        .forEach(
-            snapshot ->
-                excerpt
-                    .append("\nEvidence ")
-                    .append(snapshot.signal())
-                    .append(' ')
-                    .append(snapshot.objectiveId()));
     return new AuthorisedAskGrounding(
         context.label(),
         clip(excerpt.toString(), 8000),
+        clip(recentEvidence.toString(), 1600),
         context.itemOpen(),
         List.copyOf(context.locators()));
+  }
+
+  private String currentExplanationLanguage(UUID actorId, AgentConversation conversation) {
+    String current = explanationLanguages.explanationLanguage(actorId).orElse(null);
+    return current == null || current.isBlank() ? conversation.getExplanationLanguage() : current;
   }
 
   private List<PriorTurn> priorTurns(UUID conversationId) {
@@ -655,7 +725,8 @@ public class AgentStudentService {
     return result;
   }
 
-  private ConversationView toConversationView(AgentConversation conversation) {
+  private ConversationView toConversationView(
+      AgentConversation conversation, String explanationLanguage) {
     List<AgentTurn> recent =
         turns.findTop20ByConversationIdOrderByCreatedAtDesc(conversation.getId());
     recent = new ArrayList<>(recent);
@@ -672,7 +743,7 @@ public class AgentStudentService {
         conversation.getPackageRevisionId(),
         conversation.getSessionId(),
         conversation.getItemId(),
-        conversation.getExplanationLanguage(),
+        explanationLanguage,
         conversation.getExamLanguage(),
         recent.stream().map(this::toTurnView).toList(),
         conversation.getCreatedAt(),
@@ -831,6 +902,14 @@ public class AgentStudentService {
       }
     }
     return text.toString();
+  }
+
+  private void scheduleIndex(UUID packageRevisionId) {
+    try {
+      search.scheduleEnsureIndexed(packageRevisionId);
+    } catch (RuntimeException exception) {
+      LOGGER.warn("agent.index.failed revisionId={}", packageRevisionId);
+    }
   }
 
   private void validateTurn(String questionText, String quote) {

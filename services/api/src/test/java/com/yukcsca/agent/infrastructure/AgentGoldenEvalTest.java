@@ -33,9 +33,11 @@ class AgentGoldenEvalTest {
             "https://api.x.ai",
             "fake-chat",
             "fake-embed",
+            "",
+            "",
             40,
             Duration.ofSeconds(8),
-            "vs011-v1");
+            "vs011-v5");
     AgentContentSearchPort search =
         new AgentContentSearchPort() {
           @Override
@@ -47,7 +49,7 @@ class AgentGoldenEvalTest {
             return List.of();
           }
         };
-    adapter = new SpringAiAgentChatAdapter(chat, search, properties, json);
+    adapter = new SpringAiAgentChatAdapter(chat, search, properties);
   }
 
   @Test
@@ -91,8 +93,8 @@ class AgentGoldenEvalTest {
     AgentChatResult result =
         adapter.complete(
             command("请解释这个恒等式", "zh-CN", "zh-CN", stem + " 且 f(1)=1", List.of(), List.of(locator)));
-    assertThat(chat.lastSystemText()).contains("zh-CN");
     assertThat(chat.lastSystemText()).contains("Do not restate a Chinese exam stem");
+    assertThat(chat.lastUserText()).contains("Answer in explanation language: zh-CN");
     assertThat(result.steps())
         .allSatisfy(step -> assertThat(step.label()).doesNotContain("getLessonContext"));
     assertThat(result.steps().getFirst().label()).isEqualTo("查看了当前内容");
@@ -139,6 +141,40 @@ class AgentGoldenEvalTest {
   }
 
   @Test
+  void greetingDoesNotRecapAndKeepsCurrentObject() {
+    chat.setMode(FakeChatModel.Mode.DERIVED);
+    AgentChatResult result = adapter.complete(command("hello, who are you", "en"));
+    assertThat(chat.calls()).isZero();
+    assertThat(result.body())
+        .isEqualTo(
+            "Hi! I’m YukCSCA Ask, here to help you understand this context “Quadratic identities”. Ask me one specific question.");
+    assertThat(result.body()).doesNotContain("x^2 + 1");
+    assertThat(result.kind()).isEqualTo(AgentAnswerKind.DERIVED_EXPLANATION);
+  }
+
+  @Test
+  void chineseGreetingKeepsNoRecapRuleAndCurrentObject() {
+    chat.setMode(FakeChatModel.Mode.DERIVED);
+    AgentChatResult result = adapter.complete(command("你好，你是谁", "zh-CN"));
+    assertThat(chat.calls()).isZero();
+    assertThat(result.body()).contains("我是 YukCSCA Ask");
+    assertThat(result.body()).doesNotContain("x^2 + 1");
+    assertThat(result.kind()).isEqualTo(AgentAnswerKind.DERIVED_EXPLANATION);
+    assertThat(result.steps())
+        .allSatisfy(step -> assertThat(step.label()).doesNotContain("getLessonContext"));
+  }
+
+  @Test
+  void substantivePromptRequiresConciseStepwiseTeaching() {
+    String prompt = adapter.systemPrompt(command("Explain this", "en"));
+    assertThat(prompt)
+        .contains("Start with a direct answer in one sentence")
+        .contains("Add 2-5 short numbered steps");
+    assertThat(prompt).contains("End with one check-for-understanding question");
+    assertThat(prompt).contains("For an OPEN scored item");
+  }
+
+  @Test
   void priorTurnsAndStudentTextAreXmlDelimited() {
     adapter.complete(
         command(
@@ -157,9 +193,10 @@ class AgentGoldenEvalTest {
                     0,
                     UUID.randomUUID()))));
     assertThat(chat.lastUserText()).contains("<student_question>");
-    assertThat(chat.lastUserText()).contains("<prior_turns>");
     assertThat(chat.lastUserText()).contains("Why is this identity true?");
     assertThat(chat.lastUserText()).contains("<current_object>");
+    assertThat(chat.lastUserText()).contains("<session_context>");
+    assertThat(chat.lastUserText()).doesNotContain("<prior_turns>");
   }
 
   private AgentChatCommand command(String question, String explanationLanguage) {
@@ -193,7 +230,7 @@ class AgentGoldenEvalTest {
         question,
         null,
         priorTurns,
-        new AuthorisedAskGrounding("Quadratic identities", excerpt, false, locators),
+        new AuthorisedAskGrounding("Quadratic identities", excerpt, "", false, locators),
         Duration.ofSeconds(8));
   }
 }

@@ -16,7 +16,7 @@ import org.springframework.ai.embedding.EmbeddingResponse;
  * contacts a billable provider.
  */
 public class HashEmbeddingModel implements EmbeddingModel {
-  private static final int DIM = 1536;
+  private static final int DIM = AgentProperties.EMBEDDING_DIMENSIONS;
 
   @Override
   public float[] embed(Document document) {

@@ -7,6 +7,10 @@ import java.util.UUID;
 public interface AgentContentSearchPort {
   void ensureIndexed(UUID packageRevisionId);
 
+  default void scheduleEnsureIndexed(UUID packageRevisionId) {
+    ensureIndexed(packageRevisionId);
+  }
+
   List<SearchHit> search(
       UUID packageRevisionId, String query, String explanationLanguage, int limit);
 

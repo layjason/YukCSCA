@@ -128,7 +128,7 @@ class AgentStudentHttpIT {
         "update user_account set role = 'PARENT', onboarding_completed = true where id = ?",
         parent.getId());
     entityManager.clear();
-    UserAccount reloadedParent = users.findById(parent.getId()).orElseThrow();
+    UserAccount reloadedParent = ((UserAccountStore) users).findById(parent.getId()).orElseThrow();
     adminToken = accessTokens.issue(admin).value();
     studentToken = accessTokens.issue(student).value();
     otherStudentToken = accessTokens.issue(other).value();
@@ -265,6 +265,54 @@ class AgentStudentHttpIT {
   }
 
   @Test
+  void existingConversationFollowsCurrentExplanationLanguage() throws Exception {
+    Fixture fixture = publishPackage();
+    UUID conversationId = startLesson(fixture.lessonId());
+    UUID studentId =
+        jdbc.queryForObject(
+            "select id from user_account where email = ?", UUID.class, "student@example.com");
+    StudentProfile profile = profiles.findByAccountId(studentId).orElseThrow();
+    profile.update(
+        null,
+        null,
+        null,
+        null,
+        ExplanationLanguage.SIMPLIFIED_CHINESE,
+        Instant.parse("2026-08-01T01:00:00Z"));
+    profiles.save(profile);
+
+    mvc.perform(
+            get("/api/v1/agent/conversations/{id}", conversationId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.explanationLanguage").value("zh-CN"));
+
+    mvc.perform(
+            post("/api/v1/agent/conversations")
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"contextType":"LESSON","contextId":"%s"}
+                    """
+                        .formatted(fixture.lessonId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(conversationId.toString()))
+        .andExpect(jsonPath("$.explanationLanguage").value("zh-CN"));
+
+    mvc.perform(
+            post("/api/v1/agent/conversations/{id}/turns", conversationId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(studentToken))
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"questionText\":\"Why is this identity true?\"}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.status").value("COMPLETED"));
+    assertThat(fakeChat.lastUserText()).contains("Answer in explanation language: zh-CN");
+    assertThat(fakeChat.lastSystemText()).doesNotContain("zh-CN");
+  }
+
+  @Test
   void unknownContextIsNotFoundAndItemMismatchConflicts() throws Exception {
     Fixture fixture = publishPackage();
     mvc.perform(
@@ -324,13 +372,22 @@ class AgentStudentHttpIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"questionText\":\"Explain this.\"}"))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.code").value("AGENT_PROVIDER_UNAVAILABLE"));
+        .andExpect(jsonPath("$.code").value("AGENT_PROVIDER_UNAVAILABLE"))
+        .andExpect(jsonPath("$.detail").value("The Ask provider is temporarily unavailable."));
     Integer failed =
         jdbc.queryForObject(
             "select count(*) from agent_turn where conversation_id = ? and status = 'FAILED'",
             Integer.class,
             conversationId);
     assertThat(failed).isEqualTo(1);
+    String trace =
+        jdbc.queryForObject(
+            "select steps::text from agent_trace where conversation_id = ?",
+            String.class,
+            conversationId);
+    assertThat(trace).contains("\"cause\"");
+    assertThat(trace).doesNotContain("provider-down");
+    assertThat(trace).doesNotContain("Explain this.");
   }
 
   @Test
@@ -491,7 +548,8 @@ class AgentStudentHttpIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"questionText\":\"Explain this.\"}"))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.code").value("AGENT_PROVIDER_UNAVAILABLE"));
+        .andExpect(jsonPath("$.code").value("AGENT_PROVIDER_UNAVAILABLE"))
+        .andExpect(jsonPath("$.detail").value("The Ask answer could not be read. Try again."));
     assertThat(fakeChat.calls()).isEqualTo(3);
     Integer failed =
         jdbc.queryForObject(
@@ -499,6 +557,13 @@ class AgentStudentHttpIT {
             Integer.class,
             conversationId);
     assertThat(failed).isEqualTo(1);
+    String trace =
+        jdbc.queryForObject(
+            "select steps::text from agent_trace where conversation_id = ?",
+            String.class,
+            conversationId);
+    assertThat(trace).contains("answer-format-exhausted");
+    assertThat(trace).doesNotContain("not-json");
   }
 
   @Test
@@ -530,6 +595,26 @@ class AgentStudentHttpIT {
     assertThat(hits).noneMatch(hit -> poisonSource.equals(hit.sourceId()));
     assertThat(hits)
         .noneMatch(hit -> hit.excerpt() != null && hit.excerpt().contains("UNIQUEPOISONTOKEN"));
+  }
+
+  @Test
+  void searchReadsExistingChunksWithoutReindexing() throws Exception {
+    Fixture fixture = publishPackage();
+    UUID conversationId = startLesson(fixture.lessonId());
+    UUID revisionId =
+        jdbc.queryForObject(
+            "select package_revision_id from agent_conversation where id = ?",
+            UUID.class,
+            conversationId);
+    jdbc.update("delete from agent_content_chunk where package_revision_id = ?", revisionId);
+    var hits = search.search(revisionId, "Content", "id", 8);
+    assertThat(hits).isEmpty();
+    Integer chunks =
+        jdbc.queryForObject(
+            "select count(*) from agent_content_chunk where package_revision_id = ?",
+            Integer.class,
+            revisionId);
+    assertThat(chunks).isZero();
   }
 
   @Test

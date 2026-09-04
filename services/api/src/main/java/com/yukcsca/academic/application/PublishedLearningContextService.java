@@ -41,28 +41,29 @@ public class PublishedLearningContextService implements PublishedLearningContext
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<AuthorisedResourceContext> findPublishedLesson(UUID accountId, UUID resourceId) {
-    return findPublishedResource(accountId, resourceId, "LESSON");
+  public Optional<AuthorisedResourceContext> findPublishedLesson(
+      UUID accountId, UUID resourceId, String explanationLanguage) {
+    return findPublishedResource(accountId, resourceId, "LESSON", explanationLanguage);
   }
 
   @Override
   @Transactional(readOnly = true)
   public Optional<AuthorisedResourceContext> findPublishedRemediation(
-      UUID accountId, UUID resourceId) {
-    return findPublishedResource(accountId, resourceId, "REMEDIATION");
+      UUID accountId, UUID resourceId, String explanationLanguage) {
+    return findPublishedResource(accountId, resourceId, "REMEDIATION", explanationLanguage);
   }
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<AuthorisedTermContext> findPublishedTerm(UUID accountId, UUID termId) {
+  public Optional<AuthorisedTermContext> findPublishedTerm(
+      UUID accountId, UUID termId, String explanationLanguage) {
     if (!mayRead(accountId) || termId == null) return Optional.empty();
     for (PublishedPackage pkg : publishedPackages()) {
       Optional<PublishedTerm> term = terms.findTerm(terms.terms(pkg.content()), termId);
       if (term.isEmpty()) continue;
       PublishedTerm value = term.get();
       String surface = value.primary() == null ? "" : value.primary().text();
-      String definition =
-          firstNonBlank(value.definitionEn(), value.definitionId(), value.definitionZh());
+      String definition = definitionFor(value, explanationLanguage);
       return Optional.of(
           new AuthorisedTermContext(
               value.id(),
@@ -98,7 +99,7 @@ public class PublishedLearningContextService implements PublishedLearningContext
   }
 
   private Optional<AuthorisedResourceContext> findPublishedResource(
-      UUID accountId, UUID resourceId, String kind) {
+      UUID accountId, UUID resourceId, String kind, String explanationLanguage) {
     if (!mayRead(accountId) || resourceId == null) return Optional.empty();
     for (PublishedPackage pkg : publishedPackages()) {
       Optional<StudyResourceProjection> match =
@@ -107,7 +108,8 @@ public class PublishedLearningContextService implements PublishedLearningContext
               .findFirst();
       if (match.isEmpty()) continue;
       StudyResourceProjection resource = match.get();
-      String language = preferredLanguage(resource.availableExplanationLanguages());
+      String language =
+          preferredLanguage(resource.availableExplanationLanguages(), explanationLanguage);
       List<JsonNode> blocks =
           language == null
               ? List.of()
@@ -260,11 +262,22 @@ public class PublishedLearningContextService implements PublishedLearningContext
     }
   }
 
-  private static String preferredLanguage(List<String> languages) {
+  private static String preferredLanguage(List<String> languages, String requested) {
+    if (requested != null && !requested.isBlank() && languages.contains(requested)) {
+      return requested;
+    }
     if (languages.contains("en")) return "en";
     if (languages.contains("id")) return "id";
     if (languages.contains("zh-CN")) return "zh-CN";
     return languages.isEmpty() ? null : languages.getFirst();
+  }
+
+  private static String definitionFor(PublishedTerm term, String language) {
+    return switch (language == null ? "" : language) {
+      case "id" -> firstNonBlank(term.definitionId(), term.definitionEn(), term.definitionZh());
+      case "zh-CN" -> firstNonBlank(term.definitionZh(), term.definitionEn(), term.definitionId());
+      default -> firstNonBlank(term.definitionEn(), term.definitionId(), term.definitionZh());
+    };
   }
 
   private static String title(LocalizedTextProjection title, String language) {

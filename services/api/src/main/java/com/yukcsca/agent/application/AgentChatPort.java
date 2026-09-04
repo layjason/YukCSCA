@@ -37,6 +37,7 @@ public interface AgentChatPort {
   record AuthorisedAskGrounding(
       String currentObjectLabel,
       String currentObjectExcerpt,
+      String recentEvidenceExcerpt,
       boolean openScoredItem,
       List<GroundedLocator> currentLocators) {}
 
