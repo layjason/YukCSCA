@@ -78,9 +78,44 @@ SMTP credentials, and an HTTPS origin before enabling credential enrollment or
 recovery.
 
 Ask (`VS-011`) is off by default (`YUKCSCA_AGENT_ENABLED=false`). Local
-journey review sets it true and supplies an OpenAI-compatible
-`YUKCSCA_AGENT_API_KEY` / `YUKCSCA_AGENT_BASE_URL`. Automated tests always use
-in-process fake chat and embedding models.
+journey review sets it true and supplies an OpenAI-compatible chat endpoint
+(`YUKCSCA_AGENT_API_KEY`, `YUKCSCA_AGENT_BASE_URL`, `YUKCSCA_AGENT_CHAT_MODEL`).
+Embeddings are computed **in the API**, never in the browser. Lesson chunks are
+indexed on a background thread after Ask first touches a published revision;
+start and Ask do not wait for that write. Hybrid vector ranking joins in once
+those rows have embeddings. A search-tool query embedding is capped at about
+1.5s and falls back to lexical ranking if it times out.
+Some chat gateways have no `/embeddings` route, so embeddings may use a second
+host (`YUKCSCA_AGENT_EMBEDDING_API_KEY`, `YUKCSCA_AGENT_EMBEDDING_BASE_URL`,
+`YUKCSCA_AGENT_EMBEDDING_MODEL`). Voyage is **not** OpenAI-compatible on this
+route: the native adapter POSTs `https://api.voyageai.com/v1/embeddings` with
+`model`, `input`, `input_type` (`document` for chunks, `query` for search), and
+`output_dimension` (1024). Sending OpenAI `dimensions` is a Voyage **400** and
+usually does not appear as billed dashboard usage. Chunks are batched (up to
+1,000 inputs per request). If the embedding key is unset while an embedding
+base URL is set, the API uses in-process hash vectors; lexical search still
+runs. A blank chat key keeps the API up with Ask disabled. A present chat key
+must reach both the sync and async OpenAI clients Spring AI 2.0.1 builds at
+startup; otherwise boot fails with a credential-source error even though
+`YUKCSCA_AGENT_API_KEY` is set.
+`agent_content_chunk.embedding` is `vector(1024)` (V18), matching Voyage
+`voyage-4`'s default width. `voyage-4-lite` / `voyage-4-large` / 2048-d
+Matryoshka need an env override and, for 2048, another migration. Automated
+tests always use in-process fake chat and embedding models.
+
+Example for AMD Radeon chat plus Voyage embeddings (paste keys, recreate
+`api`):
+
+```bash
+YUKCSCA_AGENT_ENABLED=true
+YUKCSCA_AGENT_BASE_URL=https://developer.amd.com.cn/radeon/api/v1
+YUKCSCA_AGENT_CHAT_MODEL=DeepSeek-V4-Flash
+YUKCSCA_AGENT_EMBEDDING_BASE_URL=https://api.voyageai.com/v1
+YUKCSCA_AGENT_EMBEDDING_MODEL=voyage-4
+YUKCSCA_AGENT_TURN_TIMEOUT=60s
+```
+
+Timeout story (one wall-clock budget): API `yukcsca.agent.turn-timeout` defaults to **60s** (Compose and `.env.example` match). Nginx `/api/` **read/send 120s** so a slow tool-calling turn is not an HTML `504` while the API is still working. Automated tests keep **8s** (`application-test.yml`) so fakes do not wait a minute. Recreate `api` and `web` after changing those values.
 
 `YUKCSCA_FIRST_ADMIN_EMAIL` is an exact, case-insensitive sign-in identity. It
 does not create an account: the address must complete Google or credential

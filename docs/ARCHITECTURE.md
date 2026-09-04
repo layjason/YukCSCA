@@ -89,12 +89,33 @@ and item/mistake context plus `AGENT_QA` writes through `AgentAssessmentContextP
 it never imports academic or assessment JPA. Academic never imports agent.
 V17 stores `agent_conversation`, `agent_turn`, `agent_trace`, `agent_flag`, and
 `agent_content_chunk` (pgvector + tsvector) and extends assistance `kind` with
-`AGENT_QA`. `agent_content_chunk.embedding` is `vector(1536)`, matching the
-default `yukcsca.agent.embedding-model` (`text-embedding-3-small`) and the
-in-process hash/fake embedding adapters. A different embedding size requires a
-new migration. Modules never import another module's repository, JPA entity,
-controller, or infrastructure. New modules appear only with their first accepted
-use case.
+`AGENT_QA`. V18 resizes `agent_content_chunk.embedding` to `vector(1024)`,
+matching the default `yukcsca.agent.embedding-model` (`voyage-4`) and the
+in-process hash/fake embedding adapters. Chat defaults to AMD Radeon
+`DeepSeek-V4-Flash`; embeddings default to Voyage. Chat and embeddings may use
+separate hosts (`yukcsca.agent.base-url` vs
+`yukcsca.agent.embedding-base-url`). Voyage embeddings use a native
+`output_dimension` / `input_type` adapter, not Spring AI's OpenAI
+`dimensions` field. New Ask turns use the student's current profile explanation
+language, not the language stored when the conversation was created.
+Lexical indexing is scheduled off the start/Ask path. Search reads
+already-indexed chunks and never blocks on `ensureIndexed`; query
+embedding is time-capped and falls back to lexical ranking. The chat
+prompt is ordered for provider prefix cache (static system → session
+context → prior turns as messages → current question). The model writes
+math as `$formula$` or Unicode inside JSON (backslash-paren is an invalid
+JSON escape). After parse, answer bodies are normalized to inline
+`\(...\)` KaTeX without wrapping surrounding CJK prose. DeepSeek V4
+thinking is disabled so structured `content` is not starved by reasoning
+tokens. Ask turn-timeout defaults to 60s; Nginx `/api/` read timeout is 120s.
+HTTP 503 stays `AGENT_PROVIDER_UNAVAILABLE`; `detail` distinguishes timeout,
+host outage, and unreadable structured output. FAILED turns persist a short
+`agent_trace` cause token without prompt or completion text. Chunk embedding runs in-process on a background thread so
+Ask is not blocked; lexical search is available immediately. Provider vectors
+longer than 1024 are truncated (Voyage Matryoshka); shorter ones are padded. A
+native size change (for example 2048) still requires a new migration. Modules never import
+another module's repository, JPA entity, controller, or infrastructure. New
+modules appear only with their first accepted use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
