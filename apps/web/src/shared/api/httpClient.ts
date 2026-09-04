@@ -9,6 +9,7 @@ export interface ApiProblem {
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  readonly detail: string | undefined;
   readonly violations: Array<{ field: string; code: string }>;
   readonly retryAfterSeconds: number | undefined;
 
@@ -17,6 +18,7 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.code = problem.code;
+    this.detail = problem.detail;
     this.violations = (problem.violations ?? []).map((row) => ({
       field: row.field ?? row.path ?? '',
       code: row.code,

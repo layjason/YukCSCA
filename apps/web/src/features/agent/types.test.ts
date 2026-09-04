@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
-import type { AgentCompletedTurn } from './types';
-import { turnsOldestFirst } from './types';
+import type { AgentCompletedTurn, AgentLocator } from './types';
+import { dedupeLocators, turnsOldestFirst } from './types';
 
 function turn(id: string, questionText: string): AgentCompletedTurn {
   return {
@@ -24,5 +24,21 @@ test('turnsOldestFirst keeps newest-last server order', () => {
   expect(turnsOldestFirst([oldest, newest]).map((row) => row.questionText)).toEqual([
     'First',
     'Second',
+  ]);
+});
+
+test('dedupeLocators keeps the first sourceKind+sourceId+blockIndex', () => {
+  const first: AgentLocator = {
+    sourceKind: 'LESSON',
+    sourceId: '33333333-3333-4333-8333-333333333333',
+    label: 'Quadratic',
+    blockIndex: 1,
+    packageRevisionId: null,
+  };
+  const duplicate: AgentLocator = { ...first, label: 'Same block again' };
+  const other: AgentLocator = { ...first, blockIndex: 2, label: 'Next block' };
+  expect(dedupeLocators([first, duplicate, other]).map((row) => row.label)).toEqual([
+    'Quadratic',
+    'Next block',
   ]);
 });

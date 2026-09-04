@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
+import { AlignJustify, MessageCircle } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
+import { addToChatAnchorFromRect, firstRangeRect, type AddToChatAnchor } from './addToChatAnchor';
 import {
   askTurn,
   getAvailability,
@@ -13,6 +14,7 @@ import {
 import { AskPanel } from './AskPanel';
 import { readStoredConversationId, writeStoredConversationId } from './conversationStorage';
 import { isSamePageLocator, locatorHref, scrollToLearnBlock } from './locatorHref';
+import { providerUnavailableCopyKey } from './providerUnavailable';
 import { quoteFromSelection } from './quoteFromSelection';
 import type {
   AgentAvailability,
@@ -21,6 +23,7 @@ import type {
   AgentHostContext,
   AgentLocator,
   AgentTurnRequest,
+  AskOutgoingMessage,
   MathBlockSource,
 } from './types';
 import {
@@ -34,7 +37,8 @@ import './agent.css';
 
 const DESKTOP_QUERY = '(min-width: 960px)';
 const POLL_MS = 1000;
-const POLL_MAX_MS = 30000;
+/** Must exceed the API turn timeout (60s) and stay under Nginx /api/ read timeout (120s). */
+const POLL_MAX_MS = 120000;
 
 export interface AskOpenItem {
   alreadyStrong: boolean;
@@ -118,6 +122,7 @@ function AskHostSession({
   const [question, setQuestion] = useState('');
   const [quote, setQuote] = useState<string | null>(null);
   const [pendingQuote, setPendingQuote] = useState<string | null>(null);
+  const [addAnchor, setAddAnchor] = useState<AddToChatAnchor | null>(null);
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [phase, setPhase] = useState<SubmitPhase>('idle');
@@ -127,6 +132,7 @@ function AskHostSession({
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [retryRequest, setRetryRequest] = useState<AgentTurnRequest | null>(null);
   const [lastErrorCode, setLastErrorCode] = useState<string | null>(null);
+  const [outgoing, setOutgoing] = useState<AskOutgoingMessage | null>(null);
 
   const available = availability?.available === true;
   const working = phase === 'working';
@@ -196,7 +202,9 @@ function AskHostSession({
         const seconds = err.retryAfterSeconds ?? 60;
         return t('agent.errorBudget', { seconds });
       }
-      if (err.code === 'AGENT_PROVIDER_UNAVAILABLE') return t('agent.errorProvider');
+      if (err.code === 'AGENT_PROVIDER_UNAVAILABLE') {
+        return t(providerUnavailableCopyKey(err.detail));
+      }
       if (err.code === 'CONTEXT_CONFLICT') return t('agent.errorConflict');
       if (err.status === 404) return t('agent.errorNotFound');
       if (err.status === 403) return t('agent.errorForbidden');
@@ -278,6 +286,7 @@ function AskHostSession({
     onOpenChangeRef.current?.(false);
     setConfirmOpen(false);
     setPendingQuote(null);
+    setAddAnchor(null);
   }, []);
 
   useEffect(() => {
@@ -304,12 +313,30 @@ function AskHostSession({
 
   useEffect(() => {
     if (!open) return;
-    function onSelectionChange(): void {
-      const next = quoteFromSelection(window.getSelection(), hostRef.current, mathBlocks);
+    function updatePendingQuote(): void {
+      const selection = window.getSelection();
+      const next = quoteFromSelection(selection, hostRef.current, mathBlocks);
       setPendingQuote(next?.quote ?? null);
+      if (!next) {
+        setAddAnchor(null);
+        return;
+      }
+      const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      setAddAnchor(
+        addToChatAnchorFromRect(firstRangeRect(range), {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        }),
+      );
     }
-    document.addEventListener('selectionchange', onSelectionChange);
-    return () => document.removeEventListener('selectionchange', onSelectionChange);
+    document.addEventListener('selectionchange', updatePendingQuote);
+    window.addEventListener('scroll', updatePendingQuote, true);
+    window.addEventListener('resize', updatePendingQuote);
+    return () => {
+      document.removeEventListener('selectionchange', updatePendingQuote);
+      window.removeEventListener('scroll', updatePendingQuote, true);
+      window.removeEventListener('resize', updatePendingQuote);
+    };
   }, [mathBlocks, open]);
 
   function validate(request: AgentTurnRequest): boolean {
@@ -338,6 +365,9 @@ function AskHostSession({
       setPhase('received');
       setRetryRequest(request);
       setIdempotencyKey(key);
+      setOutgoing({ questionText: request.questionText, quote: request.quote ?? null });
+      setQuestion((current) => (current.trim() === request.questionText ? '' : current));
+      setQuote((current) => (current === (request.quote ?? null) ? null : current));
       window.clearTimeout(phaseTimer.current);
       phaseTimer.current = window.setTimeout(() => {
         if (cancelledRef.current) return;
@@ -351,6 +381,7 @@ function AskHostSession({
           turns: [...conversation.turns.filter((turn) => turn.id !== completed.id), completed],
           updatedAt: completed.createdAt,
         });
+        setOutgoing(null);
         setQuestion('');
         setQuote(null);
         setPhase('idle');
@@ -367,6 +398,7 @@ function AskHostSession({
             const settled = await pollUntilSettled(conversation.id);
             if (cancelledRef.current) return;
             if (settled.turns.some(isPendingTurn)) {
+              restoreComposer(request);
               setPhase('idle');
               setLiveMessage(t('agent.liveTimeout'));
               setErrorMessage(t('agent.errorConcurrent'));
@@ -389,12 +421,16 @@ function AskHostSession({
             if (newlyCompleted.length > 0) {
               openItem?.onAsked?.();
             }
+            setOutgoing(null);
             if (matching) {
               setQuestion('');
               setQuote(null);
+            } else {
+              restoreComposer(request);
             }
           } catch (pollErr) {
             if (cancelledRef.current) return;
+            restoreComposer(request);
             const message = mapError(pollErr);
             setPhase('idle');
             setLastErrorCode(pollErr instanceof ApiError ? (pollErr.code ?? null) : null);
@@ -410,10 +446,12 @@ function AskHostSession({
           } else {
             setQuestionError(t('agent.validationQuestion'));
           }
+          restoreComposer(request);
           setLastErrorCode(err.code);
           setPhase('idle');
           return;
         }
+        restoreComposer(request);
         const message = mapError(err);
         setPhase('idle');
         setLastErrorCode(err instanceof ApiError ? (err.code ?? null) : null);
@@ -423,6 +461,12 @@ function AskHostSession({
     },
     [conversation, mapError, openItem, persistConversation, pollUntilSettled, t],
   );
+
+  function restoreComposer(request: AgentTurnRequest): void {
+    setOutgoing(null);
+    setQuestion((current) => (current.trim() ? current : request.questionText));
+    setQuote((current) => current ?? request.quote ?? null);
+  }
 
   function currentRequest(): AgentTurnRequest {
     const request: AgentTurnRequest = { questionText: question.trim() };
@@ -505,6 +549,7 @@ function AskHostSession({
           composerDisabled={composerDisabled}
           working={working}
           received={received}
+          outgoing={outgoing}
           errorMessage={errorMessage}
           liveMessage={liveAnnouncement}
           confirmOpen={confirmOpen}
@@ -566,6 +611,7 @@ function AskHostSession({
           composerDisabled={composerDisabled}
           working={working}
           received={received}
+          outgoing={outgoing}
           errorMessage={errorMessage}
           liveMessage={liveAnnouncement}
           confirmOpen={confirmOpen}
@@ -585,15 +631,31 @@ function AskHostSession({
       ) : null}
 
       {showPanel && pendingQuote && pendingQuote !== quote ? (
-        <div className="ask-add-toolbar">
+        <div
+          className={`ask-add-toolbar${addAnchor && !addAnchor.fallback ? '' : ' is-fallback'}`}
+          style={
+            addAnchor && !addAnchor.fallback
+              ? {
+                  top: addAnchor.top,
+                  left: addAnchor.left,
+                  transform:
+                    addAnchor.place === 'below'
+                      ? 'translate(-50%, var(--space-xs))'
+                      : 'translate(-50%, calc(-100% - var(--space-xs)))',
+                }
+              : undefined
+          }
+        >
           <button
             type="button"
-            className="btn-secondary ask-add-to-chat"
+            className="ask-add-to-chat"
             onClick={() => {
               setQuote(pendingQuote);
               setPendingQuote(null);
+              setAddAnchor(null);
             }}
           >
+            <AlignJustify size={16} aria-hidden="true" />
             {t('agent.quoteAdd')}
           </button>
         </div>

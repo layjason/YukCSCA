@@ -1,11 +1,31 @@
-import { MessageCircle, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { MixedProse } from '@/shared/content/MixedProse';
-import type { AgentCompletedTurn, AgentConversation, AgentLocator, AgentTurn } from './types';
+import { useEffect, useRef, useState } from 'react';
 import {
+  BookOpen,
+  ChevronRight,
+  CornerDownLeft,
+  Lightbulb,
+  MessageCircle,
+  Search,
+  X,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { KatexFormula } from '@/shared/content/KatexFormula';
+import { MixedProse } from '@/shared/content/MixedProse';
+import { parseAskBody } from './askBody';
+import type {
+  AgentCompletedTurn,
+  AgentConversation,
+  AgentLocator,
+  AgentTraceStep,
+  AgentTurn,
+  AskOutgoingMessage,
+} from './types';
+import {
+  dedupeLocators,
   isCompletedTurn,
   isFailedTurn,
   isPendingTurn,
+  locatorKey,
   turnsOldestFirst,
   workedSeconds,
 } from './types';
@@ -24,6 +44,7 @@ interface AskPanelProps {
   composerDisabled: boolean;
   working: boolean;
   received: boolean;
+  outgoing: AskOutgoingMessage | null;
   errorMessage: string | null;
   liveMessage: string;
   confirmOpen: boolean;
@@ -50,6 +71,7 @@ export function AskPanel({
   composerDisabled,
   working,
   received,
+  outgoing,
   errorMessage,
   liveMessage,
   confirmOpen,
@@ -66,6 +88,13 @@ export function AskPanel({
   const { t } = useTranslation();
   const turns = conversation ? turnsOldestFirst(conversation.turns) : [];
   const lastCompleted = [...turns].reverse().find(isCompletedTurn) ?? null;
+  const endRef = useRef<HTMLLIElement>(null);
+  const inFlight = working || received;
+
+  useEffect(() => {
+    if (!outgoing && !inFlight) return;
+    endRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [outgoing, inFlight, turns.length]);
 
   return (
     <section className={`ask-panel ask-panel-${variant}`} aria-label={t('agent.regionLabel')}>
@@ -83,7 +112,7 @@ export function AskPanel({
       </header>
 
       <div className="ask-panel-scroll">
-        {turns.length === 0 && !working && !received ? (
+        {turns.length === 0 && !outgoing && !inFlight ? (
           <p className="ask-empty">{t('agent.empty')}</p>
         ) : null}
 
@@ -97,10 +126,29 @@ export function AskPanel({
               />
             </li>
           ))}
+          {outgoing ? (
+            <li ref={endRef} className="ask-turn">
+              <article className="ask-turn-card">
+                <StudentUtterance questionText={outgoing.questionText} quote={outgoing.quote} />
+                {received && !working ? <p className="ask-status">{t('agent.received')}</p> : null}
+                {working ? <p className="ask-status">{t('agent.working')}</p> : null}
+              </article>
+            </li>
+          ) : (
+            <>
+              {received && !working ? (
+                <li className="ask-turn">
+                  <p className="ask-status">{t('agent.received')}</p>
+                </li>
+              ) : null}
+              {working ? (
+                <li className="ask-turn">
+                  <p className="ask-status">{t('agent.working')}</p>
+                </li>
+              ) : null}
+            </>
+          )}
         </ol>
-
-        {received && !working ? <p className="ask-status">{t('agent.received')}</p> : null}
-        {working ? <p className="ask-status">{t('agent.working')}</p> : null}
         {errorMessage ? (
           <div className="ask-error" role="alert">
             <p>{errorMessage}</p>
@@ -146,19 +194,7 @@ export function AskPanel({
           </div>
         ) : null}
         {quote ? (
-          <div className="ask-quote-chip">
-            <span className="ask-quote-label">{t('agent.quoteLabel')}</span>
-            <code className="ask-quote-text">{quote}</code>
-            <button
-              type="button"
-              className="ask-quote-remove"
-              onClick={onRemoveQuote}
-              aria-label={t('agent.quoteRemove')}
-              disabled={composerDisabled}
-            >
-              <X size={16} aria-hidden="true" />
-            </button>
-          </div>
+          <QuoteChip quote={quote} onRemove={onRemoveQuote} removeDisabled={composerDisabled} />
         ) : null}
         <label className="ask-composer-field">
           <span className="sr-only">{t('agent.composerLabel')}</span>
@@ -172,7 +208,7 @@ export function AskPanel({
             }}
             placeholder={t('agent.composerPlaceholder')}
             disabled={composerDisabled}
-            rows={3}
+            rows={2}
             maxLength={2000}
           />
         </label>
@@ -204,6 +240,39 @@ export function AskPanel({
   );
 }
 
+function QuoteChip({
+  quote,
+  onRemove,
+  removeDisabled = false,
+}: {
+  quote: string;
+  onRemove?: () => void;
+  removeDisabled?: boolean;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <div
+      className={`ask-quote-pill${onRemove ? ' ask-quote-composer' : ''}`}
+      role="group"
+      aria-label={`${t('agent.quoteLabel')}: ${quote}`}
+    >
+      <CornerDownLeft size={14} aria-hidden="true" />
+      <span className="ask-quote-pill-text">{quote}</span>
+      {onRemove ? (
+        <button
+          type="button"
+          className="ask-quote-remove"
+          onClick={onRemove}
+          aria-label={t('agent.quoteRemove')}
+          disabled={removeDisabled}
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function AskTurnView({
   turn,
   sessionId,
@@ -217,12 +286,7 @@ function AskTurnView({
 
   return (
     <article className="ask-turn-card">
-      <p className="ask-question">{turn.questionText}</p>
-      {turn.quote ? (
-        <p className="ask-quoted">
-          <span className="ask-quote-label">{t('agent.quoteLabel')}</span> {turn.quote}
-        </p>
-      ) : null}
+      <StudentUtterance questionText={turn.questionText} quote={turn.quote} />
 
       {isPendingTurn(turn) ? <p className="ask-status">{t('agent.pendingTurn')}</p> : null}
       {isFailedTurn(turn) ? <p className="ask-error-inline">{t('agent.failedTurn')}</p> : null}
@@ -238,19 +302,22 @@ function LocatorControl({
   locator,
   sessionId,
   onLocator,
+  variant = 'chip',
 }: {
   locator: AgentLocator;
   sessionId: string | null;
   onLocator: (locator: AgentLocator) => void;
+  variant?: 'chip' | 'row';
 }): React.JSX.Element {
   const { t } = useTranslation();
   const label = locator.label || t('agent.locatorFallback');
   const clickable = locator.sourceKind !== 'ITEM' || Boolean(sessionId);
+  const className = variant === 'row' ? 'ask-trace-result' : 'ask-locator';
   if (!clickable) {
-    return <span className="ask-locator is-static">{label}</span>;
+    return <span className={`${className} is-static`}>{label}</span>;
   }
   return (
-    <button type="button" className="ask-locator" onClick={() => onLocator(locator)}>
+    <button type="button" className={className} onClick={() => onLocator(locator)}>
       {label}
     </button>
   );
@@ -266,6 +333,7 @@ function CompletedTurnBody({
   onLocator: (locator: AgentLocator) => void;
 }): React.JSX.Element {
   const { t } = useTranslation();
+  const locators = dedupeLocators(turn.locators);
   const provenance =
     turn.kind === 'REVIEWED_SOURCE'
       ? t('agent.provenance.reviewed', {
@@ -276,43 +344,163 @@ function CompletedTurnBody({
         : t('agent.provenance.insufficient');
 
   return (
-    <>
+    <div className="ask-assistant">
       <p className="ask-provenance">{provenance}</p>
-      <MixedProse text={turn.body} as="div" className="ask-body" />
-      {turn.locators.length > 0 ? (
+      <AskAnswerBody text={turn.body} />
+      {locators.length > 0 ? (
         <ul className="ask-locators">
-          {turn.locators.map((locator) => (
+          {locators.map((locator) => (
             <li key={`${locator.sourceKind}:${locator.sourceId}:${locator.blockIndex ?? ''}`}>
               <LocatorControl locator={locator} sessionId={sessionId} onLocator={onLocator} />
             </li>
           ))}
         </ul>
       ) : null}
-      <details className="ask-worked">
-        <summary>{t('agent.workedFor', { seconds: workedSeconds(turn.latencyMs) })}</summary>
-        {turn.steps.length > 0 ? (
-          <ol className="ask-steps">
-            {turn.steps.map((step, index) => (
-              <li key={`${step.kind}-${index}`}>
-                <p>{step.label}</p>
-                {step.locators.length > 0 ? (
-                  <ul className="ask-locators">
-                    {step.locators.map((locator) => (
-                      <li key={`${locator.sourceKind}:${locator.sourceId}:${index}`}>
-                        <LocatorControl
-                          locator={locator}
-                          sessionId={sessionId}
-                          onLocator={onLocator}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ol>
+      <WorkedTrace turn={turn} sessionId={sessionId} onLocator={onLocator} />
+    </div>
+  );
+}
+
+function StudentUtterance({
+  questionText,
+  quote,
+}: {
+  questionText: string;
+  quote: string | null;
+}): React.JSX.Element {
+  return (
+    <div className="ask-student">
+      {quote ? <QuoteChip quote={quote} /> : null}
+      <p className="ask-question-bubble">{questionText}</p>
+    </div>
+  );
+}
+
+function WorkedTrace({
+  turn,
+  sessionId,
+  onLocator,
+}: {
+  turn: AgentCompletedTurn;
+  sessionId: string | null;
+  onLocator: (locator: AgentLocator) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const toolSteps = turn.steps.filter((step) => step.kind === 'TOOL');
+  const modelSteps = turn.steps.filter((step) => step.kind === 'MODEL');
+  const checked = dedupeLocators(toolSteps.flatMap((step) => step.locators));
+
+  return (
+    <details className="ask-worked" open={open}>
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          setOpen((current) => !current);
+        }}
+      >
+        <span>{t('agent.workedFor', { seconds: workedSeconds(turn.latencyMs) })}</span>
+        <ChevronRight className="ask-worked-chevron" size={16} aria-hidden="true" />
+      </summary>
+      {open ? (
+        <>
+          {checked.length > 0 ? (
+            <p className="ask-trace-summary">
+              <Search size={16} aria-hidden="true" />
+              <span>{t('agent.traceChecked', { count: checked.length })}</span>
+            </p>
+          ) : null}
+          {turn.steps.length > 0 ? (
+            <ol className="ask-trace">
+              {toolSteps.map((step, index) => (
+                <TraceStepRow
+                  key={`${step.kind}-${index}`}
+                  step={step}
+                  sessionId={sessionId}
+                  onLocator={onLocator}
+                />
+              ))}
+              {modelSteps.map((step, index) => (
+                <TraceStepRow
+                  key={`${step.kind}-model-${index}`}
+                  step={step}
+                  sessionId={sessionId}
+                  onLocator={onLocator}
+                />
+              ))}
+            </ol>
+          ) : null}
+        </>
+      ) : null}
+    </details>
+  );
+}
+
+function TraceStepRow({
+  step,
+  sessionId,
+  onLocator,
+}: {
+  step: AgentTraceStep;
+  sessionId: string | null;
+  onLocator: (locator: AgentLocator) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation();
+  const locators = dedupeLocators(step.locators);
+  const Icon = step.kind === 'MODEL' ? Lightbulb : locators.length > 0 ? Search : BookOpen;
+  return (
+    <li className="ask-trace-item">
+      <Icon className="ask-trace-icon" size={16} aria-hidden="true" />
+      <div className="ask-trace-body">
+        <p className="ask-trace-label">{step.label}</p>
+        {locators.length > 0 ? (
+          <div className="ask-trace-results">
+            <p className="ask-trace-results-count">
+              {t('agent.traceResults', { count: locators.length })}
+            </p>
+            <ul>
+              {locators.map((locator) => (
+                <li key={locatorKey(locator)}>
+                  <LocatorControl
+                    locator={locator}
+                    sessionId={sessionId}
+                    onLocator={onLocator}
+                    variant="row"
+                  />
+                  <span className="ask-trace-result-meta">
+                    {t(`agent.contextKind.${locator.sourceKind}`)}
+                    {locator.blockIndex != null
+                      ? ` · ${t('agent.traceBlock', { index: locator.blockIndex })}`
+                      : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
-      </details>
-    </>
+      </div>
+    </li>
+  );
+}
+
+function AskAnswerBody({ text }: { text: string }): React.JSX.Element {
+  const { t } = useTranslation();
+  const segments = parseAskBody(text);
+  return (
+    <div className="ask-body">
+      {segments.map((segment, index) =>
+        segment.kind === 'display' ? (
+          <KatexFormula
+            key={`display-${index}`}
+            latex={segment.latex}
+            displayMode
+            ariaLabel={t('content.inlineMathAria', { latex: segment.latex })}
+            errorLabel={t('content.inlineMathError')}
+          />
+        ) : (
+          <MixedProse key={`prose-${index}`} text={segment.text} as="div" />
+        ),
+      )}
+    </div>
   );
 }

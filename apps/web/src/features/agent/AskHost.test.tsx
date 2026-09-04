@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
@@ -7,7 +7,12 @@ import i18n from '@/shared/i18n';
 import { ApiError } from '@/shared/api/httpClient';
 import { AskHost } from './AskHost';
 import * as agentApi from './api/agentApi';
-import type { AgentCompletedTurn, AgentConversation, AgentPendingTurn } from './types';
+import type {
+  AgentCompletedTurn,
+  AgentConversation,
+  AgentLocator,
+  AgentPendingTurn,
+} from './types';
 
 vi.mock('./api/agentApi', async () => {
   const actual = await vi.importActual<typeof agentApi>('./api/agentApi');
@@ -189,6 +194,18 @@ test('shows derived assistance copy and never official', async () => {
   expect(screen.queryByText(/official/i)).not.toBeInTheDocument();
 });
 
+test('renders display math from an Ask body instead of raw delimiters', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [{ ...completed, body: 'See \\[a^2+b^2=c^2\\] on the line.' }],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  expect(await screen.findByText('From this lesson')).toBeInTheDocument();
+  expect(screen.queryByText('\\[a^2+b^2=c^2\\]')).not.toBeInTheDocument();
+  expect(document.querySelector('.learn-math-display, .katex-display, .katex')).not.toBeNull();
+});
+
 test('shows insufficiency without a report control', async () => {
   vi.mocked(agentApi.startConversation).mockResolvedValue({
     ...emptyConversation,
@@ -242,6 +259,8 @@ test('shows Received before Working while a turn is in flight', async () => {
   fireEvent.change(composer, { target: { value: 'What is a factor?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
   expect(await screen.findByText('Received')).toBeInTheDocument();
+  expect(screen.getByText('What is a factor?').className).toContain('ask-question-bubble');
+  expect(composer).toHaveValue('');
   expect(screen.getByRole('button', { name: 'Submit question' })).toBeDisabled();
 });
 
@@ -331,6 +350,46 @@ test('announces budget errors instead of a timeout in the live region', async ()
   );
   expect(budgetCopy.length).toBeGreaterThanOrEqual(2);
   expect(screen.queryByText('Ask timed out.')).not.toBeInTheDocument();
+  expect(screen.queryByText('Ask timed out. Try again.')).not.toBeInTheDocument();
+});
+
+test('distinguishes timeout, unreadable answer, and generic provider 503 copy', async () => {
+  vi.mocked(agentApi.askTurn)
+    .mockRejectedValueOnce(
+      new ApiError(503, {
+        code: 'AGENT_PROVIDER_UNAVAILABLE',
+        detail: 'The Ask provider timed out.',
+      }),
+    )
+    .mockRejectedValueOnce(
+      new ApiError(503, {
+        code: 'AGENT_PROVIDER_UNAVAILABLE',
+        detail: 'The Ask answer could not be read. Try again.',
+      }),
+    )
+    .mockRejectedValueOnce(
+      new ApiError(503, {
+        code: 'AGENT_PROVIDER_UNAVAILABLE',
+        detail: 'The Ask provider is temporarily unavailable.',
+      }),
+    );
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const composer = await screen.findByPlaceholderText('Ask about this work');
+  fireEvent.change(composer, { target: { value: 'What is a factor?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+  expect((await screen.findAllByText('Ask timed out. Try again.')).length).toBeGreaterThanOrEqual(
+    1,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(
+    (await screen.findAllByText('Ask could not read that answer. Try again.')).length,
+  ).toBeGreaterThanOrEqual(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(
+    (await screen.findAllByText('Ask is temporarily unavailable. Try again.')).length,
+  ).toBeGreaterThanOrEqual(1);
+  expect(screen.queryByText('Ask timed out. Try again.')).not.toBeInTheDocument();
 });
 
 test('rotates the Idempotency-Key after a provider failure', async () => {
@@ -442,3 +501,90 @@ test('keeps polling after a transient conversation read failure', async () => {
     timeout: 4000,
   });
 }, 10_000);
+
+test('renders quote and question as student-side chips without a Quoted label', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        questionText: 'what am i highligthing',
+        quote: '-b\\pm\\sqrt{b^{2}-4ac}',
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  expect(await screen.findByText('what am i highligthing')).toBeInTheDocument();
+  expect(screen.getByText('-b\\pm\\sqrt{b^{2}-4ac}')).toBeInTheDocument();
+  expect(screen.getByText('what am i highligthing').className).toContain('ask-question-bubble');
+  expect(screen.queryByText(/^Quoted$/i)).not.toBeInTheDocument();
+  expect(screen.getByRole('group', { name: /Quoted: -b/ })).toBeInTheDocument();
+});
+
+test('Worked for Ns is collapsed and expands to checked sources without raw tool names', async () => {
+  const locator: AgentLocator = {
+    sourceKind: 'LESSON',
+    sourceId: CONTEXT_ID,
+    label: 'Factorisation',
+    blockIndex: 0,
+    packageRevisionId: null,
+  };
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        latencyMs: 5000,
+        locators: [locator, locator],
+        steps: [
+          {
+            kind: 'TOOL',
+            label: 'Looked at this lesson',
+            locators: [locator, locator],
+            latencyMs: 120,
+          },
+        ],
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const summary = await screen.findByText('Worked for 5s');
+  const details = summary.closest('details');
+  expect(details).not.toBeNull();
+  expect(details).not.toHaveAttribute('open');
+  expect(screen.getAllByRole('button', { name: 'Factorisation' })).toHaveLength(1);
+  fireEvent.click(summary);
+  expect(details).toHaveAttribute('open');
+  expect(within(details as HTMLElement).getByText('Checked 1 sources')).toBeVisible();
+  expect(within(details as HTMLElement).getByText('Looked at this lesson')).toBeVisible();
+  expect(within(details as HTMLElement).getByText('1 sources')).toBeVisible();
+  expect(
+    within(details as HTMLElement).getByRole('button', { name: 'Factorisation' }),
+  ).toBeInTheDocument();
+  expect(within(details as HTMLElement).getByText(/Block 0/)).toBeInTheDocument();
+  expect(screen.queryByText('getLessonContext')).not.toBeInTheDocument();
+  expect(screen.queryByText(/token/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /report/i })).not.toBeInTheDocument();
+});
+
+test('shows Add to chat when a host selection is pending and drops a quote chip', async () => {
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  await screen.findByRole('region', { name: 'Ask about this work' });
+  const math = document.querySelector('.learn-content-block-math');
+  expect(math).not.toBeNull();
+  const range = document.createRange();
+  range.selectNodeContents(math as Node);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  fireEvent(document, new Event('selectionchange'));
+  const add = await screen.findByRole('button', { name: 'Add to chat' });
+  expect(add.querySelector('svg')).not.toBeNull();
+  fireEvent.click(add);
+  expect(screen.queryByRole('button', { name: 'Add to chat' })).not.toBeInTheDocument();
+  expect(document.querySelector('.ask-quote-composer')).toHaveTextContent('x^2');
+  expect(screen.queryByText(/^Quoted$/i)).not.toBeInTheDocument();
+});

@@ -67,3 +67,26 @@ export function turnsOldestFirst(turns: readonly AgentTurn[]): AgentTurn[] {
 export function workedSeconds(latencyMs: number): number {
   return Math.max(1, Math.round(latencyMs / 1000));
 }
+
+export function locatorKey(locator: AgentLocator): string {
+  return `${locator.sourceKind}:${locator.sourceId}:${locator.blockIndex ?? ''}`;
+}
+
+/** Local in-flight student utterance shown before the server turn exists. */
+export interface AskOutgoingMessage {
+  questionText: string;
+  quote: string | null;
+}
+
+/** Body locators are inspectable sources; duplicates from trajectory steps must not paint. */
+export function dedupeLocators(locators: readonly AgentLocator[]): AgentLocator[] {
+  const seen = new Set<string>();
+  const unique: AgentLocator[] = [];
+  for (const locator of locators) {
+    const key = locatorKey(locator);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(locator);
+  }
+  return unique;
+}
