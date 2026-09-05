@@ -122,3 +122,14 @@ test('shows term notebook link for zh-CN mistakes', async () => {
 
   expect(await screen.findByRole('link', { name: /open term notebook/i })).toBeInTheDocument();
 });
+
+test('places the term notebook link opposite All mistakes', async () => {
+  vi.spyOn(api, 'getMistake').mockResolvedValue(detail({ examLanguage: 'zh-CN' }));
+  renderDetail();
+
+  const back = await screen.findByRole('link', { name: /all mistakes/i });
+  const notebook = screen.getByRole('link', { name: /open term notebook/i });
+  expect(back.parentElement).toHaveClass('mistake-detail-chrome');
+  expect(back.parentElement).toBe(notebook.parentElement);
+  expect(back.parentElement?.lastElementChild).toBe(notebook);
+});
