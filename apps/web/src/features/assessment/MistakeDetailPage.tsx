@@ -18,6 +18,7 @@ import { resolveLocalizedText } from './localizedText';
 import type { ErrorCause, MistakeDetail } from './types';
 import { ERROR_CAUSES } from './types';
 import { notebookStateFrom } from '@/shared/terminology/notebookReturn';
+import { AskHost, mathBlocksFrom } from '@/features/agent';
 import './assessment.css';
 
 export function MistakeDetailPage(): React.JSX.Element {
@@ -104,7 +105,7 @@ export function MistakeDetailPage(): React.JSX.Element {
     }
   }
 
-  if (loading) {
+  if (loading && !mistake) {
     return (
       <div className="page-content assessment-page" aria-busy="true">
         <div className="assessment-skeleton">
@@ -172,161 +173,171 @@ export function MistakeDetailPage(): React.JSX.Element {
 
   return (
     <div className="page-content assessment-page mistake-detail">
-      <Link to="/app/practice/mistakes" className="back-btn">
-        <span className="back-arrow" aria-hidden="true">
-          ←
-        </span>
-        {t('assessment.mistakes.backToList')}
-      </Link>
-      {mistake.examLanguage === 'zh-CN' ? (
-        <Link
-          to="/app/learn/terms"
-          state={notebookStateFrom(`${location.pathname}${location.search}`)}
-          className="learn-back-link"
-        >
-          <BookOpenText size={18} aria-hidden="true" />
-          {t('assessment.languageHelp.openNotebook')}
+      <AskHost
+        context={{ contextType: 'MISTAKE', contextId: mistake.mistakeId }}
+        hostTitle={t('assessment.mistakes.detailTitle')}
+        mathBlocks={mathBlocksFrom(mistake.attemptQuestion.stem)}
+      >
+        <Link to="/app/practice/mistakes" className="back-btn">
+          <span className="back-arrow" aria-hidden="true">
+            ←
+          </span>
+          {t('assessment.mistakes.backToList')}
         </Link>
-      ) : null}
+        {mistake.examLanguage === 'zh-CN' ? (
+          <Link
+            to="/app/learn/terms"
+            state={notebookStateFrom(`${location.pathname}${location.search}`)}
+            className="learn-back-link"
+          >
+            <BookOpenText size={18} aria-hidden="true" />
+            {t('assessment.languageHelp.openNotebook')}
+          </Link>
+        ) : null}
 
-      <header className="assessment-hero assessment-hero-sky">
-        <span className={`assessment-status status-${mistake.status.toLowerCase()}`}>
-          {t(`assessment.mistakes.status.${mistake.status}`)}
-        </span>
-        <h1>{t('assessment.mistakes.detailTitle')}</h1>
-      </header>
+        <header className="assessment-hero assessment-hero-sky">
+          <span className={`assessment-status status-${mistake.status.toLowerCase()}`}>
+            {t(`assessment.mistakes.status.${mistake.status}`)}
+          </span>
+          <h1>{t('assessment.mistakes.detailTitle')}</h1>
+        </header>
 
-      {error ? (
-        <div className="assessment-inline-error" role="alert">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="mistake-detail-layout">
-        <section className="assessment-item-card">
-          <div className="assessment-stem">
-            <AssessmentBlocks blocks={mistake.attemptQuestion.stem} />
+        {error ? (
+          <div className="assessment-inline-error" role="alert">
+            {error}
           </div>
-          <OptionRadiogroup
-            options={mistake.attemptQuestion.options}
-            name="mistake-attempt"
-            value={mistake.latestResponse.selectedOptionKey}
-            onChange={() => undefined}
-            disabled
-            showCorrectness
-            correctKey={mistake.latestResponse.correctOptionKey}
-            selectedKey={mistake.latestResponse.selectedOptionKey}
-          />
-          {mistake.latestResponse.feedback ? (
-            <FeedbackPanel
-              feedback={mistake.latestResponse.feedback}
-              subject={mistake.subject}
-              interfaceLanguage={i18n.language}
-              assistanceUsed={anyAssistanceUsed(mistake.assistanceSummary)}
-            />
-          ) : null}
-        </section>
+        ) : null}
 
-        <div className="mistake-detail-side">
-          <section className="assessment-section">
-            <h2 className="assessment-section-title">{t('assessment.mistakes.annotation')}</h2>
-            <label className="assessment-field">
-              <span className="assessment-field-label">{t('assessment.mistakes.errorCause')}</span>
-              <select
-                value={cause}
-                onChange={(e) => setCause(e.target.value as ErrorCause | '')}
-                disabled={busy}
-              >
-                <option value="">{t('assessment.mistakes.causeNone')}</option>
-                {ERROR_CAUSES.map((c) => (
-                  <option key={c} value={c}>
-                    {t(`assessment.mistakes.causes.${c}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="assessment-field">
-              <span className="assessment-field-label">{t('assessment.mistakes.privateNote')}</span>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={3}
-                maxLength={2000}
-                disabled={busy}
-                placeholder={t('assessment.mistakes.privateNotePlaceholder')}
-              />
-            </label>
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={busy}
-              onClick={() => void handleSaveAnnotation()}
-            >
-              {t('assessment.mistakes.saveAnnotation')}
-            </button>
-          </section>
-
-          <section className="assessment-section">
-            <h2 className="assessment-section-title">{t('assessment.mistakes.nextSteps')}</h2>
-            <div className="assessment-result-actions">
-              {nextAction === 'already_passed' ? (
-                <>
-                  <p className="assessment-card-meta" role="status">
-                    {t('assessment.mistakes.alreadyPassed')}
-                  </p>
-                  {remediationHref && preferredRemediation ? (
-                    <Link to={remediationHref} className="btn-secondary">
-                      {preferredRemediation.kind === 'REMEDIATION' ? (
-                        <Wrench size={18} aria-hidden="true" />
-                      ) : (
-                        <BookOpen size={18} aria-hidden="true" />
-                      )}
-                      {t('assessment.mistakes.reviewAgain')}
-                    </Link>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  {remediationHref && preferredRemediation ? (
-                    <Link to={remediationHref} className="btn-primary">
-                      {preferredRemediation.kind === 'REMEDIATION' ? (
-                        <Wrench size={18} aria-hidden="true" />
-                      ) : (
-                        <BookOpen size={18} aria-hidden="true" />
-                      )}
-                      {remediationLabel}
-                    </Link>
-                  ) : null}
-                  {nextAction === 'continue_revalidation' && inProgressSessionId ? (
-                    <Link
-                      to={`/app/practice/sessions/${inProgressSessionId}`}
-                      className="btn-primary"
-                    >
-                      <RefreshCw size={18} aria-hidden="true" />
-                      {t('assessment.mistakes.continueRevalidation')}
-                    </Link>
-                  ) : nextAction === 'start_revalidation' ? (
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={busy}
-                      onClick={() => void handleRevalidate()}
-                      aria-busy={busy}
-                    >
-                      <RefreshCw size={18} aria-hidden="true" />
-                      {t('assessment.mistakes.revalidate')}
-                    </button>
-                  ) : (
-                    <p className="assessment-card-meta" role="status">
-                      {t('assessment.mistakes.revalidationLocked')}
-                    </p>
-                  )}
-                </>
-              )}
+        <div className="mistake-detail-layout">
+          <section className="assessment-item-card">
+            <div className="assessment-stem">
+              <AssessmentBlocks blocks={mistake.attemptQuestion.stem} />
             </div>
+            <OptionRadiogroup
+              options={mistake.attemptQuestion.options}
+              name="mistake-attempt"
+              value={mistake.latestResponse.selectedOptionKey}
+              onChange={() => undefined}
+              disabled
+              showCorrectness
+              correctKey={mistake.latestResponse.correctOptionKey}
+              selectedKey={mistake.latestResponse.selectedOptionKey}
+            />
+            {mistake.latestResponse.feedback ? (
+              <FeedbackPanel
+                feedback={mistake.latestResponse.feedback}
+                subject={mistake.subject}
+                interfaceLanguage={i18n.language}
+                assistanceUsed={anyAssistanceUsed(mistake.assistanceSummary)}
+              />
+            ) : null}
           </section>
+
+          <div className="mistake-detail-side">
+            <section className="assessment-section">
+              <h2 className="assessment-section-title">{t('assessment.mistakes.annotation')}</h2>
+              <label className="assessment-field">
+                <span className="assessment-field-label">
+                  {t('assessment.mistakes.errorCause')}
+                </span>
+                <select
+                  value={cause}
+                  onChange={(e) => setCause(e.target.value as ErrorCause | '')}
+                  disabled={busy}
+                >
+                  <option value="">{t('assessment.mistakes.causeNone')}</option>
+                  {ERROR_CAUSES.map((c) => (
+                    <option key={c} value={c}>
+                      {t(`assessment.mistakes.causes.${c}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="assessment-field">
+                <span className="assessment-field-label">
+                  {t('assessment.mistakes.privateNote')}
+                </span>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  maxLength={2000}
+                  disabled={busy}
+                  placeholder={t('assessment.mistakes.privateNotePlaceholder')}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() => void handleSaveAnnotation()}
+              >
+                {t('assessment.mistakes.saveAnnotation')}
+              </button>
+            </section>
+
+            <section className="assessment-section">
+              <h2 className="assessment-section-title">{t('assessment.mistakes.nextSteps')}</h2>
+              <div className="assessment-result-actions">
+                {nextAction === 'already_passed' ? (
+                  <>
+                    <p className="assessment-card-meta" role="status">
+                      {t('assessment.mistakes.alreadyPassed')}
+                    </p>
+                    {remediationHref && preferredRemediation ? (
+                      <Link to={remediationHref} className="btn-secondary">
+                        {preferredRemediation.kind === 'REMEDIATION' ? (
+                          <Wrench size={18} aria-hidden="true" />
+                        ) : (
+                          <BookOpen size={18} aria-hidden="true" />
+                        )}
+                        {t('assessment.mistakes.reviewAgain')}
+                      </Link>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    {remediationHref && preferredRemediation ? (
+                      <Link to={remediationHref} className="btn-primary">
+                        {preferredRemediation.kind === 'REMEDIATION' ? (
+                          <Wrench size={18} aria-hidden="true" />
+                        ) : (
+                          <BookOpen size={18} aria-hidden="true" />
+                        )}
+                        {remediationLabel}
+                      </Link>
+                    ) : null}
+                    {nextAction === 'continue_revalidation' && inProgressSessionId ? (
+                      <Link
+                        to={`/app/practice/sessions/${inProgressSessionId}`}
+                        className="btn-primary"
+                      >
+                        <RefreshCw size={18} aria-hidden="true" />
+                        {t('assessment.mistakes.continueRevalidation')}
+                      </Link>
+                    ) : nextAction === 'start_revalidation' ? (
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={busy}
+                        onClick={() => void handleRevalidate()}
+                        aria-busy={busy}
+                      >
+                        <RefreshCw size={18} aria-hidden="true" />
+                        {t('assessment.mistakes.revalidate')}
+                      </button>
+                    ) : (
+                      <p className="assessment-card-meta" role="status">
+                        {t('assessment.mistakes.revalidationLocked')}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
+      </AskHost>
     </div>
   );
 }

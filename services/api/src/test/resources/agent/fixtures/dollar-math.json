@@ -1,0 +1,7 @@
+{
+  "kind": "DERIVED_EXPLANATION",
+  "body": "The excluded value is $x \\ne 2$.",
+  "locators": [],
+  "suggestedFollowUps": ["Next step"],
+  "lowConfidence": false
+}

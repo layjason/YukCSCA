@@ -6,9 +6,9 @@
 
 | Field | Value |
 | --- | --- |
-| Requirement baseline | English/Chinese V1.8, 2026-08-22 |
-| Story baseline | `USER_STORIES.md` version 0.3.7 |
-| Audit date | 2026-08-22 |
+| Requirement baseline | English/Chinese V1.9, 2026-09-01 |
+| Story baseline | `USER_STORIES.md` version 0.3.8 |
+| Audit date | 2026-09-01 |
 | P0 exact-reference coverage | **51 / 51 functional sections** |
 | P1 exact-reference coverage | **25 / 33 functional sections** |
 | P2 exact-reference coverage | **1 / 3 functional sections** |
@@ -42,11 +42,11 @@ during shaping.
 | 4.6 | In-Course Assessment | `US-COURSE-03` | Owners: delivered `VS-005` (admin questions/mock definition); delivered `VS-009` (student CHECKPOINT sessions + bounded objective evidence; accepted TypeSpec `VS-009-R8-accepted`; product-owner journeys 2026-08-14). |
 | 5.1 | Topic Practice | `US-PRACTICE-01` | Owner: delivered `VS-009` (plan-independent TOPIC_PRACTICE on shared assessment substrate; accepted TypeSpec `VS-009-R8-accepted`; product-owner journeys 2026-08-14). |
 | 5.2 | Plan-Assigned Practice | `US-PRACTICE-02` | Owner: proposed `VS-017`; explicitly requires an active plan. |
-| 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01` | Owners: delivered `VS-009` mathematical tiered hints + post-submit solutions (`VS-009-R8-accepted`); delivered [`VS-010A`](../delivery/VS-010A-chinese-terminology.md) Chinese word/phrase Language help (`VS-010A-R10-accepted`; product-owner journeys and visual review 2026-08-22). |
+| 5.3 | Hints, Language Assistance, and Solutions | `US-TERM-01`, `US-HINT-01`, `US-AGENT-04` | Owners: delivered `VS-009` mathematical tiered hints + post-submit solutions (`VS-009-R8-accepted`); delivered [`VS-010A`](../delivery/VS-010A-chinese-terminology.md) Chinese word/phrase Language help (`VS-010A-R10-accepted`; product-owner journeys and visual review 2026-08-22). Delivered [`VS-011`](../delivery/VS-011-contextual-text-qa.md) (`VS-011-R7-accepted`; `DONE` after product-owner journey review 2026-09-05) records in-progress Ask as `AGENT_QA` strong assistance (`D-01`). |
 | 5.4 | Mistake Notebook and Immediate Remediation | `US-MISTAKE-01`, `US-MISTAKE-02`, `US-MISTAKE-03` | Owner: delivered `VS-009` (mistake notebook, published REMEDIATION + revalidation; product-owner journeys 2026-08-14). |
 | 6.1 | Daily Task Entry Point | `US-AGENT-01`, `US-AGENT-02` | Owner: proposed `VS-017`; requires an active plan. |
 | 6.2 | Guided Learning Sessions | `US-AGENT-03` | Owner: proposed `VS-018`; follows plan creation because it records a plan effect. |
-| 6.3 | Contextual Questions and Answers | `US-AGENT-04`, `US-AGENT-06` | Owners: proposed first `VS-011` (text Q&A, `US-AGENT-04`); proposed later follow-on after `VS-010B` + first `VS-011` for derived video answers (`US-AGENT-06`, not `VS-012`); `VS-013` adds mock-report Q&A context. |
+| 6.3 | Contextual Questions and Answers | `US-AGENT-04`, `US-AGENT-06` | Owners: delivered [`VS-011`](../delivery/VS-011-contextual-text-qa.md) **`DONE`** (`VS-011-R7-accepted`; text Q&A, `US-AGENT-04`; product-owner journeys and visual review 2026-09-05; hybrid authorised search; `D-01`–`D-09` approved 2026-09-01; mock report still `VS-013`); proposed later follow-on after `VS-010B` + first `VS-011` for derived video answers (`US-AGENT-06`, not `VS-012`). |
 | 6.4 | Plan Remediation and Reprioritization | `US-AGENT-05` | Owner: proposed `VS-019`; material changes require confirmation and current plan version. |
 | 7.1 | Mock-Exam Selection | `US-MOCK-01`, `US-TRIAL-03` | Owners: proposed `VS-012`, `VS-030`; no plan dependency. |
 | 7.2 | Exam Experience | `US-MOCK-02`, `US-MOCK-03`, `US-TRIAL-03` | Owners: proposed `VS-012`, `VS-030`; timed recovery and exactly-once submission remain coupled. |
@@ -71,7 +71,7 @@ during shaping.
 | 14.5 | Question and Mock-Paper Management | `US-ADM-04` | Owner: delivered `VS-005`; published questions support text, LaTeX, and approved diagrams and are selected for the first timed mock definition. |
 | 14.6 | Content Source and Rights Records | `US-ADM-05`, `US-ADM-08` | Owners: delivered `VS-005`; proposed `VS-010B` for uploaded or produced video provenance. Provenance is derived automatically for YukCSCA-original content, external content retains source and permission evidence, and the official syllabus remains reference-only behind a compact source action. |
 | 14.7 | Order, Payment, and Refund Management | `US-FINOPS-01` | Owner: proposed `VS-033`. |
-| 14.9 | AI and Content Quality Management | `US-SUPPORT-02`, `US-ADM-06` | Owners: proposed `VS-020`, `VS-021`; `VS-010B` / later `US-AGENT-06` keep generated video in Draft until human review. |
+| 14.9 | AI and Content Quality Management | `US-SUPPORT-02`, `US-ADM-06` | Owners: proposed `VS-020`, `VS-021`; delivered `VS-011` persists insufficient-evidence / low-confidence flags and trajectory steps but does not ship student report or the admin queue (those two ship together); `VS-010B` / later `US-AGENT-06` keep generated video in Draft until human review. |
 | 14.10 | Operating Analytics | `US-ADM-07` | Owner: proposed `VS-022`. |
 
 ## Escalating insufficient coverage during shaping

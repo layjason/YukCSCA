@@ -38,11 +38,15 @@ import {
 } from './types';
 import { getMistake } from '@/features/assessment/api/assessmentApi';
 import { CheckpointCta } from '@/features/assessment/components/CheckpointCta';
+import { AskHost, mathBlocksFrom, useHideTermRail } from '@/features/agent';
 import './learn.css';
 
-/** App shell scrolls `.app-content-wrapper`, not `window`. */
+/** Desktop Ask gives the reader its own scroller; otherwise the app shell scrolls. */
 function getShellScroller(): HTMLElement | null {
-  return document.querySelector('.app-content-wrapper');
+  return (
+    document.querySelector('.ask-shell.is-desktop-open > .ask-shell-host') ??
+    document.querySelector('.app-content-wrapper')
+  );
 }
 
 function readShellScrollTop(): number {
@@ -68,7 +72,11 @@ export function LessonReaderPage(): React.JSX.Element {
   }>();
   const [searchParams] = useSearchParams();
   const linkedMistakeId = searchParams.get('mistakeId');
+  const blockParam = searchParams.get('block');
+  const blockFromQuery = blockParam != null && /^\d+$/.test(blockParam) ? Number(blockParam) : null;
   const subject = isAcademicSubject(subjectParam) ? subjectParam : null;
+  const [askOpen, setAskOpen] = useState(false);
+  const hideTermRail = useHideTermRail(askOpen);
 
   const refreshLinkedMistake = useCallback(async () => {
     if (!linkedMistakeId) return;
@@ -445,6 +453,10 @@ export function LessonReaderPage(): React.JSX.Element {
     }
 
     const blocks = lesson.body.blocks;
+    if (blockFromQuery != null) {
+      resumeAppliedRef.current = true;
+      return;
+    }
     const clamped = clampResumeBlockIndex(progress?.resumeBlockIndex, blocks.length);
     if (clamped == null || clamped <= 0) {
       resumeAppliedRef.current = true;
@@ -463,7 +475,25 @@ export function LessonReaderPage(): React.JSX.Element {
       window.setTimeout(() => setResumeHighlightIndex(null), prefersReducedMotion() ? 0 : 1600);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [lesson, progress?.resumeBlockIndex]);
+  }, [lesson, progress?.resumeBlockIndex, blockFromQuery]);
+
+  useEffect(() => {
+    if (!lesson || lesson.body.availability !== 'AVAILABLE') return;
+    if (blockFromQuery == null) return;
+    const max = lesson.body.blocks.length;
+    if (blockFromQuery < 0 || blockFromQuery >= max) return;
+    const frame = window.requestAnimationFrame(() => {
+      const el = blockElsRef.current.get(blockFromQuery);
+      if (!el) return;
+      el.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'center',
+      });
+      setResumeHighlightIndex(blockFromQuery);
+      window.setTimeout(() => setResumeHighlightIndex(null), prefersReducedMotion() ? 0 : 1600);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [lesson, blockFromQuery]);
 
   // Coalesce IN_PROGRESS resume PUTs while reading (not when content is complete).
   useEffect(() => {
@@ -700,177 +730,195 @@ export function LessonReaderPage(): React.JSX.Element {
   const showCheckpoint = Boolean(subject && resourceId && progress?.status === 'CONTENT_COMPLETE');
   const showFooter = showBody || showCheckpoint;
 
+  function highlightBlock(index: number): void {
+    setResumeHighlightIndex(index);
+    window.setTimeout(() => setResumeHighlightIndex(null), prefersReducedMotion() ? 0 : 1600);
+  }
+
   return (
     <div className="page-content learn-page lesson-reader-page">
-      <header className="learn-reader-chrome">
-        <div className="learn-reader-chrome-row">
-          <Link to={`/app/learn/${subject}`} className="learn-back-link">
-            <ArrowLeft size={18} aria-hidden="true" />
-            {t('learn.backToBrowse')}
-          </Link>
-          {progress ? <ContentProgressFrom progress={progress} /> : null}
-        </div>
-        <h1 className="learn-reader-title">{title || t('learn.lesson.title')}</h1>
-        <LanguageToggle
-          value={explanationLanguage}
-          available={
-            lesson.availableExplanationLanguages.length > 0
-              ? lesson.availableExplanationLanguages
-              : [explanationLanguage]
-          }
-          onChange={handleLanguageChange}
-          disabled={loading}
-        />
-        {needsReview ? (
-          <p className="learn-update-notice" role="status">
-            {t('learn.lesson.updatedSinceComplete')}
-          </p>
-        ) : null}
-        {requiredSetNotice && lesson.terminology?.previewResourceId ? (
-          <p className="learn-update-notice" role="status">
-            {t('terminology.requiredSetUpdated')}{' '}
-            <Link to={previewHref(subject, lesson.terminology.previewResourceId, resourceId)}>
-              {t('terminology.openUpdatedPreview')}
+      <AskHost
+        context={{ contextType: 'LESSON', contextId: resourceId }}
+        hostTitle={title || t('learn.lesson.title')}
+        mathBlocks={mathBlocksFrom(blocks)}
+        onHighlightBlock={highlightBlock}
+        onOpenChange={setAskOpen}
+      >
+        <header className="learn-reader-chrome">
+          <div className="learn-reader-chrome-row">
+            <Link to={`/app/learn/${subject}`} className="learn-back-link">
+              <ArrowLeft size={18} aria-hidden="true" />
+              {t('learn.backToBrowse')}
             </Link>
-          </p>
-        ) : null}
-      </header>
-
-      {(loading || awaitingPreview) && !showBody && blocks.length === 0 ? (
-        <div className="learn-reader-skeleton" aria-busy="true">
-          <div className="learn-skeleton learn-skeleton-block" />
-          <div className="learn-skeleton learn-skeleton-block" />
-        </div>
-      ) : null}
-
-      {!isAvailable && !loading && !awaitingPreview ? (
-        <section
-          className="learn-language-unavailable state-notice state-notice-info"
-          role="status"
-        >
-          <h2>{t('learn.lesson.languageUnavailableTitle')}</h2>
-          <p>
-            {t('learn.lesson.languageUnavailableDescription', {
-              language: t(`studentActivation.languages.${body.requestedLanguage}`),
-            })}
-          </p>
-          {lesson.availableExplanationLanguages.length === 0 ? (
-            <p>{t('learn.lesson.noLanguagesAvailable')}</p>
+            {progress ? <ContentProgressFrom progress={progress} /> : null}
+          </div>
+          <h1 className="learn-reader-title">{title || t('learn.lesson.title')}</h1>
+          <LanguageToggle
+            value={explanationLanguage}
+            available={
+              lesson.availableExplanationLanguages.length > 0
+                ? lesson.availableExplanationLanguages
+                : [explanationLanguage]
+            }
+            onChange={handleLanguageChange}
+            disabled={loading}
+          />
+          {needsReview ? (
+            <p className="learn-update-notice" role="status">
+              {t('learn.lesson.updatedSinceComplete')}
+            </p>
           ) : null}
-        </section>
-      ) : null}
+          {requiredSetNotice && lesson.terminology?.previewResourceId ? (
+            <p className="learn-update-notice" role="status">
+              {t('terminology.requiredSetUpdated')}{' '}
+              <Link to={previewHref(subject, lesson.terminology.previewResourceId, resourceId)}>
+                {t('terminology.openUpdatedPreview')}
+              </Link>
+            </p>
+          ) : null}
+        </header>
 
-      {showBody ? (
-        <div className="learn-reader-with-rail" ref={columnRef}>
-          <article
-            className={`learn-reader-body${reloading ? ' is-reloading' : ''}`}
-            aria-label={title || t('learn.lesson.title')}
-            aria-busy={loading || reloading || undefined}
+        {(loading || awaitingPreview) && !showBody && blocks.length === 0 ? (
+          <div className="learn-reader-skeleton" aria-busy="true">
+            <div className="learn-skeleton learn-skeleton-block" />
+            <div className="learn-skeleton learn-skeleton-block" />
+          </div>
+        ) : null}
+
+        {!isAvailable && !loading && !awaitingPreview ? (
+          <section
+            className="learn-language-unavailable state-notice state-notice-info"
+            role="status"
           >
-            {lesson.video ? (
-              <LessonVideo
-                videoRef={lesson.video}
-                explanationLanguage={displayedExplanationLanguage}
-                initialPositionSeconds={
-                  progress?.video?.videoAssetId === lesson.video.videoAssetId
-                    ? progress?.video?.positionSeconds
-                    : null
-                }
-                onProgressUpdate={handleVideoProgressUpdate}
+            <h2>{t('learn.lesson.languageUnavailableTitle')}</h2>
+            <p>
+              {t('learn.lesson.languageUnavailableDescription', {
+                language: t(`studentActivation.languages.${body.requestedLanguage}`),
+              })}
+            </p>
+            {lesson.availableExplanationLanguages.length === 0 ? (
+              <p>{t('learn.lesson.noLanguagesAvailable')}</p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {showBody ? (
+          <div
+            className={`learn-reader-with-rail${hideTermRail ? ' without-term-rail' : ''}`}
+            ref={columnRef}
+          >
+            <article
+              className={`learn-reader-body${reloading ? ' is-reloading' : ''}`}
+              aria-label={title || t('learn.lesson.title')}
+              aria-busy={loading || reloading || undefined}
+            >
+              {lesson.video ? (
+                <LessonVideo
+                  videoRef={lesson.video}
+                  explanationLanguage={displayedExplanationLanguage}
+                  initialPositionSeconds={
+                    progress?.video?.videoAssetId === lesson.video.videoAssetId
+                      ? progress?.video?.positionSeconds
+                      : null
+                  }
+                  onProgressUpdate={handleVideoProgressUpdate}
+                />
+              ) : null}
+              {blocks.map((block, index) => (
+                <ContentBlockView
+                  key={`${lesson.resourceId}-${index}`}
+                  block={block}
+                  index={index}
+                  highlighted={resumeHighlightIndex === index}
+                  termSpans={
+                    block.kind === 'TEXT'
+                      ? (lesson.terminology?.spans ?? [])
+                          .filter((span) => span.blockIndex === index)
+                          .map((span) => ({
+                            termId: span.termId,
+                            surfaceForm: span.surfaceForm,
+                            startOffset: span.startOffset,
+                            endOffset: span.endOffset,
+                          }))
+                      : undefined
+                  }
+                  onTermActivate={lesson.terminology ? handleTermActivate : undefined}
+                  onTermHoverEnd={lesson.terminology ? scheduleGlossHide : undefined}
+                  blockRef={(el) => {
+                    if (el) blockElsRef.current.set(index, el);
+                    else blockElsRef.current.delete(index);
+                  }}
+                />
+              ))}
+            </article>
+            {lesson.terminology && !hideTermRail ? (
+              <LessonTermRail
+                subject={subject}
+                resourceId={resourceId}
+                explanationLanguage={explanationLanguage}
+                rail={lesson.terminology.rail}
               />
             ) : null}
-            {blocks.map((block, index) => (
-              <ContentBlockView
-                key={`${lesson.resourceId}-${index}`}
-                block={block}
-                index={index}
-                highlighted={resumeHighlightIndex === index}
-                termSpans={
-                  block.kind === 'TEXT'
-                    ? (lesson.terminology?.spans ?? [])
-                        .filter((span) => span.blockIndex === index)
-                        .map((span) => ({
-                          termId: span.termId,
-                          surfaceForm: span.surfaceForm,
-                          startOffset: span.startOffset,
-                          endOffset: span.endOffset,
-                        }))
-                    : undefined
-                }
-                onTermActivate={lesson.terminology ? handleTermActivate : undefined}
-                onTermHoverEnd={lesson.terminology ? scheduleGlossHide : undefined}
-                blockRef={(el) => {
-                  if (el) blockElsRef.current.set(index, el);
-                  else blockElsRef.current.delete(index);
-                }}
-              />
-            ))}
-          </article>
-          {lesson.terminology ? (
-            <LessonTermRail
-              subject={subject}
-              resourceId={resourceId}
-              explanationLanguage={explanationLanguage}
-              rail={lesson.terminology.rail}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {lookupError ? <p role="alert">{lookupError}</p> : null}
-      {activeGloss && glossCards[activeGloss.span.termId] ? (
-        <TermGlossBubble
-          card={glossCards[activeGloss.span.termId]!}
-          surfaceForm={activeGloss.span.surfaceForm}
-          anchor={activeGloss.target}
-          bookmarked={Boolean(glossBookmarked[activeGloss.span.termId])}
-          bookmarkBusy={glossBookmarkBusy}
-          onToggleBookmark={() => void handleToggleGlossBookmark(activeGloss.span.termId)}
-          onDismiss={() => setActiveGloss(null)}
-          restoreFocus={activeGloss.restoreFocus}
-          onHoverStay={cancelGlossHide}
-          onHoverLeave={scheduleGlossHide}
-        />
-      ) : null}
+          </div>
+        ) : null}
+        {lookupError ? <p role="alert">{lookupError}</p> : null}
+        {activeGloss && glossCards[activeGloss.span.termId] ? (
+          <TermGlossBubble
+            card={glossCards[activeGloss.span.termId]!}
+            surfaceForm={activeGloss.span.surfaceForm}
+            anchor={activeGloss.target}
+            bookmarked={Boolean(glossBookmarked[activeGloss.span.termId])}
+            bookmarkBusy={glossBookmarkBusy}
+            onToggleBookmark={() => void handleToggleGlossBookmark(activeGloss.span.termId)}
+            onDismiss={() => setActiveGloss(null)}
+            restoreFocus={activeGloss.restoreFocus}
+            onHoverStay={cancelGlossHide}
+            onHoverLeave={scheduleGlossHide}
+          />
+        ) : null}
 
-      {showFooter ? (
-        <footer className="learn-reader-actions">
-          {showBody ? (
-            isComplete && !needsReview ? (
-              <p className="learn-complete-ack" role="status">
-                <Check size={18} aria-hidden="true" />
-                {t('learn.lesson.contentCompleteAck')}
-              </p>
-            ) : (
-              <button
-                type="button"
-                className="btn-primary learn-complete-button"
-                onClick={() => void handleMarkComplete()}
-                disabled={saving || loading}
-                aria-busy={saving}
-              >
-                {saving
-                  ? t('learn.lesson.savingProgress')
-                  : needsReview
-                    ? t('learn.lesson.markReviewed')
-                    : t('learn.lesson.markContentComplete')}
-              </button>
-            )
-          ) : null}
-          {/* Keep checkpoint handoff while lesson soft-update is pending review so last result /
+        {showFooter ? (
+          <footer className="learn-reader-actions">
+            {showBody ? (
+              isComplete && !needsReview ? (
+                <p className="learn-complete-ack" role="status">
+                  <Check size={18} aria-hidden="true" />
+                  {t('learn.lesson.contentCompleteAck')}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary learn-complete-button"
+                  onClick={() => void handleMarkComplete()}
+                  disabled={saving || loading}
+                  aria-busy={saving}
+                >
+                  {saving
+                    ? t('learn.lesson.savingProgress')
+                    : needsReview
+                      ? t('learn.lesson.markReviewed')
+                      : t('learn.lesson.markContentComplete')}
+                </button>
+              )
+            ) : null}
+            {/* Keep checkpoint handoff while lesson soft-update is pending review so last result /
               retry / practice stay available with honest lesson-updated copy. */}
-          {showCheckpoint ? (
-            <CheckpointCta
-              key={`${subject}:${resourceId}`}
-              subject={subject}
-              resourceId={resourceId}
-              enabled
-              lessonContentUpdated={needsReview}
-            />
-          ) : null}
-        </footer>
-      ) : null}
+            {showCheckpoint ? (
+              <CheckpointCta
+                key={`${subject}:${resourceId}`}
+                subject={subject}
+                resourceId={resourceId}
+                enabled
+                lessonContentUpdated={needsReview}
+              />
+            ) : null}
+          </footer>
+        ) : null}
 
-      {toast ? <Toast message={toast.message} tone={toast.tone} onDismiss={dismissToast} /> : null}
+        {toast ? (
+          <Toast message={toast.message} tone={toast.tone} onDismiss={dismissToast} />
+        ) : null}
+      </AskHost>
     </div>
   );
 }

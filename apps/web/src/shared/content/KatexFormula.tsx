@@ -57,6 +57,7 @@ export function KatexFormula({
     return (
       <div
         className={`learn-math learn-math-display ${className}`.trim()}
+        data-latex={latex}
         role="img"
         aria-label={ariaLabel}
         dangerouslySetInnerHTML={{ __html: rendered.html }}
@@ -67,6 +68,7 @@ export function KatexFormula({
   return (
     <span
       className={`learn-math ${className}`.trim()}
+      data-latex={latex}
       role="img"
       aria-label={ariaLabel}
       dangerouslySetInnerHTML={{ __html: rendered.html }}

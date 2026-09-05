@@ -23,19 +23,24 @@ Browser -> Nginx/React -> Spring Boot API -> PostgreSQL 18
              +-> proxies /api and health only
 ```
 
-| Area       | Current implementation                                                 |
-| ---------- | ---------------------------------------------------------------------- |
-| Workspace  | Node.js 24, pnpm 11, one lockfile                                      |
-| Web        | React 19, Vite 8, strict TypeScript, React Router, i18next, CSS tokens |
-| Contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations        |
-| API/data   | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL 18  |
-| Media      | S3-compatible port (`MediaStoragePort`); MinIO in Compose dev/test     |
-| Worker     | Isolated Python service: Manim CE, manim-voiceover gTTS, FFmpeg        |
-| Testing    | Vitest, Testing Library, JUnit, Testcontainers, Playwright             |
-| Operations | Docker Compose, Actuator health, structured logs, GitHub Actions       |
+| Area       | Current implementation                                                              |
+| ---------- | ----------------------------------------------------------------------------------- |
+| Workspace  | Node.js 24, pnpm 11, one lockfile                                                   |
+| Web        | React 19, Vite 8, strict TypeScript, React Router, i18next, CSS tokens              |
+| Contract   | TypeSpec 1.14 → OpenAPI 3.1 → generated TypeScript declarations                     |
+| API/data   | Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL 18 with pgvector |
+| Media      | S3-compatible port (`MediaStoragePort`); MinIO in Compose dev/test                  |
+| Worker     | Isolated Python service: Manim CE, manim-voiceover gTTS, FFmpeg                     |
+| Testing    | Vitest, Testing Library, JUnit, Testcontainers, Playwright                          |
+| Operations | Docker Compose, Actuator health, structured logs, GitHub Actions                    |
 
-No extra caches, vector stores, AI SDKs, or microservices beyond the isolated
-render worker. Redis remains deferred. Image bytes stay in PostgreSQL `bytea`.
+The first AI adapter lives in the `agent` module (VS-011): Spring AI 2.0.1
+`ChatClient` / `EmbeddingModel` behind `AgentChatPort` (`ADR-0004`), and
+authorised hybrid retrieval uses pgvector plus `tsvector` in the existing
+PostgreSQL database (`ADR-0005`). Tests use a fake `ChatModel` and
+`EmbeddingModel`; CI does not contact a billable provider. Redis, MCP, a
+dedicated vector service, and extra microservices remain out. Image bytes stay
+in PostgreSQL `bytea`.
 
 ## Contract and backend boundaries
 
@@ -48,8 +53,8 @@ render worker. Redis remains deferred. Image bytes stay in PostgreSQL `bytea`.
   codes. Bearer failures preserve `WWW-Authenticate`; rate limits preserve
   `Retry-After`.
 
-The API currently contains `identity`, `profile`, `academic`, and `assessment`
-modules:
+The API currently contains `identity`, `profile`, `academic`, `assessment`, and
+`agent` modules:
 
 ```text
 <module>/
@@ -77,8 +82,41 @@ content-progress, and the published term bank only through academic application
 ports (`PublishedAssessmentCatalog`, `StudentContentProgressQuery`,
 `PublishedTerminologyCatalog`) and never imports academic JPA. Academic never
 imports assessment JPA; ITEM term lookups use `AssessmentItemContextPort`.
-Modules never import another module's repository, JPA entity, controller, or
-infrastructure. New modules appear only with their first accepted use case.
+The `agent` module (VS-011, `DONE` after product-owner journey review
+2026-09-05) owns student-private contextual text Q&A under
+`/api/v1/agent/**`: availability, idempotent start, owner GET, and `askTurn`.
+It reads published lessons/remediation/terms through `PublishedLearningContextPort`
+and item/mistake context plus `AGENT_QA` writes through `AgentAssessmentContextPort`;
+it never imports academic or assessment JPA. Academic never imports agent.
+V17 stores `agent_conversation`, `agent_turn`, `agent_trace`, `agent_flag`, and
+`agent_content_chunk` (pgvector + tsvector) and extends assistance `kind` with
+`AGENT_QA`. V18 resizes `agent_content_chunk.embedding` to `vector(1024)`,
+matching the default `yukcsca.agent.embedding-model` (`voyage-4`) and the
+in-process hash/fake embedding adapters. Chat defaults to AMD Radeon
+`DeepSeek-V4-Flash`; embeddings default to Voyage. Chat and embeddings may use
+separate hosts (`yukcsca.agent.base-url` vs
+`yukcsca.agent.embedding-base-url`). Voyage embeddings use a native
+`output_dimension` / `input_type` adapter, not Spring AI's OpenAI
+`dimensions` field. New Ask turns use the student's current profile explanation
+language, not the language stored when the conversation was created.
+Lexical indexing is scheduled off the start/Ask path. Search reads
+already-indexed chunks and never blocks on `ensureIndexed`; query
+embedding is time-capped and falls back to lexical ranking. The chat
+prompt is ordered for provider prefix cache (static system → session
+context → prior turns as messages → current question). The model writes
+math as `$formula$` or Unicode inside JSON (backslash-paren is an invalid
+JSON escape). After parse, answer bodies are normalized to inline
+`\(...\)` KaTeX without wrapping surrounding CJK prose. DeepSeek V4
+thinking is disabled so structured `content` is not starved by reasoning
+tokens. Ask turn-timeout defaults to 60s; Nginx `/api/` read timeout is 120s.
+HTTP 503 stays `AGENT_PROVIDER_UNAVAILABLE`; `detail` distinguishes timeout,
+host outage, and unreadable structured output. FAILED turns persist a short
+`agent_trace` cause token without prompt or completion text. Chunk embedding runs in-process on a background thread so
+Ask is not blocked; lexical search is available immediately. Provider vectors
+longer than 1024 are truncated (Voyage Matryoshka); shorter ones are padded. A
+native size change (for example 2048) still requires a new migration. Modules never import
+another module's repository, JPA entity, controller, or infrastructure. New
+modules appear only with their first accepted use case.
 
 Flyway owns the schema; shared migrations are append-only. Integration tests use
 the production migrations with PostgreSQL through Testcontainers.
@@ -229,8 +267,9 @@ read-oriented evidence surface for later modules. Publish-time term audio uses
 `SpeechSynthesisPort` (gTTS adapter per `ADR-0003` when enabled; tests use an
 in-process stub). CI and tests do not contact Google Translate TTS. Student and
 admin audio GETs never synthesize.
-No LLM/provider calls. Observability is value-free (no stems/answers/notes/keys,
-selected unmatched text, SSML, or speech keys).
+VS-011 Ask lives in the separate `agent` module and is the first LLM adapter;
+assessment still does not call a model. Observability is value-free (no
+stems/answers/notes/keys, selected unmatched text, SSML, or speech keys).
 
 VS-010B adds the reviewed-lesson-video backend to `academic`: V13 stores
 `academic_video_asset` (lifecycle, shape metadata, provenance; bytes live in
@@ -319,8 +358,13 @@ assessment (`/app/practice`, sessions, Language help, mistakes, Learn checkpoint
 remediation reader under `features/assessment`); post-setup home routes
 activated students to `/app/learn`, and mobile More exposes production-safe
 destinations without re-entering the preview-workspace gate for those routes.
-Family, mock execution, access, commerce, tutoring, and AI destinations remain
-prototype-only or unimplemented until their owning frontend slices land. VS-002 is also `DONE` after full implementation,
+Family, mock execution, access, commerce, and tutoring destinations remain
+prototype-only or unimplemented until their owning frontend slices land.
+Contextual text Ask (`VS-011`, checkpoint `VS-011-R7-accepted`) is `DONE` after
+backend waves 1–3, frontend Ask chrome, independent code-surface review, and
+product-owner journey review on 2026-09-05. It is a secondary control on
+production Learn/Practice hosts under `features/agent` — not a primary nav
+item and not `/app/ask`. Prototype Today is not wired to the agent API. VS-002 is also `DONE` after full implementation,
 verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
 and first Mathematics package path. VS-008 is `DONE` for the first production
 student consumer of published LESSON content with content progress only.

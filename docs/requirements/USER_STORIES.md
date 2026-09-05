@@ -1,7 +1,7 @@
 # YukCSCA User Story Backlog
 
-**Backlog version:** 0.3.7
-**Updated:** 2026-08-22
+**Backlog version:** 0.3.8
+**Updated:** 2026-09-01
 **Status:** Supporting decomposition; non-normative
 
 **Language convention:** User stories, flows, and acceptance criteria are written in English. Acceptance criteria use Given/When/Then semantics.
@@ -1272,6 +1272,7 @@ Each hint level is disclosed, recorded, and reflected in mastery interpretation.
 - Given an unanswered or active question, when the first hint is requested, then it guides the next step without revealing the full solution.
 - Given stronger hints or a full explanation, then each assistance level is recorded on the attempt.
 - Given a correct answer after strong assistance, then the attempt contributes less to mastery and schedules later no-assistance reassessment.
+- Given an in-progress contextual Ask on a scored item, then it is recorded as `AGENT_QA` strong assistance separately from mathematical hints (`US-AGENT-04`).
 - Given a submitted question, then the solution includes key steps, common mistakes, and links to relevant learning content.
 
 **Not included in this story:** AI-generated scored questions.
@@ -1470,24 +1471,26 @@ One session ends with a recorded summary and plan update rather than an open-end
 
 **Closed-loop outcome**
 
-The student receives a traceable answer, an explicit insufficiency response, or a human-review path from authorised context.
+The student receives a traceable answer with inspectable locators, or an explicit insufficiency response, from authorised context, without leaving the host lesson or item.
 
 **Main flow**
 
-1. Ask from a lesson, item, mistake, terminology entry, or remediation unit.
+1. Ask from a lesson, item, mistake, terminology entry, or remediation unit (host stays visible).
 2. Review the answer in the current explanation language with exam terminology preserved.
-3. Inspect source basis or report the answer when needed.
+3. Open source locators when needed.
 
 **Acceptance Criteria**
 
-- Given authorised current context, when the student asks, then the answer uses the exact lesson or question context provided and only the relevant bounded learner evidence.
+- Given authorised current context, when the student asks, then the answer uses that context first and may cite other published authorised objects in the same package as locators without retargeting the conversation.
 - Given no active study plan, then the question remains available.
-- Given reviewed source support, then the answer is labelled as a reviewed-source answer and retains traceable references.
-- Given a derived explanation, then it is visibly distinguished from official or reviewed source wording.
-- Given insufficient or conflicting evidence, then the agent says so and offers feedback or human review instead of guessing.
+- Given reviewed source support, then the answer is a reviewed-source answer with inspectable locators (not a labelled essay).
+- Given a derived explanation, including public mathematics when retrieved text is thin, then it is visibly assistance and never official or reviewed-source.
+- Given an official, policy, scoring, or admissions question without reviewed sources, or conflicting evidence, then the agent says so instead of guessing.
+- Given an in-progress scored checkpoint, topic-practice, or revalidation item, when the student asks, then Ask is available, answer keys are not sent to the model, and the turn is recorded as strong assistance.
+- Given a locked item, mistake, lesson, or remediation reader, then Ask does not write attempt assistance.
 - Given formal timed mock mode, then contextual answer tools are unavailable until submission.
 
-**Not included in this story:** Guided-session orchestration, plan reprioritization, or a narrated video answer (`US-AGENT-06`).
+**Not included in this story:** Guided-session orchestration, plan reprioritization, a narrated video answer (`US-AGENT-06`), or student report of a disputed answer (ships with the admin quality queue, `US-ADM-06`).
 
 ### US-AGENT-05 — Approve a major plan reprioritization
 

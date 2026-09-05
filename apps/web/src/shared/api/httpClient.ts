@@ -3,12 +3,13 @@ export interface ApiProblem {
   title?: string;
   detail?: string;
   code?: string;
-  violations?: Array<{ field: string; code: string }>;
+  violations?: Array<{ field?: string; path?: string; code: string }>;
 }
 
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  readonly detail: string | undefined;
   readonly violations: Array<{ field: string; code: string }>;
   readonly retryAfterSeconds: number | undefined;
 
@@ -17,7 +18,11 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.code = problem.code;
-    this.violations = problem.violations ?? [];
+    this.detail = problem.detail;
+    this.violations = (problem.violations ?? []).map((row) => ({
+      field: row.field ?? row.path ?? '',
+      code: row.code,
+    }));
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }

@@ -46,3 +46,8 @@ yukcsca:
     enabled: true
     timeout: 1s
     max-clips-per-publish: 200
+  agent:
+    enabled: true
+    daily-turn-cap: 40
+    turn-timeout: 8s
+    prompt-version: vs011-v6
