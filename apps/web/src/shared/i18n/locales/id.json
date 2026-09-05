@@ -17,6 +17,7 @@
     "inlineLatexHint": "Teks boleh mencampur prosa dengan LaTeX sebaris \\(...\\). Rumus tampilan tetap di blok Formula. Jangan gunakan < atau >. Gunakan \\lt, \\gt, \\leq, \\geq."
   },
   "agent": {
+    "welcome": "Ada yang bisa saya bantu hari ini?",
     "ask": "Tanya",
     "askAria": "Tanya tentang halaman ini",
     "close": "Tutup",
@@ -30,12 +31,13 @@
     "submitting": "Sedang bekerja…",
     "received": "Diterima",
     "working": "Sedang bekerja…",
+    "workingFor": "Sedang bekerja selama {{seconds}} dtk",
     "quoteAdd": "Tambah ke percakapan",
     "quoteRemove": "Hapus kutipan",
     "quoteLabel": "Dikutip",
     "provenance": {
       "reviewed": "Dari {{kind}} ini",
-      "derived": "Bantuan — bukan dari teks yang ditinjau",
+      "derived": "Penjelasan AI",
       "insufficient": "Sumber yang ditinjau tidak cukup untuk menjawab itu."
     },
     "contextKind": {
@@ -49,6 +51,8 @@
     "traceChecked": "Memeriksa {{count}} sumber",
     "traceResults": "{{count}} sumber",
     "traceBlock": "Blok {{index}}",
+    "sourcesLabel": "Sumber",
+    "locatorAria": "{{kind}}: {{label}}",
     "followUpsLabel": "Tindak lanjut yang disarankan",
     "unavailable": "Tanya tidak tersedia di sini.",
     "unavailableDisabled": "Tanya sedang dimatikan.",

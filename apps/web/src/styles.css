@@ -6,6 +6,33 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+@media (forced-colors: active) {
+  * {
+    scrollbar-color: auto;
+  }
 }
 
 :root {
@@ -27,6 +54,7 @@
   --color-ink: #171717;
   --color-ink-muted: #5d5d63;
   --color-canvas: #ffffff;
+  --color-scrollbar-thumb: #ffffff;
   --color-app-background: #fafaf7;
   --color-surface-soft: #f4f4f0;
   --color-surface-raised: #ffffff;

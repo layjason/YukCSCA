@@ -611,3 +611,19 @@ A UI slice is not visually complete until the reviewer can answer yes to the app
 - Do Indonesian, English, and Chinese content fit without hierarchy loss?
 - Are AI assistance, reviewed content, progress evidence, and restrictions distinguishable?
 - Is the screen consistent with the preceding and following step in the journey?
+
+## Contextual Ask presentation
+
+The shared Ask surface uses a right-hand desktop rail with the host still visible, and a mobile sheet above the shell bottom-navigation offset. Keep the composer in the panel with a localized, accessible arrow-up send button inside the input bar. Wrap assistant text lightly with a 35% lilac / canvas mix and existing border tokens; source chips follow the answer, then corner-down-right follow-up controls. Reviewed provenance may be screen-reader text beside inspectable chips; keep insufficient-evidence copy visible and the composer disclaimer. The product owner requested removing the visible derived-answer label; retain its accessible description. Use a lilac Ask launcher with brief icon tilt on hover/focus, centered follow-up contents, and one focus ring around the whole composer.
+
+Waiting shows a local seconds counter; completion uses the recorded server duration in the collapsed trace disclosure above the answer. Use brief entry, focus, and press feedback, without a perpetual decorative animation. Respect reduced motion and retain 44px controls.
+
+Ask browser-review refinement: assistant answer wraps use white canvas with a quiet border. Source chips stay white; only the icon tile carries the source-kind pastel. The launcher uses a rectangular action with a dark icon tile, text, and directional arrow in a separate spaced row. Mobile Ask meets the measured bottom-navigation height, including its safe-area padding, rather than the shell's conservative content offset.
+
+Latest product-owner Ask refinement: use a compact primary-color pill with a Lucide sparkle and localized Ask label, replacing the tiled launcher. Empty chat centers a localized “How can I help you today?” greeting in the interface language with a one-time gradual reveal; hide it on submission or existing history. Reduced motion displays the full greeting immediately, and screen readers receive the complete sentence. The mobile sheet is reduced to 55dvh with a 34rem cap while retaining navigation clearance and scrolling. This is local welcome animation, not streamed model output.
+
+Latest Ask browser feedback supersedes the navy and cream launcher: use existing sky blue with ink text, reduce launcher-to-host spacing to the 8px rhythm, and remove the extra disclosure-to-answer gap while preserving the 44px trace control. Quote chips reuse MixedProse for both standalone LaTeX and prose with inline math; keep original quote data and accessible labels unchanged, and allow long formulas to scroll within the chip.
+
+Desktop Ask is an open right-hand column: transparent background, no outer rounded frame, and no header/composer dividers. Short conversations settle toward the composer; long conversations keep their own scrolling. Individual answer wraps, source chips, focus indicators, and the mobile sheet remain contained. This presentation follows the product owner's reference without changing conversation behavior.
+
+Desktop learning content beside Ask uses only a thin rounded grey border, preserving its background. Both columns fit the viewport with standard page insets and independent scrolling. The lesson header scrolls with its content. Scrollbars use a thin white thumb (`--color-scrollbar-thumb: #ffffff`) on a transparent track, with a grey edge where supported and stronger grey on hover. Forced-colors mode retains native colors.

@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
@@ -73,11 +73,11 @@ const emptyConversation: AgentConversation = {
   updatedAt: '2026-09-02T00:00:00Z',
 };
 
-function stubDesktop(): void {
+function stubDesktop(desktop = true): void {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (query: string) => ({
-      matches: query.includes('960'),
+      matches: desktop && query.includes('960'),
       media: query,
       addEventListener: () => undefined,
       removeEventListener: () => undefined,
@@ -175,10 +175,16 @@ test('renders reviewed provenance, locators, follow-ups, and Worked for Ns', asy
   });
   renderHost();
   fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
-  expect(await screen.findByText('From this lesson')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Factorisation' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Why does this work?' })).toBeInTheDocument();
-  expect(screen.getByText('Worked for 2s')).toBeInTheDocument();
+  expect(await screen.findByText('From this lesson')).toHaveClass('sr-only');
+  const answer = screen.getByText(completed.body);
+  const worked = screen.getByText('Worked for 2s');
+  const source = screen.getByRole('button', { name: /lesson: Factorisation/i });
+  const followUp = screen.getByRole('button', { name: 'Why does this work?' });
+  expect(worked.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(answer.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(source.compareDocumentPosition(followUp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(source.querySelector('svg')).not.toBeNull();
+  expect(source.closest('.ask-locators')).not.toBeNull();
   expect(screen.queryByText('REVIEWED_SOURCE')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /report/i })).not.toBeInTheDocument();
 });
@@ -190,7 +196,7 @@ test('shows derived assistance copy and never official', async () => {
   });
   renderHost();
   fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
-  expect(await screen.findByText('Assistance — not from reviewed text')).toBeInTheDocument();
+  expect(await screen.findByText('AI explanation')).toHaveClass('sr-only');
   expect(screen.queryByText(/official/i)).not.toBeInTheDocument();
 });
 
@@ -201,9 +207,68 @@ test('renders display math from an Ask body instead of raw delimiters', async ()
   });
   renderHost();
   fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
-  expect(await screen.findByText('From this lesson')).toBeInTheDocument();
+  expect(await screen.findByText('From this lesson')).toHaveClass('sr-only');
   expect(screen.queryByText('\\[a^2+b^2=c^2\\]')).not.toBeInTheDocument();
   expect(document.querySelector('.learn-math-display, .katex-display, .katex')).not.toBeNull();
+});
+
+test('renders safe Markdown emphasis and list structure', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        body: '**Key terms**\n\n1. **集合**\n1.1 并集（union）\n1.2 交集（intersection）',
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const headingText = await screen.findByText('Key terms');
+  expect(headingText.closest('.ask-answer-heading')).toBeInTheDocument();
+  expect(screen.getByText('集合').closest('strong')).toBeInTheDocument();
+  expect(screen.getByText('集合').closest('ol')).toBeInTheDocument();
+  expect(screen.getByText('并集（union）').closest('li')).toHaveClass('is-nested');
+  expect(screen.queryByText('**Key terms**')).not.toBeInTheDocument();
+});
+
+test('renders math in locators and suggested follow-ups', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        questionText: 'What if $x \\ne 2$?',
+        body: 'Here is the step.',
+        locators: [
+          {
+            sourceKind: 'LESSON',
+            sourceId: '11111111-1111-4111-8111-111111111111',
+            label: 'Solve \\(x^2 - 4 = 0\\)',
+            blockIndex: 0,
+            packageRevisionId: null,
+          },
+        ],
+        steps: [
+          {
+            kind: 'TOOL',
+            label: 'Checked $A \\cap B$',
+            locators: [],
+            latencyMs: 10,
+          },
+        ],
+        suggestedFollowUps: ['What if \\(x \\ne 2\\)?'],
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  expect(await screen.findByRole('button', { name: /What if/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Solve/ })).toBeInTheDocument();
+  expect(document.querySelector('.ask-question-bubble .learn-math')).not.toBeNull();
+  expect(screen.queryByText('\\(x^2 - 4 = 0\\)')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Worked for 2s'));
+  expect(document.querySelector('.ask-trace-label .learn-math')).not.toBeNull();
 });
 
 test('shows insufficiency without a report control', async () => {
@@ -259,7 +324,7 @@ test('shows Received before Working while a turn is in flight', async () => {
   fireEvent.change(composer, { target: { value: 'What is a factor?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
   expect(await screen.findByText('Received')).toBeInTheDocument();
-  expect(screen.getByText('What is a factor?').className).toContain('ask-question-bubble');
+  expect(screen.getByText('What is a factor?').closest('.ask-question-bubble')).toBeInTheDocument();
   expect(composer).toHaveValue('');
   expect(screen.getByRole('button', { name: 'Submit question' })).toBeDisabled();
 });
@@ -516,8 +581,10 @@ test('renders quote and question as student-side chips without a Quoted label', 
   renderHost();
   fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
   expect(await screen.findByText('what am i highligthing')).toBeInTheDocument();
-  expect(screen.getByText('-b\\pm\\sqrt{b^{2}-4ac}')).toBeInTheDocument();
-  expect(screen.getByText('what am i highligthing').className).toContain('ask-question-bubble');
+  expect(document.querySelector('.ask-quote-pill .katex')).not.toBeNull();
+  expect(
+    screen.getByText('what am i highligthing').closest('.ask-question-bubble'),
+  ).toBeInTheDocument();
   expect(screen.queryByText(/^Quoted$/i)).not.toBeInTheDocument();
   expect(screen.getByRole('group', { name: /Quoted: -b/ })).toBeInTheDocument();
 });
@@ -554,14 +621,16 @@ test('Worked for Ns is collapsed and expands to checked sources without raw tool
   const details = summary.closest('details');
   expect(details).not.toBeNull();
   expect(details).not.toHaveAttribute('open');
-  expect(screen.getAllByRole('button', { name: 'Factorisation' })).toHaveLength(1);
+  const answer = screen.getByText(completed.body);
+  expect(answer.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  expect(screen.getAllByRole('button', { name: /lesson: Factorisation/i })).toHaveLength(1);
   fireEvent.click(summary);
   expect(details).toHaveAttribute('open');
   expect(within(details as HTMLElement).getByText('Checked 1 sources')).toBeVisible();
   expect(within(details as HTMLElement).getByText('Looked at this lesson')).toBeVisible();
   expect(within(details as HTMLElement).getByText('1 sources')).toBeVisible();
   expect(
-    within(details as HTMLElement).getByRole('button', { name: 'Factorisation' }),
+    within(details as HTMLElement).getByRole('button', { name: /lesson: Factorisation/i }),
   ).toBeInTheDocument();
   expect(within(details as HTMLElement).getByText(/Block 0/)).toBeInTheDocument();
   expect(screen.queryByText('getLessonContext')).not.toBeInTheDocument();
@@ -569,22 +638,151 @@ test('Worked for Ns is collapsed and expands to checked sources without raw tool
   expect(screen.queryByRole('button', { name: /report/i })).not.toBeInTheDocument();
 });
 
+function selectHostNode(node: Node): void {
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  fireEvent(document, new Event('selectionchange'));
+}
+
 test('shows Add to chat when a host selection is pending and drops a quote chip', async () => {
   renderHost();
   fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
   await screen.findByRole('region', { name: 'Ask about this work' });
   const math = document.querySelector('.learn-content-block-math');
   expect(math).not.toBeNull();
-  const range = document.createRange();
-  range.selectNodeContents(math as Node);
-  const selection = window.getSelection();
-  selection?.removeAllRanges();
-  selection?.addRange(range);
-  fireEvent(document, new Event('selectionchange'));
+  selectHostNode(math as Node);
   const add = await screen.findByRole('button', { name: 'Add to chat' });
   expect(add.querySelector('svg')).not.toBeNull();
   fireEvent.click(add);
   expect(screen.queryByRole('button', { name: 'Add to chat' })).not.toBeInTheDocument();
-  expect(document.querySelector('.ask-quote-composer')).toHaveTextContent('x^2');
+  expect(document.querySelector('.ask-quote-composer .katex')).not.toBeNull();
+  expect(screen.getByRole('group', { name: 'Quoted: x^2' })).toBeInTheDocument();
   expect(screen.queryByText(/^Quoted$/i)).not.toBeInTheDocument();
+});
+
+test('shows Add to chat on host highlight while Ask is closed and opens the panel', async () => {
+  renderHost();
+  await screen.findByRole('button', { name: 'Ask about this page' });
+  const body = screen.getByText('Lesson body');
+  selectHostNode(body);
+  const add = await screen.findByRole('button', { name: 'Add to chat' });
+  fireEvent.pointerDown(add);
+  fireEvent.click(add);
+  expect(await screen.findByRole('region', { name: 'Ask about this work' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Quoted: Lesson body' })).toBeInTheDocument();
+  expect(agentApi.startConversation).toHaveBeenCalled();
+});
+
+test('omits Add to chat on highlight when Ask is unavailable', async () => {
+  vi.mocked(agentApi.getAvailability).mockResolvedValue({
+    available: false,
+    unavailableCode: 'AGENT_DISABLED',
+  });
+  renderHost();
+  await waitFor(() => expect(agentApi.getAvailability).toHaveBeenCalled());
+  selectHostNode(screen.getByText('Lesson body'));
+  expect(screen.queryByRole('button', { name: 'Add to chat' })).not.toBeInTheDocument();
+});
+
+test('counts working seconds and stops the timer on completion', async () => {
+  let finish: ((turn: AgentCompletedTurn) => void) | undefined;
+  vi.mocked(agentApi.askTurn).mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const composer = await screen.findByPlaceholderText('Ask about this work');
+  vi.useFakeTimers();
+  try {
+    fireEvent.change(composer, { target: { value: 'What is a factor?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit question' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(screen.getByText('Working for 1s')).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(screen.getByText('Working for 3s')).toBeInTheDocument();
+    await act(async () => {
+      finish?.(completed);
+    });
+    expect(screen.queryByText(/Working for/)).not.toBeInTheDocument();
+    expect(screen.getByText('Worked for 2s')).toBeInTheDocument();
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('places the desktop panel after the host and keeps icon send accessible', async () => {
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const panel = await screen.findByRole('region', { name: 'Ask about this work' });
+  expect(
+    screen.getByText('Lesson body').compareDocumentPosition(panel) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  const send = screen.getByRole('button', { name: 'Submit question' });
+  expect(send.closest('.ask-input-bar')).toContainElement(screen.getByRole('textbox'));
+  expect(send).toHaveTextContent('');
+  expect(send.querySelector('svg')).not.toBeNull();
+  expect(send).toBeDisabled();
+});
+
+test('places the mobile sheet against the measured navigation height', async () => {
+  stubDesktop(false);
+  const navigation = document.createElement('nav');
+  navigation.className = 'app-bottom-nav';
+  vi.spyOn(navigation, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 1000, 500, 64));
+  document.body.append(navigation);
+  try {
+    renderHost();
+    fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+    const panel = await screen.findByRole('region', { name: 'Ask about this work' });
+    expect(panel).toHaveClass('ask-panel-sheet');
+    expect(panel).toHaveStyle({ bottom: '64px' });
+  } finally {
+    navigation.remove();
+  }
+});
+
+test.each([
+  ['en', 'How can I help you today?'],
+  ['id', 'Ada yang bisa saya bantu hari ini?'],
+  ['zh-CN', '今天有什么可以帮你？'],
+])(
+  'shows the empty greeting in interface language %s and removes it on submit',
+  async (language, greeting) => {
+    await i18n.changeLanguage(language);
+    vi.mocked(agentApi.askTurn).mockReturnValue(new Promise(() => undefined));
+    renderHost();
+    fireEvent.click(await screen.findByRole('button', { name: i18n.t('agent.askAria') }));
+    expect(await screen.findByText(greeting)).toBeInTheDocument();
+    const composer = await screen.findByRole('textbox');
+    await waitFor(() => expect(composer).not.toBeDisabled());
+    fireEvent.change(composer, { target: { value: 'Help with this lesson' } });
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('agent.submit') }));
+    expect(screen.queryByText(greeting)).not.toBeInTheDocument();
+  },
+);
+
+test.each([
+  String.raw`A \cap B = \{x \mid x \in A \text{ and } x \in B\}`,
+  String.raw`Consider \(A \cap B\) here.`,
+])('renders quoted math through the shared renderer: %s', async (quote) => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [{ ...completed, quote }],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  await screen.findByText(completed.body);
+  expect(document.querySelector('.ask-quote-pill .katex')).not.toBeNull();
+  expect(screen.getByRole('group', { name: `Quoted: ${quote}` })).toBeInTheDocument();
 });

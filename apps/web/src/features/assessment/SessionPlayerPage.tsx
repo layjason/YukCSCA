@@ -63,48 +63,59 @@ export function SessionPlayerPage(): React.JSX.Element {
   const [wordingHardQuestionIds, setWordingHardQuestionIds] = useState<Set<string>>(new Set());
   const [wordingPromptDismissed, setWordingPromptDismissed] = useState<Set<string>>(new Set());
 
-  const load = useCallback(async () => {
-    if (!sessionId) return;
-    setLoading(true);
-    setError(null);
-    setNotFound(false);
-    try {
-      const data = await getAssessmentSession(sessionId);
-      if (data.status === 'SUBMITTED') {
-        // Allow deep-link into result; avoid trapping on player unless mid-review.
-        void navigate(`/app/practice/sessions/${sessionId}/result`, { replace: true });
-        return;
+  const load = useCallback(
+    async (mode: 'full' | 'silent' = 'full') => {
+      if (!sessionId) return;
+      if (mode === 'full') {
+        setLoading(true);
+        setError(null);
+        setNotFound(false);
       }
-      if (data.status === 'CANCELLED') {
-        setError(t('assessment.errors.sessionCancelled'));
+      try {
+        const data = await getAssessmentSession(sessionId);
+        if (data.status === 'SUBMITTED') {
+          if (mode === 'full') {
+            void navigate(`/app/practice/sessions/${sessionId}/result`, { replace: true });
+          } else {
+            setSession(data);
+          }
+          return;
+        }
+        if (data.status === 'CANCELLED') {
+          setError(t('assessment.errors.sessionCancelled'));
+          setSession(data);
+          return;
+        }
         setSession(data);
-        return;
+        if (mode === 'full') {
+          const idx = resumeItemIndex(data.items);
+          setItemIndex(idx);
+          setSelected(data.items[idx]?.selectedOptionKey ?? null);
+        }
+      } catch (err) {
+        if (mode === 'silent') return;
+        if (err instanceof ApiError && err.status === 404) {
+          setNotFound(true);
+        } else if (err instanceof ApiError && err.status === 403) {
+          setError(t('assessment.errors.forbidden'));
+        } else if (
+          err instanceof ApiError &&
+          (err.status === 409 || err.code === 'SESSION_NOT_RESUMABLE')
+        ) {
+          setError(t('assessment.errors.sessionCancelled'));
+        } else {
+          setError(t('assessment.errors.loadSession'));
+        }
+      } finally {
+        if (mode === 'full') setLoading(false);
       }
-      setSession(data);
-      const idx = resumeItemIndex(data.items);
-      setItemIndex(idx);
-      setSelected(data.items[idx]?.selectedOptionKey ?? null);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setNotFound(true);
-      } else if (err instanceof ApiError && err.status === 403) {
-        setError(t('assessment.errors.forbidden'));
-      } else if (
-        err instanceof ApiError &&
-        (err.status === 409 || err.code === 'SESSION_NOT_RESUMABLE')
-      ) {
-        setError(t('assessment.errors.sessionCancelled'));
-      } else {
-        setError(t('assessment.errors.loadSession'));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId, navigate, t]);
+    },
+    [sessionId, navigate, t],
+  );
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load('full');
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let active = true;
@@ -319,7 +330,7 @@ export function SessionPlayerPage(): React.JSX.Element {
     );
   }
 
-  if (loading) {
+  if (loading && !session) {
     return (
       <div className="page-content assessment-page" aria-busy="true">
         <div className="assessment-skeleton">
@@ -410,7 +421,7 @@ export function SessionPlayerPage(): React.JSX.Element {
               openItem: {
                 alreadyStrong: item.strongAssistance === true,
                 onAsked: () => {
-                  void load();
+                  void load('silent');
                 },
               },
             }

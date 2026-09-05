@@ -41,9 +41,12 @@ import { CheckpointCta } from '@/features/assessment/components/CheckpointCta';
 import { AskHost, mathBlocksFrom, useHideTermRail } from '@/features/agent';
 import './learn.css';
 
-/** App shell scrolls `.app-content-wrapper`, not `window`. */
+/** Desktop Ask gives the reader its own scroller; otherwise the app shell scrolls. */
 function getShellScroller(): HTMLElement | null {
-  return document.querySelector('.app-content-wrapper');
+  return (
+    document.querySelector('.ask-shell.is-desktop-open > .ask-shell-host') ??
+    document.querySelector('.app-content-wrapper')
+  );
 }
 
 function readShellScrollTop(): number {

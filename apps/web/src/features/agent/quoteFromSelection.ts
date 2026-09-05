@@ -38,6 +38,57 @@ function intersectingMathBlock(range: Range, root: HTMLElement): HTMLElement | n
   return null;
 }
 
+function rangeIntersectsNode(range: Range, node: Node): boolean {
+  try {
+    return range.intersectsNode(node);
+  } catch {
+    return false;
+  }
+}
+
+function latexHost(node: Node | null): HTMLElement | null {
+  const el = asElement(node);
+  return (el?.closest('.learn-math[data-latex]') as HTMLElement | null) ?? null;
+}
+
+function sliceTextNode(node: Text, range: Range): string {
+  const length = node.data.length;
+  let from = 0;
+  let to = length;
+  if (typeof range.comparePoint === 'function') {
+    while (from < length && range.comparePoint(node, from) < 0) from += 1;
+    while (to > from && range.comparePoint(node, to) > 0) to -= 1;
+  } else {
+    if (node === range.startContainer) from = range.startOffset;
+    if (node === range.endContainer) to = range.endOffset;
+  }
+  return node.data.slice(from, to);
+}
+
+/** Rebuild host text so inline KaTeX is quoted as `\(...\)` instead of glyph/ARIA noise. */
+function serializeSelectedHostText(range: Range, root: HTMLElement): string {
+  const parts: string[] = [];
+  const seenLatex = new Set<HTMLElement>();
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  let node: Node | null = walker.nextNode();
+  while (node) {
+    if (node instanceof HTMLElement && node.matches('.learn-math[data-latex]')) {
+      if (rangeIntersectsNode(range, node) && !seenLatex.has(node)) {
+        seenLatex.add(node);
+        const latex = node.dataset.latex?.trim() ?? '';
+        if (latex.length > 0) parts.push(`\\(${latex}\\)`);
+      }
+    } else if (node.nodeType === Node.TEXT_NODE && !latexHost(node)) {
+      if (rangeIntersectsNode(range, node)) {
+        const sliced = sliceTextNode(node as Text, range);
+        if (sliced.length > 0) parts.push(sliced);
+      }
+    }
+    node = walker.nextNode();
+  }
+  return parts.join('').replace(/\s+/g, ' ').trim();
+}
+
 export function quoteFromSelection(
   selection: Selection | null,
   root: HTMLElement | null,
@@ -59,7 +110,9 @@ export function quoteFromSelection(
     }
   }
 
-  const text = selection.toString().replace(/\s+/g, ' ').trim();
+  const reconstructed = serializeSelectedHostText(range, root);
+  const text =
+    reconstructed.length > 0 ? reconstructed : selection.toString().replace(/\s+/g, ' ').trim();
   if (text.length < 1) return null;
   return { quote: text.slice(0, TEXT_QUOTE_MAX_LENGTH), kind: 'TEXT' };
 }

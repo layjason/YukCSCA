@@ -1,17 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ArrowUp,
   BookOpen,
   ChevronRight,
+  CircleAlert,
+  ClipboardList,
   CornerDownLeft,
+  CornerDownRight,
   Lightbulb,
-  MessageCircle,
+  NotebookText,
   Search,
+  Wrench,
   X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { KatexFormula } from '@/shared/content/KatexFormula';
 import { MixedProse } from '@/shared/content/MixedProse';
-import { parseAskBody } from './askBody';
+import { looksLikePureLatex } from '@/shared/content/inlineLatex';
+import { parseAskBody, parseAskProse, type AskProseBlock, type AskProseListItem } from './askBody';
 import type {
   AgentCompletedTurn,
   AgentConversation,
@@ -88,16 +94,40 @@ export function AskPanel({
   const { t } = useTranslation();
   const turns = conversation ? turnsOldestFirst(conversation.turns) : [];
   const lastCompleted = [...turns].reverse().find(isCompletedTurn) ?? null;
-  const endRef = useRef<HTMLLIElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inFlight = working || received;
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!outgoing && !inFlight) return;
-    endRef.current?.scrollIntoView?.({ block: 'nearest' });
+    if (variant !== 'sheet') return;
+    const navigation = document.querySelector('.app-bottom-nav');
+    if (!navigation) {
+      panelRef.current?.style.setProperty('bottom', '0px');
+      return;
+    }
+    const measure = () =>
+      panelRef.current?.style.setProperty(
+        'bottom',
+        `${navigation.getBoundingClientRect().height}px`,
+      );
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(navigation);
+    return () => observer.disconnect();
+  }, [variant]);
+
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (scroll) scroll.scrollTop = scroll.scrollHeight;
   }, [outgoing, inFlight, turns.length]);
 
   return (
-    <section className={`ask-panel ask-panel-${variant}`} aria-label={t('agent.regionLabel')}>
+    <section
+      className={`ask-panel ask-panel-${variant}`}
+      ref={panelRef}
+      aria-label={t('agent.regionLabel')}
+    >
       <header className="ask-panel-header">
         <span className="ask-context-chip">{hostTitle}</span>
         <button
@@ -111,9 +141,9 @@ export function AskPanel({
         </button>
       </header>
 
-      <div className="ask-panel-scroll">
+      <div className="ask-panel-scroll" ref={scrollRef}>
         {turns.length === 0 && !outgoing && !inFlight ? (
-          <p className="ask-empty">{t('agent.empty')}</p>
+          <WelcomeGreeting key={t('agent.welcome')} text={t('agent.welcome')} />
         ) : null}
 
         <ol className="ask-turns">
@@ -127,11 +157,11 @@ export function AskPanel({
             </li>
           ))}
           {outgoing ? (
-            <li ref={endRef} className="ask-turn">
+            <li className="ask-turn">
               <article className="ask-turn-card">
                 <StudentUtterance questionText={outgoing.questionText} quote={outgoing.quote} />
                 {received && !working ? <p className="ask-status">{t('agent.received')}</p> : null}
-                {working ? <p className="ask-status">{t('agent.working')}</p> : null}
+                {working ? <WorkingStatus /> : null}
               </article>
             </li>
           ) : (
@@ -143,7 +173,7 @@ export function AskPanel({
               ) : null}
               {working ? (
                 <li className="ask-turn">
-                  <p className="ask-status">{t('agent.working')}</p>
+                  <WorkingStatus />
                 </li>
               ) : null}
             </>
@@ -168,7 +198,8 @@ export function AskPanel({
                 disabled={composerDisabled}
                 onClick={() => onFollowUp(chip)}
               >
-                {chip}
+                <CornerDownRight size={16} aria-hidden="true" />
+                <MixedProse text={chip} as="span" />
               </button>
             ))}
           </div>
@@ -196,22 +227,33 @@ export function AskPanel({
         {quote ? (
           <QuoteChip quote={quote} onRemove={onRemoveQuote} removeDisabled={composerDisabled} />
         ) : null}
-        <label className="ask-composer-field">
-          <span className="sr-only">{t('agent.composerLabel')}</span>
-          <textarea
-            value={question}
-            onChange={(event) => onQuestionChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) return;
-              event.preventDefault();
-              if (!submitDisabled) onSubmit();
-            }}
-            placeholder={t('agent.composerPlaceholder')}
-            disabled={composerDisabled}
-            rows={2}
-            maxLength={2000}
-          />
-        </label>
+        <div className="ask-input-bar">
+          <label className="ask-composer-field">
+            <span className="sr-only">{t('agent.composerLabel')}</span>
+            <textarea
+              value={question}
+              onChange={(event) => onQuestionChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) return;
+                event.preventDefault();
+                if (!submitDisabled) onSubmit();
+              }}
+              placeholder={t('agent.composerPlaceholder')}
+              disabled={composerDisabled}
+              rows={1}
+              maxLength={2000}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-primary ask-submit"
+            onClick={onSubmit}
+            disabled={submitDisabled}
+            aria-label={working ? t('agent.submitting') : t('agent.submit')}
+          >
+            <ArrowUp size={20} aria-hidden="true" />
+          </button>
+        </div>
         {questionError ? (
           <p className="ask-field-error" role="alert">
             {questionError}
@@ -222,15 +264,6 @@ export function AskPanel({
             {quoteError}
           </p>
         ) : null}
-        <button
-          type="button"
-          className="btn-primary ask-submit"
-          onClick={onSubmit}
-          disabled={submitDisabled}
-        >
-          <MessageCircle size={18} aria-hidden="true" />
-          {working ? t('agent.submitting') : t('agent.submit')}
-        </button>
       </div>
 
       <div className="sr-only" aria-live="polite" aria-atomic="true">
@@ -238,6 +271,41 @@ export function AskPanel({
       </div>
     </section>
   );
+}
+
+function WelcomeGreeting({ text }: { text: string }): React.JSX.Element {
+  const parts = text.includes(' ') ? text.split(/(\s+)/) : Array.from(text);
+  return (
+    <div className="ask-welcome">
+      <p>
+        <span className="sr-only">{text}</span>
+        <span aria-hidden="true">
+          {parts.map((part, index) => (
+            <span
+              key={index}
+              className="ask-welcome-part"
+              style={{ animationDelay: `${index * 110}ms` }}
+            >
+              {part}
+            </span>
+          ))}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function WorkingStatus(): React.JSX.Element {
+  const { t } = useTranslation();
+  const [startedAt] = useState(() => Date.now());
+  const [seconds, setSeconds] = useState(1);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSeconds(Math.floor((Date.now() - startedAt) / 1000) + 1);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+  return <p className="ask-status ask-working">{t('agent.workingFor', { seconds })}</p>;
 }
 
 function QuoteChip({
@@ -257,7 +325,13 @@ function QuoteChip({
       aria-label={`${t('agent.quoteLabel')}: ${quote}`}
     >
       <CornerDownLeft size={14} aria-hidden="true" />
-      <span className="ask-quote-pill-text">{quote}</span>
+      <MixedProse
+        className="ask-quote-pill-text"
+        text={
+          looksLikePureLatex(quote.replace(/\\text\s*\{[^{}]*\}/g, 'x')) ? `\\(${quote}\\)` : quote
+        }
+        as="span"
+      />
       {onRemove ? (
         <button
           type="button"
@@ -313,12 +387,38 @@ function LocatorControl({
   const label = locator.label || t('agent.locatorFallback');
   const clickable = locator.sourceKind !== 'ITEM' || Boolean(sessionId);
   const className = variant === 'row' ? 'ask-trace-result' : 'ask-locator';
+  const accessibleName = t('agent.locatorAria', {
+    kind: t(`agent.contextKind.${locator.sourceKind}`),
+    label,
+  });
+  const content = (
+    <>
+      <LocatorIcon sourceKind={locator.sourceKind} />
+      <span className="ask-locator-label">
+        <MixedProse text={label} as="span" />
+      </span>
+    </>
+  );
   if (!clickable) {
-    return <span className={`${className} is-static`}>{label}</span>;
+    return (
+      <span
+        className={`${className} is-static`}
+        data-kind={locator.sourceKind}
+        aria-label={accessibleName}
+      >
+        {content}
+      </span>
+    );
   }
   return (
-    <button type="button" className={className} onClick={() => onLocator(locator)}>
-      {label}
+    <button
+      type="button"
+      className={className}
+      data-kind={locator.sourceKind}
+      aria-label={accessibleName}
+      onClick={() => onLocator(locator)}
+    >
+      {content}
     </button>
   );
 }
@@ -344,21 +444,49 @@ function CompletedTurnBody({
         : t('agent.provenance.insufficient');
 
   return (
-    <div className="ask-assistant">
-      <p className="ask-provenance">{provenance}</p>
-      <AskAnswerBody text={turn.body} />
-      {locators.length > 0 ? (
-        <ul className="ask-locators">
-          {locators.map((locator) => (
-            <li key={`${locator.sourceKind}:${locator.sourceId}:${locator.blockIndex ?? ''}`}>
-              <LocatorControl locator={locator} sessionId={sessionId} onLocator={onLocator} />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <>
       <WorkedTrace turn={turn} sessionId={sessionId} onLocator={onLocator} />
-    </div>
+      <div className="ask-assistant">
+        <AskAnswerBody text={turn.body} />
+        <div
+          className={
+            locators.length > 0 || turn.kind === 'INSUFFICIENT_EVIDENCE' ? 'ask-sources' : 'sr-only'
+          }
+        >
+          <p className={turn.kind === 'INSUFFICIENT_EVIDENCE' ? 'ask-provenance' : 'sr-only'}>
+            {provenance}
+          </p>
+          {locators.length > 0 ? (
+            <ul className="ask-locators" aria-label={t('agent.sourcesLabel')}>
+              {locators.map((locator) => (
+                <li key={`${locator.sourceKind}:${locator.sourceId}:${locator.blockIndex ?? ''}`}>
+                  <LocatorControl locator={locator} sessionId={sessionId} onLocator={onLocator} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+    </>
   );
+}
+
+function LocatorIcon({
+  sourceKind,
+}: {
+  sourceKind: AgentLocator['sourceKind'];
+}): React.JSX.Element {
+  const Icon =
+    sourceKind === 'ITEM'
+      ? ClipboardList
+      : sourceKind === 'MISTAKE'
+        ? CircleAlert
+        : sourceKind === 'REMEDIATION'
+          ? Wrench
+          : sourceKind === 'TERMINOLOGY'
+            ? NotebookText
+            : BookOpen;
+  return <Icon className="ask-locator-icon" size={16} aria-hidden="true" />;
 }
 
 function StudentUtterance({
@@ -371,7 +499,9 @@ function StudentUtterance({
   return (
     <div className="ask-student">
       {quote ? <QuoteChip quote={quote} /> : null}
-      <p className="ask-question-bubble">{questionText}</p>
+      <p className="ask-question-bubble">
+        <MixedProse text={questionText} as="span" />
+      </p>
     </div>
   );
 }
@@ -452,7 +582,9 @@ function TraceStepRow({
     <li className="ask-trace-item">
       <Icon className="ask-trace-icon" size={16} aria-hidden="true" />
       <div className="ask-trace-body">
-        <p className="ask-trace-label">{step.label}</p>
+        <p className="ask-trace-label">
+          <MixedProse text={step.label} as="span" />
+        </p>
         {locators.length > 0 ? (
           <div className="ask-trace-results">
             <p className="ask-trace-results-count">
@@ -498,9 +630,88 @@ function AskAnswerBody({ text }: { text: string }): React.JSX.Element {
             errorLabel={t('content.inlineMathError')}
           />
         ) : (
-          <MixedProse key={`prose-${index}`} text={segment.text} as="div" />
+          <AskProse key={`prose-${index}`} text={segment.text} />
         ),
       )}
     </div>
   );
+}
+
+function AskProse({ text }: { text: string }): React.JSX.Element {
+  return (
+    <>
+      {parseAskProse(text).map((block, index) => (
+        <AskProseBlockView key={`block-${index}`} block={block} />
+      ))}
+    </>
+  );
+}
+
+function AskProseBlockView({ block }: { block: AskProseBlock }): React.JSX.Element {
+  if (block.kind === 'heading') {
+    return (
+      <p className="ask-answer-heading">
+        <AskInline text={block.text} />
+      </p>
+    );
+  }
+  if (block.kind === 'paragraph') {
+    return (
+      <p className="ask-answer-paragraph">
+        <AskInline text={block.text} />
+      </p>
+    );
+  }
+  const ListTag = block.kind === 'ordered-list' ? 'ol' : 'ul';
+  const start =
+    block.kind === 'ordered-list'
+      ? parseInt(block.items[0]?.marker ?? '1', 10) || undefined
+      : undefined;
+  return (
+    <ListTag
+      start={start}
+      className={`ask-answer-list ask-answer-list-${block.kind === 'ordered-list' ? 'ordered' : 'unordered'}`}
+    >
+      {block.items.map((item, index) => (
+        <AskListItemView key={`${item.marker ?? 'bullet'}-${index}`} item={item} />
+      ))}
+    </ListTag>
+  );
+}
+
+function AskListItemView({ item }: { item: AskProseListItem }): React.JSX.Element {
+  const nested = item.depth > 0;
+  return (
+    <li className={nested ? 'ask-answer-list-item is-nested' : 'ask-answer-list-item'}>
+      {nested && item.marker ? (
+        <span className="ask-answer-list-marker">{item.marker}.</span>
+      ) : null}
+      <AskInline text={item.text} />
+    </li>
+  );
+}
+
+function AskInline({ text }: { text: string }): React.JSX.Element {
+  const parts: React.JSX.Element[] = [];
+  const boldPattern = /\*\*([^*\n]+)\*\*/g;
+  let cursor = 0;
+  let match = boldPattern.exec(text);
+  while (match) {
+    if (match.index > cursor) {
+      parts.push(
+        <MixedProse key={`text-${cursor}`} text={text.slice(cursor, match.index)} as="span" />,
+      );
+    }
+    parts.push(
+      <strong key={`bold-${match.index}`}>
+        <MixedProse text={match[1] ?? ''} as="span" />
+      </strong>,
+    );
+    cursor = match.index + match[0].length;
+    match = boldPattern.exec(text);
+  }
+  if (cursor < text.length || parts.length === 0) {
+    parts.push(<MixedProse key={`text-${cursor}`} text={text.slice(cursor)} as="span" />);
+  }
+  return <>{parts}</>;
 }

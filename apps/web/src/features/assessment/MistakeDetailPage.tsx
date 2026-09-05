@@ -105,7 +105,7 @@ export function MistakeDetailPage(): React.JSX.Element {
     }
   }
 
-  if (loading) {
+  if (loading && !mistake) {
     return (
       <div className="page-content assessment-page" aria-busy="true">
         <div className="assessment-skeleton">

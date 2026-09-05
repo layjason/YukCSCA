@@ -45,6 +45,39 @@ test('uses a short TEXT selection when no MATH block is intersected', () => {
   expect(result?.quote.length).toBeLessThanOrEqual(500);
 });
 
+test('rebuilds mixed TEXT with inline latex instead of KaTeX glyph text', () => {
+  document.body.innerHTML = `
+    <div data-ask-selection-root>
+      <p class="learn-content-block learn-content-block-text">
+        <span>Area is </span>
+        <span class="learn-math" data-latex="x^{2}"><span class="katex">x2</span></span>
+        <span> square.</span>
+      </p>
+    </div>
+  `;
+  const root = document.querySelector('[data-ask-selection-root]') as HTMLElement;
+  selectNode(root.querySelector('p') as HTMLElement);
+  const result = quoteFromSelection(window.getSelection(), root, []);
+  expect(result).toEqual({
+    quote: String.raw`Area is \(x^{2}\) square.`,
+    kind: 'TEXT',
+  });
+});
+
+test('quotes a standalone inline latex span as delimited latex', () => {
+  document.body.innerHTML = `
+    <div data-ask-selection-root>
+      <p class="learn-content-block learn-content-block-text">
+        <span class="learn-math" data-latex="a+b"><span class="katex">ab</span></span>
+      </p>
+    </div>
+  `;
+  const root = document.querySelector('[data-ask-selection-root]') as HTMLElement;
+  selectNode(root.querySelector('.learn-math') as HTMLElement);
+  const result = quoteFromSelection(window.getSelection(), root, []);
+  expect(result).toEqual({ quote: String.raw`\(a+b\)`, kind: 'TEXT' });
+});
+
 test('returns null when the selection is outside the host root', () => {
   document.body.innerHTML = `
     <div data-ask-selection-root><p>Inside</p></div>

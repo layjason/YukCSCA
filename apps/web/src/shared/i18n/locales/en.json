@@ -17,6 +17,7 @@
     "inlineLatexHint": "You can mix prose with inline LaTeX using \\(...\\). Display-mode formulas stay in a Formula block. Do not use < or >. Prefer \\lt, \\gt, \\leq, \\geq."
   },
   "agent": {
+    "welcome": "How can I help you today?",
     "ask": "Ask",
     "askAria": "Ask about this page",
     "close": "Close",
@@ -30,12 +31,13 @@
     "submitting": "Working…",
     "received": "Received",
     "working": "Working…",
+    "workingFor": "Working for {{seconds}}s",
     "quoteAdd": "Add to chat",
     "quoteRemove": "Remove quote",
     "quoteLabel": "Quoted",
     "provenance": {
       "reviewed": "From this {{kind}}",
-      "derived": "Assistance — not from reviewed text",
+      "derived": "AI explanation",
       "insufficient": "Not enough reviewed sources to answer that."
     },
     "contextKind": {
@@ -49,6 +51,8 @@
     "traceChecked": "Checked {{count}} sources",
     "traceResults": "{{count}} sources",
     "traceBlock": "Block {{index}}",
+    "sourcesLabel": "Sources",
+    "locatorAria": "{{kind}}: {{label}}",
     "followUpsLabel": "Suggested follow-ups",
     "unavailable": "Ask is not available here.",
     "unavailableDisabled": "Ask is turned off right now.",

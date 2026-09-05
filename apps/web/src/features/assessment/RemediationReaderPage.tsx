@@ -237,7 +237,7 @@ export function RemediationReaderPage(): React.JSX.Element {
     );
   }
 
-  if (!profileReady || loading) {
+  if (!profileReady || (loading && !resource)) {
     return (
       <div className="page-content assessment-page" aria-busy="true">
         <div className="assessment-skeleton">

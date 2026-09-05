@@ -148,7 +148,7 @@ export function SessionResultPage(): React.JSX.Element {
     }
   }
 
-  if (loading) {
+  if (loading && !result) {
     return (
       <div className="page-content assessment-page" aria-busy="true">
         <div className="assessment-skeleton">

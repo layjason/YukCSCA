@@ -17,6 +17,7 @@
     "inlineLatexHint": "文本可在散文中使用 \\(...\\) 行内 LaTeX。居中公式仍用公式块。请勿使用 < 或 >，请优先使用 \\lt、\\gt、\\leq、\\geq。"
   },
   "agent": {
+    "welcome": "今天有什么可以帮你？",
     "ask": "提问",
     "askAria": "就本页提问",
     "close": "关闭",
@@ -30,12 +31,13 @@
     "submitting": "正在处理…",
     "received": "已收到",
     "working": "正在处理…",
+    "workingFor": "已处理 {{seconds}} 秒",
     "quoteAdd": "加入提问",
     "quoteRemove": "移除引用",
     "quoteLabel": "引用",
     "provenance": {
       "reviewed": "来自本{{kind}}",
-      "derived": "辅助说明 — 并非来自已审阅文本",
+      "derived": "AI 解释",
       "insufficient": "没有足够的已审阅来源来回答。"
     },
     "contextKind": {
@@ -49,6 +51,8 @@
     "traceChecked": "查看了 {{count}} 处来源",
     "traceResults": "{{count}} 处来源",
     "traceBlock": "第 {{index}} 块",
+    "sourcesLabel": "来源",
+    "locatorAria": "{{kind}}：{{label}}",
     "followUpsLabel": "建议追问",
     "unavailable": "此处无法提问。",
     "unavailableDisabled": "提问功能目前已关闭。",

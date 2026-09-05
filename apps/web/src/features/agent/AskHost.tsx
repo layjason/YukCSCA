@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { AlignJustify, MessageCircle } from 'lucide-react';
+import { AlignJustify, Sparkles } from 'lucide-react';
 import { ApiError } from '@/shared/api/httpClient';
 import { addToChatAnchorFromRect, firstRangeRect, type AddToChatAnchor } from './addToChatAnchor';
 import {
@@ -36,6 +36,7 @@ import {
 import './agent.css';
 
 const DESKTOP_QUERY = '(min-width: 960px)';
+const EMPTY_MATH_BLOCKS: readonly MathBlockSource[] = [];
 const POLL_MS = 1000;
 /** Must exceed the API turn timeout (60s) and stay under Nginx /api/ read timeout (120s). */
 const POLL_MAX_MS = 120000;
@@ -87,7 +88,7 @@ export function AskHost(props: AskHostProps): React.JSX.Element {
 function AskHostSession({
   context,
   hostTitle,
-  mathBlocks = [],
+  mathBlocks = EMPTY_MATH_BLOCKS,
   openItem,
   onHighlightBlock,
   onOpenChange,
@@ -122,6 +123,7 @@ function AskHostSession({
   const [question, setQuestion] = useState('');
   const [quote, setQuote] = useState<string | null>(null);
   const [pendingQuote, setPendingQuote] = useState<string | null>(null);
+  const pendingQuoteRef = useRef<string | null>(null);
   const [addAnchor, setAddAnchor] = useState<AddToChatAnchor | null>(null);
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -312,23 +314,38 @@ function AskHostSession({
   }, [closePanel, confirmOpen, open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!enabled || !available) {
+      pendingQuoteRef.current = null;
+      setPendingQuote(null);
+      setAddAnchor(null);
+      return;
+    }
     function updatePendingQuote(): void {
       const selection = window.getSelection();
       const next = quoteFromSelection(selection, hostRef.current, mathBlocks);
-      setPendingQuote(next?.quote ?? null);
+      const quoteText = next?.quote ?? null;
+      pendingQuoteRef.current = quoteText;
+      setPendingQuote((current) => (current === quoteText ? current : quoteText));
       if (!next) {
         setAddAnchor(null);
         return;
       }
       const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-      setAddAnchor(
-        addToChatAnchorFromRect(firstRangeRect(range), {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        }),
+      const nextAnchor = addToChatAnchorFromRect(firstRangeRect(range), {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      setAddAnchor((current) =>
+        current &&
+        current.top === nextAnchor.top &&
+        current.left === nextAnchor.left &&
+        current.place === nextAnchor.place &&
+        current.fallback === nextAnchor.fallback
+          ? current
+          : nextAnchor,
       );
     }
+    updatePendingQuote();
     document.addEventListener('selectionchange', updatePendingQuote);
     window.addEventListener('scroll', updatePendingQuote, true);
     window.addEventListener('resize', updatePendingQuote);
@@ -337,7 +354,7 @@ function AskHostSession({
       window.removeEventListener('scroll', updatePendingQuote, true);
       window.removeEventListener('resize', updatePendingQuote);
     };
-  }, [mathBlocks, open]);
+  }, [available, enabled, mathBlocks]);
 
   function validate(request: AgentTurnRequest): boolean {
     setQuestionError(null);
@@ -355,6 +372,12 @@ function AskHostSession({
       return false;
     }
     return true;
+  }
+
+  function restoreComposer(request: AgentTurnRequest): void {
+    setOutgoing(null);
+    setQuestion((current) => (current.trim() ? current : request.questionText));
+    setQuote((current) => current ?? request.quote ?? null);
   }
 
   const sendTurn = useCallback(
@@ -462,12 +485,6 @@ function AskHostSession({
     [conversation, mapError, openItem, persistConversation, pollUntilSettled, t],
   );
 
-  function restoreComposer(request: AgentTurnRequest): void {
-    setOutgoing(null);
-    setQuestion((current) => (current.trim() ? current : request.questionText));
-    setQuote((current) => current ?? request.quote ?? null);
-  }
-
   function currentRequest(): AgentTurnRequest {
     const request: AgentTurnRequest = { questionText: question.trim() };
     if (quote && quote.trim().length > 0) request.quote = quote;
@@ -509,6 +526,19 @@ function AskHostSession({
     void sendTurn(retryRequest, key);
   }
 
+  function handleAddToChat(): void {
+    const next = pendingQuoteRef.current;
+    if (!next) return;
+    setQuote(next);
+    pendingQuoteRef.current = null;
+    setPendingQuote(null);
+    setAddAnchor(null);
+    window.getSelection()?.removeAllRanges();
+    if (!open) {
+      void openPanel();
+    }
+  }
+
   function handleLocator(locator: AgentLocator): void {
     if (!conversation) return;
     if (isSamePageLocator(locator, context) && locator.blockIndex != null) {
@@ -536,6 +566,36 @@ function AskHostSession({
     <div
       className={`ask-shell${showPanel && desktop ? ' is-desktop-open' : ''}${showPanel && !desktop ? ' is-sheet-open' : ''}`}
     >
+      <div className="ask-shell-host" ref={hostRef} data-ask-selection-root="">
+        {showCompact ? (
+          <div className="ask-compact-bar">
+            <button
+              type="button"
+              ref={triggerRef}
+              className="ask-compact"
+              onClick={() => void openPanel()}
+              aria-label={t('agent.askAria')}
+            >
+              <Sparkles size={20} aria-hidden="true" />
+              <span>{t('agent.ask')}</span>
+            </button>
+          </div>
+        ) : null}
+        {showHistory ? (
+          <div className="ask-compact-bar">
+            <button
+              type="button"
+              ref={triggerRef}
+              className="ask-history"
+              onClick={() => void openPanel()}
+            >
+              {t('agent.showHistory')}
+            </button>
+          </div>
+        ) : null}
+        {children}
+      </div>
+
       {showPanel && desktop ? (
         <AskPanel
           variant="rail"
@@ -567,36 +627,6 @@ function AskHostSession({
           onCancelConfirm={() => setConfirmOpen(false)}
         />
       ) : null}
-
-      <div className="ask-shell-host" ref={hostRef} data-ask-selection-root="">
-        {showCompact ? (
-          <div className="ask-compact-bar">
-            <button
-              type="button"
-              ref={triggerRef}
-              className="ask-compact"
-              onClick={() => void openPanel()}
-              aria-label={t('agent.askAria')}
-            >
-              <MessageCircle size={18} aria-hidden="true" />
-              <span>{t('agent.ask')}</span>
-            </button>
-          </div>
-        ) : null}
-        {showHistory ? (
-          <div className="ask-compact-bar">
-            <button
-              type="button"
-              ref={triggerRef}
-              className="ask-history"
-              onClick={() => void openPanel()}
-            >
-              {t('agent.showHistory')}
-            </button>
-          </div>
-        ) : null}
-        {children}
-      </div>
 
       {showPanel && !desktop ? (
         <AskPanel
@@ -630,7 +660,7 @@ function AskHostSession({
         />
       ) : null}
 
-      {showPanel && pendingQuote && pendingQuote !== quote ? (
+      {available && pendingQuote && pendingQuote !== quote ? (
         <div
           className={`ask-add-toolbar${addAnchor && !addAnchor.fallback ? '' : ' is-fallback'}`}
           style={
@@ -649,11 +679,9 @@ function AskHostSession({
           <button
             type="button"
             className="ask-add-to-chat"
-            onClick={() => {
-              setQuote(pendingQuote);
-              setPendingQuote(null);
-              setAddAnchor(null);
-            }}
+            onPointerDown={(event) => event.preventDefault()}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={handleAddToChat}
           >
             <AlignJustify size={16} aria-hidden="true" />
             {t('agent.quoteAdd')}
