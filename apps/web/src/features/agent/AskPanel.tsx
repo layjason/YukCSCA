@@ -17,7 +17,13 @@ import { useTranslation } from 'react-i18next';
 import { KatexFormula } from '@/shared/content/KatexFormula';
 import { MixedProse } from '@/shared/content/MixedProse';
 import { looksLikePureLatex } from '@/shared/content/inlineLatex';
-import { parseAskBody, parseAskProse, type AskProseBlock, type AskProseListItem } from './askBody';
+import {
+  parseAskBody,
+  parseAskInline,
+  parseAskProse,
+  type AskProseBlock,
+  type AskProseListItem,
+} from './askBody';
 import type {
   AgentCompletedTurn,
   AgentConversation,
@@ -692,26 +698,34 @@ function AskListItemView({ item }: { item: AskProseListItem }): React.JSX.Elemen
 }
 
 function AskInline({ text }: { text: string }): React.JSX.Element {
-  const parts: React.JSX.Element[] = [];
-  const boldPattern = /\*\*([^*\n]+)\*\*/g;
-  let cursor = 0;
-  let match = boldPattern.exec(text);
-  while (match) {
-    if (match.index > cursor) {
-      parts.push(
-        <MixedProse key={`text-${cursor}`} text={text.slice(cursor, match.index)} as="span" />,
-      );
-    }
-    parts.push(
-      <strong key={`bold-${match.index}`}>
-        <MixedProse text={match[1] ?? ''} as="span" />
-      </strong>,
-    );
-    cursor = match.index + match[0].length;
-    match = boldPattern.exec(text);
-  }
-  if (cursor < text.length || parts.length === 0) {
-    parts.push(<MixedProse key={`text-${cursor}`} text={text.slice(cursor)} as="span" />);
-  }
-  return <>{parts}</>;
+  return (
+    <>
+      {parseAskInline(text).map((part, index) => {
+        if (part.kind === 'bold-italic') {
+          return (
+            <strong key={`bold-italic-${index}`}>
+              <em>
+                <MixedProse text={part.text} as="span" />
+              </em>
+            </strong>
+          );
+        }
+        if (part.kind === 'bold') {
+          return (
+            <strong key={`bold-${index}`}>
+              <MixedProse text={part.text} as="span" />
+            </strong>
+          );
+        }
+        if (part.kind === 'italic') {
+          return (
+            <em key={`italic-${index}`}>
+              <MixedProse text={part.text} as="span" />
+            </em>
+          );
+        }
+        return <MixedProse key={`text-${index}`} text={part.text} as="span" />;
+      })}
+    </>
+  );
 }

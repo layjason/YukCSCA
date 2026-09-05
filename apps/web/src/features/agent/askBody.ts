@@ -1,3 +1,5 @@
+import { looksLikePureLatex, parseInlineLatex } from '@/shared/content/inlineLatex';
+
 export type AskBodySegment = { kind: 'prose'; text: string } | { kind: 'display'; latex: string };
 
 export type AskProseListItem = {
@@ -11,6 +13,12 @@ export type AskProseBlock =
   | { kind: 'heading'; text: string }
   | { kind: 'ordered-list'; items: AskProseListItem[] }
   | { kind: 'unordered-list'; items: AskProseListItem[] };
+
+export type AskInlinePart =
+  | { kind: 'text'; text: string }
+  | { kind: 'bold'; text: string }
+  | { kind: 'italic'; text: string }
+  | { kind: 'bold-italic'; text: string };
 
 const BRACKET_OPEN = '\\[';
 const BRACKET_CLOSE = '\\]';
@@ -133,4 +141,110 @@ export function parseAskProse(source: string): AskProseBlock[] {
 function pushProse(segments: AskBodySegment[], text: string): void {
   if (!text) return;
   segments.push({ kind: 'prose', text });
+}
+
+type EmphasisToken = {
+  text: string;
+  width: number;
+  matched: boolean;
+  opening: boolean;
+};
+
+/**
+ * Bounded star emphasis, with explicit/quoted math kept opaque. Bare math is
+ * detected later by MixedProse, after Markdown delimiters have been removed.
+ * Tokens are visited once in each pass; malformed runs remain literal.
+ */
+export function parseAskInline(source: string): AskInlinePart[] {
+  if (!source) return [];
+  // Preserve bare formula operators/superscripts unless a boundary introduces
+  // actual emphasis (for example `**x^2** + **y^2**`).
+  if (looksLikePureLatex(source) && !/(?:^|\s)\\*\*{1,3}(?=[^\s*])/u.test(source)) {
+    return [{ kind: 'text', text: source }];
+  }
+  const reserved = parseInlineLatex(source, { detectBareMath: false }).filter(
+    (segment) => segment.kind !== 'text',
+  );
+  const tokens: EmphasisToken[] = [];
+  const openers: EmphasisToken[] = [];
+  const literal = (text: string): void => {
+    tokens.push({ text, width: 0, matched: false, opening: false });
+  };
+  let rangeIndex = 0;
+  let index = 0;
+  while (index < source.length) {
+    while (reserved[rangeIndex] && reserved[rangeIndex]!.end <= index) rangeIndex++;
+    const range = reserved[rangeIndex];
+    if (range && index >= range.start) {
+      const text = source.slice(index, range.end);
+      if (text.includes('\n')) openers.length = 0;
+      literal(text);
+      index = range.end;
+      continue;
+    }
+    // Only Markdown escapes are consumed; LaTeX commands are never unescaped.
+    if (source[index] === '\\' && ['*', '\\'].includes(source[index + 1] ?? '')) {
+      literal(source[index + 1]!);
+      index += 2;
+      continue;
+    }
+    if (source[index] !== '*') {
+      if (source[index] === '\n') openers.length = 0;
+      literal(source[index]!);
+      index++;
+      continue;
+    }
+    const start = index;
+    while (source[index] === '*') index++;
+    let width = index - start;
+    if (width > 3) {
+      literal(source.slice(start, index));
+      continue;
+    }
+    const before = source[start - 1] ?? '';
+    const after = source[index] ?? '';
+    const beforeSpace = !before || /\s/u.test(before);
+    const afterSpace = !after || /\s/u.test(after);
+    const beforePunctuation = /[\p{P}\p{S}]/u.test(before);
+    const afterPunctuation = /[\p{P}\p{S}]/u.test(after);
+    const canOpen = !afterSpace && (!afterPunctuation || beforeSpace || beforePunctuation);
+    const canClose = !beforeSpace && (!beforePunctuation || afterSpace || afterPunctuation);
+    if (canClose) {
+      while (width > 0) {
+        const opener = openers.at(-1);
+        if (!opener || opener.width > width) break;
+        openers.pop();
+        opener.matched = true;
+        tokens.push({
+          text: '*'.repeat(opener.width),
+          width: opener.width,
+          matched: true,
+          opening: false,
+        });
+        width -= opener.width;
+      }
+    }
+    if (width > 0) {
+      const token = { text: '*'.repeat(width), width, matched: false, opening: true };
+      tokens.push(token);
+      if (canOpen) openers.push(token);
+    }
+  }
+
+  const parts: AskInlinePart[] = [];
+  let bold = 0;
+  let italic = 0;
+  for (const token of tokens) {
+    if (token.matched) {
+      const direction = token.opening ? 1 : -1;
+      if (token.width >= 2) bold += direction;
+      if (token.width !== 2) italic += direction;
+      continue;
+    }
+    const kind = bold > 0 ? (italic > 0 ? 'bold-italic' : 'bold') : italic > 0 ? 'italic' : 'text';
+    const last = parts.at(-1);
+    if (last?.kind === kind) last.text += token.text;
+    else parts.push({ kind, text: token.text });
+  }
+  return parts;
 }

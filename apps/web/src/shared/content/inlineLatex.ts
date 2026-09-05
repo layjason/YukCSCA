@@ -31,7 +31,10 @@ export interface InlineLatexRange {
 }
 
 /** Split source into prose, bounded inline math, and a trailing unmatched opener if present. */
-export function parseInlineLatex(source: string): InlineLatexSegment[] {
+export function parseInlineLatex(
+  source: string,
+  { detectBareMath = true }: { detectBareMath?: boolean } = {},
+): InlineLatexSegment[] {
   if (!source) return [];
   const trimmed = source.trim();
   const unquoted = unquote(trimmed);
@@ -41,6 +44,7 @@ export function parseInlineLatex(source: string): InlineLatexSegment[] {
   const displayDollarFirst = findDisplayDollarMath(source, 0);
 
   if (
+    detectBareMath &&
     openFirst < 0 &&
     !dollarFirst &&
     !displayBracketFirst &&
