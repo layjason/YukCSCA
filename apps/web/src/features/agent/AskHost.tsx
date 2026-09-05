@@ -316,8 +316,6 @@ function AskHostSession({
   useEffect(() => {
     if (!enabled || !available) {
       pendingQuoteRef.current = null;
-      setPendingQuote(null);
-      setAddAnchor(null);
       return;
     }
     function updatePendingQuote(): void {
@@ -660,7 +658,7 @@ function AskHostSession({
         />
       ) : null}
 
-      {available && pendingQuote && pendingQuote !== quote ? (
+      {enabled && available && pendingQuote && pendingQuote !== quote ? (
         <div
           className={`ask-add-toolbar${addAnchor && !addAnchor.fallback ? '' : ' is-fallback'}`}
           style={
