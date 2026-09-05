@@ -82,7 +82,8 @@ content-progress, and the published term bank only through academic application
 ports (`PublishedAssessmentCatalog`, `StudentContentProgressQuery`,
 `PublishedTerminologyCatalog`) and never imports academic JPA. Academic never
 imports assessment JPA; ITEM term lookups use `AssessmentItemContextPort`.
-The `agent` module (VS-011) owns student-private contextual text Q&A under
+The `agent` module (VS-011, `DONE` after product-owner journey review
+2026-09-05) owns student-private contextual text Q&A under
 `/api/v1/agent/**`: availability, idempotent start, owner GET, and `askTurn`.
 It reads published lessons/remediation/terms through `PublishedLearningContextPort`
 and item/mistake context plus `AGENT_QA` writes through `AgentAssessmentContextPort`;
@@ -359,11 +360,11 @@ activated students to `/app/learn`, and mobile More exposes production-safe
 destinations without re-entering the preview-workspace gate for those routes.
 Family, mock execution, access, commerce, and tutoring destinations remain
 prototype-only or unimplemented until their owning frontend slices land.
-Contextual text Ask (`VS-011`, checkpoint `VS-011-R7-accepted`) is a secondary
-control on production Learn/Practice hosts under `features/agent` — not a
-primary nav item and not `/app/ask`. Prototype Today is not wired to the agent
-API. Backend agent waves may land in parallel and are not implied by the
-frontend chrome. VS-002 is also `DONE` after full implementation,
+Contextual text Ask (`VS-011`, checkpoint `VS-011-R7-accepted`) is `DONE` after
+backend waves 1–3, frontend Ask chrome, independent code-surface review, and
+product-owner journey review on 2026-09-05. It is a secondary control on
+production Learn/Practice hosts under `features/agent` — not a primary nav
+item and not `/app/ask`. Prototype Today is not wired to the agent API. VS-002 is also `DONE` after full implementation,
 verification, and product owner signoff. VS-005 is `DONE` for the pilot admin
 and first Mathematics package path. VS-008 is `DONE` for the first production
 student consumer of published LESSON content with content progress only.
