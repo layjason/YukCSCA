@@ -128,24 +128,26 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
       Greetings, identity, thanks, or meta questions such as who are you / what can you do: 1-2 short sentences naming YukCSCA Ask and, at most, the current object label. Do not recap, outline, enumerate, or teach the module. Do not call tools. kind = DERIVED_EXPLANATION. (The application normally answers these before this prompt.)
       <current_object> is already in the user message. Do not call a getter just to re-read it.
       Call the matching getter only if current_object is missing a needed detail.
-      Call searchAuthorisedContent only when the question needs another published object in this package, or the current excerpt is clearly insufficient for a content question.
+      Search by meaning, not by the literal tool name. When the student asks about another lesson, practice, term, example, definition, or a related concept in this package, you MUST call searchAuthorisedContent even if they do not say “search” or name the tool. Also search when the current excerpt does not contain the asked content. Do not refuse just because the requested object is not the current object; search the authorised package and explain the scope if there are no hits.
       Call getRecentEvidence only when the question is about the student's recent work or mistakes and the supplied evidence is insufficient.
       Never call a getter whose context type is not the current context.
-      Prefer answering now over another tool call. Maximum 2 tool calls unless search is required after the getter.
+      Prefer answering now over another getter call. Search is required when the current excerpt does not answer the question. Maximum 2 tool calls unless search is required after the getter.
 
       Teaching format for a substantive question:
       1. Start with a direct answer in one sentence.
       2. Add 2-5 short numbered steps only when a procedure or why/how explanation is needed. Each step is at most two sentences on its own line.
       3. Define unfamiliar terms briefly and keep each step focused on one idea.
       4. End with one check-for-understanding question when useful.
+      Use a small, safe Markdown subset for readable prose: blank-line-separated paragraphs, **bold** for key terms, and numbered or dash lists. Put every list item on its own line; indent nested items such as 1.1 and 1.2. Do not use raw HTML, links, tables, blockquotes, or code fences.
       Do not provide a syllabus, broad capability list, unrelated examples, or a module dump unless the student explicitly asks for an overview.
 
       Output contract:
       Return only a JSON object with keys kind, body, locators, suggestedFollowUps, lowConfidence.
-      kind REVIEWED_SOURCE when reviewed locators support the answer.
-      kind DERIVED_EXPLANATION for public mathematics when retrieved text is thin, and for greetings or identity; never label it official.
+      When retrieved_data contains a supporting authorised hit, kind MUST be REVIEWED_SOURCE. Copy that hit's sourceKind, sourceId, label, blockIndex, and packageRevisionId into locators exactly. Never invent IDs or labels.
+      kind REVIEWED_SOURCE when reviewed locators support the answer, including after a successful search.
+      kind DERIVED_EXPLANATION only for public mathematics when retrieved text is thin AND there is no supporting authorised hit, and for greetings or identity; never label it official. Do not choose DERIVED_EXPLANATION when a supporting search hit exists.
       kind INSUFFICIENT_EVIDENCE for official/policy/scoring/admissions questions without reviewed sources.
-      body is TEXT-like prose, 1-12000 characters. Write mathematics as $formula$ (dollar-delimited TeX) or Unicode (≠ π ≤). Never emit \\(, \\), \\[, \\], or $$ — those sequences are invalid JSON escapes. The application converts $formula$ and Unicode to inline KaTeX after parse. Never emit bare math such as x≠2. Never use markdown code fences.
+      body is TEXT-like prose, 1-12000 characters. Write mathematics in body and suggestedFollowUps as $formula$ (dollar-delimited TeX) or Unicode (≠ π ≤). Never emit \\(, \\), \\[, \\], or $$ — those sequences are invalid JSON escapes. The application converts $formula$ and Unicode to inline KaTeX after parse. Never emit bare math such as x≠2. Never use markdown code fences.
       suggestedFollowUps are 0-3 short strings that stay on this same context.
       If you cannot ground an official, policy, scoring-rule, or admissions claim, return INSUFFICIENT_EVIDENCE. Do not guess.
 
@@ -415,15 +417,45 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
       return null;
     }
     List<GroundedLocator> authorised = authorisedLocators(command, tools);
-    List<GroundedLocator> locators = readLocators(answer.locators(), authorised);
-    if (kind == AgentAnswerKind.REVIEWED_SOURCE && locators.isEmpty()) {
-      locators = command.grounding().currentLocators();
-    }
+    List<GroundedLocator> requested = readLocators(answer.locators(), authorised);
+    List<GroundedLocator> searchHits = tools.locatorsFor("searchAuthorisedContent");
+    List<GroundedLocator> locators =
+        groundedLocators(requested, searchHits, command.grounding().currentLocators(), kind);
+    boolean searchedWithHits = !searchHits.isEmpty();
+    kind = groundedKind(kind, searchedWithHits && !locators.isEmpty());
     List<String> followUps = readFollowUps(answer.suggestedFollowUps());
     boolean lowConfidence = answer.lowConfidence();
     List<TraceStep> steps = studentSteps(command, tools);
     return new AgentChatResult(
         kind, body, locators, steps, followUps, lowConfidence, tokenUsage, properties.chatModel());
+  }
+
+  static AgentAnswerKind groundedKind(AgentAnswerKind kind, boolean searchedWithHits) {
+    if (searchedWithHits && kind == AgentAnswerKind.DERIVED_EXPLANATION) {
+      return AgentAnswerKind.REVIEWED_SOURCE;
+    }
+    return kind;
+  }
+
+  /**
+   * Prefer model-cited authorised locators, then Java-authorised search hits, then the current
+   * object when the model claimed reviewed support but omitted copyable ids.
+   */
+  static List<GroundedLocator> groundedLocators(
+      List<GroundedLocator> requested,
+      List<GroundedLocator> searchHits,
+      List<GroundedLocator> current,
+      AgentAnswerKind kind) {
+    if (requested != null && !requested.isEmpty()) {
+      return List.copyOf(requested);
+    }
+    if (searchHits != null && !searchHits.isEmpty()) {
+      return List.copyOf(searchHits);
+    }
+    if (kind == AgentAnswerKind.REVIEWED_SOURCE && current != null && !current.isEmpty()) {
+      return List.copyOf(current);
+    }
+    return List.of();
   }
 
   List<TraceStep> studentSteps(AgentChatCommand command, AgentToolFacade tools) {
@@ -483,9 +515,10 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
       if ("id".equals(language)) return "Mencari konten terotorisasi";
       return "Searched authorised package content";
     }
-    if ("zh-CN".equals(language)) return clip("检索了本套件：“" + clipped + "”", 200);
-    if ("id".equals(language)) return clip("Mencari paket ini untuk “" + clipped + "”", 200);
-    return clip("Searched this package for “" + clipped + "”", 200);
+    String normalized = normalizeInlineMath(clipped);
+    if ("zh-CN".equals(language)) return clip("检索了本套件：“" + normalized + "”", 200);
+    if ("id".equals(language)) return clip("Mencari paket ini untuk “" + normalized + "”", 200);
+    return clip("Searched this package for “" + normalized + "”", 200);
   }
 
   private static String studentModelLabel(String language) {
@@ -510,23 +543,11 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
   private List<GroundedLocator> readLocators(
       List<StructuredLocator> requested, List<GroundedLocator> authorised) {
     if (requested == null || requested.isEmpty()) return List.of();
-    Map<String, GroundedLocator> allowed = new LinkedHashMap<>();
-    for (GroundedLocator locator : authorised) {
-      allowed.putIfAbsent(key(locator), locator);
-    }
+    List<GroundedLocator> allowed = authorised == null ? List.of() : authorised;
     List<GroundedLocator> values = new ArrayList<>();
     Set<String> seen = new LinkedHashSet<>();
     for (StructuredLocator item : requested) {
-      if (item == null) continue;
-      AgentContextType kind = parseContext(item.sourceKind());
-      UUID sourceId = item.sourceId();
-      if (kind == null || sourceId == null) continue;
-      Integer blockIndex = item.blockIndex();
-      UUID revision = item.packageRevisionId();
-      GroundedLocator candidate =
-          new GroundedLocator(
-              kind, sourceId, item.label() == null ? "Source" : item.label(), blockIndex, revision);
-      GroundedLocator canonical = allowed.get(key(candidate));
+      GroundedLocator canonical = matchAuthorised(item, allowed);
       if (canonical == null || !seen.add(key(canonical))) continue;
       values.add(canonical);
       if (values.size() == 12) break;
@@ -534,12 +555,57 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
     return values;
   }
 
+  static GroundedLocator matchAuthorised(StructuredLocator item, List<GroundedLocator> authorised) {
+    if (item == null || authorised == null || authorised.isEmpty()) {
+      return null;
+    }
+    AgentContextType kind = parseContext(item.sourceKind());
+    UUID sourceId = item.sourceId();
+    if (kind != null && sourceId != null) {
+      GroundedLocator exact =
+          new GroundedLocator(
+              kind,
+              sourceId,
+              item.label() == null ? "Source" : item.label(),
+              item.blockIndex(),
+              item.packageRevisionId());
+      for (GroundedLocator locator : authorised) {
+        if (key(locator).equals(key(exact))) {
+          return locator;
+        }
+      }
+      for (GroundedLocator locator : authorised) {
+        if (locator.sourceKind() == kind && sourceId.equals(locator.sourceId())) {
+          return locator;
+        }
+      }
+    }
+    String label = item.label();
+    if (label == null || label.isBlank()) {
+      return null;
+    }
+    GroundedLocator unique = null;
+    for (GroundedLocator locator : authorised) {
+      if (!label.equalsIgnoreCase(locator.label())) {
+        continue;
+      }
+      if (kind != null && locator.sourceKind() != kind) {
+        continue;
+      }
+      if (unique != null) {
+        return null;
+      }
+      unique = locator;
+    }
+    return unique;
+  }
+
   private List<String> readFollowUps(List<String> requested) {
     if (requested == null || requested.isEmpty()) return List.of();
     List<String> values = new ArrayList<>();
     for (String item : requested) {
       if (item == null) continue;
-      String text = item.trim();
+      String text = normalizeInlineMath(item.trim());
       if (text.isEmpty() || text.length() > 80) continue;
       values.add(text);
       if (values.size() == 3) break;
@@ -778,7 +844,20 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
   }
 
   private static Integer integerValue(JsonNode value) {
-    return value == null || value.isNull() || !value.isNumber() ? null : value.asInt();
+    if (value == null || value.isNull()) {
+      return null;
+    }
+    if (value.isNumber()) {
+      return value.asInt();
+    }
+    if (!value.isValueNode()) {
+      return null;
+    }
+    try {
+      return Integer.valueOf(value.asText().trim());
+    } catch (NumberFormatException exception) {
+      return null;
+    }
   }
 
   static String extractJsonObject(String content) {
@@ -885,11 +964,67 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
     String text = convertDisplayMath(body.trim());
     text = convertDollarMath(text);
     text = text.replace("```json", "").replace("```", "");
-    text = stripMarkdownHeadings(text);
+    text = normalizeMarkdownHeadings(text);
+    text = normalizeListSpacing(text);
     return wrapBareMath(text);
   }
 
-  private static String stripMarkdownHeadings(String body) {
+  static String normalizeInlineMath(String text) {
+    if (text == null || text.isBlank()) {
+      return "";
+    }
+    String trimmed = text.trim();
+    String unquoted = unquote(trimmed);
+    boolean wasQuoted = !unquoted.equals(trimmed);
+    String out = convertDisplayMath(unquoted);
+    out = convertDollarMath(out);
+    if (!out.contains("\\(") && isPureLatex(out)) {
+      out = "\\(" + unicodeToLatex(out) + "\\)";
+    } else {
+      out = wrapBareMath(out);
+    }
+    return wasQuoted ? trimmed.charAt(0) + out + trimmed.charAt(trimmed.length() - 1) : out;
+  }
+
+  static String unquote(String s) {
+    if (s == null || s.length() < 2) {
+      return s;
+    }
+    char first = s.charAt(0);
+    char last = s.charAt(s.length() - 1);
+    if ((first == '“' && last == '”')
+        || (first == '"' && last == '"')
+        || (first == '‘' && last == '’')
+        || (first == '\'' && last == '\'')) {
+      return s.substring(1, s.length() - 1).trim();
+    }
+    return s;
+  }
+
+  static boolean isPureLatex(String text) {
+    if (text == null || text.isBlank() || text.length() > 4000) {
+      return false;
+    }
+    String trimmed = unquote(text.trim());
+    if (trimmed.startsWith("\\(") || trimmed.startsWith("$")) {
+      return false;
+    }
+    if (trimmed.matches("^\\s*\\\\[a-zA-Z].*")) {
+      return true;
+    }
+    if (trimmed.matches("^[a-zA-Z0-9\\s\\\\{}_^=+\\-*/.,:;()\\[\\]≠≤≥√π∞±×÷∪∩∈]+$")) {
+      boolean hasMathSyntax = trimmed.matches(".*[\\\\_^=≠≤≥√π∞±×÷∪∩∈].*");
+      if (!hasMathSyntax) {
+        return false;
+      }
+      return java.util.Arrays.stream(trimmed.split("\\s+"))
+          .filter(w -> w.matches("^[a-zA-Z]{2,}$"))
+          .allMatch(w -> Set.of("sin", "cos", "tan", "log", "ln", "max", "min").contains(w));
+    }
+    return false;
+  }
+
+  private static String normalizeMarkdownHeadings(String body) {
     StringBuilder out = new StringBuilder();
     body.lines()
         .forEach(
@@ -897,8 +1032,24 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
               if (!out.isEmpty()) {
                 out.append('\n');
               }
-              out.append(line.replaceFirst("^#{1,6}\\s+", ""));
+              out.append(line.replaceFirst("^\\s*#{1,6}\\s+(.+?)\\s*$", "**$1**"));
             });
+    return out.toString();
+  }
+
+  /** Models occasionally put several numbered items on one line; restore list boundaries. */
+  private static String normalizeListSpacing(String body) {
+    StringBuilder out = new StringBuilder(body.length());
+    for (String line : body.split("\\R", -1)) {
+      String normalized = line.replaceAll("(?<=\\S)[ \\t]+(?=\\d+\\.[ \\t]+)", "\n");
+      if (line.matches(".*\\d+\\.[ \\t]+.*")) {
+        normalized = normalized.replaceAll("(?<=\\S)[ \\t]+(?=\\d+(?:\\.\\d+)+\\.?[ \\t]+)", "\n");
+      }
+      if (!out.isEmpty()) {
+        out.append('\n');
+      }
+      out.append(normalized);
+    }
     return out.toString();
   }
 
@@ -946,9 +1097,11 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
         out.append(prose.substring(cursor));
         break;
       }
-      String inner = prose.substring(start + 1, end).trim();
+      String rawInner = prose.substring(start + 1, end);
+      String inner = rawInner.trim();
       out.append(prose, cursor, start);
-      if (looksLikeMathBody(inner)) {
+      if (looksLikeMathBody(inner)
+          && (rawInner.equals(inner) || looksLikeWhitespaceWrappedMath(inner))) {
         out.append("\\(").append(inner).append("\\)");
       } else {
         out.append(prose, start, end + 1);
@@ -970,11 +1123,8 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
     if (inner.isEmpty() || inner.length() > 4000) {
       return false;
     }
-    if (inner.matches("\\d+([.,]\\d+)?")) {
-      return false;
-    }
-    if (inner.matches("\\d+([.,]\\d+)?\\s+(and|to|or)\\s*")) {
-      return false;
+    if (inner.matches("[\\d\\s,.;:+(){}\\[\\]-]+")) {
+      return true;
     }
     for (int i = 0; i < inner.length(); i++) {
       char ch = inner.charAt(i);
@@ -988,6 +1138,20 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
       }
     }
     return inner.chars().anyMatch(ch -> (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'));
+  }
+
+  private static boolean looksLikeWhitespaceWrappedMath(String inner) {
+    if (inner.matches("^[\\d\\s,.;:+\\-(){}\\[\\]]+$")) {
+      return true;
+    }
+    if (inner.matches("^[\\d\\s,.;:+\\-(){}\\[\\]^_=\\\\A-Za-z±×÷≤≥≠√π∞∪∩∈]+$")) {
+      boolean hasMathSyntax = inner.matches(".*[\\\\_^=±×÷≤≥≠√π∞∪∩∈].*");
+      return hasMathSyntax
+          && java.util.Arrays.stream(inner.split("\\s+"))
+              .filter(w -> w.matches("^[A-Za-z]{2,}$"))
+              .allMatch(w -> Set.of("sin", "cos", "tan", "log", "ln", "max", "min").contains(w));
+    }
+    return false;
   }
 
   private static String replaceDelimited(String body, String open, String close) {
@@ -1257,9 +1421,9 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
   }
 
   private static AgentContextType parseContext(String raw) {
-    if (raw == null) return null;
+    if (raw == null || raw.isBlank()) return null;
     try {
-      return AgentContextType.valueOf(raw);
+      return AgentContextType.valueOf(raw.trim().toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException exception) {
       return null;
     }
@@ -1283,7 +1447,7 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
       List<String> suggestedFollowUps,
       boolean lowConfidence) {}
 
-  private record StructuredLocator(
+  record StructuredLocator(
       String sourceKind, UUID sourceId, String label, Integer blockIndex, UUID packageRevisionId) {}
 
   private static final class BudgetedToolCallback implements ToolCallback {

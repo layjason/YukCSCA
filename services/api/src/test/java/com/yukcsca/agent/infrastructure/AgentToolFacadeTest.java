@@ -60,6 +60,12 @@ class AgentToolFacadeTest {
     assertThat(seenLimit.get()).isEqualTo(3);
     assertThat(tools.retrievedLocators()).hasSize(3);
     assertThat(body).contains("Hit 0").contains("Hit 2").doesNotContain("Hit 3");
+    assertThat(body)
+        .contains("\"sourceKind\":\"LESSON\"")
+        .contains("\"sourceId\":\"" + hits.get(0).sourceId() + "\"")
+        .contains("\"blockIndex\":0")
+        .contains("\"packageRevisionId\":\"" + revision + "\"")
+        .contains("\"excerpt\":\"excerpt-0\"");
     assertThat(tools.lastSearchQuery()).isEqualTo("union");
   }
 

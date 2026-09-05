@@ -132,6 +132,77 @@ class SpringAiAgentChatAdapterTest {
   }
 
   @Test
+  void retrievedAuthorisedHitsCannotBeDowngradedToDerivedProvenance() {
+    assertThat(
+            SpringAiAgentChatAdapter.groundedKind(
+                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION, true))
+        .isEqualTo(com.yukcsca.agent.domain.AgentAnswerKind.REVIEWED_SOURCE);
+    assertThat(
+            SpringAiAgentChatAdapter.groundedKind(
+                com.yukcsca.agent.domain.AgentAnswerKind.INSUFFICIENT_EVIDENCE, true))
+        .isEqualTo(com.yukcsca.agent.domain.AgentAnswerKind.INSUFFICIENT_EVIDENCE);
+    assertThat(
+            SpringAiAgentChatAdapter.groundedKind(
+                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION, false))
+        .isEqualTo(com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION);
+  }
+
+  @Test
+  void searchHitsFillLocatorsWhenTheModelOmitsCopyableIds() {
+    GroundedLocator current =
+        new GroundedLocator(
+            AgentContextType.LESSON,
+            UUID.randomUUID(),
+            "Quadratic identities",
+            0,
+            UUID.randomUUID());
+    GroundedLocator searched =
+        new GroundedLocator(
+            AgentContextType.TERMINOLOGY,
+            UUID.randomUUID(),
+            "Union",
+            null,
+            current.packageRevisionId());
+    assertThat(
+            SpringAiAgentChatAdapter.groundedLocators(
+                List.of(),
+                List.of(searched),
+                List.of(current),
+                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION))
+        .containsExactly(searched);
+    assertThat(
+            SpringAiAgentChatAdapter.groundedLocators(
+                List.of(),
+                List.of(),
+                List.of(current),
+                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION))
+        .isEmpty();
+    assertThat(
+            SpringAiAgentChatAdapter.groundedLocators(
+                List.of(),
+                List.of(),
+                List.of(current),
+                com.yukcsca.agent.domain.AgentAnswerKind.REVIEWED_SOURCE))
+        .containsExactly(current);
+  }
+
+  @Test
+  void authorisedLocatorMatchAcceptsSourceIdWithoutExactBlockIndex() {
+    GroundedLocator authorised =
+        new GroundedLocator(
+            AgentContextType.LESSON,
+            UUID.randomUUID(),
+            "Quadratic identities",
+            2,
+            UUID.randomUUID());
+    SpringAiAgentChatAdapter.StructuredLocator requested =
+        new SpringAiAgentChatAdapter.StructuredLocator(
+            "lesson", authorised.sourceId(), "Quadratic identities", null, null);
+    assertThat(SpringAiAgentChatAdapter.matchAuthorised(requested, List.of(authorised)))
+        .isEqualTo(authorised);
+  }
+
+  @Test
   void longCurrentObjectIsClippedInTheUserPrompt() {
     String excerpt = "set ".repeat(800);
     AgentChatCommand command =
@@ -301,6 +372,7 @@ class SpringAiAgentChatAdapterTest {
         .isTrue();
     assertThat(SpringAiAgentChatAdapter.normalizeBody("# Domain\nThe excluded value is x≠2."))
         .doesNotContain("# Domain")
+        .contains("**Domain**")
         .contains("\\(x \\ne 2\\)");
     assertThat(
             SpringAiAgentChatAdapter.validBody(
@@ -309,8 +381,16 @@ class SpringAiAgentChatAdapterTest {
     assertThat(SpringAiAgentChatAdapter.validBody("Use \\(x^2 here.")).isFalse();
     assertThat(SpringAiAgentChatAdapter.validBody("Use \\(x^2\\) here.")).isTrue();
     assertThat(SpringAiAgentChatAdapter.validBody("# A heading\nAnswer.")).isFalse();
+    assertThat(SpringAiAgentChatAdapter.normalizeBody("当然，本课需要掌握的词语如下： 1. 集合 2. 列举法 1.1 并集"))
+        .isEqualTo("当然，本课需要掌握的词语如下：\n1. 集合\n2. 列举法\n1.1 并集");
+    assertThat(
+            SpringAiAgentChatAdapter.normalizeBody(
+                "I have 5 apples and in 2026 we will visit room 102."))
+        .isEqualTo("I have 5 apples and in 2026 we will visit room 102.");
     assertThat(SpringAiAgentChatAdapter.normalizeBody("The excluded value is $x \\ne 2$."))
         .isEqualTo("The excluded value is \\(x \\ne 2\\).");
+    assertThat(SpringAiAgentChatAdapter.normalizeBody("The set contains $1, 2, 4$ and $5$."))
+        .isEqualTo("The set contains \\(1, 2, 4\\) and \\(5\\).");
     assertThat(
             SpringAiAgentChatAdapter.validBody(
                 SpringAiAgentChatAdapter.normalizeBody("The excluded value is $x \\ne 2$.")))
@@ -347,6 +427,32 @@ class SpringAiAgentChatAdapterTest {
     String system = adapter.systemPrompt(command(AgentContextType.LESSON, Duration.ofSeconds(8)));
     assertThat(system).contains("$formula$");
     assertThat(system).doesNotContain("delimited as \\(formula\\)");
+    assertThat(system).contains("you MUST call searchAuthorisedContent");
+    assertThat(system).contains("even if they do not say “search” or name the tool");
+    assertThat(system).contains("kind MUST be REVIEWED_SOURCE");
+    assertThat(system).contains("Prefer answering now over another getter call");
+  }
+
+  @Test
+  void suggestedFollowUpsAndSearchQueriesNormalizeMathToStoredKatex() {
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("What if $x \\ne 2$?"))
+        .isEqualTo("What if \\(x \\ne 2\\)?");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("How about A ∩ B?"))
+        .isEqualTo("How about \\(A \\cap B\\)?");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}"))
+        .isEqualTo("\\(\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}\\)");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("x^2 - 5x + 6 = 0"))
+        .isEqualTo("\\(x^2 - 5x + 6 = 0\\)");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("“\\frac{1}{2}”"))
+        .isEqualTo("“\\(\\frac{1}{2}\\)”");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("“x^2 - 4 = 0”"))
+        .isEqualTo("“\\(x^2 - 4 = 0\\)”");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("Budget is $5 today and $10 tomorrow."))
+        .isEqualTo("Budget is $5 today and $10 tomorrow.");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("解集是 $ (2,3) $。"))
+        .isEqualTo("解集是 \\((2,3)\\)。");
+    assertThat(SpringAiAgentChatAdapter.normalizeInlineMath("Version 2 = Beta"))
+        .isEqualTo("Version 2 = Beta");
   }
 
   @Test
@@ -502,7 +608,7 @@ class SpringAiAgentChatAdapterTest {
         "",
         40,
         Duration.ofSeconds(8),
-        "vs011-v5");
+        "vs011-v6");
   }
 
   private static AgentChatCommand command(AgentContextType contextType, Duration timeout) {

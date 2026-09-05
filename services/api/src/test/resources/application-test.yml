@@ -50,4 +50,4 @@ yukcsca:
     enabled: true
     daily-turn-cap: 40
     turn-timeout: 8s
-    prompt-version: vs011-v5
+    prompt-version: vs011-v6

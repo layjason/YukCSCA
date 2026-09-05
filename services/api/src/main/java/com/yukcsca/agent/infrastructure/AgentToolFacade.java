@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.ai.tool.annotation.Tool;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Request-attached, allow-listed tools. Getters take no model-supplied ids; search takes a query
@@ -28,6 +29,7 @@ public class AgentToolFacade {
           "searchAuthorisedContent");
 
   static final int SEARCH_HIT_CAP = 3;
+  private static final JsonMapper SEARCH_JSON = JsonMapper.builder().build();
 
   private final AgentChatCommand command;
   private final AgentContentSearchPort search;
@@ -105,7 +107,7 @@ public class AgentToolFacade {
 
   @Tool(
       description =
-          "Search published authorised objects in this package. Use when the question needs another published object in this package, or current_object is clearly insufficient for a content question. Do not use when greeting, identity, thanks, or current_object already answers. Query is a student question fragment.")
+          "Search published authorised lessons, practices, terms, and related objects in this package by meaning. Call whenever the student asks about another or related object, or when current_object does not contain the asked content. The student will not name this tool. Do not use for greetings, identity, or thanks. Query is a student question fragment. Each hit includes sourceKind, sourceId, label, blockIndex, packageRevisionId, and excerpt; copy those locator fields into locators.")
   public String searchAuthorisedContent(String query) {
     lastSearchQuery = query == null ? "" : query.trim();
     markInvoked("searchAuthorisedContent");
@@ -118,7 +120,7 @@ public class AgentToolFacade {
     if (hits.isEmpty()) {
       return wrap("search", "No authorised hits.");
     }
-    StringBuilder body = new StringBuilder();
+    List<Map<String, Object>> rows = new ArrayList<>();
     for (SearchHit hit : hits) {
       recordLocator(
           "searchAuthorisedContent",
@@ -128,14 +130,41 @@ public class AgentToolFacade {
               hit.label(),
               hit.blockIndex(),
               hit.packageRevisionId()));
-      body.append(hit.sourceKind())
-          .append(' ')
-          .append(hit.label())
-          .append('\n')
-          .append(hit.excerpt())
-          .append("\n\n");
+      Map<String, Object> row = new LinkedHashMap<>();
+      row.put("sourceKind", hit.sourceKind().name());
+      row.put("sourceId", hit.sourceId() == null ? null : hit.sourceId().toString());
+      row.put("label", hit.label());
+      row.put("blockIndex", hit.blockIndex());
+      row.put(
+          "packageRevisionId",
+          hit.packageRevisionId() == null ? null : hit.packageRevisionId().toString());
+      row.put("excerpt", hit.excerpt());
+      rows.add(row);
     }
-    return wrap("search", body.toString());
+    return wrap("search", serializeHits(rows));
+  }
+
+  private static String serializeHits(List<Map<String, Object>> rows) {
+    try {
+      return SEARCH_JSON.writeValueAsString(rows);
+    } catch (RuntimeException exception) {
+      StringBuilder body = new StringBuilder();
+      for (Map<String, Object> row : rows) {
+        body.append(row.get("sourceKind"))
+            .append(" sourceId=")
+            .append(row.get("sourceId"))
+            .append(" label=")
+            .append(row.get("label"))
+            .append(" blockIndex=")
+            .append(row.get("blockIndex"))
+            .append(" packageRevisionId=")
+            .append(row.get("packageRevisionId"))
+            .append('\n')
+            .append(row.get("excerpt"))
+            .append("\n\n");
+      }
+      return body.toString();
+    }
   }
 
   private String getter(AgentContextType expected, String name) {

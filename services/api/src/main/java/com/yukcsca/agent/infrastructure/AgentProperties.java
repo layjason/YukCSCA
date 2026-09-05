@@ -42,7 +42,7 @@ public record AgentProperties(
       turnTimeout = Duration.ofSeconds(60);
     }
     if (promptVersion == null || promptVersion.isBlank()) {
-      promptVersion = "vs011-v5";
+      promptVersion = "vs011-v6";
     }
     if (apiKey == null) {
       apiKey = "";

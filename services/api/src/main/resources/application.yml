@@ -102,7 +102,7 @@ yukcsca:
     embedding-base-url: ${YUKCSCA_AGENT_EMBEDDING_BASE_URL:https://api.voyageai.com/v1}
     daily-turn-cap: ${YUKCSCA_AGENT_DAILY_TURN_CAP:40}
     turn-timeout: ${YUKCSCA_AGENT_TURN_TIMEOUT:60s}
-    prompt-version: ${YUKCSCA_AGENT_PROMPT_VERSION:vs011-v5}
+    prompt-version: ${YUKCSCA_AGENT_PROMPT_VERSION:vs011-v6}
   media:
     storage:
       endpoint: ${YUKCSCA_MEDIA_ENDPOINT:}
