@@ -363,6 +363,10 @@
   font-weight: 700;
 }
 
+.ask-body em {
+  font-style: italic;
+}
+
 .ask-body .katex,
 .ask-body .katex-display {
   max-width: 100%;

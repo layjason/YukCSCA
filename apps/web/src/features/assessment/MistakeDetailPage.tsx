@@ -178,22 +178,24 @@ export function MistakeDetailPage(): React.JSX.Element {
         hostTitle={t('assessment.mistakes.detailTitle')}
         mathBlocks={mathBlocksFrom(mistake.attemptQuestion.stem)}
       >
-        <Link to="/app/practice/mistakes" className="back-btn">
-          <span className="back-arrow" aria-hidden="true">
-            ←
-          </span>
-          {t('assessment.mistakes.backToList')}
-        </Link>
-        {mistake.examLanguage === 'zh-CN' ? (
-          <Link
-            to="/app/learn/terms"
-            state={notebookStateFrom(`${location.pathname}${location.search}`)}
-            className="learn-back-link"
-          >
-            <BookOpenText size={18} aria-hidden="true" />
-            {t('assessment.languageHelp.openNotebook')}
+        <div className="mistake-detail-chrome">
+          <Link to="/app/practice/mistakes" className="back-btn">
+            <span className="back-arrow" aria-hidden="true">
+              ←
+            </span>
+            {t('assessment.mistakes.backToList')}
           </Link>
-        ) : null}
+          {mistake.examLanguage === 'zh-CN' ? (
+            <Link
+              to="/app/learn/terms"
+              state={notebookStateFrom(`${location.pathname}${location.search}`)}
+              className="learn-back-link"
+            >
+              <BookOpenText size={18} aria-hidden="true" />
+              {t('assessment.languageHelp.openNotebook')}
+            </Link>
+          ) : null}
+        </div>
 
         <header className="assessment-hero assessment-hero-sky">
           <span className={`assessment-status status-${mistake.status.toLowerCase()}`}>

@@ -136,3 +136,13 @@ test('rejects empty, unsafe, and inequality fragments', () => {
   expect(mixedLatexHasAngleBrackets("若 \\(f'(x)>0\\) 则单调递增")).toBe(true);
   expect(isValidMixedLatex('broken \\(x^2')).toBe(false);
 });
+
+test('can defer bare-math inference for Markdown without changing the default', () => {
+  expect(parseInlineLatex('x^2')).toEqual([{ kind: 'math', latex: 'x^2', start: 0, end: 3 }]);
+  expect(parseInlineLatex('**x^2**', { detectBareMath: false })).toEqual([
+    { kind: 'text', text: '**x^2**', start: 0, end: 7 },
+  ]);
+  expect(parseInlineLatex(String.raw`\(x*y\)`, { detectBareMath: false })).toEqual([
+    { kind: 'math', latex: 'x*y', start: 0, end: 7 },
+  ]);
+});

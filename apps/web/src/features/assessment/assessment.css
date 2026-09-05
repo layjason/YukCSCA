@@ -648,11 +648,25 @@ a.assessment-list-row:focus-visible {
   margin-bottom: var(--space-lg);
 }
 
-.mistakes-page > .back-btn,
-.mistake-detail > .back-btn {
+.mistakes-page > .back-btn {
   position: relative;
   z-index: 2;
   margin-bottom: var(--space-xl);
+}
+
+.mistake-detail-chrome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  position: relative;
+  z-index: 2;
+  margin-bottom: var(--space-xl);
+}
+
+.mistake-detail-chrome > .back-btn {
+  margin-bottom: 0;
 }
 
 .mistakes-filter {

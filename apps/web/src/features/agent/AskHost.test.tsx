@@ -232,6 +232,46 @@ test('renders safe Markdown emphasis and list structure', async () => {
   expect(screen.queryByText('**Key terms**')).not.toBeInTheDocument();
 });
 
+test('renders bold KaTeX without stealing later italics', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        body: '**\\(\\in\\)** asks whether something is an *element* of a set; **⊆** asks whether one *set* is contained in another.',
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  expect((await screen.findByText('element')).closest('em')).toBeInTheDocument();
+  expect(screen.getByText('set').closest('em')).toBeInTheDocument();
+  expect(screen.getByText('⊆').closest('strong')).toBeInTheDocument();
+  expect(
+    document.querySelector('.ask-body strong .katex, .ask-body strong .learn-math'),
+  ).not.toBeNull();
+  expect(screen.queryByText(/\*\*\\?\\?\(?\\in/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/\*element\*/)).not.toBeInTheDocument();
+});
+
+test('renders italic markdown without leftover asterisks', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        body: '∈ asks whether something is an *element* of a set; ⊆ asks whether one *set* is contained in another.',
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  expect((await screen.findByText('element')).closest('em')).toBeInTheDocument();
+  expect(screen.getByText('set').closest('em')).toBeInTheDocument();
+  expect(screen.queryByText(/\*element\*/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+});
+
 test('renders math in locators and suggested follow-ups', async () => {
   vi.mocked(agentApi.startConversation).mockResolvedValue({
     ...emptyConversation,
@@ -785,4 +825,32 @@ test.each([
   await screen.findByText(completed.body);
   expect(document.querySelector('.ask-quote-pill .katex')).not.toBeNull();
   expect(screen.getByRole('group', { name: `Quoted: ${quote}` })).toBeInTheDocument();
+});
+
+test('renders nested emphasis and bare formulas while retaining literal operators', async () => {
+  vi.mocked(agentApi.startConversation).mockResolvedValue({
+    ...emptyConversation,
+    turns: [
+      {
+        ...completed,
+        body: String.raw`***important*** and **outer *inner* outer**.
+
+**x^2** + **y^2**
+
+Compute 2 * 3 * 4. Use \*literal\*.`,
+      },
+    ],
+  });
+  renderHost();
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask about this page' }));
+  const important = await screen.findByText('important');
+  expect(important.closest('strong')).toBeInTheDocument();
+  expect(important.closest('em')).toBeInTheDocument();
+  const inner = screen.getByText('inner');
+  expect(inner.closest('strong')).toBeInTheDocument();
+  expect(inner.closest('em')).toBeInTheDocument();
+  expect(document.querySelector('.ask-body strong [data-latex="x^2"]')).not.toBeNull();
+  expect(document.querySelector('.ask-body strong [data-latex="y^2"]')).not.toBeNull();
+  expect(screen.getByText('Compute 2 * 3 * 4. Use *literal*.')).toBeInTheDocument();
+  expect(document.querySelector('.ask-body [role="alert"]')).toBeNull();
 });
