@@ -54,6 +54,84 @@ class MarkupSplitTest(unittest.TestCase):
         joined = "".join(content for _kind, content in lines[0])
         self.assertEqual(joined.strip(), "Quadratic formula")
 
+    def test_trailing_period_stays_with_inline_tex(self):
+        runs = markup.attach_trailing_punctuation(
+            markup.split_markup(r"Area is \(x^2\).")
+        )
+        self.assertEqual(
+            runs,
+            [
+                ("text", "Area is "),
+                ("tex", "x^2"),
+                ("punct", "."),
+            ],
+        )
+        lines = markup.wrap_markup_lines(r"Area is \(x^2\).", width=42)
+        self.assertEqual(len(lines), 1)
+        self.assertIn(("punct", "."), lines[0])
+
+    def test_comma_after_tex_does_not_swallow_following_words(self):
+        runs = markup.attach_trailing_punctuation(
+            markup.split_markup(r"belongs to \(A\), write \(a\in A\).")
+        )
+        self.assertEqual(
+            runs,
+            [
+                ("text", "belongs to "),
+                ("tex", "A"),
+                ("punct", ","),
+                ("text", " write "),
+                ("tex", r"a\in A"),
+                ("punct", "."),
+            ],
+        )
+
+    def test_fold_latin_punctuation_into_tex_leaves_cjk(self):
+        folded = markup.fold_latin_punctuation(
+            [
+                ("tex", r"a\in A"),
+                ("punct", "."),
+                ("text", " and "),
+                ("tex", r"\emptyset"),
+                ("punct", "。"),
+            ]
+        )
+        self.assertEqual(
+            folded,
+            [
+                ("tex", r"a\in A\text{.}"),
+                ("text", " and "),
+                ("tex", r"\emptyset"),
+                ("punct", "。"),
+            ],
+        )
+
+    def test_word_space_follows_authored_spaces_not_punctuation(self):
+        self.assertTrue(
+            markup.needs_word_space(("text", "If "), ("tex", "a"))
+        )
+        self.assertTrue(
+            markup.needs_word_space(("tex", "A"), ("text", " belongs"))
+        )
+        self.assertFalse(
+            markup.needs_word_space(("tex", r"A\text{,}"), ("punct", ","))
+        )
+        self.assertTrue(
+            markup.needs_word_space(("tex", r"A\text{,}"), ("text", " write"))
+        )
+        self.assertFalse(
+            markup.needs_word_space(("tex", r"\emptyset"), ("punct", "。"))
+        )
+
+    def test_single_letter_tex_does_not_inflate_wrap_width(self):
+        lines = markup.wrap_markup_lines(
+            r"If \(a\) belongs to \(A\), write \(a\in A\); otherwise write \(a\notin A\).",
+            width=40,
+        )
+        first = "".join(content for _kind, content in lines[0])
+        self.assertIn("belongs", first)
+        self.assertNotEqual(first.strip(), "If")
+
 
 class InlineMarkupValidationTest(unittest.TestCase):
     def test_title_allows_reviewed_inline_tex(self):
@@ -113,6 +191,15 @@ class InlineMarkupValidationTest(unittest.TestCase):
 
     def test_tex_for_manim_maps_katex_inequalities(self):
         self.assertEqual(markup.tex_for_manim(r"a \lt b \gt c"), "a < b > c")
+
+    def test_tex_for_manim_maps_lt_gt_after_a_letter(self):
+        self.assertEqual(markup.tex_for_manim(r"0\lt x\lt 8"), "0< x< 8")
+        self.assertEqual(markup.tex_for_manim(r"x\lt 2"), "x< 2")
+        self.assertEqual(markup.tex_for_manim(r"x\gt 3"), "x> 3")
+
+    def test_tex_for_manim_leaves_longer_commands(self):
+        self.assertEqual(markup.tex_for_manim(r"A\ltimes B"), r"A\ltimes B")
+        self.assertEqual(markup.tex_for_manim(r"A\gtimes B"), r"A\gtimes B")
 
 
 if __name__ == "__main__":

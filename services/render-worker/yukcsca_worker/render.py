@@ -141,6 +141,12 @@ def _render(
     import manim as mn
     from manim_voiceover import VoiceoverScene
 
+    # KaTeX ``\lt`` / ``\gt`` are not TeX primitives. Conversion still maps them
+    # to ``<`` / ``>``; define the commands so a leftover token still compiles.
+    tex_template = mn.TexTemplate()
+    tex_template.add_to_preamble(r"\providecommand{\lt}{<}\providecommand{\gt}{>}")
+    mn.config.tex_template = tex_template
+
     class ScriptScene(VoiceoverScene):
         def construct(self) -> None:
             self.set_speech_service(service)
@@ -1249,35 +1255,80 @@ def compose_markup(
     # DejaVu reports reliable bounding boxes for Latin; Noto Sans CJK is required for zh-CN.
     font = "Noto Sans CJK SC" if language == "zh-CN" else "DejaVu Sans"
     wrap = 18 if language == "zh-CN" else wrap_width
+    math_scale = _inline_math_scale(mn, font, font_size)
+    word_space = _word_space_width(mn, font, font_size)
     rows = []
     for line in markup.wrap_markup_lines(text, width=wrap):
-        pieces = []
-        for kind, content in _collapse_text_runs(line):
-            if kind == "tex":
-                pieces.append(
-                    mn.MathTex(markup.tex_for_manim(content), font_size=font_size + 2, color=fill)
-                )
+        folded = markup.fold_latin_punctuation(_collapse_text_runs(line))
+        pieces: list[tuple[str, str, Any]] = []
+        pending_space = False
+        for kind, content in folded:
+            if kind == "text" and not content.strip():
+                pending_space = True
                 continue
-            kwargs: dict[str, Any] = {
-                "font_size": font_size,
-                "color": fill,
-                "font": font,
-            }
-            if weight is not None:
-                kwargs["weight"] = weight
-            pieces.append(mn.Text(content, **kwargs))
+            if kind == "tex":
+                math = mn.MathTex(markup.tex_for_manim(content), font_size=font_size, color=fill)
+                if math_scale != 1.0:
+                    math.scale(math_scale)
+                pieces.append((kind, content, math, pending_space))
+            else:
+                visible = content.strip() if kind == "text" else content
+                kwargs: dict[str, Any] = {
+                    "font_size": font_size,
+                    "color": fill,
+                    "font": font,
+                }
+                if weight is not None:
+                    kwargs["weight"] = weight
+                pieces.append((kind, content, mn.Text(visible, **kwargs), pending_space))
+            pending_space = False
         if not pieces:
             continue
-        if len(pieces) == 1:
-            rows.append(pieces[0])
-        else:
-            rows.append(mn.VGroup(*pieces).arrange(mn.RIGHT, buff=0.12, aligned_edge=mn.DOWN))
+        rows.append(_arrange_markup_row(mn, pieces, word_space))
     if not rows:
         rows.append(mn.Text(" ", font_size=font_size, font=font, color=fill))
     group = mn.VGroup(*rows).arrange(mn.DOWN, aligned_edge=mn.LEFT, buff=0.16)
     if max_width is not None and group.width > max_width:
         group.scale_to_fit_width(max_width)
     return group
+
+
+def _inline_math_scale(mn, font: str, font_size: int) -> float:
+    """Scale MathTex so an ``x`` matches the surrounding Text x-height."""
+
+    text_x = mn.Text("x", font=font, font_size=font_size)
+    math_x = mn.MathTex("x", font_size=font_size)
+    if math_x.height <= 1e-6:
+        return 1.0
+    return float(text_x.height / math_x.height)
+
+
+def _word_space_width(mn, font: str, font_size: int) -> float:
+    """Width of one space in the prose font; ``Text`` itself drops edge spaces."""
+
+    pair = mn.Text("x x", font=font, font_size=font_size)
+    tight = mn.Text("xx", font=font, font_size=font_size)
+    return max(0.04, float(pair.width - tight.width))
+
+
+def _arrange_markup_row(mn, pieces: list[tuple[str, str, Any, bool]], word_space: float):
+    """Places Text/MathTex on one baseline row with word spaces as gaps."""
+
+    first_kind, first_content, first_mob, _forced = pieces[0]
+    if len(pieces) == 1:
+        return first_mob
+    placed = [first_mob]
+    prev = (first_kind, first_content)
+    for kind, content, mob, forced_space in pieces[1:]:
+        gap = (
+            word_space
+            if forced_space or markup.needs_word_space(prev, (kind, content))
+            else 0.0
+        )
+        mob.next_to(placed[-1], mn.RIGHT, buff=gap)
+        placed.append(mob)
+        prev = (kind, content)
+    return mn.VGroup(*placed).center()
 
 
 def _collapse_text_runs(line: list[tuple[str, str]]) -> list[tuple[str, str]]:
