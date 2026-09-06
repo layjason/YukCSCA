@@ -12,11 +12,15 @@ Original YukCSCA source is proprietary. See [LICENSE](LICENSE).
 
 Before starting a lesson, students can preview essential Chinese terms and technical phrases. Each term includes an explanation in the student's selected language. Students can listen to available pronunciations, save challenging terms to a personal vocabulary notebook, and revisit terms due for review.
 
+https://github.com/user-attachments/assets/d1f7d670-e858-4680-a460-07108c732e70
+
 [Terminology implementation](services/api/src/main/java/com/yukcsca/academic/) · [Shared terminology UI](apps/web/src/shared/terminology/)
 
 ### Study lessons in your preferred language
 
 Students can study published lessons in Bahasa Indonesia, English, or Simplified Chinese, depending on the available authored content. Mathematics is the starting subject; Physics and Chemistry share the same learning architecture. Narrated videos offer reviewed captions in the active explanation language, timed interactive transcripts, and adjustable playback speeds. Playback positions and lesson progress are saved automatically so students can resume where they left off.
+
+https://github.com/user-attachments/assets/83dbb180-1cbf-48cc-9228-8500e0ae8074
 
 [Learning UI](apps/web/src/features/learn/)
 
@@ -24,17 +28,23 @@ Students can study published lessons in Bahasa Indonesia, English, or Simplified
 
 Lesson checkpoints and topic practice sets track correctness and assistance separately: completing a lesson records progress, while unassisted answers provide evidence of understanding. **Language help** offers definitions and bookmarks for supported exam-language terms without counting as a problem-solving hint. A progressive hint ladder guides students through concepts and solution steps; strong assistance, including Ask, prevents a checkpoint pass, while vocabulary lookups do not. Correct answers and unrevealed hints remain hidden until submission and review.
 
+https://github.com/user-attachments/assets/84b2999d-9ef2-486f-a0ba-443582b04e35
+
 [Assessment implementation](services/api/src/main/java/com/yukcsca/assessment/)
 
 ### Review mistakes and try again
 
 Incorrect answers are saved to a personal mistake notebook with their original question context. Students can add study notes, explore targeted remediation materials, and retry the problem when ready. An unassisted correct answer marks the mistake as successfully revalidated; using a problem-solving hint or Ask prevents revalidation from passing. Language help remains available without affecting the outcome.
 
+https://github.com/user-attachments/assets/4f0cc6a8-6138-43e7-9974-68d32d6c732a
+
 [Assessment implementation](services/api/src/main/java/com/yukcsca/assessment/)
 
 ### Ask when you are stuck
 
 Students can open **Ask** while studying a lesson, answering a question, reviewing a mistake, looking up a term, or working through remediation. Ask uses the active explanation language and distinguishes answers supported by reviewed materials from derived explanations and insufficient-evidence refusals. Source-backed answers include clickable citations. On active assessment items, Ask records strong assistance, which prevents a checkpoint pass or successful revalidation. The AI provides explanations; deterministic application rules grade submissions.
+
+https://github.com/user-attachments/assets/d8ef18ae-4146-4cf6-8dce-716e90b0d2af
 
 [Agent implementation](services/api/src/main/java/com/yukcsca/agent/) · [Ask UI](apps/web/src/features/agent/)
 
