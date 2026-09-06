@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -44,6 +46,43 @@ function renderPage() {
     </I18nextProvider>,
   );
 }
+
+test('keeps prose math inline while clamping standalone math previews', async () => {
+  vi.spyOn(api, 'listMistakes').mockResolvedValueOnce({
+    items: [
+      row({
+        stemPreview: [
+          { kind: 'TEXT', text: '设 \\(A=\\{1,3,5\\}\\)，下列正确的是' },
+          { kind: 'MATH', latex: 'x^2', displayMode: true },
+        ],
+      }),
+    ],
+    nextCursor: null,
+  });
+  const style = document.createElement('style');
+  style.textContent = readFileSync('src/features/assessment/assessment.css', 'utf8');
+  document.head.append(style);
+  try {
+    const { container } = renderPage();
+    await screen.findByText(/下列正确的是/);
+    const inline = container.querySelector('.learn-text-block .learn-math');
+    const standalone = container.querySelector('.learn-content-block-math > .learn-math');
+    expect(inline).not.toBeNull();
+    expect(standalone).not.toBeNull();
+    // jsdom does not lay out WebKit line clamps; check their selector targets.
+    const clampRules = Array.from(style.sheet!.cssRules).filter(
+      (rule): rule is CSSStyleRule =>
+        'selectorText' in rule &&
+        'style' in rule &&
+        (rule as CSSStyleRule).style.getPropertyValue('-webkit-line-clamp') === '3',
+    );
+    expect(clampRules.some((rule) => inline!.matches(rule.selectorText))).toBe(false);
+    expect(clampRules.some((rule) => standalone!.matches(rule.selectorText))).toBe(true);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  } finally {
+    style.remove();
+  }
+});
 
 test('uses server status filter and load more instead of a client-only first page', async () => {
   const list = vi.spyOn(api, 'listMistakes').mockResolvedValueOnce({
