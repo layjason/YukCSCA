@@ -853,8 +853,8 @@ a.mistakes-row:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.mistakes-row-stem .learn-math,
-.mistakes-row-stem .learn-math-display {
+/* Clamp standalone blocks; prose formulas must keep their inline layout. */
+.mistakes-row-stem .learn-content-block-math > .learn-math {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
