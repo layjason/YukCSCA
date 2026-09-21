@@ -7,7 +7,8 @@ import org.testcontainers.utility.DockerImageName;
 
 /**
  * Shared MinIO container for S3-backed integration tests (VS-010B). One instance serves the whole
- * suite; credentials and bucket mirror the Compose dev setup.
+ * suite; credentials and bucket mirror the Compose dev setup. Image comes from Quay because Docker
+ * Hub removed {@code minio/minio} in 2026-09; the tag matches Compose.
  */
 public final class MinioTestSupport {
   public static final String ACCESS_KEY = "yukcsca-test";
@@ -15,7 +16,8 @@ public final class MinioTestSupport {
   public static final String BUCKET = "yukcsca-test-media";
 
   private static final GenericContainer<?> MINIO =
-      new GenericContainer<>(DockerImageName.parse("minio/minio:RELEASE.2025-04-22T22-12-26Z"))
+      new GenericContainer<>(
+              DockerImageName.parse("quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z"))
           .withCommand("server /data")
           .withExposedPorts(9000)
           .withEnv("MINIO_ROOT_USER", ACCESS_KEY)
