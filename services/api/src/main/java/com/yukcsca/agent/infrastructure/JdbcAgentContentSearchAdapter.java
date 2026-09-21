@@ -112,13 +112,14 @@ public class JdbcAgentContentSearchAdapter implements AgentContentSearchPort {
     if (model.isPresent() && hasStoredEmbeddings(packageRevisionId)) {
       vector = embedQueryOrNull(model.get(), query, packageRevisionId);
     }
+    double lexicalBlend = lexicalBlend(query, vector != null);
     List<SearchHit> hits = new ArrayList<>();
     jdbc.query(
         """
         select source_kind, source_id, block_index, label, body, package_revision_id,
                ts_rank(search_tsv, websearch_to_tsquery('simple', ?)) as lex,
                case
-                 when embedding is null or ? is null then 0
+                 when embedding is null or cast(? as text) is null then 0
                  else 1 - (embedding <=> cast(? as vector))
                end as vec
           from agent_content_chunk
@@ -126,15 +127,17 @@ public class JdbcAgentContentSearchAdapter implements AgentContentSearchPort {
            and explanation_language = ?
            and (
              search_tsv @@ websearch_to_tsquery('simple', ?)
-             or (? is not null and embedding is not null)
+             or (cast(? as text) is not null and embedding is not null)
            )
          order by (
-           0.5 * ts_rank(search_tsv, websearch_to_tsquery('simple', ?))
-           + 0.5 * case
-             when embedding is null or ? is null then 0
+           ? * ts_rank(search_tsv, websearch_to_tsquery('simple', ?))
+           + (1.0 - ?) * case
+             when embedding is null or cast(? as text) is null then 0
              else 1 - (embedding <=> cast(? as vector))
            end
-         ) desc
+         ) desc,
+           source_id,
+           block_index nulls last
          limit ?
         """,
         rs -> {
@@ -143,7 +146,8 @@ public class JdbcAgentContentSearchAdapter implements AgentContentSearchPort {
             if (kind == null) continue;
             int block = rs.getInt("block_index");
             Integer blockIndex = rs.wasNull() ? null : block;
-            double score = rs.getDouble("lex") + rs.getDouble("vec");
+            double score =
+                lexicalBlend * rs.getDouble("lex") + (1.0 - lexicalBlend) * rs.getDouble("vec");
             hits.add(
                 new SearchHit(
                     kind,
@@ -163,11 +167,35 @@ public class JdbcAgentContentSearchAdapter implements AgentContentSearchPort {
         language,
         query,
         vector,
+        lexicalBlend,
         query,
+        lexicalBlend,
         vector,
         vector,
         capped);
     return authoriseHits(packageRevisionId, language, hits);
+  }
+
+  /**
+   * PostgreSQL {@code simple} does not segment Han text, so {@code ts_rank} is not a useful Chinese
+   * signal. When a query embedding exists, Han queries rank by cosine only. English/Indonesian keep
+   * the 0.5/0.5 blend. Timeout or missing embeddings keep lexical ranking.
+   */
+  static double lexicalBlend(String query, boolean queryVectorAvailable) {
+    if (queryVectorAvailable && containsHan(query)) {
+      return 0.0d;
+    }
+    return 0.5d;
+  }
+
+  static boolean containsHan(String query) {
+    if (query == null || query.isBlank()) {
+      return false;
+    }
+    return query
+        .codePoints()
+        .anyMatch(
+            codePoint -> Character.UnicodeScript.of(codePoint) == Character.UnicodeScript.HAN);
   }
 
   private void indexLexical(UUID packageRevisionId) {

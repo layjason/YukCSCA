@@ -72,7 +72,7 @@ class AgentPropertiesTest {
             40,
             Duration.ofSeconds(8),
             " ");
-    assertThat(properties.promptVersion()).isEqualTo("vs011-v6");
+    assertThat(properties.promptVersion()).isEqualTo("vs011-v7");
   }
 
   @Test

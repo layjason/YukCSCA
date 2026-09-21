@@ -143,9 +143,10 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
 
       Output contract:
       Return only a JSON object with keys kind, body, locators, suggestedFollowUps, lowConfidence.
-      When retrieved_data contains a supporting authorised hit, kind MUST be REVIEWED_SOURCE. Copy that hit's sourceKind, sourceId, label, blockIndex, and packageRevisionId into locators exactly. Never invent IDs or labels.
-      kind REVIEWED_SOURCE when reviewed locators support the answer, including after a successful search.
-      kind DERIVED_EXPLANATION only for public mathematics when retrieved text is thin AND there is no supporting authorised hit, and for greetings or identity; never label it official. Do not choose DERIVED_EXPLANATION when a supporting search hit exists.
+      When a retrieved hit's excerpt supports the answer, kind MUST be REVIEWED_SOURCE. Copy that hit's sourceKind, sourceId, label, blockIndex, and packageRevisionId into locators exactly. Never invent IDs or labels.
+      kind REVIEWED_SOURCE only when reviewed locators support the answer.
+      kind DERIVED_EXPLANATION for public mathematics when retrieved text is thin or does not support the claim, and for greetings or identity; never label it official.
+      Search rows alone do not make an answer reviewed-source. Do not upgrade kind merely because search returned hits.
       kind INSUFFICIENT_EVIDENCE for official/policy/scoring/admissions questions without reviewed sources.
       body is TEXT-like prose, 1-12000 characters. Write mathematics in body and suggestedFollowUps as $formula$ (dollar-delimited TeX) or Unicode (≠ π ≤). Never emit \\(, \\), \\[, \\], or $$ — those sequences are invalid JSON escapes. The application converts $formula$ and Unicode to inline KaTeX after parse. Never emit bare math such as x≠2. Never use markdown code fences.
       suggestedFollowUps are 0-3 short strings that stay on this same context.
@@ -421,8 +422,6 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
     List<GroundedLocator> searchHits = tools.locatorsFor("searchAuthorisedContent");
     List<GroundedLocator> locators =
         groundedLocators(requested, searchHits, command.grounding().currentLocators(), kind);
-    boolean searchedWithHits = !searchHits.isEmpty();
-    kind = groundedKind(kind, searchedWithHits && !locators.isEmpty());
     List<String> followUps = readFollowUps(answer.suggestedFollowUps());
     boolean lowConfidence = answer.lowConfidence();
     List<TraceStep> steps = studentSteps(command, tools);
@@ -430,16 +429,10 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
         kind, body, locators, steps, followUps, lowConfidence, tokenUsage, properties.chatModel());
   }
 
-  static AgentAnswerKind groundedKind(AgentAnswerKind kind, boolean searchedWithHits) {
-    if (searchedWithHits && kind == AgentAnswerKind.DERIVED_EXPLANATION) {
-      return AgentAnswerKind.REVIEWED_SOURCE;
-    }
-    return kind;
-  }
-
   /**
-   * Prefer model-cited authorised locators, then Java-authorised search hits, then the current
-   * object when the model claimed reviewed support but omitted copyable ids.
+   * Prefer model-cited authorised locators. Search hits and the current object fill locators only
+   * when the model claimed reviewed support and omitted copyable ids. Search rows never rewrite
+   * {@code DERIVED_EXPLANATION} into reviewed-source.
    */
   static List<GroundedLocator> groundedLocators(
       List<GroundedLocator> requested,
@@ -449,10 +442,13 @@ public class SpringAiAgentChatAdapter implements AgentChatPort {
     if (requested != null && !requested.isEmpty()) {
       return List.copyOf(requested);
     }
+    if (kind != AgentAnswerKind.REVIEWED_SOURCE) {
+      return List.of();
+    }
     if (searchHits != null && !searchHits.isEmpty()) {
       return List.copyOf(searchHits);
     }
-    if (kind == AgentAnswerKind.REVIEWED_SOURCE && current != null && !current.isEmpty()) {
+    if (current != null && !current.isEmpty()) {
       return List.copyOf(current);
     }
     return List.of();

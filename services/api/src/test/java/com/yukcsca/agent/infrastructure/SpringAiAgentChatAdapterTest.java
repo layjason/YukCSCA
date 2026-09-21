@@ -132,23 +132,7 @@ class SpringAiAgentChatAdapterTest {
   }
 
   @Test
-  void retrievedAuthorisedHitsCannotBeDowngradedToDerivedProvenance() {
-    assertThat(
-            SpringAiAgentChatAdapter.groundedKind(
-                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION, true))
-        .isEqualTo(com.yukcsca.agent.domain.AgentAnswerKind.REVIEWED_SOURCE);
-    assertThat(
-            SpringAiAgentChatAdapter.groundedKind(
-                com.yukcsca.agent.domain.AgentAnswerKind.INSUFFICIENT_EVIDENCE, true))
-        .isEqualTo(com.yukcsca.agent.domain.AgentAnswerKind.INSUFFICIENT_EVIDENCE);
-    assertThat(
-            SpringAiAgentChatAdapter.groundedKind(
-                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION, false))
-        .isEqualTo(com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION);
-  }
-
-  @Test
-  void searchHitsFillLocatorsWhenTheModelOmitsCopyableIds() {
+  void searchHitsDoNotUpgradeDerivedKindOrAttachLocators() {
     GroundedLocator current =
         new GroundedLocator(
             AgentContextType.LESSON,
@@ -169,14 +153,53 @@ class SpringAiAgentChatAdapterTest {
                 List.of(searched),
                 List.of(current),
                 com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION))
-        .containsExactly(searched);
+        .isEmpty();
     assertThat(
             SpringAiAgentChatAdapter.groundedLocators(
                 List.of(),
-                List.of(),
+                List.of(searched),
                 List.of(current),
-                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION))
+                com.yukcsca.agent.domain.AgentAnswerKind.INSUFFICIENT_EVIDENCE))
         .isEmpty();
+  }
+
+  @Test
+  void searchHitsFillReviewedLocatorsWhenTheModelOmitsCopyableIds() {
+    GroundedLocator current =
+        new GroundedLocator(
+            AgentContextType.LESSON,
+            UUID.randomUUID(),
+            "Quadratic identities",
+            0,
+            UUID.randomUUID());
+    GroundedLocator searched =
+        new GroundedLocator(
+            AgentContextType.TERMINOLOGY,
+            UUID.randomUUID(),
+            "Union",
+            null,
+            current.packageRevisionId());
+    GroundedLocator requested =
+        new GroundedLocator(
+            AgentContextType.LESSON,
+            current.sourceId(),
+            current.label(),
+            current.blockIndex(),
+            current.packageRevisionId());
+    assertThat(
+            SpringAiAgentChatAdapter.groundedLocators(
+                List.of(requested),
+                List.of(searched),
+                List.of(current),
+                com.yukcsca.agent.domain.AgentAnswerKind.REVIEWED_SOURCE))
+        .containsExactly(requested);
+    assertThat(
+            SpringAiAgentChatAdapter.groundedLocators(
+                List.of(),
+                List.of(searched),
+                List.of(current),
+                com.yukcsca.agent.domain.AgentAnswerKind.REVIEWED_SOURCE))
+        .containsExactly(searched);
     assertThat(
             SpringAiAgentChatAdapter.groundedLocators(
                 List.of(),
@@ -184,6 +207,13 @@ class SpringAiAgentChatAdapterTest {
                 List.of(current),
                 com.yukcsca.agent.domain.AgentAnswerKind.REVIEWED_SOURCE))
         .containsExactly(current);
+    assertThat(
+            SpringAiAgentChatAdapter.groundedLocators(
+                List.of(),
+                List.of(),
+                List.of(current),
+                com.yukcsca.agent.domain.AgentAnswerKind.DERIVED_EXPLANATION))
+        .isEmpty();
   }
 
   @Test
@@ -430,6 +460,7 @@ class SpringAiAgentChatAdapterTest {
     assertThat(system).contains("you MUST call searchAuthorisedContent");
     assertThat(system).contains("even if they do not say “search” or name the tool");
     assertThat(system).contains("kind MUST be REVIEWED_SOURCE");
+    assertThat(system).contains("Search rows alone do not make an answer reviewed-source");
     assertThat(system).contains("Prefer answering now over another getter call");
   }
 
@@ -608,7 +639,7 @@ class SpringAiAgentChatAdapterTest {
         "",
         40,
         Duration.ofSeconds(8),
-        "vs011-v6");
+        "vs011-v7");
   }
 
   private static AgentChatCommand command(AgentContextType contextType, Duration timeout) {

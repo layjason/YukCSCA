@@ -53,7 +53,7 @@ class AgentLiveFixtureEvalTest {
                 "",
                 40,
                 Duration.ofSeconds(8),
-                "vs011-v6"));
+                "vs011-v7"));
   }
 
   @Test
